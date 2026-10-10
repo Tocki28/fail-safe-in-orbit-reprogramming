@@ -479,57 +479,147 @@ outside the scope of bench demonstration.
 
 % ===========================================================================
 \section{Operational Scenarios}
-Every scenario below is demonstrated on hardware and recorded.
+Each scenario follows one thread of events from trigger to outcome
+[1, App.~S, pp.~252--253]. Every scenario below is demonstrated on hardware and
+recorded. Sources in brackets are items of NASA's list of software causes of
+hazards [2, App.~A, Table~2].
 
 \subsection{Nominal Conditions}
 \begin{description}[leftmargin=3cm]
-\item[Scenario-100] Update: release, upload over one or more contacts, check,
-  transfer \tbr{receive}, switch \tbd{switch}, judged good \tbd{confirm},
-  confirmed, outcome reported.
-\item[Scenario-110] Telemetry: reports stamped and stored between contacts, all sent
-  at the next one.
-\item[Scenario-120] Scheduled command: received during a contact, runs at its time,
-  answer sent at the next contact.
+\item[Scenario-100] \textbf{Firmware update.}
+  \begin{enumerate}[nosep]
+  \item The operator releases new firmware; the ground software checks it and
+    prepares the upload.
+  \item Over one or more contacts, the firmware goes up the radio link to the
+    onboard computer.
+  \item The onboard computer checks that it is undamaged, from the operator,
+    built for this controller, and not older than the minimum version.
+  \item The onboard computer delivers it to the controller over the data link;
+    the controller keeps working meanwhile \tbr{receive}.
+  \item The controller switches to the new firmware and enters TRIAL
+    \tbd{switch}.
+  \item The new firmware is judged good within the trial time \tbd{trialtime}
+    \tbd{confirm}; the update is committed and the controller returns to
+    OPERATE.
+  \item The outcome is stored and sent down at the next contact.
+  \end{enumerate}
+\item[Scenario-110] \textbf{Telemetry between contacts.}
+  \begin{enumerate}[nosep]
+  \item The controller sends regular health reports, and an event report as
+    soon as something important happens.
+  \item The onboard computer time-tags and stores every report.
+  \item At the next contact, all stored reports go down the radio link.
+  \end{enumerate}
+\item[Scenario-120] \textbf{Command during a contact.}
+  \begin{enumerate}[nosep]
+  \item The operator decides a command; the ground software prepares and
+    checks it.
+  \item During a contact, the command goes up the radio link.
+  \item The onboard computer checks that it is from the operator, new, allowed
+    in the current mode, and has possible values. A dangerous command must
+    first be armed by a separate command.
+  \item The command is executed. The answers (received, then done with the
+    result) go down, and the command and its answers are logged.
+  \end{enumerate}
+\item[Scenario-130] \textbf{Scheduled command.}
+  \begin{enumerate}[nosep]
+  \item During a contact, the operator sends a command with a run time; the
+    System answers ``received''.
+  \item At the run time, the command runs.
+  \item The ``done'' answer is stored and sent down at the next contact.
+  \end{enumerate}
 \end{description}
 
 \subsection{Off-Nominal Conditions}
-Trigger, then expected outcome. Sources in brackets are items of [2, App.~A,
-Table~2].
+Grouped by NASA's kinds of off-nominal condition: low performance, operator
+errors, failures, and unexpected environmental conditions
+[1, App.~S, p.~253]. Each entry gives the trigger, then the expected outcome.
+
+\medskip
+\needspace{4\baselineskip}
+\noindent\textbf{Low performance of the radio link}
 \begin{description}[leftmargin=3cm]
-\item[Scenario-200] Ground link lost mid-transfer: resumes next contact where it
-  stopped.
-\item[Scenario-210] Command not from operator or replayed: refused, logged [2, p.~62].
-\item[Scenario-220] Answer lost, command resent: not run again, ``already done''.
-\item[Scenario-230] Command wrong for current state: refused with reason [2, p.~63].
-\item[Scenario-240] Impossible value: refused with reason [2, p.~62].
-\item[Scenario-250] Dangerous command not armed: refused with reason.
-\item[Scenario-260] Command expired: refused with reason [2, p.~63].
-\item[Scenario-270] Report storage full: ground told how many were lost.
-\item[Scenario-300] Firmware damaged in transfer: refused before the controller
-  [2, p.~63].
-\item[Scenario-310] Firmware not from operator: refused.
-\item[Scenario-320] Firmware below minimum version: refused.
-\item[Scenario-330] Firmware for another controller: refused [2, p.~63].
-\item[Scenario-340] Power lost during firmware write: previous firmware runs; retry
-  possible [2, p.~63].
-\item[Scenario-350] New firmware hangs: back to previous, unaided.
-\item[Scenario-360] New firmware restart loop: back to previous after \tbd{bootcount}
-  starts [2, p.~64].
-\item[Scenario-370] New firmware never judged good: back to previous.
-\item[Scenario-380] Previous firmware also bad: last-resort firmware runs.
-\item[Scenario-390] Operator cancels update: known-good firmware left running.
-\item[Scenario-400] Bit error in stored firmware: detected, not run \tbr{bitflip}
-  [2, p.~63].
-\item[Scenario-410] No firmware can run: restored through the reprogramming link
-  [2, p.~63].
-\item[Scenario-500] One data-link connection fails: everything continues on the
-  other; reported.
-\item[Scenario-510] Both data-link connections fail: controller keeps working; loss
-  reported; reprogramming link still usable \tbr{bothlinks}.
-\item[Scenario-520] Controller silent: noticed, recovery tried, recorded
+\item[Scenario-200] The radio link is lost during a firmware upload. The upload
+  resumes at the next contact from where it stopped.
+\item[Scenario-210] Report storage fills during a long gap between contacts. At
+  the next contact, the ground is told how many reports were lost.
+\end{description}
+
+\medskip
+\needspace{4\baselineskip}
+\noindent\textbf{Operator errors and unauthorized commands}
+\begin{description}[leftmargin=3cm]
+\item[Scenario-300] A command not from the operator, or an old command sent
+  again, arrives. It is refused and logged [2, p.~62].
+\item[Scenario-310] A command not allowed in the current mode arrives, for
+  example ``switch'' when no new firmware has arrived. It is refused with the
+  reason [2, p.~63].
+\item[Scenario-320] A command with impossible values arrives. It is refused with
+  the reason [2, p.~62].
+\item[Scenario-330] A dangerous command arrives without being armed. It is
+  refused with the reason.
+\item[Scenario-340] A command arrives after its expiry. It is refused with the
+  reason [2, p.~63].
+\item[Scenario-350] An answer is lost and the operator sends the command again.
+  It is not run a second time; the answer is ``already done''.
+\item[Scenario-360] Firmware built for a different controller is uploaded. It is
+  refused before it is installed [2, p.~63].
+\end{description}
+
+\medskip
+\needspace{4\baselineskip}
+\noindent\textbf{Firmware update failures}
+\begin{description}[leftmargin=3cm]
+\item[Scenario-400] Firmware is damaged in transfer. The onboard computer refuses
+  it before it reaches the controller [2, p.~63].
+\item[Scenario-410] Firmware not released by the operator arrives. It is
+  refused.
+\item[Scenario-420] Firmware older than the minimum version arrives. It is
+  refused.
+\item[Scenario-430] The new firmware hangs during TRIAL. The controller returns
+  to its previous firmware without outside help.
+\item[Scenario-440] The new firmware restarts over and over. After
+  \tbd{bootcount} failed starts, the controller returns to its previous
+  firmware [2, p.~64].
+\item[Scenario-450] The new firmware runs but is never judged good. After the
+  trial time, the controller returns to its previous firmware.
+\item[Scenario-460] The previous firmware is also unusable. The controller runs
+  its last-resort firmware.
+\item[Scenario-470] The operator cancels an update in progress. The update stops;
+  working firmware is left running.
+\item[Scenario-480] No firmware can run. The onboard computer restores the
+  controller through the reprogramming link [2, p.~63].
+\end{description}
+
+\medskip
+\needspace{4\baselineskip}
+\noindent\textbf{Equipment failures}
+\begin{description}[leftmargin=3cm]
+\item[Scenario-500] One data-link connection fails. Everything continues on the
+  other, and the failure is reported.
+\item[Scenario-510] Both data-link connections fail. The controller keeps
+  working on its current firmware, the loss is reported, and the
+  reprogramming link is still usable \tbr{bothlinks}.
+\item[Scenario-520] The controller goes silent. The onboard computer notices,
+  tries to bring it back, and records what it did \tbr{faults}.
+\item[Scenario-530] A program on the onboard computer crashes. It restarts and
+  resumes any update in progress; the controller is not affected
   \tbr{faults}.
-\item[Scenario-530] Onboard program crash: it restarts and resumes any update; the
-  controller is unaffected \tbr{faults}.
+\end{description}
+
+\medskip
+\needspace{4\baselineskip}
+\noindent\textbf{Unexpected environmental conditions} (from Section~4.0)
+\begin{description}[leftmargin=3cm]
+\item[Scenario-600] Power is lost while the controller's firmware is being
+  written. When power returns, the controller runs its previous firmware, and
+  the update can be repeated [2, p.~63].
+\item[Scenario-610] A radiation bit error changes stored firmware. The
+  controller detects it before starting that firmware and does not run it
+  \tbr{bitflip} [2, p.~63].
+\item[Scenario-620] A radiation bit error hits the memory the controller is
+  running from. The controller may crash; it restarts on its own and resumes
+  operation [2, p.~63].
 \end{description}
 
 % ===========================================================================

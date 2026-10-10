@@ -240,25 +240,29 @@ NASA-HDBK-1009A, 12 March 2025.
 \label{sec:ngo}
 \begin{description}
 \item[NEED] A controller that nobody can reach must stay operable, observable
-  and correctable for its whole life. The three properties are three areas a
-  space software specification must cover: operation, observability, and
-  maintenance including in-flight modification over the specified lifetime
-  [3, Annex~B, items 5.11--5.13, p.~113].
+  and correctable for its whole life.
 \item[G-1] \textbf{Operability:} the controller keeps running and acts on the
-  operator's commands. Capabilities Command, Fault.
+  operator's commands.
+  \begin{itemize}[leftmargin=1.2cm]
+  \item[\textbf{O-1}] Every valid operator command is executed. Valid means from the
+    operator, allowed in the current state, with possible values, and not
+    expired.
+  \item[\textbf{O-2}] Firmware and commands not from the operator are never acted on.
+  \item[\textbf{O-3}] With one data-link connection lost, commands, telemetry and
+    updates continue.
+  \item[\textbf{O-4}] No fault found between contacts goes unreported \tbr{faults}.
+  \end{itemize}
 \item[G-2] \textbf{Observability:} the ground can know what the System is
-  doing, how healthy it is, and what happened between contacts. Capabilities
-  Telemetry.
+  doing, how healthy it is, and what happened between contacts.
+  \begin{itemize}[leftmargin=1.2cm]
+  \item[\textbf{O-5}] No report is lost without the ground being told.
+  \end{itemize}
 \item[G-3] \textbf{Correctability:} the controller's firmware can be replaced
-  for its whole life without losing the controller. Capabilities Update.
-\item[G-4] No update, and no failure during one, leaves the controller without
-  firmware it can run.
-\item[G-5] The System acts only on firmware and commands from the operator.
-\item[G-6] Losing one connection of the data link stops nothing.
-\item[G-7] Between contacts the System handles faults alone and reports them
-  later \tbr{faults}.
-\item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
-  recorded.
+  for its whole life without losing the controller.
+  \begin{itemize}[leftmargin=1.2cm]
+  \item[\textbf{O-6}] No update, even one interrupted by a single fault, leaves the
+    controller without runnable firmware.
+  \end{itemize}
 \end{description}
 
 \subsection{Overview of System and Key Elements}
@@ -364,6 +368,7 @@ deployment.
 
 % ===========================================================================
 \section{Operational Scenarios}
+Every scenario below is demonstrated on hardware and recorded.
 
 \subsection{Nominal Conditions}
 \begin{description}[leftmargin=3cm]
@@ -474,7 +479,7 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \begin{description}
 \tbritem{telemetry}{Telemetry-1, Telemetry-2, Telemetry-3, Telemetry-5 as written (shown 10 Oct, not yet
   accepted).}
-\tbritem{faults}{G-7, Fault-1 to Fault-4 as written (shown 10 Oct, not yet
+\tbritem{faults}{O-4 and Fault-1 to Fault-4 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}
 \tbritem{obcupdate}{Onboard computer's own update out of scope.}

@@ -56,20 +56,21 @@ changes it: NASA applies these processes "iteratively and recursively"
 
 ## How We Use AI
 
-AI can now do the analysis at every phase. What it cannot do is be answerable
-for the result: every cell in the last column is a risk a person accepts.
+AI performs the analysis across every phase of development. What it cannot do
+is assume accountability: **every entry in the right-hand column represents a
+risk explicitly accepted by a human engineer.**
 
-| Phase | The question we ask | How AI helps answer it | The risk the engineer accepts |
+| Phase | The Question We Ask | How AI Helps Answer It | The Risk the Engineer Accepts |
 |---|---|---|---|
-| 1. ConOps | Why do we need this system, and how will it be used, normally and when it fails? | Asks the questions, proposes failure scenarios from NASA's hazard-cause list, writes the document in NASA's outline. | The need, every capability and every scenario. |
-| 2. Software Classification | How bad is each part's worst failure, and how much rigor does it need? | Matches each part against the class definitions in NPR 7150.2D, quoting the clause. | Each class, and so the rigor each part gets. |
-| 3. Hazard Analysis | What can go wrong, and what stops it? | Drafts the fault tree and failure-mode table. Walks NASA's hazard-cause list item by item. Asks what could defeat each protection and what fails with it. A separate AI session then hunts for gaps. | The hazard list and each severity. |
-| 4. Requirements | What exactly must the system do? | Turns each hazard and scenario into numbered, single-claim statements. Checks them against NASA's requirement-writing checklist. Traces each to its source. | Every requirement and every number. |
-| 5. Architecture | Which design meets the requirements with the fewest ways to fail? | Lays out the alternatives as a trade study. Reads datasheets and quotes hardware facts with page numbers. | The chosen design over the alternatives. |
-| 6. Interfaces | What crosses each boundary, byte by byte? | Drafts the message layouts and the compile-time size checks that enforce them. | The interfaces, before any code. |
-| 7. Verification Plan | How will each requirement be proven? | Proposes a method and a pass criterion per requirement. Flags any requirement that cannot be verified. | The plan, including any requirement left unverified. |
-| 8. Implementation | Does the code do what the requirements say, and nothing else? | Writes one small subsystem at a time, from its requirements and interface, under the coding rules it is given. States the reason for each decision in comments. Drafts the tests separately from the code. | Splits the system into the smallest subsystems. Chooses the coding rules (e.g. JPL's "Power of Ten"). Evaluates each subsystem against them, then accepts it or sends it back. |
-| 9. Verification | Does the system work on hardware, including under injected faults? | Writes the test and fault-injection scripts. Tabulates the results. | The results as evidence, or not. |
+| **1. ConOps** | Why do we need this system, and how will it be used normally and during failures? | Generates operational questions, proposes failure scenarios using NASA hazard lists, and drafts the document in NASA's standard outline. | Accepts the system need, all defining capabilities, and every failure scenario. |
+| **2. Software Classification** | How severe is each component's worst-case failure, and how much rigor does it require? | Maps system components against NPR 7150.2D class definitions and cites the relevant clauses. | Formally assigns software classes and commits to the required engineering rigor. |
+| **3. Hazard Analysis** | What can go wrong, and what mechanisms prevent it? | Drafts fault trees and failure-mode tables by evaluating NASA's hazard-cause lists. A separate AI session audits for gaps, protection defeats, and common-cause failures. | Accepts the hazard list, severity classifications, and mitigation completeness. |
+| **4. Requirements** | What exact, unambiguous rules must the system obey? | Converts hazards and scenarios into numbered, single-claim statements, checks them against NASA checklists, and traces them to sources. | Approves every requirement statement, threshold, and numerical value. |
+| **5. Architecture** | Which design satisfies requirements with the fewest single points of failure? | Constructs trade studies evaluating design alternatives using page-cited datasheet specs. | Selects and defends the chosen architecture over all alternatives. |
+| **6. Interfaces** | What crosses each boundary, byte by byte? | Drafts message layouts and writes the compile-time size checks that enforce them. | Approves interface specifications prior to writing implementation code. |
+| **7. Verification Plan** | How will each requirement be proven? | Maps each requirement to a verification method and pass criterion, flagging any requirement that cannot be verified. | Accepts the verification plan, including the risk of any requirement left unverified. |
+| **8. Implementation** | Does the code do what requirements specify, and nothing else? | Implements one small subsystem at a time from its specs and the coding rules it is given (e.g., JPL's *The Power of Ten*), commenting the rationale. Drafts unit tests separately from the code. | Splits the system into the smallest subsystems, establishes coding standards, evaluates each subsystem against them, and approves or rejects generated code. |
+| **9. Verification** | Does the system perform on hardware, including under injected faults? | Generates test and fault-injection scripts, then tabulates execution results. | Verifies test execution on physical hardware and accepts the results as valid evidence. |
 
 At every phase:
 

@@ -116,7 +116,7 @@ software updates [4, Lesson 0559, p.~199].
 \item[C-1] The ground cannot talk to the controller directly. Every command,
   report, and firmware image passes through the onboard computer.
 \item[C-2] All software is built to NASA's software engineering requirements.
-  Rigor per part is set by its software class [5, \S3.5.1, p.~24; App.~C].
+  Rigor per part is set by its software class [5, Sec.~3.5.1, p.~24; App.~C].
 \item[C-3] One engineer builds and checks the System. No independent team
   reviews the work.
 \item[C-4] The System runs on commercial development boards, not on spacecraft
@@ -151,7 +151,7 @@ App.~C.\par}
 The System comprises two spatially separated operational segments. The
 \textbf{ground segment} on Earth includes the operator, the mission operations
 center running ground software, and the ground station antenna
-[6, \S11.2, p.~305]. The \textbf{space segment} in orbit consists of the onboard
+[6, Sec.~11.2, p.~305]. The \textbf{space segment} in orbit consists of the onboard
 computer and the controller, which operate without physical access.
 
 Communication between segments is strictly established via a radio link during
@@ -184,7 +184,7 @@ computer's own software update \tbr{obcupdate}; radio equipment.
 \subsection{Applicable Documents}
 [1] NASA, \emph{NASA Systems Engineering Handbook}, NASA/SP-2016-6105 Rev~2,
 2016. This outline follows its App.~S, pp.~251--253, tailored per its
-\S3.11.1, p.~34: Section~7.0 not applicable; App.~C added for open items per its
+Sec.~3.11.1, p.~34: Section~7.0 not applicable; App.~C added for open items per its
 App.~C, pp.~197--198.
 
 \subsection{Reference Documents}
@@ -201,7 +201,7 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
 
 \noindent [6] NASA, \emph{State-of-the-Art of Small Spacecraft Technology},
 Chapter 11, ``Ground Data Systems and Mission Operations'', 2026 edition.
-Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
+Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
 
 % ===========================================================================
 \section{Description of Envisioned System}
@@ -229,7 +229,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
   recorded.
 \item[N-1] Retired during drafting; now G-7. NASA requires a single need statement
-  [1, \S4.1, p.~49].
+  [1, Sec.~4.1, p.~49].
 \item[N-2] Retired during drafting; now G-6.
 \item[N-3] Retired during drafting; now G-5.
 \end{description}
@@ -239,10 +239,10 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[Operator] Releases firmware, decides commands, reads reports. Works
   through the mission operations center.
 \item[Mission operations center] Runs the ground software: commands the
-  spacecraft and monitors its performance [6, \S11.2, p.~305]. Packages released
+  spacecraft and monitors its performance [6, Sec.~11.2, p.~305]. Packages released
   firmware, checks commands before they are sent, and stores reports.
-\item[Ground station] Antenna and radio that carry the radio link during contacts
-  [6, \S11.2, p.~305].
+\item[Ground station] The antenna and radio that carry the radio link
+  during contacts [6, Sec.~11.2, p.~305].
 \item[Onboard computer] Checks and passes on firmware and commands, stores
   reports, watches and restores the controller.
 \item[Controller] Does its job, reports, keeps known-good firmware to fall back
@@ -315,7 +315,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 % ===========================================================================
 \section{Physical Environment}
 Follows from the situation in which nobody can reach the System. Response legend
-[1, App.~S \S4.0, p.~252]: OPERATE = all functions continue; SURVIVE = functions
+[1, App.~S, p.~252]: OPERATE = all functions continue; SURVIVE = functions
 stop and return when the condition ends.
 
 \begin{tabular}{@{}lll@{}}

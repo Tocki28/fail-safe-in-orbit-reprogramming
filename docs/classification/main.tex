@@ -174,10 +174,32 @@ The values below are not yet known.
 
 \clearpage
 \section{Requirements Mapping Matrix}
-Every requirement of NPR 7150.2D marked for an item's class is complied with
-[1, App.~C, pp.~56--78], except those tailored out below
-[1, Sec.~3.1.12, p.~22]. The tailoring was decided by the author on 10 October
-2026 and is revisited at each later phase.
+NPR 7150.2D sets 100 rules for how software is built, each marked for the
+classes it applies to [1, App.~C, pp.~56--78]. The project intends to follow
+every rule that applies to an item's class, except the 20 tailored out in the
+second table below [1, Sec.~3.1.12, p.~22]. The author decided this
+tailoring on 10 October 2026; it is revisited at each later phase.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Class & Rules that apply & Tailored out & Followed \\
+\midrule
+B & 100 & 20 & 80 \\
+C & 92 & 15 & 77 \\
+D & 64 & 11 & 53 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Followed by the Class B items} (by NASA's rule number, SWE):
+013, 016, 017, 018, 020, 023, 024, 027, 033, 034, 036, 037, 050, 051, 052, 053,
+054, 055, 057, 058, 060, 061, 062, 063, 065, 066, 068, 071, 073, 075, 077, 079,
+080, 081, 082, 083, 084, 085, 086, 087, 088, 089, 090, 093, 121, 125, 134, 135,
+136, 139, 146, 147, 154, 156, 157, 159, 176, 184, 185, 186, 187, 189, 190, 191,
+192, 193, 194, 195, 196, 199, 200, 201, 202, 203, 204, 207, 210, 211, 219, 220.
+The Class C and D items follow those of these rules marked for their class.
 
 \begin{table}[H]
 \centering
@@ -211,7 +233,8 @@ SWE & Requirement & Reason \\
 \end{table}
 
 \noindent\textbf{Legend: reason}
-\begin{description}[leftmargin=3.9cm]
+{\small
+\begin{description}[leftmargin=3.6cm]
 \item[\mbox{NOT NASA}] The System is not a NASA program or project; there is no NASA
   Center, catalogue or sponsoring organisation.
 \item[\mbox{NO SUPPLIER}] The engineer develops all software; there is no separate
@@ -223,6 +246,6 @@ SWE & Requirement & Reason \\
 \item[\mbox{NO BUDGET}] The project has no development budget to estimate.
 \item[\mbox{BENCH ONLY}] The System is demonstrated on a bench, not qualified for
   flight (ConOps constraint C-4).
-\end{description}
+\end{description}}
 
 \end{document}

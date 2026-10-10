@@ -170,15 +170,17 @@ failures are modelled and named [4,~pp.~23--24].
     onboard clock;
   \item[\textit{Power}] lost at any moment (A-2);
   \item[\textit{Hardware}] a failed data-link connection or reprogramming link;
-  \item[\textit{Operator}] a wrong or mistimed command (A-4).
+  \item[\textit{Operator}] a wrong or mistimed command (A-4);
+  \item[\textit{Security}] the means of proving origin disclosed.
   \end{itemize}
   Physical tampering is excluded: nobody can reach the spacecraft (A-1).
 \item \textbf{Operator errors:} each counts as a wrong or mistimed command.
 \item \textbf{Counting failures:} one cause that disables several controls at
   once counts as one failure.
-\item \textbf{Fault tolerance:} no two failures together may cause a
-  catastrophic hazard, and no single failure may cause a critical one
-  [3,~Sec.~3.1] \tbr{credible}.
+\item \textbf{Fault tolerance:} the number of failures that must happen
+  together before a hazard can occur. A catastrophic hazard must need at least
+  three; a critical hazard at least two [3,~Sec.~3.1] \tbr{credible}. Each
+  hazard is checked by finding the smallest set of failures that causes it.
 \item \textbf{Severity:} rated on the worst effect with no control working, so
   no control lowers a hazard's severity \tbr{severity}.
 \item \textbf{Likelihood:} not rated; it depends on the design
@@ -264,59 +266,67 @@ fails and when [4,~p.~50].
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
-% Event tops at 0.5, -1.87, -4.15, -6.52. Below each event: its ID box, then
-% its gate or symbol. Lines leave a gate's base and meet a bus above the row.
-\node[ev, anchor=north, text width=4.6cm] (T) at (1.66,0.5) {H-1: after a restart, no firmware on the controller can run, and the restore fails};
+% Event tops at 0.5, -1.87, -4.15, -6.52, -8.89. Below each event: its ID box,
+% then its gate or symbol. Lines leave a gate's base and meet a bus above the row.
+\node[ev, anchor=north, text width=4.6cm] (T) at (2.82,0.5) {H-1: after a restart, no firmware on the controller can run, and none can be restored};
 \node[idbox, below=0pt of T] (iT) {G01};
-\pic at (iT.south) {andgate};
-\node[ev, anchor=north, text width=3.4cm] (E1) at (-2.375,-1.87) {No firmware image starts when the controller restarts};
-\node[ev, anchor=north, text width=3.6cm] (E2) at (5.7,-1.87) {The restore through the reprogramming link fails when it is needed};
-\coordinate (g1) at ($(iT.south)+(0,-0.7)$);
-\draw (g1) -- (g1 |- 0,-1.72) -| (E1.north);
-\draw (g1 |- 0,-1.72) -| (E2.north);
-\node[idbox, below=0pt of E1] (iE1) {G02};
-\node[idbox, below=0pt of E2] (iE2) {G03};
+\pic at (iT.south) {orgate};
+\coordinate (g1) at ($(iT.south)+(0,-0.6)$);
+\node[ev, anchor=north, text width=3.4cm] (EA) at (-1.31,-1.87) {No image starts on its own, and the restore fails};
+\node[ev, anchor=north, text width=4.4cm] (E4) at (6.95,-1.87) {One cause stops every image, including the restored one};
+\draw (g1) -- (g1 |- 0,-1.72) -| (EA.north);
+\draw (g1 |- 0,-1.72) -| (E4.north);
+\node[idbox, below=0pt of EA] (iEA) {G02};
+\node[idbox, below=0pt of E4] (iE4) {G06};
+\pic at (iEA.south) {andgate};
+\pic at (iE4.south) {orgate};
+\coordinate (g2) at ($(iEA.south)+(0,-0.7)$);
+\coordinate (g6) at ($(iE4.south)+(0,-0.6)$);
+% Second row.
+\node[ev, anchor=north, text width=3.4cm] (E1) at (-4.325,-4.15) {No firmware image starts when the controller restarts};
+\node[ev, anchor=north, text width=3.6cm] (E2) at (1.7,-4.15) {The restore through the reprogramming link fails when it is needed};
+\draw (g2) -- (g2 |- 0,-4.0) -| (E1.north);
+\draw (g2 |- 0,-4.0) -| (E2.north);
+\foreach \x/\t/\n in {4.75/Start-up code fails/B04,
+    6.95/Data kept over restarts stops every image/B05,
+    9.15/Same defect in every image/B07} {
+  \node[ev, anchor=north, text width=1.95cm] (C) at (\x,-4.15) {\t};
+  \node[idbox, below=0pt of C] (iC) {\n};
+  \node[undev, below=0pt of iC] {};
+  \draw (g6) -- (g6 |- 0,-4.0) -| (C.north);
+}
+\node[idbox, below=0pt of E1] (iE1) {G03};
+\node[idbox, below=0pt of E2] (iE2) {G04};
 \pic at (iE1.south) {orgate};
 \pic at (iE2.south) {orgate};
-% Two ways no image starts.
-\node[ev, anchor=north, text width=2.6cm] (E3) at (-5.35,-4.15) {Each image fails on its own at the restart};
-\node[ev, anchor=north, text width=2.6cm] (E4) at (0.6,-4.15) {One cause stops every image at the restart};
-\coordinate (g2) at ($(iE1.south)+(0,-0.6)$);
-\draw (g2) -- (g2 |- 0,-4.0) -| (E3.north);
-\draw (g2 |- 0,-4.0) -| (E4.north);
-% Why the restore fails.
-\coordinate (g3) at ($(iE2.south)+(0,-0.6)$);
-\foreach \x/\t/\s/\n in {3.3/Reprogramming link fails (hardware)/basic/B08,
-    5.7/Onboard computer misses the need/undev/B09,
-    8.1/Its known-good copy is damaged/undev/B10} {
-  \node[ev, anchor=north, text width=2.15cm] (R) at (\x,-4.15) {\t};
+\coordinate (g3) at ($(iE1.south)+(0,-0.6)$);
+\coordinate (g4) at ($(iE2.south)+(0,-0.6)$);
+% Third row.
+\node[ev, anchor=north, text width=2.6cm] (E3) at (-5.6,-6.52) {Each image fails on its own at the restart};
+\draw (g3) -- (g3 |- 0,-6.37) -| (E3.north);
+\node[ev, anchor=north, text width=1.95cm] (B6) at (-3.05,-6.52) {Restart loop never reaches the fall-back};
+\node[idbox, below=0pt of B6] (iB6) {B06};
+\node[undev, below=0pt of iB6] {};
+\draw (g3 |- 0,-6.37) -| (B6.north);
+\foreach \x/\t/\s/\n in {-0.65/Reprogramming link fails (hardware)/basic/B08,
+    1.7/Onboard computer misses the need/undev/B09,
+    4.05/Its known-good copy is damaged/undev/B10} {
+  \node[ev, anchor=north, text width=2.15cm] (R) at (\x,-6.52) {\t};
   \node[idbox, below=0pt of R] (iR) {\n};
   \node[\s, below=0pt of iR] {};
-  \draw (g3) -- (g3 |- 0,-4.0) -| (R.north);
+  \draw (g4) -- (g4 |- 0,-6.37) -| (R.north);
 }
-\node[idbox, below=0pt of E3] (iE3) {G04};
-\node[idbox, below=0pt of E4] (iE4) {G05};
+\node[idbox, below=0pt of E3] (iE3) {G05};
 \pic at (iE3.south) {andgate};
-\pic at (iE4.south) {orgate};
-% Primary events.
-\coordinate (g4) at ($(iE3.south)+(0,-0.7)$);
-\foreach \x/\t/\n in {-7.6/Current firmware fails to start/B01,
-    -5.35/Previous firmware fails to start/B02,
-    -3.1/Last-resort firmware fails to start/B03} {
-  \node[ev, anchor=north, text width=1.95cm] (A) at (\x,-6.52) {\t};
+\coordinate (g5) at ($(iE3.south)+(0,-0.7)$);
+% Fourth row.
+\foreach \x/\t/\n in {-7.8/Current firmware fails to start/B01,
+    -5.6/Previous firmware fails to start/B02,
+    -3.4/Last-resort firmware fails to start/B03} {
+  \node[ev, anchor=north, text width=1.95cm] (A) at (\x,-8.89) {\t};
   \node[idbox, below=0pt of A] (iA) {\n};
   \node[undev, below=0pt of iA] {};
-  \draw (g4) -- (g4 |- 0,-6.37) -| (A.north);
-}
-\coordinate (g5) at ($(iE4.south)+(0,-0.6)$);
-\foreach \x/\t/\n in {-0.7/Start-up code fails/B04,
-    1.55/Data kept over restarts stops every image/B05,
-    3.8/Restart loop never reaches the fall-back/B06,
-    6.05/Same defect in every image/B07} {
-  \node[ev, anchor=north, text width=1.95cm] (B) at (\x,-6.52) {\t};
-  \node[idbox, below=0pt of B] (iB) {\n};
-  \node[undev, below=0pt of iB] {};
-  \draw (g5) -- (g5 |- 0,-6.37) -| (B.north);
+  \draw (g5) -- (g5 |- 0,-8.74) -| (A.north);
 }
 \end{tikzpicture}}
 \caption{Fault tree of H-1. Rectangle: event developed by the gate below it.
@@ -328,11 +338,53 @@ as in [4,~Table~4-1, p.~34] and [4,~Fig.~4-1, p.~33].}
 \end{figure}
 
 A minimal cut set is the smallest combination of primary events that causes
-the top event [4,~Sec.~1.3, p.~3]. H-1 has two kinds: four events (B01, B02 and
-B03, with one of B08 to B10) and two events (one of B04 to B07, with one of B08
-to B10). Two failures are credible for a catastrophic hazard (Section~3.0), so
-B04 to B07 are the weakest point of H-1: one event defeats three layers of
-firmware.
+the top event [4,~Sec.~1.3, p.~3]. H-1 has three: one event (B04, B05 or B07);
+two events (B06 with one of B08 to B10); four events (B01, B02 and B03 with
+one of B08 to B10). Until the design shows otherwise, B04, B05 and B07 also
+stop the image the restore puts back, so each causes H-1 alone.
+
+The table below gives the same count for every catastrophic and critical
+hazard, with the proposed controls working.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Hazard & Severity & Needed & Fewest & Meets rule \\
+\midrule
+H-1  & CATASTROPHIC & 3 & 1 & NO \\
+H-2  & CATASTROPHIC & 3 & 1 & NO \\
+H-3  & CATASTROPHIC & 3 & 1 & NO \\
+H-4  & CATASTROPHIC & 3 & 1 & NO \\
+H-5  & CATASTROPHIC & 3 & 1 & NO \\
+H-6  & CRITICAL & 2 & 1 & NO \\
+H-7  & CRITICAL & 2 & 2 & YES \\
+H-8  & CRITICAL & 2 & 1 & NO \\
+H-9  & CRITICAL & 2 & 1 & NO \\
+H-10 & CRITICAL & 2 & 2 & YES \\
+H-11 & CRITICAL & 2 & 2 & YES \\
+H-12 & CRITICAL & 2 & 2 & YES \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Legend.} Needed: failures the fault tolerance rule requires
+before the hazard can occur (Section~3.0). Fewest: failures that cause it now.
+Meets rule: YES when Fewest is at least Needed.
+
+\medskip
+\noindent The single failures that break the rule:
+\begin{itemize}
+\item H-1: one cause that stops every image, including the restored one.
+\item H-2 and H-5: the means of proving origin is disclosed.
+\item H-3: a defect in the onboard computer's update path, which cannot be
+  corrected.
+\item H-4: one software defect that cuts both data-link connections.
+\item H-6: a wrong onboard clock, or a bit error in a held command after its
+  check.
+\item H-8: the same defect in every image.
+\item H-9: a wrong onboard clock.
+\end{itemize}
 
 % ===========================================================================
 \section{Bottom-Up Analysis}
@@ -437,7 +489,8 @@ last-resort firmware that updates never replace (Scenario-460)\ver{TEST};
 software (Scenario-480)\ver{TEST}; (6)~stored firmware and the reprogramming
 link are checked between uses\ver{TEST}.
 \field{Fails if} The image check passes damaged firmware; the failed-start
-count is lost at a restart; the last-resort firmware shares the defect.
+count is lost at a restart; the last-resort firmware, or the image the restore
+puts back, shares the defect.
 \fieldin{Common causes} Shared image code; data kept over restarts; one power
 supply; radiation; one set of build tools; fixed onboard computer software.
 
@@ -718,8 +771,8 @@ The values below are not yet known.
 \begin{description}
 \tbritem{severity}{Severity rated as the worst credible effect with no control
   working, and the meaning of each severity category for the System.}
-\tbritem{credible}{No two failures together may cause a catastrophic hazard,
-  and no single failure may cause a critical one.}
+\tbritem{credible}{A catastrophic hazard must need at least three failures
+  together; a critical hazard at least two.}
 \tbritem{hazards}{The hazard list and the severity of each hazard.}
 \tbritem{safety}{The safety-critical designation of each software item.}
 \end{description}

@@ -4,7 +4,6 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{tikz}
-\usepackage{fontawesome5}
 \usetikzlibrary{arrows.meta}
 \usepackage{graphicx}
 \usepackage{float}
@@ -164,47 +163,12 @@ space segment works alone. Inside the spacecraft, the onboard computer reaches
 the controller over a redundant internal link (I-2) and can rewrite it through
 the recovery path (I-3). Figure~\ref{fig:segments} shows the layout.
 
-\begin{figure}[tbp]
+\begin{figure}[H]
 \centering
-\begin{tikzpicture}[
-  box/.style={draw, rounded corners=2pt, fill=white, minimum width=2.2cm, minimum height=1.2cm, align=center},
-  icon/.style={inner sep=1pt},
-  >={Stealth[length=2.2mm]}]
-\useasboundingbox (0,-0.6) rectangle (16,7.4);
-% Earth
-\begin{scope}
-\clip (0,-0.6) rectangle (16,0.3);
-\fill[black!12] (8,-40) circle (40.3);
-\end{scope}
-\node[font=\footnotesize, anchor=east] at (15.8,-0.25) {Earth};
-% Ground segment
-\node[icon, font=\fontsize{24}{24}\selectfont] (op) at (1.6,1.15) {\faUser};
-\node[font=\small, anchor=north] at ([yshift=-0.5mm]op.south) {Operator};
-\node[icon, font=\fontsize{32}{32}\selectfont] (gs) at (4.6,1.25) {\faSatelliteDish};
-\node[font=\small, anchor=north] at ([yshift=-0.5mm]gs.south) {Ground station};
-\draw (op.east) -- (gs.west);
-\node[font=\small\bfseries, anchor=west] at (0.1,2.45) {Ground segment (Earth)};
-% Orbit and spacecraft
-\draw[gray, dashed] (0,4.4) .. controls (4.5,7.3) .. (9.2,5.6);
-\node[gray, font=\footnotesize] at (0.9,5.25) {orbit};
-\node[icon, font=\fontsize{36}{36}\selectfont] (sat) at (5.7,5.9) {\faSatellite};
-\node[font=\small\bfseries, anchor=south] at (4.6,6.85) {Space segment (in orbit, out of reach)};
-% Radio link across the gap
-\draw[<->, dashed, thick] (gs.north east) -- node[pos=0.5, left, align=right, font=\small, xshift=-1mm]{I-1 ground link\\radio, long distance\\contact windows only} (sat.south west);
-% Inside the spacecraft
-\draw[gray] (sat.north east) -- (9.4,6.6);
-\draw[gray] (sat.south east) -- (9.4,1.8);
-\draw[dashed, rounded corners=4pt, fill=white] (9.4,1.8) rectangle (16,6.6);
-\node[font=\small\bfseries, anchor=north west] at (9.5,6.55) {Inside the spacecraft};
-\node[box] (obc) at (10.8,4.6) {{\Large\faServer}\\[1mm]Onboard\\computer};
-\node[box] (ctl) at (14.7,4.6) {{\Large\faMicrochip}\\[1mm]Controller};
-\draw[<->] ([yshift=2mm]obc.east) -- node[above, font=\footnotesize]{I-2} ([yshift=2mm]ctl.west);
-\draw[<->] ([yshift=-2mm]obc.east) -- node[below, font=\footnotesize]{redundant} ([yshift=-2mm]ctl.west);
-\draw[->, thick] (obc.south) to[out=-30, in=-150] node[below, font=\small]{I-3 recovery path} (ctl.south);
-\end{tikzpicture}
+\includegraphics[width=\textwidth,trim=0 37 0 0,clip]{fig-segments.pdf}
 \caption{Ground and space segments. They are far apart and joined only by radio
 during contact windows. I-3 works with no firmware running on the controller.
-Icons: Font Awesome 5 Free (SIL OFL 1.1).}
+Editable source: \texttt{fig-segments.drawio}.}
 \label{fig:segments}
 \end{figure}
 

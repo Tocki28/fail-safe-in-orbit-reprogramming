@@ -1,0 +1,112 @@
+<mxfile host="drawio">
+  <diagram id="segments" name="Figure 1 - Ground and space segments">
+    <mxGraphModel dx="640" dy="420" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="640" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Earth: a wide ellipse whose lower half is hidden by a white band -->
+        <mxCell id="earth" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="0" y="330" width="640" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="earthmask" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="-5" y="368" width="650" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="earthlabel" value="Earth" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
+          <mxGeometry x="540" y="345" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Orbit -->
+        <mxCell id="orbit" value="" style="curved=1;endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="0" y="175" as="sourcePoint" />
+            <mxPoint x="420" y="100" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="120" y="100" />
+              <mxPoint x="270" y="68" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="orbitlabel" value="orbit" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#888888;" vertex="1" parent="1">
+          <mxGeometry x="10" y="125" width="50" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Call-out lines from the satellite to the inside view -->
+        <mxCell id="zoom1" value="" style="endArrow=none;html=1;strokeColor=#AAAAAA;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="45" as="sourcePoint" />
+            <mxPoint x="370" y="55" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="zoom2" value="" style="endArrow=none;html=1;strokeColor=#AAAAAA;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="300" y="98" as="sourcePoint" />
+            <mxPoint x="370" y="255" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Space segment -->
+        <mxCell id="spacelabel" value="&lt;b&gt;Space segment&lt;/b&gt; (in orbit, out of reach)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="140" y="0" width="320" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="sat" value="" style="shape=mxgraph.networks.satellite;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="235" y="35" width="70" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Inside the spacecraft -->
+        <mxCell id="inside" value="&lt;b&gt;Inside the spacecraft&lt;/b&gt;" style="rounded=1;arcSize=4;dashed=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="370" y="55" width="268" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="obc" value="Onboard&lt;br&gt;computer" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="385" y="110" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="ctl" value="Controller" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="550" y="110" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="i2a" value="I-2" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;labelBackgroundColor=none;fontSize=13;endSize=5;startSize=5;" edge="1" parent="1" source="obc" target="ctl">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="i2b" value="redundant" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;labelBackgroundColor=none;fontSize=12;endSize=5;startSize=5;" edge="1" parent="1" source="obc" target="ctl">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint y="10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="i3" value="" style="curved=1;endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeWidth=2;labelBackgroundColor=#FFFFFF;fontSize=13;endSize=6;" edge="1" parent="1" source="obc" target="ctl">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="508" y="212" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <mxCell id="i3label" value="I-3 recovery path" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="448" y="190" width="120" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Ground segment -->
+        <mxCell id="groundlabel" value="&lt;b&gt;Ground segment&lt;/b&gt; (Earth)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="10" y="208" width="220" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="op" value="Operator" style="shape=mxgraph.networks.user_male;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="35" y="245" width="34" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="dish" value="Ground station" style="shape=mxgraph.networks.satellite_dish;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="135" y="240" width="55" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="opdish" value="" style="endArrow=none;html=1;" edge="1" parent="1" source="op" target="dish">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- I-1 radio link across the gap -->
+        <mxCell id="i1" value="" style="endArrow=classic;startArrow=classic;html=1;dashed=1;strokeWidth=2;endSize=6;startSize=6;" edge="1" parent="1" source="dish" target="sat">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="i1label" value="I-1 ground link&lt;br&gt;radio, long distance&lt;br&gt;contact windows only" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="212" y="196" width="150" height="58" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

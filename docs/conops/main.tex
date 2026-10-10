@@ -267,18 +267,19 @@ NASA-HDBK-1009A, 12 March 2025.
 
 \subsection{Overview of System and Key Elements}
 \begin{description}[leftmargin=4.4cm]
-\item[Operator] Releases firmware, decides commands, reads reports. Works
-  through the mission operations center.
-\item[Mission operations center] Runs the ground software: commands the
-  spacecraft and monitors its performance [6, Sec.~11.2, p.~305]. Packages released
-  firmware, checks commands before they are sent, and stores reports.
-\item[Ground station] The antenna and radio that carry the radio link
-  during contacts [6, Sec.~11.2, p.~305].
-\item[Onboard computer] Checks and passes on firmware and commands, stores
-  reports, watches and restores the controller.
-\item[Controller] Runs its function, reports, keeps known-good firmware to fall back
-  on.
+\item[Operator] The user. Decides and sends commands, releases new firmware,
+  and reads the reports.
+\item[Ground software] In the mission operations center. Turns the operator's
+  decisions into commands and firmware ready to send, checks them before they
+  leave, and keeps every report received.
+\item[Onboard computer] Checks commands and firmware and passes them to the
+  controller, stores the controller's reports between contacts, watches the
+  controller, and restores it when its firmware cannot run.
+\item[Controller] Runs its firmware, acts on commands, reports its state, and
+  returns to working firmware on its own when new firmware fails.
 \end{description}
+The ground station's radio equipment and the spacecraft power supply are
+outside the System; it uses them as given.
 
 \subsection{Interfaces}
 \begin{description}[leftmargin=4.4cm]

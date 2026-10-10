@@ -44,7 +44,11 @@
 \newtotcounter{tbd}
 \newtotcounter{tbr}
 \newtotcounter{tbropen}
-\newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
+\newtotcounter{tbdopen}
+\newcommand{\tbditem}[2]{\refstepcounter{tbd}\stepcounter{tbdopen}\label{tbd:#1}\item[TBD-\thetbd] #2}
+\makeatletter
+\newcommand{\tbdresolvedat}[3]{\protected@edef\@currentlabel{#2}\label{tbd:#1}\item[TBD-#2] #3}
+\makeatother
 \newcommand{\tbritem}[2]{\refstepcounter{tbr}\stepcounter{tbropen}\label{tbr:#1}\item[TBR-\thetbr] #2}
 \newcommand{\tbrresolved}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
 \newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
@@ -68,7 +72,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 10 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD, \total{tbropen} TBR (App.~C) \\
+Open items & \total{tbdopen} TBD, \total{tbropen} TBR (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -174,9 +178,29 @@ controller's firmware cannot run.}
 \end{figure}
 
 \subsubsection{System Scope}
-In scope: the controller's job, telemetry, commanding, fault handling between
-contacts, firmware update of the controller. Out of scope: the onboard
-computer's own software update \tbr{obcupdate}; radio equipment.
+\noindent\textbf{In scope}
+\begin{itemize}
+\item \textbf{Commanding:} commands from the ground, through the onboard
+  computer, to the controller.
+\item \textbf{Telemetry:} reports from the controller and the onboard computer
+  back to the ground.
+\item \textbf{Fault handling between contacts:} detecting faults and
+  responding without the ground \tbr{faults}.
+\item \textbf{Firmware updates:} updating and restoring the controller's
+  firmware in flight.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Out of scope}
+\begin{itemize}
+\item \textbf{Controller functions:} what the controller controls in a real
+  mission. A stand-in function runs on the bench, so that updates and
+  telemetry have something to protect and report on.
+\item \textbf{Onboard computer software updates:} updating or restoring the
+  onboard computer's own software \tbr{obcupdate}.
+\item \textbf{Radio equipment:} RF front ends, antennas and ground
+  transceivers, used as given and not developed here.
+\end{itemize}
 
 % ===========================================================================
 \section{Documents}
@@ -214,8 +238,8 @@ Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
   space software specification must cover: operation, observability, and
   maintenance including in-flight modification over the specified lifetime
   [3, Annex~B, items 5.11--5.13, p.~113].
-\item[G-5] Operable: the controller keeps doing its job and acts on the
-  operator's commands. Capabilities JOB, CMD, FM.
+\item[G-5] Operable: the controller keeps running its function and acts on the
+  operator's commands. Capabilities FN, CMD, FM.
 \item[G-6] Observable: the ground can know what the System is doing, how
   healthy it is, and what happened between contacts. Capabilities TM.
 \item[G-7] Correctable: the controller's firmware can be replaced for its whole
@@ -245,7 +269,7 @@ Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
   during contacts [6, Sec.~11.2, p.~305].
 \item[Onboard computer] Checks and passes on firmware and commands, stores
   reports, watches and restores the controller.
-\item[Controller] Does its job, reports, keeps known-good firmware to fall back
+\item[Controller] Runs its function, reports, keeps known-good firmware to fall back
   on.
 \end{description}
 
@@ -275,7 +299,8 @@ Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
 
 \subsection{Proposed Capabilities}
 \begin{description}
-\item[JOB-1] Do the controller's job \tbd{job}.
+\item[FN-1] Run a stand-in function, so that updates and telemetry have
+  something to protect and report on.
 \item[TM-1] Send regular health reports: alive, firmware, uptime, last restart
   reason, temperature \tbr{telemetry}.
 \item[TM-2] Report important events at once \tbr{telemetry}.
@@ -411,7 +436,7 @@ Not applicable: bench demonstration.
 \renewcommand{\thesection}{\Alph{section}}
 
 \section{Acronyms}
-CMD command; ConOps Concept of Operations; FM fault management; MOC mission operations center; OPS operational
+CMD command; ConOps Concept of Operations; FM fault management; FN function; MOC mission operations center; OPS operational
 scenario; TC telecommand; TBD To Be Determined; TBR To Be Resolved; TM telemetry; UPD update;
 VER verification.
 
@@ -437,6 +462,8 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbrresolved{power}{Controller power can drop at any instant, including
   mid-write. Accepted by the author, 10 October 2026.}
 \tbrresolved{operator}{One operator. Accepted by the author, 10 October 2026.}
+\tbdresolvedat{job}{3}{Controller functions: out of scope; a stand-in function
+  runs on the bench. Decided by the author, 10 October 2026.}
 \end{description}
 
 \subsection*{Open}
@@ -453,8 +480,7 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbritem{faultinject}{Test setup can cut power and break one connection.}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{date}{Demonstration date.}
-\tbditem{job}{Controller's job: power switching, heater or sensor; LED
-  stand-in.}
+\stepcounter{tbd}% TBD-3 is resolved; its number is kept
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}
 \tbditem{confirm}{Who judges new firmware good: controller or operator.}
 \tbditem{window}{Contact window length and gap (sourced, or a test parameter).}

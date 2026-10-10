@@ -465,7 +465,8 @@ hazards [2, App.~A, Table~2].
   \item During a contact, the command goes up the radio link.
   \item The onboard computer checks that it is from the operator, new, allowed
     in the current mode, and has possible values. A dangerous command must
-    first be armed by a separate command.
+    first be armed by a separate command; the arm expires if the command does
+    not follow within a set time.
   \item The command is executed. The answers (received, then done with the
     result) go down, and the command and its answers are logged.
   \end{enumerate}
@@ -509,6 +510,8 @@ trigger, then the expected outcome.
   the reason [2, p.~62].
 \item[Scenario-330] A dangerous command arrives without being armed. It is
   refused with the reason.
+\item[Scenario-335] A dangerous command arrives after its arm has expired. It
+  is refused with the reason; the operator must arm again.
 \item[Scenario-340] A command arrives after its expiry. It is refused with the
   reason [2, p.~63].
 \item[Scenario-350] An answer is lost and the operator sends the command again.
@@ -607,7 +610,8 @@ Not applicable: bench demonstration.
 \item[Last-resort] Known-good firmware that updates never replace (golden
   image).
 \item[Switch] The controller stops running old firmware and starts the new.
-\item[Arm] First step of a dangerous command; changes nothing alone.
+\item[Arm] First step of a dangerous command; changes nothing alone and
+  expires after a set time.
 \item[Expiry] Time after which a waiting command is refused.
 \end{description}
 

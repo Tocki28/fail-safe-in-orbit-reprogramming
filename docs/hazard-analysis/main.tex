@@ -115,7 +115,9 @@ into rules; each already names its verification method
 
 The document also decides which software is safety-critical, which the
 Software Classification left open [6,~Sec.~4.0]. It covers the software items
-of that classification in operation [6,~Sec.~3.0].
+of that classification [6,~Sec.~3.0] in operation: all controller modes, during
+and between contacts. Bench and build tools are covered where they can reach
+operation.
 
 % ===========================================================================
 \section{Documents}
@@ -145,27 +147,53 @@ NASA/SP-2016-6105 Rev~2, 2016.
 
 % ===========================================================================
 \section{Ground Rules}
+These rules are set before the analysis: what counts as a failure, which
+failures are included and the fault tolerance required [3,~Sec.~3.1], and how
+failures are modelled and named [4,~pp.~23--24].
+
 \begin{itemize}
-\item \textbf{Hazard:} a state, or a set of conditions, with the potential to
-  cause harm [1,~p.~13].
-\item \textbf{Sources:} the ConOps and the software causes of hazards
-  [1,~App.~A, Table~2, pp.~62--68]. Numbers of objectives (O), assumptions
-  (A), constraints (C), risks (R), capabilities and scenarios refer to the
-  ConOps [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0].
-\item \textbf{Points of view:} functional, operational, software, environment,
-  human and organizational [2,~Sec.~3.2.2]. The physical view follows the
-  architecture.
+\item \textbf{Hazard:} a state with the potential to cause harm [1,~p.~13].
+  Here, harm is losing what the need asks for: a controller that runs, and
+  that the operator can command, observe and correct.
+\item \textbf{Boundary:} the radio equipment and the spacecraft power supply
+  are outside the System [5,~Sec.~1.2.2]. Their failures enter as causes and
+  are not analysed further.
+\item \textbf{Failures included} [1,~App.~A, Table~2, pp.~62--68]:
+  \begin{itemize}[leftmargin=2.0cm, labelwidth=1.8cm, labelsep=0.2cm, align=left]
+  \item[\textit{Software}] a hang, crash, overflow or wrong state in any of the
+    three software items;
+  \item[\textit{Data}] a message corrupted, lost, repeated or late on any link;
+    a full buffer;
+  \item[\textit{Memory}] a write cut short by power loss; a bit flipped by
+    radiation (A-5); a stored value that wrongly survives a restart;
+  \item[\textit{Timing}] a watchdog reset; a restart loop; a wrong or reset
+    onboard clock;
+  \item[\textit{Power}] lost at any moment (A-2);
+  \item[\textit{Hardware}] a failed data-link connection or reprogramming link;
+  \item[\textit{Operator}] a wrong or mistimed command (A-4).
+  \end{itemize}
+  Physical tampering is excluded: nobody can reach the spacecraft (A-1).
+\item \textbf{Modelling:} an operator error enters as a wrong or mistimed
+  command. A common cause counts as one failure, however many controls it
+  defeats.
+\item \textbf{Fault tolerance:} a catastrophic hazard stays controlled with
+  any two failures present at the same time; a critical hazard with any one
+  [3,~Sec.~3.1] \tbr{credible}.
+\item \textbf{Severity:} rated on the worst effect with no control working, so
+  no control lowers a hazard's severity \tbr{severity}.
+\item \textbf{Likelihood:} not rated; it depends on the design
+  \tbd{likelihood}.
 \item \textbf{Safety effort:} full [7,~Sec.~3.2.1, p.~44], chosen by the author
   on 10 October 2026. A moderate effort suits hazards that operators have time
   to answer [7,~Sec.~3.2.2, p.~44]; between contacts, no operator can (A-3). At
   this stage, the full effort makes a fault tree mandatory and a failure modes
   analysis highly recommended [7,~Table~6-3, p.~107].
-\item \textbf{Severity:} the worst credible effect, with no control working
-  \tbr{severity}.
-\item \textbf{Credible failures:} up to two at once for a catastrophic hazard,
-  one for a critical hazard [3,~Sec.~3.1] \tbr{credible}.
-\item \textbf{Likelihood:} not rated; it depends on the design
-  \tbd{likelihood}.
+\item \textbf{Naming:} hazards H-1 to H-17 in order of severity; fault-tree
+  gates G01 to G05 and primary events B01 to B10. A number is never reused.
+\item \textbf{Assumptions:} those of the ConOps, A-1 to A-5; this analysis
+  adds none. Numbers of objectives (O), assumptions (A), constraints (C), risks
+  (R), capabilities and scenarios refer to the ConOps
+  [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0].
 \item \textbf{Controls:} a control with a scenario number comes from the
   ConOps; one without is new.
 \item \textbf{Software role} [2,~Sec.~3.2.2]: CAUSE, a software fault can lead
@@ -184,16 +212,18 @@ for the System
 \begin{description}[leftmargin=3.9cm]
 \item[CATASTROPHIC] ``Loss of human life or permanent disability; loss of
   entire system; loss of ground facility; severe environmental damage''. The
-  controller is lost, or can no longer be commanded, observed or corrected,
-  for the rest of the mission.
+  controller is lost for the rest of the mission: it cannot run, or can no
+  longer be commanded, observed or corrected.
 \item[CRITICAL] ``Severe injury or temporary disability; major system or
   environmental damage''. The controller acts against the operator's intent,
-  or cannot be commanded, observed or corrected until the ground acts.
-\item[MODERATE] ``Minor injury; minor system damage''. A function is degraded
-  or interrupted, but none of the above happens.
+  or cannot be commanded, observed or corrected until the operator acts at a
+  later contact.
+\item[MODERATE] ``Minor injury; minor system damage''. Part of a function is
+  lost, such as some health reports or one update attempt; the controller
+  still runs and obeys the operator.
 \item[NEGLIGIBLE] ``No injury or minor injury; some system stress, but no
-  system damage''. No function is degraded; the operator has extra work or a
-  delay.
+  system damage''. Nothing is lost; the operator has extra work or gets data a
+  contact later.
 \end{description}
 
 % ===========================================================================
@@ -230,7 +260,7 @@ H-17 & A command is refused with a wrong or unclear reason & NEGLIGIBLE \\
 Figure~\ref{fig:tree} develops the worst hazard, H-1. Each box states what
 fails and when [4,~p.~50].
 
-\begin{figure}[H]
+\begin{figure}[tbp]
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
@@ -376,8 +406,6 @@ H-1, H-6, H-8, H-9, H-10.\par
 H-1, H-7, H-12.\par
 \noindent\textbf{Fixed onboard computer software:} it is not updated during
 the mission [5,~Sec.~5.0], so its defects stay. H-1, H-3, H-4.\par
-\noindent\textbf{One engineer, AI-drafted code:} one misunderstanding can enter
-both a function and its check (C-3, R-2) [1,~p.~67]. All hazards.\par
 
 % ===========================================================================
 \section{Hazard Reports}
@@ -533,7 +561,7 @@ every release before it is sent (Scenario-100)\ver{TEST}; (4)~the operator can
 order a return to the previous firmware\ver{DEMONSTRATION}.
 \field{Fails if} The judgement checks too little, or the trial ends before the
 defect shows.
-\fieldin{Common causes} One set of build tools; one engineer, AI-drafted code.
+\fieldin{Common causes} One set of build tools.
 
 % ---------------------------------------------------------------- H-8
 \hazard{H-8}{The controller stops working between contacts and is not brought back.}{CRITICAL}{CAUSE, CONTROL, MONITOR}

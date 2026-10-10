@@ -57,26 +57,24 @@ changes it: NASA applies these processes "iteratively and recursively"
 
 ## How We Use AI
 
-These rules apply to all of our engineering work with AI, not only this
-repository. The assistant is Claude, by Anthropic.
+| Phase | The question we ask | How AI helps answer it | What the engineer does |
+|---|---|---|---|
+| 1. ConOps | How is the system used, and what happens when it fails? | Asks the questions, proposes failure scenarios from NASA's hazard-cause list, writes the document in NASA's outline. | Decides every capability and scenario. Unaccepted proposals stay TBR. |
+| 2. Software Classification | How bad is each part's worst failure, and how much rigor does it need? | Matches each part against the class definitions in NPR 7150.2D, quoting the clause. | Assigns each class. |
+| 3. Hazard Analysis | What can go wrong, and what stops it? | Drafts the fault tree and failure-mode table. Walks NASA's hazard-cause list item by item. Asks what could defeat each protection and what fails with it. A separate AI session then hunts for gaps. | Judges severity. Accepts the hazard list. |
+| 4. Requirements | What exactly must the system do? | Turns each hazard and scenario into numbered, single-claim statements. Checks them against NASA's requirement-writing checklist. Traces each to its source. | Accepts every requirement and every number. |
+| 5. Architecture | Which design meets the requirements with the fewest ways to fail? | Lays out the alternatives as a trade study. Reads datasheets and quotes hardware facts with page numbers. | Chooses the design. |
+| 6. Interfaces | What crosses each boundary, byte by byte? | Drafts the message layouts and the compile-time size checks that enforce them. | Approves them before any code. |
+| 7. Verification Plan | How will each requirement be proven? | Proposes a method and a pass criterion per requirement. Flags any requirement that cannot be verified. | Accepts the plan. |
+| 8. Implementation | Does the code do what the requirements say, and nothing else? | Drafts the code with the reason for each decision in comments. Drafts the tests separately from the code. | Reviews and can explain every line. The compiler and static analysis judge the code, not the AI. |
+| 9. Verification | Does the system work on hardware, including under injected faults? | Writes the test and fault-injection scripts. Tabulates the results. | Runs the tests on hardware and judges pass or fail. Measured results are the evidence. |
 
-- **Decisions:** The engineer decides. The AI asks, proposes options and
-  explains them. It does not choose.
-- **Assumptions:** Nothing the AI assumes stands until the engineer accepts it.
-  Open proposals stay marked TBR; acceptances are recorded.
-- **Sources:** Every fact the AI brings carries its source and exact location
-  (page, table, equation). A fact without one is treated as unverified.
-- **Measure, Don't Assert:** When a claim can be checked by running something,
-  the AI runs it instead of reasoning about it. When it cannot, the AI states
-  what would settle it.
-- **Scope:** The AI reads only the material that belongs to the task. Similar
-  material from another project is never used as a source.
-- **Authorship:** The AI may draft documents and code. Nothing is published
-  that the engineer cannot explain line by line.
-- **Evidence:** Proof comes from test, analysis, inspection or demonstration.
-  The AI's own statement is never evidence.
-- **Actions:** The AI publishes, pushes or sends nothing without the
-  engineer's explicit go.
+At every phase:
+
+- When a claim can be checked by running something, the AI runs it. When it
+  cannot, the AI states what would settle it.
+- The AI reads only the material that belongs to the task.
+- The AI publishes, pushes or sends nothing without the engineer's go.
 
 ## License
 

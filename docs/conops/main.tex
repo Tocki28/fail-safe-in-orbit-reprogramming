@@ -113,22 +113,32 @@ software updates [4, Lesson 0559, p.~199].
 
 \subsubsection{Assumptions and Constraints}
 \begin{description}
-\item[C-1] The ground has no direct link to the controller, only through the
-  onboard computer.
+\item[C-1] The ground cannot talk to the controller directly. Every command,
+  report and firmware image passes through the onboard computer.
 \item[C-2] All software is built to NASA's software engineering requirements.
-  Which requirements apply to each part depends on its software class
-  [5, \S3.5.1, p.~24; App.~C].
-\item[C-3] One engineer builds and verifies the System. There is no
-  independent test team.
-\item[C-4] The System is demonstrated on development boards on a bench, not on
-  flight hardware. Results show behaviour, not flight qualification.
-\item[C-5] The System is demonstrated by \tbd{date}.
-\item[A-1] No physical access after deployment \tbr{situation}.
-\item[A-2] Controller power can be lost at any instant, including during a
-  firmware write \tbr{power}.
-\item[A-3] The ground link exists only during contact windows \tbd{window}.
-\item[A-4] One operator \tbr{operator}.
-\item[A-5] Single-bit memory errors occur \tbr{situation}.
+  How strict they are for each part depends on how bad that part's failure
+  would be: its software class [5, \S3.5.1, p.~24; App.~C].
+\item[C-3] One engineer builds and checks the System. No independent team
+  reviews the work.
+\item[C-4] The System runs on development boards on a desk, not on spacecraft
+  hardware. It can show how the System behaves, not that it would survive
+  launch or space.
+\item[C-5] The System must be shown working by a fixed date \tbd{date}.
+  Anything not finished by then is listed as unfinished, not left out.
+\item[A-1] Once launched, nobody can touch the onboard computer or the
+  controller. Every fix must arrive by radio \tbr{situation}.
+\item[A-2] The controller can lose power at any moment, even halfway through
+  writing new firmware. The System must survive that without losing the
+  controller \tbr{power}.
+\item[A-3] The ground can reach the spacecraft only while its antenna can see
+  it, during a contact window \tbd{window}. Between contacts the System must
+  work on its own.
+\item[A-4] One person operates the ground station. No second person checks a
+  command before it is sent, so the System itself must refuse wrong commands
+  \tbr{operator}.
+\item[A-5] Radiation in space can flip single bits in memory, so stored
+  firmware can change on its own. The System must not run firmware that has
+  changed \tbr{situation}.
 \end{description}
 
 \medskip

@@ -179,48 +179,30 @@ controller's firmware cannot run.}
 \end{figure}
 
 \subsubsection{System Scope}
-\noindent\textbf{Size and complexity:} three programs to build and verify:
-the ground software in the mission operations center, the onboard computer's
-software, and the controller's firmware.
+The scope is the System's boundary: what is inside, who uses it, and what
+touches it from outside. NASA calls this the system context
+[7, Sec.~8.3, p.~24].
 
-\medskip
-\noindent\textbf{External interfaces}
-\begin{itemize}
-\item The radio equipment at both ends of the radio link.
-\item The spacecraft power supply feeding the onboard computer and the
-  controller. Its loss is assumption A-2.
-\end{itemize}
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+NASA's term & This System \\
+\midrule
+System of interest & Onboard computer, controller, ground software in the MOC \\
+Users & Operator \\
+External elements & Radio equipment, spacecraft power supply \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\medskip
-\noindent\textbf{Enabling systems} (needed to build and test the System, not
-part of it)
 \begin{itemize}
-\item The tools that build and release firmware.
-\item The bench setup that degrades the radio link and injects faults (VER-1,
-  VER-2).
-\end{itemize}
-
-\medskip
-\noindent\textbf{In scope}
-\begin{itemize}
-\item \textbf{Commanding:} commands from the ground, through the onboard
-  computer, to the controller.
-\item \textbf{Telemetry:} reports from the controller and the onboard computer
-  back to the ground.
-\item \textbf{Fault handling between contacts:} detecting faults and
-  responding without the ground \tbr{faults}.
-\item \textbf{Firmware updates:} updating and restoring the controller's
-  firmware in flight.
-\end{itemize}
-
-\medskip
-\needspace{4\baselineskip}
-\noindent\textbf{Out of scope}
-\begin{itemize}
-\item \textbf{Onboard computer software updates:} updating or restoring the
-  onboard computer's own software \tbr{obcupdate}.
-\item \textbf{Radio equipment:} RF front ends, antennas and ground
-  transceivers, used as given and not developed here.
+\item \textbf{Enabling systems:} firmware build tools and the bench test setup,
+  needed to build and test the System but not part of it.
+\item \textbf{In scope:} commanding, telemetry, firmware updates, and fault
+  handling between contacts \tbr{faults}.
+\item \textbf{Out of scope:} the onboard computer's own software updates
+  \tbr{obcupdate}, and the radio equipment, which is used as given.
 \end{itemize}
 
 % ===========================================================================
@@ -247,6 +229,9 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
 \noindent [6] NASA, \emph{State-of-the-Art of Small Spacecraft Technology},
 Chapter 11, ``Ground Data Systems and Mission Operations'', 2026 edition.
 Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
+
+\noindent [7] NASA, \emph{NASA Systems Modeling Handbook for Systems Engineering},
+NASA-HDBK-1009A, 12 March 2025.
 
 % ===========================================================================
 \section{Description of Envisioned System}

@@ -176,8 +176,8 @@ failures are modelled and named [4,~pp.~23--24].
 \item \textbf{Operator errors:} each counts as a wrong or mistimed command.
 \item \textbf{Counting failures:} one cause that disables several controls at
   once counts as one failure.
-\item \textbf{Fault tolerance:} a catastrophic hazard stays controlled with
-  any two failures present at the same time; a critical hazard with any one
+\item \textbf{Fault tolerance:} no two failures together may cause a
+  catastrophic hazard, and no single failure may cause a critical one
   [3,~Sec.~3.1] \tbr{credible}.
 \item \textbf{Severity:} rated on the worst effect with no control working, so
   no control lowers a hazard's severity \tbr{severity}.
@@ -718,8 +718,8 @@ The values below are not yet known.
 \begin{description}
 \tbritem{severity}{Severity rated as the worst credible effect with no control
   working, and the meaning of each severity category for the System.}
-\tbritem{credible}{Up to two failures at once credible for a catastrophic
-  hazard, and one for a critical hazard.}
+\tbritem{credible}{No two failures together may cause a catastrophic hazard,
+  and no single failure may cause a critical one.}
 \tbritem{hazards}{The hazard list and the severity of each hazard.}
 \tbritem{safety}{The safety-critical designation of each software item.}
 \end{description}

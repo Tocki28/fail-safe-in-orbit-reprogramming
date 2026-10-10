@@ -31,7 +31,7 @@
 
 % Controlled-document header on every page.
 \newcommand{\docref}{Reference TBD}
-\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
+\newcommand{\docrev}{Issue 1, Rev.~1 --- DRAFT}
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\small Remote Controller with Fail-Safe Update --- ConOps}
@@ -63,7 +63,7 @@
 \vspace{1em}
 \begin{tabular}{@{}ll@{}}
 Reference & TBD \tbd{ref} \\
-Issue / revision & Issue 1, Revision 0 --- DRAFT \\
+Issue / revision & Issue 1, Revision 1 --- DRAFT \\
 Date & 10 October 2026 \\
 Author & Andrew Toma \\
 Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
@@ -71,11 +71,14 @@ Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
 \end{center}
 
 \subsection*{Document change record}
-\begin{tabular}{@{}llll@{}}
+\begin{tabular}{@{}lllp{10cm}@{}}
 \toprule
 Issue & Rev. & Date & Change \\
 \midrule
 1 & 0 & 2026-10-10 & First draft \\
+1 & 1 & 2026-10-10 & Single need statement, accepted by the author, with its
+  source (\S3.1); N-1 to N-3 retired into goals G-5 to G-7; rationale added
+  (\S1.1.1); References [3] and [4] added. \\
 \bottomrule
 \end{tabular}
 
@@ -92,6 +95,11 @@ A controller in space must be updated, watched and commanded from the ground,
 with nobody able to reach it \tbr{situation}. A failed update can leave it
 unable to run any firmware or accept new firmware. Without physical access that
 state is permanent. It is the worst outcome this System guards against.
+
+Rationale: the loss has happened. NASA records a mission terminated after an
+in-flight software upload omitted a patch for a defective countdown timer; its
+recommendations include test-bed verification of in-flight software updates
+[4, Lesson 0559, p.~199].
 
 \subsubsection{Assumptions and Constraints}
 \begin{description}
@@ -145,14 +153,28 @@ App.~C, pp.~197--198.
 [2] NASA, \emph{Software Assurance and Software Safety Standard},
 NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
 
+\noindent [3] ESA, \emph{Space engineering --- Software}, ECSS-E-ST-40C Rev.~1,
+30 April 2025.
+
+\noindent [4] NASA, \emph{Fault Management Handbook}, NASA-HDBK-1002, Draft~2,
+2 April 2012. A draft, not a released standard.
+
 % ===========================================================================
 \section{Description of Envisioned System}
 
 \subsection{Needs, Goals and Objectives}
 \begin{description}
-\item[N-1] Replace the controller's firmware after deployment.
-\item[N-2] See from the ground what the System is doing and how healthy it is.
-\item[N-3] Command the System from the ground.
+\item[NEED] A controller that nobody can reach must stay operable, observable
+  and correctable for its whole life. The three properties are three areas a
+  space software specification must cover: operation, observability, and
+  maintenance including in-flight modification over the specified lifetime
+  [3, Annex~B, items 5.11--5.13, p.~113].
+\item[G-5] Operable: the controller keeps doing its job and acts on the
+  operator's commands. Capabilities JOB, CMD, FM.
+\item[G-6] Observable: the ground can know what the System is doing, how
+  healthy it is, and what happened between contacts. Capabilities TM.
+\item[G-7] Correctable: the controller's firmware can be replaced for its whole
+  life without losing the controller. Capabilities UPD.
 \item[G-1] No update, and no failure during one, leaves the controller without
   firmware it can run.
 \item[G-2] The System acts only on firmware and commands from the operator.
@@ -161,6 +183,10 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
   later \tbr{faults}.
 \item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
   recorded.
+\item[N-1] Retired in Rev.~1; now G-7. NASA requires a single need statement
+  [1, \S4.1, p.~49].
+\item[N-2] Retired in Rev.~1; now G-6.
+\item[N-3] Retired in Rev.~1; now G-5.
 \end{description}
 
 \subsection{Overview of System and Key Elements}

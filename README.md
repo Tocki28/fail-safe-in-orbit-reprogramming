@@ -24,7 +24,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 
 1. **ConOps:** What the system is for and why it is needed, and its normal and
    failure-mode operational behavior.
-   **Draft:** [Issue 1, Rev 0](docs/conops/ConOps_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
+   **Draft:** [Issue 1, Rev 1](docs/conops/ConOps_Remote-Controller-Fail-Safe-Update_Iss1_Rev1_DRAFT.pdf)
 2. **Software Classification:** Failure severity and required rigor.
    *Not started.*
 3. **Hazard Analysis:** Top-down and bottom-up fault identification.

@@ -1,0 +1,376 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{totcount}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{tocloft}
+\usepackage[hidelinks]{hyperref}
+
+% Room for "1.0" style numbers in the contents; list down to 1.1 level only.
+\setlength{\cftsecnumwidth}{2.4em}
+\setlength{\cftsubsecindent}{2.4em}
+\setlength{\cftsubsecnumwidth}{2.4em}
+\setcounter{tocdepth}{2}
+\tocloftpagestyle{fancy}
+
+% Section numbers as in the NASA ConOps outline: 1.0, 1.1, 1.1.1
+% [1, App. S, pp. 251--253].
+\renewcommand{\thesection}{\arabic{section}.0}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
+
+% Controlled-document header on every page.
+\newcommand{\docref}{Reference TBD}
+\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small Remote Controller with Fail-Safe Update --- ConOps}
+\rhead{\small \docrev}
+\lfoot{\small \docref}
+\rfoot{\small Page \thepage\ of \pageref{LastPage}}
+
+% Open items. TBD = not known. TBR = proposal awaiting the author's acceptance
+% [1, App. C, pp. 197--198]. Defined once in App. C; totals counted, not typed.
+\newtotcounter{tbd}
+\newtotcounter{tbr}
+\newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
+\newcommand{\tbritem}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
+\newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
+\newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
+
+\setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
+\setlist[enumerate]{nosep}
+\setlist[itemize]{nosep}
+
+\begin{document}
+
+% ---------------------------------------------------------------- cover page
+\thispagestyle{fancy}
+\begin{center}
+{\LARGE\bfseries Remote Controller with Fail-Safe Update\par}
+\vspace{0.4em}
+{\Large Concept of Operations\par}
+\vspace{1em}
+\begin{tabular}{@{}ll@{}}
+Reference & TBD \tbd{ref} \\
+Issue / revision & Issue 1, Revision 0 --- DRAFT \\
+Date & 10 October 2026 \\
+Author & Andrew Toma \\
+Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
+\end{tabular}
+\end{center}
+
+\subsection*{Document change record}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Issue & Rev. & Date & Change \\
+\midrule
+1 & 0 & 2026-10-10 & First draft \\
+\bottomrule
+\end{tabular}
+
+\tableofcontents
+
+\newpage
+% ===========================================================================
+\section{Introduction}
+
+\subsection{Project Description}
+
+\subsubsection{Background}
+A controller in space must be updated, watched and commanded from the ground,
+with nobody able to reach it \tbr{situation}. A failed update can leave it
+unable to run any firmware or accept new firmware. Without physical access that
+state is permanent. It is the worst outcome this System guards against.
+
+\subsubsection{Assumptions and Constraints}
+\begin{description}
+\item[C-1] The ground has no direct link to the controller, only through the
+  onboard computer.
+\item[C-2] All software follows critical-software practice. Rigour per part is
+  set later by its software class.
+\item[C-3] One engineer. Demonstration date \tbd{date}.
+\item[C-4] Bench hardware stands in for flight hardware \tbr{situation}.
+\item[A-1] No physical access after deployment \tbr{situation}.
+\item[A-2] Controller power can be lost at any instant, including during a
+  firmware write \tbr{power}.
+\item[A-3] The ground link exists only during contact windows \tbd{window}.
+\item[A-4] One operator \tbr{operator}.
+\item[A-5] Single-bit memory errors occur \tbr{situation}.
+\end{description}
+
+\subsection{Overview of the Envisioned System}
+
+\subsubsection{Overview}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners=2pt, minimum width=2.8cm, minimum height=1.1cm, align=center},
+  >={Stealth[length=2.2mm]}]
+\node[box] (gs) at (0,0) {Ground station\\\small(operator)};
+\node[box] (obc) at (6.4,0) {Onboard\\computer};
+\node[box] (ctl) at (12.8,0) {Controller};
+\draw[<->, dashed] (gs) -- node[above, font=\small]{I-1 ground link} node[below, font=\footnotesize]{contacts only} (obc);
+\draw[<->] ([yshift=2mm]obc.east) -- node[above, font=\small]{I-2 internal link} ([yshift=2mm]ctl.west);
+\draw[<->] ([yshift=-2mm]obc.east) -- node[below, font=\footnotesize]{redundant} ([yshift=-2mm]ctl.west);
+\draw[->, thick] (obc.south) to[out=-35, in=-145] node[below, font=\small]{I-3 recovery path} (ctl.south);
+\end{tikzpicture}
+\end{figure}
+
+\subsubsection{System Scope}
+In scope: the controller's job, telemetry, commanding, fault handling between
+contacts, firmware update of the controller. Out of scope: the onboard
+computer's own software update \tbr{obcupdate}; radio equipment.
+
+% ===========================================================================
+\section{Documents}
+
+\subsection{Applicable Documents}
+[1] NASA, \emph{NASA Systems Engineering Handbook}, NASA/SP-2016-6105 Rev~2,
+2016. This outline follows its App.~S, pp.~251--253, tailored per its
+\S3.11.1, p.~34: Section~7.0 not applicable; App.~C added for open items per its
+App.~C, pp.~197--198.
+
+\subsection{Reference Documents}
+[2] NASA, \emph{Software Assurance and Software Safety Standard},
+NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
+
+% ===========================================================================
+\section{Description of Envisioned System}
+
+\subsection{Needs, Goals and Objectives}
+\begin{description}
+\item[N-1] Replace the controller's firmware after deployment.
+\item[N-2] See from the ground what the System is doing and how healthy it is.
+\item[N-3] Command the System from the ground.
+\item[G-1] No update, and no failure during one, leaves the controller without
+  firmware it can run.
+\item[G-2] The System acts only on firmware and commands from the operator.
+\item[G-3] Losing one connection of the internal link stops nothing.
+\item[G-4] Between contacts the System handles faults alone and reports them
+  later \tbr{faults}.
+\item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
+  recorded.
+\end{description}
+
+\subsection{Overview of System and Key Elements}
+\begin{description}[leftmargin=3.6cm]
+\item[Ground] Operator releases firmware, sends firmware and commands, reads
+  reports.
+\item[Onboard computer] Checks and passes on firmware and commands, stores
+  reports, watches and restores the controller.
+\item[Controller] Does its job, reports, keeps known-good firmware to fall back
+  on.
+\end{description}
+
+\subsection{Interfaces}
+\begin{description}
+\item[I-1] Ground link. Radio, contact windows only.
+\item[I-2] Internal link. Redundant: losing one connection does not cut the
+  controller off.
+\item[I-3] Recovery path. Rewrites and restarts the controller with no
+  controller firmware running.
+\end{description}
+
+\subsection{Modes of Operations}
+\begin{description}[leftmargin=3cm]
+\item[OPERATE] Runs confirmed firmware. New firmware can arrive \tbr{receive}.
+\item[TRIAL] Runs new firmware not yet judged good \tbd{trialtime}.
+\item[FALLBACK] Runs previous or last-resort firmware after a failed trial or
+  start.
+\item[RECOVERY] Runs nothing. Restored through I-3.
+\end{description}
+
+\subsection{Proposed Capabilities}
+\begin{description}
+\item[JOB-1] Do the controller's job \tbd{job}.
+\item[TM-1] Send regular health reports: alive, firmware, uptime, last restart
+  reason, temperature \tbr{telemetry}.
+\item[TM-2] Report important events at once \tbr{telemetry}.
+\item[TM-3] Timestamp every report \tbr{telemetry}.
+\item[TM-4] Store reports between contacts, send all at the next one, report any
+  lost.
+\item[TM-5] Report the health of each internal connection \tbr{telemetry}.
+\item[CMD-1] Accept commands only from the operator. Refuse replayed commands.
+\item[CMD-2] Answer every command: received, refused with reason, or done with
+  result.
+\item[CMD-3] Refuse commands not allowed in the current state.
+\item[CMD-4] Run a resent command at most once.
+\item[CMD-5] Dangerous commands need two steps: arm, then execute.
+\item[CMD-6] Refuse impossible values.
+\item[CMD-7] Let the operator cancel an update, leaving known-good firmware
+  running.
+\item[CMD-8] Run commands at a set time. Refuse expired commands.
+\item[CMD-9] Log every command and its answer.
+\item[FM-1] Notice a silent controller and try to bring it back \tbr{faults}.
+\item[FM-2] Carry on over the other connection when one dies \tbr{faults}.
+\item[FM-3] Restart crashed onboard programs and continue \tbr{faults}.
+\item[FM-4] Record every fault and action for the ground \tbr{faults}.
+\item[UPD-1] Take firmware from the ground through dropping links.
+\item[UPD-2] Refuse firmware that is damaged, not from the operator, for
+  something else, or below the minimum version.
+\item[UPD-3] Get the firmware to the controller.
+\item[UPD-4] Switch the controller to it \tbd{switch}.
+\item[UPD-5] Decide whether it is good \tbd{confirm}.
+\item[UPD-6] Go back to working firmware if not, with nobody's help.
+\item[UPD-7] Tell the ground what happened.
+\item[UPD-8] Never leave the controller without runnable firmware.
+\item[VER-1] Degrade the ground link on purpose (test only).
+\item[VER-2] Cut controller power and break one connection on command (test
+  only) \tbr{faultinject}.
+\end{description}
+
+% ===========================================================================
+\section{Physical Environment}
+Follows from the situation \tbr{situation}. Response legend
+[1, App.~S \S4.0, p.~252]: OPERATE = all functions continue; SURVIVE = functions
+stop and return when the condition ends.
+
+\begin{tabular}{@{}lll@{}}
+\toprule
+Condition & Response & Scenario \\
+\midrule
+No ground contact & OPERATE & OPS-110 \\
+Controller power loss at any instant & SURVIVE & OPS-340 \\
+Single-bit memory error & OPERATE & OPS-400 \\
+Temperature range & \tbd{temp} & --- \\
+\bottomrule
+\end{tabular}
+
+% ===========================================================================
+\section{Support Environment}
+Firmware is built and released on the ground and sent up during contacts, one
+transfer across several if needed. The onboard computer keeps the last
+known-good firmware. Update rate \tbd{frequency}. Nothing is repaired after
+deployment \tbr{situation}.
+
+% ===========================================================================
+\section{Operational Scenarios}
+
+\subsection{Nominal Conditions}
+\begin{description}
+\item[OPS-100] Update: release, upload over one or more contacts, check,
+  transfer \tbr{receive}, switch \tbd{switch}, judged good \tbd{confirm},
+  confirmed, outcome reported.
+\item[OPS-110] Telemetry: reports stamped and stored between contacts, all sent
+  at the next one.
+\item[OPS-120] Scheduled command: received during a contact, runs at its time,
+  answer sent at the next contact.
+\end{description}
+
+\subsection{Off-Nominal Conditions}
+Trigger, then expected outcome. Sources in brackets are items of [2, App.~A,
+Table~2].
+\begin{description}
+\item[OPS-200] Ground link lost mid-transfer: resumes next contact where it
+  stopped.
+\item[OPS-210] Command not from operator or replayed: refused, logged [2, p.~62].
+\item[OPS-220] Answer lost, command resent: not run again, ``already done''.
+\item[OPS-230] Command wrong for current state: refused with reason [2, p.~63].
+\item[OPS-240] Impossible value: refused with reason [2, p.~62].
+\item[OPS-250] Dangerous command not armed: refused with reason.
+\item[OPS-260] Command expired: refused with reason [2, p.~63].
+\item[OPS-270] Report storage full: ground told how many were lost.
+\item[OPS-300] Firmware damaged in transfer: refused before the controller
+  [2, p.~63].
+\item[OPS-310] Firmware not from operator: refused.
+\item[OPS-320] Firmware below minimum version: refused.
+\item[OPS-330] Firmware for another controller: refused [2, p.~63].
+\item[OPS-340] Power lost during firmware write: previous firmware runs; retry
+  possible [2, p.~63].
+\item[OPS-350] New firmware hangs: back to previous, unaided.
+\item[OPS-360] New firmware restart loop: back to previous after \tbd{bootcount}
+  starts [2, p.~64].
+\item[OPS-370] New firmware never judged good: back to previous.
+\item[OPS-380] Previous firmware also bad: last-resort firmware runs.
+\item[OPS-390] Operator cancels update: known-good firmware left running.
+\item[OPS-400] Bit error in stored firmware: detected, not run \tbr{bitflip}
+  [2, p.~63].
+\item[OPS-410] No firmware can run: restored through I-3 [2, p.~63].
+\item[OPS-500] One internal connection fails: everything continues on the
+  other; reported.
+\item[OPS-510] Whole internal link fails: controller keeps working; loss
+  reported; I-3 still usable \tbr{bothlinks}.
+\item[OPS-520] Controller silent: noticed, recovery tried, recorded
+  \tbr{faults}.
+\item[OPS-530] Onboard program crash: it restarts and resumes any update; the
+  controller is unaffected \tbr{faults}.
+\end{description}
+
+% ===========================================================================
+\section{Impact Considerations}
+Not applicable: bench demonstration.
+
+% ===========================================================================
+\section{Risks and Potential Issues}
+\begin{description}
+\item[R-1] Both internal connections may share software; one defect could cut
+  both.
+\item[R-2] Controller memory may not hold last-resort plus two working firmwares.
+\item[R-3] Second internal connection and recovery path not yet shown on bench.
+\item[R-4] Demonstration date \tbd{date}; undemonstrated scenarios are declared,
+  not dropped.
+\end{description}
+
+% ===========================================================================
+\appendix
+\renewcommand{\thesection}{\Alph{section}}
+
+\section{Acronyms}
+CMD command; ConOps Concept of Operations; FM fault management; OPS operational
+scenario; TBD To Be Determined; TBR To Be Resolved; TM telemetry; UPD update;
+VER verification.
+
+\section{Glossary}
+\begin{description}[leftmargin=3.2cm]
+\item[Confirmed] Firmware judged good after its trial; only confirmed firmware
+  is known-good.
+\item[Last-resort] Known-good firmware that updates never replace (golden
+  image).
+\item[Switch] The controller stops running old firmware and starts the new.
+\item[Arm] First step of a dangerous command; changes nothing alone.
+\item[Expiry] Time after which a waiting command is refused.
+\end{description}
+
+\section{Open Items}
+Unmarked statements were stated or accepted by the author on 9--10 October
+2026. TBR items are resolved before the hazard analysis.
+\begin{description}
+\tbritem{situation}{Spacecraft controller, ground contacts only, no physical
+  access, bench stand-in, bit errors occur, no repair.}
+\tbritem{power}{Controller power can drop at any instant, including mid-write.}
+\tbritem{operator}{One operator.}
+\tbritem{telemetry}{TM-1, TM-2, TM-3, TM-5 as written (shown 10 Oct, not yet
+  accepted).}
+\tbritem{faults}{G-4, FM-1 to FM-4 as written (shown 10 Oct, not yet
+  accepted).}
+\tbritem{receive}{Controller keeps working while new firmware arrives.}
+\tbritem{obcupdate}{Onboard computer's own update out of scope.}
+\tbritem{bothlinks}{Recovery path still usable with the whole internal link
+  lost.}
+\tbritem{bitflip}{Stored firmware checked before start; damaged copy skipped.}
+\tbritem{faultinject}{Test setup can cut power and break one connection.}
+\tbditem{ref}{Project name and document reference.}
+\tbditem{date}{Demonstration date.}
+\tbditem{job}{Controller's job: power switching, heater or sensor; LED
+  stand-in.}
+\tbditem{switch}{Switch automatically on arrival, or only on operator command.}
+\tbditem{confirm}{Who judges new firmware good: controller or operator.}
+\tbditem{window}{Contact window length and gap (sourced, or a test parameter).}
+\tbditem{trialtime}{Trial time limit (requirements).}
+\tbditem{bootcount}{Failed starts before going back (requirements).}
+\tbditem{frequency}{Update rate.}
+\tbditem{temp}{Temperature range.}
+\end{description}
+
+\end{document}

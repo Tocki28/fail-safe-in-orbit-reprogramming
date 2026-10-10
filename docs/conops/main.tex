@@ -284,25 +284,27 @@ outside the System; it uses them as given.
 \subsection{Interfaces}
 \noindent\textbf{External interfaces}
 \begin{description}[leftmargin=4.4cm]
-\item[Operator interface] Human. Operator to ground software. The operator
-  gives commands, releases firmware, and reads reports.
-\item[Radio link] Radio frequency. Ground software to onboard computer,
-  carried by radio equipment outside the System. Intermittent TM/TC, only
-  during contact windows.
-\item[Power] Electrical. The spacecraft power supply feeds the onboard computer
-  and the controller. It can be lost at any moment (assumption A-2).
+\item[Operator interface] Human. Ground software to operator. Allows the
+  flight operator to issue telecommands, authorize firmware deployments, and
+  monitor system telemetry.
+\item[Radio link] Radio frequency. Ground software to onboard computer via
+  external radio equipment. Provides intermittent telemetry and telecommand
+  (TM/TC) transfer exclusively during contact windows.
+\item[Power] Electrical. Spacecraft power subsystem to onboard computer and
+  controller. Subject to unannounced power interruptions at any time
+  (assumption A-2).
 \end{description}
 
 \medskip
 \noindent\textbf{Interfaces between elements}
 \begin{description}[leftmargin=4.4cm]
-\item[Data link] Data. Onboard computer to controller. The normal path for
-  commands, firmware and reports; it works only while the controller's
-  firmware runs. It has two separate connections: if one fails, the other
-  carries everything.
-\item[Reprogramming link] Data. Onboard computer to controller. The last
-  resort: restores working firmware without any help from the controller's
-  own software.
+\item[Data link] Digital data. Onboard computer to controller. Nominal
+  interface for commands, telemetry, and firmware updates while controller
+  firmware is running. Uses two separate connections, so a single connection
+  failure does not interrupt operations.
+\item[Reprogramming link] Digital data. Onboard computer to controller.
+  Recovery interface used as a last resort to restore functional firmware
+  independently of the controller's main software.
 \end{description}
 
 \subsection{Modes of Operations}

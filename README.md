@@ -72,12 +72,14 @@ risk explicitly accepted by a human engineer.**
 | **8. Implementation** | Does the code do what requirements specify, and nothing else? | Implements one small subsystem at a time from its specs and the coding rules it is given (e.g., JPL's *The Power of Ten*), commenting the rationale. Drafts unit tests separately from the code. | Splits the system into the smallest subsystems, establishes coding standards, evaluates each subsystem against them, and approves or rejects generated code. |
 | **9. Verification** | Does the system perform on hardware, including under injected faults? | Generates test and fault-injection scripts, then tabulates execution results. | Verifies test execution on physical hardware and accepts the results as valid evidence. |
 
-At every phase:
+### Execution Principles
 
-- When a claim can be checked by running something, the AI runs it. When it
-  cannot, the AI states what would settle it.
-- The AI reads only the material that belongs to the task.
-- The AI publishes, pushes or sends nothing without the engineer's go.
+- **Verification First:** If a claim can be tested by running code, the AI
+  executes it. Otherwise, it states what is required to verify it.
+- **Scoped Context:** The AI reads only the material relevant to the active
+  task.
+- **Human-in-the-Loop:** The AI publishes, commits, or pushes nothing without
+  explicit engineer approval.
 
 ## License
 

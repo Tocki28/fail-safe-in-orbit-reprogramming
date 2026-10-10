@@ -96,7 +96,7 @@
         <mxCell id="i1" value="" style="endArrow=classic;startArrow=classic;html=1;dashed=1;strokeWidth=2;endSize=6;startSize=6;" edge="1" parent="1" source="dish" target="sat">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i1label" value="&lt;b&gt;Radio link (TM/TC)&lt;/b&gt;&lt;br&gt;only during contacts" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="i1label" value="&lt;b&gt;Radio link&lt;/b&gt;&lt;br&gt;intermittent TM/TC communication" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="70" y="140" width="170" height="64" as="geometry" />
         </mxCell>
       </root>

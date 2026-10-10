@@ -159,9 +159,6 @@ required and how failures are modelled and named, before the analysis starts
 \item \textbf{Hazard:} a state with the potential to cause harm [1,~p.~13].
   Here, harm is the loss of the controller's operability, observability or
   correctability.
-\item \textbf{Controls:} ``means of reducing the risk of exposure to a hazard''
-  [1,~p.~13]: a check, a backup, an automatic response or an operator
-  procedure.
 \item \textbf{Boundary:} the radio equipment and the spacecraft power supply lie
   outside the System [5,~Sec.~1.2.2]. Their failures enter as causes and are
   not analysed further.
@@ -195,11 +192,12 @@ Security & Means of proving origin disclosed \\
 
 \subsection{Analysis Rules}
 \begin{itemize}
+\item \textbf{Severity:} how bad the outcome is if the hazard happens.
+  Controls, ``means of reducing the risk of exposure to a hazard'' [1,~p.~13]
+  such as a check, a backup, an automatic response or an operator procedure,
+  do not change it: they make a hazard less likely, not less bad.
 \item \textbf{Counting failures:} one cause that disables several controls at
   once counts as one failure.
-\item \textbf{Severity:} how bad the outcome is if the hazard happens
-  \tbr{severity}. Controls do not change it: they make a hazard less likely,
-  not less bad.
 \item \textbf{Fault tolerance:} ``the ability to perform a function in the
   presence of any of a specified number of coincident, independent failure
   causes of specified types'' [9,~p.~18]. The types are the failures included
@@ -796,11 +794,10 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent The proposals below await the author's acceptance.
+\noindent The author accepted the severity rule and the meaning of each
+severity category (Section~3.3) on 10 October 2026. The proposals below await
+the author's acceptance.
 \begin{description}
-\tbritem{severity}{Severity as how bad the outcome is if the hazard happens,
-  unchanged by controls, and the meaning of each severity category for the
-  System.}
 \tbritem{credible}{A catastrophic hazard must need at least three failures
   together; a critical hazard at least two.}
 \tbritem{hazards}{The hazard list and the severity of each hazard.}

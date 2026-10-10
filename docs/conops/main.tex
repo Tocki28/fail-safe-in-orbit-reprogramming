@@ -43,8 +43,10 @@
 % [1, App. C, pp. 197--198]. Defined once in App. C; totals counted, not typed.
 \newtotcounter{tbd}
 \newtotcounter{tbr}
+\newtotcounter{tbropen}
 \newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
-\newcommand{\tbritem}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
+\newcommand{\tbritem}[2]{\refstepcounter{tbr}\stepcounter{tbropen}\label{tbr:#1}\item[TBR-\thetbr] #2}
+\newcommand{\tbrresolved}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
 \newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
 \newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
 
@@ -66,7 +68,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 10 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
+Open items & \total{tbd} TBD, \total{tbropen} TBR (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -89,8 +91,7 @@ Issue & Rev. & Date & Change \\
 
 \subsubsection{Background}
 \noindent\textbf{Purpose:} The System lets an operator on the ground command,
-monitor, and update a controller in space that nobody can reach
-\tbr{situation}, and keeps that controller working between contacts.
+monitor, and update a controller in space that nobody can reach, and keeps that controller working between contacts.
 
 \medskip
 \noindent\textbf{Need:} A controller that nobody can reach must stay operable,
@@ -113,41 +114,34 @@ software updates [4, Lesson 0559, p.~199].
 \subsubsection{Assumptions and Constraints}
 \begin{description}
 \item[C-1] The ground cannot talk to the controller directly. Every command,
-  report and firmware image passes through the onboard computer.
+  report, and firmware image passes through the onboard computer.
 \item[C-2] All software is built to NASA's software engineering requirements.
-  How strict they are for each part depends on how bad that part's failure
-  would be: its software class [5, \S3.5.1, p.~24; App.~C].
+  Rigor per part is set by its software class [5, \S3.5.1, p.~24; App.~C].
 \item[C-3] One engineer builds and checks the System. No independent team
   reviews the work.
-\item[C-4] The System runs on development boards on a desk, not on spacecraft
+\item[C-4] The System runs on commercial development boards, not on spacecraft
   hardware. It can show how the System behaves, not that it would survive
   launch or space.
-\item[C-5] The System must be shown working by a fixed date \tbd{date}.
-  Anything not finished by then is listed as unfinished, not left out.
-\item[A-1] Once launched, nobody can touch the onboard computer or the
-  controller. Every fix must arrive by radio \tbr{situation}.
+\item[A-1] Once launched, physical access to the onboard computer or controller
+  is impossible; all fixes and updates must arrive by radio.
 \item[A-2] The controller can lose power at any moment, even halfway through
   writing new firmware. The System must survive that without losing the
-  controller \tbr{power}.
-\item[A-3] The ground can reach the spacecraft only while its antenna can see
-  it, during a contact window \tbd{window}. Between contacts the System must
-  work on its own.
+  controller [2, App.~A, Table~2, p.~63].
+\item[A-3] The ground can reach the spacecraft only during line-of-sight
+  contact windows \tbd{window}. Between contacts the System must work on its
+  own.
 \item[A-4] One person operates the ground station. No second person checks a
-  command before it is sent, so the System itself must refuse wrong commands
-  \tbr{operator}.
+  command before it is sent, so the System itself must refuse wrong commands.
 \item[A-5] Radiation in space can flip single bits in memory, so stored
   firmware can change on its own. The System must not run firmware that has
-  changed \tbr{situation}.
+  changed [2, App.~A, Table~2, p.~63].
 \end{description}
 
 \medskip
 {\itshape \noindent\textbf{Note.} A constraint (C) is a limit the System must work
 within; it is imposed, not chosen. An assumption (A) is a condition taken as
 true without proof; the design depends on it, and if it proves false the design
-may be wrong. The NASA outline asks for both here [1, App.~S, p.~251]. Each
-assumption becomes failure scenarios and, later, tests: A-2 becomes OPS-340,
-power lost during a firmware write, and then a test that cuts power at every
-point of a write. \textbf{[TBR-$n$]} marks a proposal the author has not yet
+may be wrong. \textbf{[TBR-$n$]} marks a proposal the author has not yet
 accepted; \textbf{[TBD-$n$]} marks a value not yet known. Both are listed in
 App.~C.\par}
 
@@ -157,7 +151,7 @@ App.~C.\par}
 The System has two segments, far apart. The ground segment is on Earth: the
 operator, the mission operations center that runs the ground software, and the
 ground station antenna [6, \S11.2, p.~305]. The space segment is in orbit: the onboard
-computer and the controller, out of physical reach \tbr{situation}. The only
+computer and the controller, out of physical reach. The only
 link between the two is the radio link (IF-1). It exists only while the ground station can
 see the spacecraft, during a contact window \tbd{window}. Between contacts the
 space segment works alone. Inside the spacecraft, the onboard computer reaches
@@ -315,7 +309,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 
 % ===========================================================================
 \section{Physical Environment}
-Follows from the situation \tbr{situation}. Response legend
+Follows from the situation in which nobody can reach the System. Response legend
 [1, App.~S \S4.0, p.~252]: OPERATE = all functions continue; SURVIVE = functions
 stop and return when the condition ends.
 
@@ -335,7 +329,7 @@ Temperature range & \tbd{temp} & --- \\
 Firmware is built and released on the ground and sent up during contacts, one
 transfer across several if needed. The onboard computer keeps the last
 known-good firmware. Update rate \tbd{frequency}. Nothing is repaired after
-deployment \tbr{situation}.
+deployment.
 
 % ===========================================================================
 \section{Operational Scenarios}
@@ -430,11 +424,18 @@ VER verification.
 \section{Open Items}
 Unmarked statements were stated or accepted by the author on 9--10 October
 2026. TBR items are resolved before the hazard analysis.
+\subsection*{Resolved}
 \begin{description}
-\tbritem{situation}{Spacecraft controller, ground contacts only, no physical
-  access, bench stand-in, bit errors occur, no repair.}
-\tbritem{power}{Controller power can drop at any instant, including mid-write.}
-\tbritem{operator}{One operator.}
+\tbrresolved{situation}{Spacecraft controller, ground contacts only, no
+  physical access, bench stand-in, bit errors occur, no repair. Accepted by the
+  author, 10 October 2026.}
+\tbrresolved{power}{Controller power can drop at any instant, including
+  mid-write. Accepted by the author, 10 October 2026.}
+\tbrresolved{operator}{One operator. Accepted by the author, 10 October 2026.}
+\end{description}
+
+\subsection*{Open}
+\begin{description}
 \tbritem{telemetry}{TM-1, TM-2, TM-3, TM-5 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{faults}{G-4, FM-1 to FM-4 as written (shown 10 Oct, not yet

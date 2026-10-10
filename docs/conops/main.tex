@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{tikz}
+\usepackage{fontawesome5}
 \usetikzlibrary{arrows.meta}
 \usepackage{graphicx}
 \usepackage{float}
@@ -31,7 +32,7 @@
 
 % Controlled-document header on every page.
 \newcommand{\docref}{Reference TBD}
-\newcommand{\docrev}{Issue 1, Rev.~2 --- DRAFT}
+\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\small Remote Controller with Fail-Safe Update --- ConOps}
@@ -63,7 +64,7 @@
 \vspace{1em}
 \begin{tabular}{@{}ll@{}}
 Reference & TBD \tbd{ref} \\
-Issue / revision & Issue 1, Revision 2 --- DRAFT \\
+Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 10 October 2026 \\
 Author & Andrew Toma \\
 Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
@@ -76,10 +77,6 @@ Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
 Issue & Rev. & Date & Change \\
 \midrule
 1 & 0 & 2026-10-10 & First draft \\
-1 & 1 & 2026-10-10 & Single need statement, accepted by the author, with its
-  source (\S3.1); N-1 to N-3 retired into goals G-5 to G-7; rationale added
-  (\S1.1.1); References [3] and [4] added. \\
-1 & 2 & 2026-10-10 & \S1.2.1: ground and space segments, joined only by radio. \\
 \bottomrule
 \end{tabular}
 
@@ -92,6 +89,10 @@ Issue & Rev. & Date & Change \\
 \subsection{Project Description}
 
 \subsubsection{Background}
+The System exists to meet one need: \emph{a controller that nobody can reach
+must stay operable, observable and correctable for its whole life}
+(\S3.1).
+
 A controller in space must be updated, watched and commanded from the ground,
 with nobody able to reach it \tbr{situation}. A failed update can leave it
 unable to run any firmware or accept new firmware. Without physical access that
@@ -133,37 +134,44 @@ the recovery path (I-3). Figure~\ref{fig:segments} shows the layout.
 \begin{figure}[tbp]
 \centering
 \begin{tikzpicture}[
-  box/.style={draw, rounded corners=2pt, fill=white, minimum width=2.8cm, minimum height=1.1cm, align=center},
-  seg/.style={draw, dashed, rounded corners=4pt, fill=white},
+  box/.style={draw, rounded corners=2pt, fill=white, minimum width=2.2cm, minimum height=1.2cm, align=center},
+  icon/.style={inner sep=1pt},
   >={Stealth[length=2.2mm]}]
-\useasboundingbox (0,-0.7) rectangle (15.8,7.7);
-% Orbit and Earth
-\draw[gray, dashed] (0,3.9) .. controls (7.9,8.6) .. (15.8,3.9);
-\node[gray, font=\footnotesize] at (1.4,4.9) {orbit};
+\useasboundingbox (0,-0.6) rectangle (16,7.4);
+% Earth
 \begin{scope}
-\clip (0,-0.7) rectangle (15.8,0.3);
-\fill[black!12] (7.9,-40) circle (40.2);
+\clip (0,-0.6) rectangle (16,0.3);
+\fill[black!12] (8,-40) circle (40.3);
 \end{scope}
-\node[font=\footnotesize] at (14.6,-0.3) {Earth};
+\node[font=\footnotesize, anchor=east] at (15.8,-0.25) {Earth};
 % Ground segment
-\draw[seg] (0.5,0.5) rectangle (9.3,2.6);
-\node[anchor=north west, font=\small\bfseries] at (0.6,2.55) {Ground segment (on Earth)};
-\node[box] (op) at (2.5,1.4) {Operator};
-\node[box] (gs) at (7.1,1.4) {Ground station\\\small(antenna)};
-\draw[<->] (op) -- (gs);
-% Space segment
-\draw[seg] (5.2,4.1) rectangle (15.6,7.6);
-\node[anchor=north west, font=\small\bfseries] at (5.3,7.55) {Space segment (spacecraft in orbit, out of reach)};
-\node[box] (obc) at (7.4,6.1) {Onboard\\computer};
-\node[box] (ctl) at (13.4,6.1) {Controller};
-\draw[<->] ([yshift=2mm]obc.east) -- node[above, font=\small]{I-2 internal link} ([yshift=2mm]ctl.west);
+\node[icon, font=\fontsize{24}{24}\selectfont] (op) at (1.6,1.15) {\faUser};
+\node[font=\small, anchor=north] at ([yshift=-0.5mm]op.south) {Operator};
+\node[icon, font=\fontsize{32}{32}\selectfont] (gs) at (4.6,1.25) {\faSatelliteDish};
+\node[font=\small, anchor=north] at ([yshift=-0.5mm]gs.south) {Ground station};
+\draw (op.east) -- (gs.west);
+\node[font=\small\bfseries, anchor=west] at (0.1,2.45) {Ground segment (Earth)};
+% Orbit and spacecraft
+\draw[gray, dashed] (0,4.4) .. controls (4.5,7.3) .. (9.2,5.6);
+\node[gray, font=\footnotesize] at (0.9,5.25) {orbit};
+\node[icon, font=\fontsize{36}{36}\selectfont] (sat) at (5.7,5.9) {\faSatellite};
+\node[font=\small\bfseries, anchor=south] at (4.6,6.85) {Space segment (in orbit, out of reach)};
+% Radio link across the gap
+\draw[<->, dashed, thick] (gs.north east) -- node[pos=0.5, left, align=right, font=\small, xshift=-1mm]{I-1 ground link\\radio, long distance\\contact windows only} (sat.south west);
+% Inside the spacecraft
+\draw[gray] (sat.north east) -- (9.4,6.6);
+\draw[gray] (sat.south east) -- (9.4,1.8);
+\draw[dashed, rounded corners=4pt, fill=white] (9.4,1.8) rectangle (16,6.6);
+\node[font=\small\bfseries, anchor=north west] at (9.5,6.55) {Inside the spacecraft};
+\node[box] (obc) at (10.8,4.6) {{\Large\faServer}\\[1mm]Onboard\\computer};
+\node[box] (ctl) at (14.7,4.6) {{\Large\faMicrochip}\\[1mm]Controller};
+\draw[<->] ([yshift=2mm]obc.east) -- node[above, font=\footnotesize]{I-2} ([yshift=2mm]ctl.west);
 \draw[<->] ([yshift=-2mm]obc.east) -- node[below, font=\footnotesize]{redundant} ([yshift=-2mm]ctl.west);
 \draw[->, thick] (obc.south) to[out=-30, in=-150] node[below, font=\small]{I-3 recovery path} (ctl.south);
-% Radio link across the gap
-\draw[<->, dashed, thick] (gs.north) -- node[pos=0.4, right, align=left, font=\small, xshift=2mm]{I-1 ground link\\radio, long distance\\contact windows only} (obc.south);
 \end{tikzpicture}
 \caption{Ground and space segments. They are far apart and joined only by radio
-during contact windows. I-3 works with no firmware running on the controller.}
+during contact windows. I-3 works with no firmware running on the controller.
+Icons: Font Awesome 5 Free (SIL OFL 1.1).}
 \label{fig:segments}
 \end{figure}
 
@@ -215,10 +223,10 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
   later \tbr{faults}.
 \item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
   recorded.
-\item[N-1] Retired in Rev.~1; now G-7. NASA requires a single need statement
+\item[N-1] Retired during drafting; now G-7. NASA requires a single need statement
   [1, \S4.1, p.~49].
-\item[N-2] Retired in Rev.~1; now G-6.
-\item[N-3] Retired in Rev.~1; now G-5.
+\item[N-2] Retired during drafting; now G-6.
+\item[N-3] Retired during drafting; now G-5.
 \end{description}
 
 \subsection{Overview of System and Key Elements}

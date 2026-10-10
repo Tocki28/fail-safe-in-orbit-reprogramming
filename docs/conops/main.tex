@@ -410,32 +410,42 @@ demonstration.
 
 % ===========================================================================
 \section{Physical Environment}
-This section gives the environment the System must work in across its life
-cycle: operation in the mission it imitates, and integration and test on the
-laboratory bench. For each condition it states whether the System must
-operate, tolerate the condition with degraded performance, or only survive it
+This section specifies the environment the System encounters across its life
+cycle, encompassing simulated mission operations and laboratory integration
+and testing. For each environmental condition, the expected system response is
+defined as nominal operation, degraded performance tolerance, or survivability
 [1, App.~S, p.~252].
 
 \begin{table}[H]
 \centering
 \begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xll@{}}
 \toprule
-Phase & Condition & Response & Scenario \\
+Phase & Environmental condition & Response & Scenario \\
 \midrule
-Operation & Temperature range & \tbd{temp} & --- \\
+Operation & Thermal range & \tbd{temp} & --- \\
 Operation & Vacuum & NOT DEMONSTRATED & --- \\
-Operation & Radiation: single-bit memory errors & OPERATE & Scenario-400 \\
-Operation & Electrical: power interruptions at any instant & SURVIVE & Scenario-340 \\
-Launch & Vibration and launch loads & NOT DEMONSTRATED & --- \\
-Integration and test & Laboratory bench: room temperature and pressure & OPERATE & All \\
+Operation & Radiation: single-event upset / memory bit errors & OPERATE & Scenario-400 \\
+Operation & Electrical: power interruption at any instant & SURVIVE & Scenario-340 \\
+Launch & Mechanical: vibration and launch loads & NOT DEMONSTRATED & --- \\
+Integration and Test & Laboratory bench: ambient room temperature and pressure & OPERATE & All \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\noindent Legend: OPERATE = all functions continue; TOLERATE = some functions
-are degraded, none is lost for good; SURVIVE = functions stop and return when
-the condition ends; NOT DEMONSTRATED = beyond what bench hardware can show
-(constraint C-4). Transportation: not applicable; the System is not transported.
+\noindent\textbf{Legend}
+\begin{description}[leftmargin=5.3cm]
+\item[OPERATE] All functions continue normally.
+\item[TOLERATE] Partial functional degradation occurs, but no function is
+  permanently lost.
+\item[SURVIVE] Operational functions temporarily halt and automatically recover
+  upon removal of the condition.
+\item[\mbox{NOT DEMONSTRATED}] Beyond the physical capabilities of bench testing
+  hardware (constraint C-4).
+\end{description}
+
+\medskip
+\noindent\textbf{Transportation:} not applicable; system transportation is
+outside the scope of bench demonstration.
 
 % ===========================================================================
 \section{Support Environment}

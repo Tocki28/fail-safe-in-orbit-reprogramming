@@ -60,7 +60,7 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="i3label" value="&lt;b&gt;Reprogramming link&lt;/b&gt;: the last resort&lt;br&gt;restores working firmware when&lt;br&gt;the controller's firmware cannot run" style="text;html=1;align=center;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="i3label" value="&lt;b&gt;Reprogramming link&lt;/b&gt;: last resort&lt;br&gt;restores working firmware if the&lt;br&gt;controller's firmware cannot run" style="text;html=1;align=center;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="408" y="190" width="200" height="48" as="geometry" />
         </mxCell>
 
@@ -68,7 +68,7 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <mxCell id="i2label" value="&lt;b&gt;Data link&lt;/b&gt;: the normal path&lt;br&gt;commands, firmware, reports&lt;br&gt;2 separate connections" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="i2label" value="&lt;b&gt;Data link&lt;/b&gt;: normal path for&lt;br&gt;commands, firmware, and reports;&lt;br&gt;2 separate connections" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="408" y="56" width="200" height="48" as="geometry" />
         </mxCell>
 

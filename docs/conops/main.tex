@@ -410,20 +410,32 @@ demonstration.
 
 % ===========================================================================
 \section{Physical Environment}
-Follows from the situation in which nobody can reach the System. Response legend
-[1, App.~S, p.~252]: OPERATE = all functions continue; SURVIVE = functions
-stop and return when the condition ends.
+This section gives the environment the System must work in across its life
+cycle: operation in the mission it imitates, and integration and test on the
+laboratory bench. For each condition it states whether the System must
+operate, tolerate the condition with degraded performance, or only survive it
+[1, App.~S, p.~252].
 
-\begin{tabular}{@{}lll@{}}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xll@{}}
 \toprule
-Condition & Response & Scenario \\
+Phase & Condition & Response & Scenario \\
 \midrule
-No ground contact & OPERATE & Scenario-110 \\
-Controller power loss at any instant & SURVIVE & Scenario-340 \\
-Single-bit memory error & OPERATE & Scenario-400 \\
-Temperature range & \tbd{temp} & --- \\
+Operation & Temperature range & \tbd{temp} & --- \\
+Operation & Vacuum & NOT DEMONSTRATED & --- \\
+Operation & Radiation: single-bit memory errors & OPERATE & Scenario-400 \\
+Operation & Electrical: power interruptions at any instant & SURVIVE & Scenario-340 \\
+Launch & Vibration and launch loads & NOT DEMONSTRATED & --- \\
+Integration and test & Laboratory bench: room temperature and pressure & OPERATE & All \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
+\end{table}
+
+\noindent Legend: OPERATE = all functions continue; TOLERATE = some functions
+are degraded, none is lost for good; SURVIVE = functions stop and return when
+the condition ends; NOT DEMONSTRATED = beyond what bench hardware can show
+(constraint C-4). Transportation: not applicable; the System is not transported.
 
 % ===========================================================================
 \section{Support Environment}

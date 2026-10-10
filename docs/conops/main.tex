@@ -13,6 +13,7 @@
 \usepackage{totcount}
 \usepackage{fancyhdr}
 \usepackage{lastpage}
+\usepackage{needspace}
 \usepackage{tocloft}
 \usepackage[hidelinks]{hyperref}
 
@@ -178,6 +179,28 @@ controller's firmware cannot run.}
 \end{figure}
 
 \subsubsection{System Scope}
+\noindent\textbf{Size and complexity:} Two segments, five elements, three links.
+Software runs in three places: the mission operations center, the onboard
+computer and the controller.
+
+\medskip
+\noindent\textbf{External interfaces}
+\begin{itemize}
+\item The radio equipment at both ends of the radio link.
+\item The spacecraft power supply feeding the onboard computer and the
+  controller. Its loss is assumption A-2.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Enabling systems} (needed to build and test the System, not
+part of it)
+\begin{itemize}
+\item The tools that build and release firmware.
+\item The bench setup that degrades the radio link and injects faults (VER-1,
+  VER-2).
+\end{itemize}
+
+\medskip
 \noindent\textbf{In scope}
 \begin{itemize}
 \item \textbf{Commanding:} commands from the ground, through the onboard
@@ -191,11 +214,9 @@ controller's firmware cannot run.}
 \end{itemize}
 
 \medskip
+\needspace{4\baselineskip}
 \noindent\textbf{Out of scope}
 \begin{itemize}
-\item \textbf{Controller functions:} what the controller controls in a real
-  mission. A stand-in function runs on the bench, so that updates and
-  telemetry have something to protect and report on.
 \item \textbf{Onboard computer software updates:} updating or restoring the
   onboard computer's own software \tbr{obcupdate}.
 \item \textbf{Radio equipment:} RF front ends, antennas and ground

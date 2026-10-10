@@ -76,7 +76,7 @@
         <mxCell id="groundlabel" value="&lt;b&gt;Ground segment&lt;/b&gt; (Earth)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;" vertex="1" parent="1">
           <mxGeometry x="10" y="208" width="220" height="24" as="geometry" />
         </mxCell>
-        <mxCell id="op" value="Operator" style="shape=mxgraph.networks.user_male;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
+        <mxCell id="op" value="Operator" style="shape=mxgraph.office.users.user;html=1;fillColor=#5A5A5A;strokeColor=none;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="15" y="245" width="30" height="45" as="geometry" />
         </mxCell>
         <mxCell id="dish" value="Ground station" style="shape=mxgraph.networks.satellite_dish;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
@@ -96,7 +96,7 @@
         <mxCell id="i1" value="" style="endArrow=classic;startArrow=classic;html=1;dashed=1;strokeWidth=2;endSize=6;startSize=6;" edge="1" parent="1" source="dish" target="sat">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i1label" value="&lt;b&gt;Radio link&lt;/b&gt;&lt;br&gt;commands and firmware up,&lt;br&gt;reports down;&lt;br&gt;only during contacts" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="i1label" value="&lt;b&gt;Radio link (TM/TC)&lt;/b&gt;&lt;br&gt;only during contacts" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="70" y="140" width="170" height="64" as="geometry" />
         </mxCell>
       </root>

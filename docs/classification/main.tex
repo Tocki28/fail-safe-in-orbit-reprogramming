@@ -133,10 +133,15 @@ Firmware build tools & BUILD & D \\
 
 % ===========================================================================
 \section{Safety-Critical Designation}
-Software is safety-critical when a hazard analysis traces a hazard to it
-[2, Sec.~4.2, p.~20]; the determination is made for each component
-[1, Sec.~3.7.1, p.~26]. The designation of each item above is set after the
-hazard analysis \tbd{safety}.
+Some software is safety-critical: the parts that can cause a hazard, or that
+exist to prevent, detect or handle one [2, Sec.~4.2, p.~20]. Safety-critical
+software must meet extra requirements on top of its class, for example test
+coverage of every decision (MC/DC) [1, Sec.~3.7.4, pp.~26--27].
+
+Which items are safety-critical can only be decided once the hazards are known,
+in the hazard analysis \tbd{safety}. Every item here is already Class~D or
+higher, as safety-critical software must be [3, Sec.~3.2.2], so the result
+cannot change a class.
 
 % ===========================================================================
 \section{Tailoring and Review}
@@ -159,6 +164,59 @@ The values below are not yet known.
 \tbditem{ref}{Project name and document reference.}
 \tbditem{safety}{Safety-critical designation of each software item, from the
   hazard analysis.}
+\end{description}
+
+\clearpage
+\section{Requirements Mapping Matrix}
+Every requirement of NPR 7150.2D marked for an item's class is complied with
+[1, App.~C, pp.~56--78], except those tailored out below
+[1, Sec.~3.1.12, p.~22]. The tailoring was decided by the author on 10 October
+2026 and is revisited at each later phase.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+SWE & Requirement & Reason \\
+\midrule
+141 & Software IV\&V for NASA project categories & NOT NASA \\
+143 & Architecture review for NASA project categories & NOT NASA \\
+174 & Planning data to the Center measurement repository & NOT NASA \\
+148 & Reuse candidates to NASA's catalogue & NOT NASA \\
+094 & Measurement data to the sponsoring organisation & NOT NASA \\
+039 & Status reports from the software developer & NO SUPPLIER \\
+040 & Products and records from the developer to NASA & NO SUPPLIER \\
+042 & NASA access to the developer's source code & NO SUPPLIER \\
+046 & Software schedule from the developer & NO SUPPLIER \\
+206 & NASA access to the developer's models and simulations & NO SUPPLIER \\
+045 & Joint NASA/developer audits & NO SUPPLIER \\
+131 & IV\&V plan & NO IV\&V \\
+178 & IV\&V access to development artifacts & NO IV\&V \\
+179 & Responses to IV\&V issues and risks & NO IV\&V \\
+032 & CMMI-DEV rated organisation & NO RATING \\
+022 & Software assurance and safety plan per NASA-STD-8739.8 & NO ASSURANCE \\
+205 & Safety-critical determination with the SMA organisation & NO ASSURANCE \\
+015 & Two cost estimate models & NO BUDGET \\
+151 & Conditions on the cost estimate & NO BUDGET \\
+070 & Accredited models and simulations for flight qualification & BENCH ONLY \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Legend: reason}
+\begin{description}[leftmargin=3.9cm]
+\item[\mbox{NOT NASA}] The System is not a NASA program or project; there is no NASA
+  Center, catalogue or sponsoring organisation.
+\item[\mbox{NO SUPPLIER}] The engineer develops all software; there is no separate
+  developer or supplier.
+\item[\mbox{NO IV\&V}] Independent verification and validation is not performed.
+\item[\mbox{NO RATING}] There is no organisation to hold a CMMI rating.
+\item[\mbox{NO ASSURANCE}] There is no independent software assurance or SMA
+  organisation (ConOps constraint C-3); the author decides alone.
+\item[\mbox{NO BUDGET}] The project has no development budget to estimate.
+\item[\mbox{BENCH ONLY}] The System is demonstrated on a bench, not qualified for
+  flight (ConOps constraint C-4).
 \end{description}
 
 \end{document}

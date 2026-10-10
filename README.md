@@ -28,7 +28,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 2. **Software Classification:** Failure severity and required rigor.
    **Draft:** [Issue 1, Rev 0](docs/classification/Software-Classification_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
 3. **Hazard Analysis:** Top-down and bottom-up fault identification.
-   *Not started.*
+   **Draft:** [Issue 1, Rev 0](docs/hazard-analysis/Hazard-Analysis_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
 4. **Requirements:** Traceable, testable, single-claim rules.
    *Not started.*
 5. **Architecture:** System-level design.

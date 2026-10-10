@@ -8,6 +8,7 @@
 *.synctex.gz
 docs/conops/main.pdf
 docs/classification/main.pdf
+docs/hazard-analysis/main.pdf
 
 # macOS
 .DS_Store

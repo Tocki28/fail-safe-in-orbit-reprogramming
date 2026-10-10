@@ -154,17 +154,19 @@ ground station antenna [6, \S11.2, p.~305]. The space segment is in orbit: the o
 computer and the controller, out of physical reach. The only
 link between the two is the radio link. It exists only while the ground station can
 see the spacecraft, during a contact window \tbd{window}. Between contacts the
-space segment works alone. Inside the spacecraft, the onboard computer reaches
-the controller over a data link with two separate connections. Through
-a reprogramming link it can rewrite and restart the controller even when
-the controller's firmware cannot run. Figure~\ref{fig:segments} shows the layout.
+space segment works alone. Inside the spacecraft, the onboard computer talks to
+the controller over the data link, the normal path, which has two separate
+connections. When the controller's firmware cannot run, the onboard computer
+uses the reprogramming link as a last resort: it writes new firmware straight
+into the controller's memory and restarts it. Figure~\ref{fig:segments} shows the layout.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig-segments.pdf}
-\caption{Ground and space segments. They are far apart and joined only by radio
-during contact windows. The reprogramming link works
-even when the controller's firmware cannot run.
+\caption{Ground and space segments, joined only by the radio link during
+contact windows. Inside the spacecraft, the data link is the normal path for
+commands, firmware and reports. The reprogramming link is the last resort: it
+flashes the controller directly when the controller's firmware cannot run.
 Editable source: \texttt{fig-segments.drawio}.}
 \label{fig:segments}
 \end{figure}
@@ -247,15 +249,19 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 
 \subsection{Interfaces}
 \begin{description}[leftmargin=4.4cm]
-\item[Radio link] Ground station to onboard computer. Commands and
-  firmware go up; reports come down. Exists only during contact windows.
-\item[Data link] Onboard computer to controller. Carries commands,
-  firmware and reports over two separate connections. If one connection fails,
-  the other carries everything.
-\item[Reprogramming link] Onboard computer to controller. Lets the
-  onboard computer rewrite the controller's firmware and restart it directly,
-  even when the controller's own firmware cannot run. It is the last-resort
-  repair.
+\item[Radio link] The only connection between the ground and the
+  spacecraft. Commands and firmware go up; reports come down. It exists only
+  during contact windows.
+\item[Data link] The normal path between the onboard computer and the
+  controller. Commands and new firmware go to the controller; reports come
+  back. The controller's own firmware receives each new firmware and installs
+  it, so this path works only while that firmware runs. It has two separate
+  connections: if one fails, the other carries everything.
+\item[Reprogramming link] The last-resort path, used only when the
+  controller's firmware cannot run. The onboard computer writes firmware
+  straight into the controller's memory and restarts it, like a programmer
+  flashing a board on the bench. It does not depend on any software on the
+  controller.
 \end{description}
 
 \subsection{Modes of Operations}

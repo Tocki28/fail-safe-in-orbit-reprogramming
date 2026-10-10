@@ -89,24 +89,24 @@ Issue & Rev. & Date & Change \\
 \subsection{Project Description}
 
 \subsubsection{Background}
-\noindent\textbf{Purpose.} The System lets an operator on the ground command,
-monitor and update a controller in space that nobody can reach
+\noindent\textbf{Purpose:} The System lets an operator on the ground command,
+monitor, and update a controller in space that nobody can reach
 \tbr{situation}, and keeps that controller working between contacts.
 
 \medskip
-\noindent\textbf{Need.} \emph{A controller that nobody can reach must stay
-operable, observable and correctable for its whole life.} Operation,
-observability, and maintenance including in-flight modification over the
-specified lifetime are the three areas a space software specification must
-cover [3, Annex~B, items 5.11--5.13, p.~113].
+\noindent\textbf{Need:} A controller that nobody can reach must stay operable,
+observable, and correctable for its whole life. Operation, observability, and
+maintenance including in-flight modification over the specified lifetime are
+three areas a space software specification must cover
+[3, Annex~B, items 5.11--5.13, p.~113].
 
 \medskip
-\noindent\textbf{Worst outcome.} A failed update can leave the controller
+\noindent\textbf{Worst-Case Failure:} A failed update can leave the controller
 unable to run any firmware and unable to accept new firmware. Without physical
-access that state is permanent.
+access, that state is permanent.
 
 \medskip
-\noindent\textbf{Rationale.} The loss has happened. NASA records a mission
+\noindent\textbf{Rationale:} The loss has happened. NASA records a mission
 terminated after an in-flight software upload omitted a patch for a defective
 countdown timer; its recommendations include test-bed verification of in-flight
 software updates [4, Lesson 0559, p.~199].
@@ -115,10 +115,14 @@ software updates [4, Lesson 0559, p.~199].
 \begin{description}
 \item[C-1] The ground has no direct link to the controller, only through the
   onboard computer.
-\item[C-2] All software follows critical-software practice. Rigour per part is
-  set later by its software class.
-\item[C-3] One engineer. Demonstration date \tbd{date}.
-\item[C-4] Bench hardware stands in for flight hardware \tbr{situation}.
+\item[C-2] All software is built to NASA's software engineering requirements.
+  Which requirements apply to each part depends on its software class
+  [5, \S3.5.1, p.~24; App.~C].
+\item[C-3] One engineer builds and verifies the System. There is no
+  independent test team.
+\item[C-4] The System is demonstrated on development boards on a bench, not on
+  flight hardware. Results show behaviour, not flight qualification.
+\item[C-5] The System is demonstrated by \tbd{date}.
 \item[A-1] No physical access after deployment \tbr{situation}.
 \item[A-2] Controller power can be lost at any instant, including during a
   firmware write \tbr{power}.
@@ -128,7 +132,7 @@ software updates [4, Lesson 0559, p.~199].
 \end{description}
 
 \medskip
-\noindent\textbf{Note.} A constraint (C) is a limit the System must work
+{\itshape \noindent\textbf{Note.} A constraint (C) is a limit the System must work
 within; it is imposed, not chosen. An assumption (A) is a condition taken as
 true without proof; the design depends on it, and if it proves false the design
 may be wrong. The NASA outline asks for both here [1, App.~S, p.~251]. Each
@@ -136,7 +140,7 @@ assumption becomes failure scenarios and, later, tests: A-2 becomes OPS-340,
 power lost during a firmware write, and then a test that cuts power at every
 point of a write. \textbf{[TBR-$n$]} marks a proposal the author has not yet
 accepted; \textbf{[TBD-$n$]} marks a value not yet known. Both are listed in
-App.~C.
+App.~C.\par}
 
 \subsection{Overview of the Envisioned System}
 
@@ -217,6 +221,8 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
 
 \noindent [4] NASA, \emph{Fault Management Handbook}, NASA-HDBK-1002, Draft~2,
 2 April 2012. A draft, not a released standard.
+
+\noindent [5] NASA, \emph{NASA Software Engineering Requirements}, NPR 7150.2D.
 
 % ===========================================================================
 \section{Description of Envisioned System}

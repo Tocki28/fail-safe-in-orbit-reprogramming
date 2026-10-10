@@ -74,7 +74,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 10 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbdopen} TBD, \total{tbropen} TBR (App.~C) \\
+Open items & \total{tbdopen} TBD (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -147,9 +147,8 @@ software updates [4, Lesson 0559, p.~199].
 {\itshape \noindent\textbf{Note.} A constraint (C) is a limit the System must work
 within; it is imposed, not chosen. An assumption (A) is a condition taken as
 true without proof; the design depends on it, and if it proves false the design
-may be wrong. \textbf{[TBR-$n$]} marks a proposal the author has not yet
-accepted; \textbf{[TBD-$n$]} marks a value not yet known. Both are listed in
-App.~C.\par}
+may be wrong. \textbf{[TBD-$n$]} marks a value not yet known; all are listed
+in App.~C.\par}
 
 \subsection{Overview of the Envisioned System}
 
@@ -201,8 +200,8 @@ External Elements & Radio equipment, spacecraft power supply \\
 \item \textbf{Enabling systems:} firmware build tools and bench test setups
   required for development and verification, external to operational scope.
 \item \textbf{In scope:} commanding, telemetry, firmware updates, and autonomous
-  fault handling between contact windows \tbr{faults}.
-\item \textbf{Out of scope:} onboard computer software updates \tbr{obcupdate},
+  fault handling between contact windows.
+\item \textbf{Out of scope:} onboard computer software updates,
   and the radio equipment, which is used as given.
 \end{itemize}
 
@@ -251,7 +250,7 @@ NASA-HDBK-1009A, 12 March 2025.
   \item[\textbf{O-2}] Firmware and commands not from the operator are never acted on.
   \item[\textbf{O-3}] With one data-link connection lost, commands, telemetry and
     updates continue.
-  \item[\textbf{O-4}] No fault found between contacts goes unreported \tbr{faults}.
+  \item[\textbf{O-4}] No fault found between contacts goes unreported.
   \end{itemize}
 \item[G-2] \textbf{Observability:} the ground can know what the System is
   doing, how healthy it is, and what happened between contacts.
@@ -322,7 +321,7 @@ outside the System; it uses them as given.
 \noindent\textbf{Controller modes during operation}
 \begin{description}[leftmargin=3cm]
 \item[OPERATE] Nominal state executing confirmed firmware. New firmware images
-  can be staged in the background during execution \tbr{receive}.
+  can be staged in the background during execution.
 \item[TRIAL] Entered upon transitioning to updated firmware. Executes the new
   image for a bounded evaluation window \tbd{trialtime}. If the new image is
   judged good, the update is committed and the controller returns to OPERATE;
@@ -345,12 +344,12 @@ Each capability is shown in detail by the scenarios in Section~6.0.
   operator's valid telecommands, answer and log every one, and support arming
   and time-tagged execution.
 \item[Capability-3] \textbf{Fault handling} (serves G-1): detect faults between
-  contacts, respond without the ground, and record them \tbr{faults}.
+  contacts, respond without the ground, and record them.
 \item[Capability-4] \textbf{Update} (serves G-3): receive, check, install and
   judge new firmware, and return to working firmware without outside help if
   it fails \tbd{switch} \tbd{confirm}.
 \item[Capability-5] \textbf{Test} (verification only): degrade the radio link;
-  cut power or break a data-link connection on command \tbr{faultinject}.
+  cut power or break a data-link connection on command.
 \item[Disposal] None; bench demonstration.
 \end{description}
 
@@ -420,11 +419,10 @@ outside the scope of bench demonstration.
   its last-resort firmware.
 \item[Upgrades] Controller firmware updates constitute the sole operational
   upgrade mechanism, governed by a defined release cadence \tbd{frequency},
-  while the onboard computer's baseline software remains fixed
-  \tbr{obcupdate}.
+  while the onboard computer's baseline software remains fixed.
 \item[Continued support] Engineering sustainment support remains allocated for
   firmware build, verification, and release throughout the active mission
-  life cycle \tbr{support}.
+  life cycle.
 \end{description}
 
 % ===========================================================================
@@ -445,7 +443,7 @@ hazards [2, App.~A, Table~2].
   \item The onboard computer checks that it is undamaged, from the operator,
     built for this controller, and not older than the minimum version.
   \item The onboard computer delivers it to the controller over the data link;
-    the controller keeps working meanwhile \tbr{receive}.
+    the controller keeps working meanwhile.
   \item The controller switches to the new firmware and enters TRIAL
     \tbd{switch}.
   \item The new firmware is judged good within the trial time \tbd{trialtime}
@@ -549,12 +547,11 @@ errors, failures, and unexpected environmental conditions
   other, and the failure is reported.
 \item[Scenario-510] Both data-link connections fail. The controller keeps
   working on its current firmware, the loss is reported, and the
-  reprogramming link is still usable \tbr{bothlinks}.
+  reprogramming link is still usable.
 \item[Scenario-520] The controller goes silent. The onboard computer notices,
-  tries to bring it back, and records what it did \tbr{faults}.
+  tries to bring it back, and records what it did.
 \item[Scenario-530] A program on the onboard computer crashes. It restarts and
-  resumes any update in progress; the controller is not affected
-  \tbr{faults}.
+  resumes any update in progress; the controller is not affected.
 \end{description}
 
 \medskip
@@ -565,8 +562,7 @@ errors, failures, and unexpected environmental conditions
   written. When power returns, the controller runs its previous firmware, and
   the update can be repeated [2, p.~63].
 \item[Scenario-610] A radiation bit error changes stored firmware. The
-  controller detects it before starting that firmware and does not run it
-  \tbr{bitflip} [2, p.~63].
+  controller detects it before starting that firmware and does not run it [2, p.~63].
 \item[Scenario-620] A radiation bit error hits the memory the controller is
   running from. The controller may crash; it restarts on its own and resumes
   operation [2, p.~63].
@@ -597,7 +593,6 @@ Not applicable: bench demonstration.
 \item[ConOps] Concept of Operations
 \item[MOC] Mission operations center
 \item[TBD] To Be Determined
-\item[TBR] To Be Resolved
 \item[TC] Telecommand
 \item[TM] Telemetry
 \end{description}
@@ -614,19 +609,9 @@ Not applicable: bench demonstration.
 \end{description}
 
 \section{Open Items}
-Unmarked statements were stated or accepted by the author on 9--10 October
-2026. TBR items are resolved before the hazard analysis.
+All statements in this document were stated or accepted by the author on
+9--10 October 2026. The values below are not yet known.
 \begin{description}
-\tbritem{faults}{O-4 and Capability-3 as written (shown 10 Oct, not yet
-  accepted).}
-\tbritem{receive}{Controller keeps working while new firmware arrives.}
-\tbritem{obcupdate}{Onboard computer's own update out of scope.}
-\tbritem{bothlinks}{Reprogramming link still usable with both data-link
-  connections lost.}
-\tbritem{bitflip}{Stored firmware checked before start; damaged copy skipped.}
-\tbritem{faultinject}{Test setup can cut power and break one connection.}
-\tbritem{support}{The engineer stays available to build and release new
-  controller firmware for the life of the mission.}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{date}{Demonstration date.}
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}

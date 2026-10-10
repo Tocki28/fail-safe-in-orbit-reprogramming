@@ -173,9 +173,9 @@ failures are modelled and named [4,~pp.~23--24].
   \item[\textit{Operator}] a wrong or mistimed command (A-4).
   \end{itemize}
   Physical tampering is excluded: nobody can reach the spacecraft (A-1).
-\item \textbf{Modelling:} an operator error enters as a wrong or mistimed
-  command. A common cause counts as one failure, however many controls it
-  defeats.
+\item \textbf{Operator errors:} each counts as a wrong or mistimed command.
+\item \textbf{Counting failures:} one cause that disables several controls at
+  once counts as one failure.
 \item \textbf{Fault tolerance:} a catastrophic hazard stays controlled with
   any two failures present at the same time; a critical hazard with any one
   [3,~Sec.~3.1] \tbr{credible}.
@@ -236,12 +236,12 @@ ID & Hazard & Severity \\
 \midrule
 \endhead
 H-1  & The controller is left with no firmware it can run, and cannot be restored & CATASTROPHIC \\
-H-2  & Firmware not released by the operator runs on the controller & CATASTROPHIC \\
+H-2  & Firmware from someone other than the operator runs on the controller & CATASTROPHIC \\
 H-3  & New firmware can no longer reach the controller & CATASTROPHIC \\
 H-4  & The controller can no longer be commanded or observed & CATASTROPHIC \\
 H-5  & Someone other than the operator commands the System & CATASTROPHIC \\
 H-6  & A command is acted on in a form or at a time the operator did not intend & CRITICAL \\
-H-7  & Defective firmware released by the operator is confirmed & CRITICAL \\
+H-7  & Wrong firmware runs on the controller: damaged, out of date, or with a hidden defect & CRITICAL \\
 H-8  & The controller stops working between contacts and is not brought back & CRITICAL \\
 H-9  & The ground is shown a false state of the System & CRITICAL \\
 H-10 & A fault between contacts never reaches the ground & CRITICAL \\
@@ -361,12 +361,12 @@ Answer and log commands & H-11 & H-9, H-17 & H-9 & H-16 \\
 Detect faults & H-8, H-10 & H-10, H-13 & H-13 & H-8 \\
 Respond to faults & H-8 & H-1, H-4, H-13 & H-13 & H-8 \\
 \multicolumn{5}{@{}l}{\itshape Update (Capability-4)} \\
-Prepare and check firmware releases & H-7 & H-3, H-7 & H-2 & NONE \\
-Receive and check firmware & H-1, H-2 & H-2, H-3, H-14 & H-14 & H-2 \\
+Prepare and check firmware releases & H-7 & H-3, H-7 & H-7 & NONE \\
+Receive and check firmware & H-1, H-2, H-7 & H-2, H-3, H-7, H-14 & H-14 & H-7 \\
 Install firmware and switch & H-14 & H-1 & H-6 & H-1 \\
 Judge and confirm new firmware & H-13 & H-3, H-7 & H-7 & H-7, H-13 \\
-Fall back to working firmware & H-1, H-8 & H-1, H-2 & H-13 & H-8, H-13 \\
-Restore through the reprogramming link & H-1 & H-1, H-2 & H-13 & H-1 \\
+Fall back to working firmware & H-1, H-8 & H-1, H-7 & H-13 & H-8, H-13 \\
+Restore through the reprogramming link & H-1 & H-1, H-2, H-7 & H-13 & H-1 \\
 \multicolumn{5}{@{}l}{\itshape Test (Capability-5)} \\
 Inject faults & NONE & NONE & H-12 & H-12 \\
 \bottomrule
@@ -401,7 +401,7 @@ connections (R-1) [1,~p.~66]. H-4.\par
 firmware, its disclosure opens both. H-2, H-5.\par
 \noindent\textbf{Radiation:} bit errors strike stored firmware, running
 memory, stored reports, held commands and the arm state (A-5) [1,~p.~63].
-H-1, H-6, H-8, H-9, H-10.\par
+H-1, H-6, H-7, H-8, H-9, H-10.\par
 \noindent\textbf{One set of build tools:} a tool defect enters every image.
 H-1, H-7, H-12.\par
 \noindent\textbf{Fixed onboard computer software:} it is not updated during
@@ -442,25 +442,21 @@ count is lost at a restart; the last-resort firmware shares the defect.
 supply; radiation; one set of build tools; fixed onboard computer software.
 
 % ---------------------------------------------------------------- H-2
-\hazard{H-2}{Firmware not released by the operator runs on the controller.}{CATASTROPHIC}{CONTROL}
-\field{When} An update, a fall-back or a restore.
-\fieldin{Effect} Firmware of unknown behaviour runs the controller and can
-refuse updates and report a false state. The restore starts only when no
-firmware can run (Scenario-480), so this firmware is never removed.
+\hazard{H-2}{Firmware from someone other than the operator runs on the controller.}{CATASTROPHIC}{CONTROL}
+\field{When} An update or a restore.
+\fieldin{Effect} Hostile firmware runs the controller and can refuse updates
+and report a false state. The restore starts only when no firmware can run
+(Scenario-480), so this firmware is never removed.
 \field{Causes} (a)~firmware not from the operator arrives (Scenario-410)
-[1,~p.~67]; (b)~firmware changes after its check, in transfer or in storage
-[1,~p.~63]; (c)~firmware older than the minimum version is sent again
-(Scenario-420); (d)~the means of proving origin is disclosed; (e)~a fall-back
-or a restore starts an image never released.
-\field{Controls} (1)~the onboard computer refuses firmware not released
-(Scenario-410), damaged (Scenario-400), older than the minimum version
-(Scenario-420) or built for another controller (Scenario-360)\ver{TEST};
-(2)~the controller checks firmware again before it runs it
-(Scenario-610)\ver{TEST}; (3)~the operator can order a restore while firmware
-runs\ver{DEMONSTRATION}.
-\field{Fails if} The check accepts what it should refuse, or is made before
-the last transfer.
-\fieldin{Common causes} One proof of origin; radiation.
+[1,~p.~67]; (b)~the means of proving origin is disclosed; (c)~a restore starts
+a stored copy someone else replaced.
+\field{Controls} (1)~the onboard computer refuses firmware not released by the
+operator (Scenario-410)\ver{TEST}; (2)~the controller checks the origin again
+before it runs the firmware\ver{TEST}; (3)~the operator can order a restore
+while firmware runs\ver{DEMONSTRATION}.
+\field{Fails if} The check accepts what it should refuse; the means of proof
+is disclosed.
+\fieldin{Common causes} One proof of origin.
 
 % ---------------------------------------------------------------- H-3
 \hazard{H-3}{New firmware can no longer reach the controller.}{CATASTROPHIC}{CAUSE, CONTROL}
@@ -545,23 +541,28 @@ state changes after its check.
 restarts.
 
 % ---------------------------------------------------------------- H-7
-\hazard{H-7}{Defective firmware released by the operator is confirmed.}{CRITICAL}{CAUSE, CONTROL}
-\field{When} During and after the trial of new firmware.
-\fieldin{Effect} The controller misbehaves until a further update; if the
-defect stops updates, H-3 follows.
-\field{Causes} (a)~the trial does not exercise the defect; (b)~the wrong build
-is released [1,~p.~67]; (c)~the release carries wrong configuration values
-[1,~p.~67]; (d)~firmware built for another controller is released
-(Scenario-360); (e)~the build tools add a defect; (f)~code is released not
-fully tested [1,~p.~67].
+\hazard{H-7}{Wrong firmware runs on the controller: damaged, out of date, or with a hidden defect.}{CRITICAL}{CAUSE, CONTROL}
+\field{When} During and after an update, a fall-back or a restore.
+\fieldin{Effect} The controller misbehaves until a further update. If the
+firmware passes its trial, it becomes the known-good firmware the controller
+falls back to. If it stops updates, H-3 follows.
+\field{Causes} (a)~a hidden defect the trial does not exercise; (b)~firmware
+changed after its check, in transfer or in storage [1,~p.~63]; (c)~firmware
+older than the minimum version sent again (Scenario-420); (d)~the wrong build,
+or wrong configuration values, released [1,~p.~67]; (e)~firmware built for
+another controller (Scenario-360); (f)~a defect added by the build tools;
+(g)~code released without full testing [1,~p.~67].
 \field{Controls} (1)~firmware not judged good within the trial time is given
-up (Scenario-430 to Scenario-450)\ver{TEST}; (2)~firmware for another
-controller is refused (Scenario-360)\ver{TEST}; (3)~the ground software checks
-every release before it is sent (Scenario-100)\ver{TEST}; (4)~the operator can
-order a return to the previous firmware\ver{DEMONSTRATION}.
+up (Scenario-430 to Scenario-450)\ver{TEST}; (2)~the onboard computer refuses
+firmware that is damaged (Scenario-400), older than the minimum version
+(Scenario-420) or built for another controller (Scenario-360)\ver{TEST};
+(3)~the controller checks firmware again before it runs it
+(Scenario-610)\ver{TEST}; (4)~the ground software checks every release before
+it is sent (Scenario-100)\ver{TEST}; (5)~the operator can order a return to
+the previous firmware\ver{DEMONSTRATION}.
 \field{Fails if} The judgement checks too little, or the trial ends before the
-defect shows.
-\fieldin{Common causes} One set of build tools.
+defect shows; a check is made before the last transfer.
+\fieldin{Common causes} One set of build tools; radiation.
 
 % ---------------------------------------------------------------- H-8
 \hazard{H-8}{The controller stops working between contacts and is not brought back.}{CRITICAL}{CAUSE, CONTROL, MONITOR}
@@ -654,14 +655,14 @@ must not work [1,~App.~A.1.2, p.~62]. Both lists hold in operation.
 \medskip
 \noindent\textbf{Must work:} return to working firmware when new firmware
 fails (H-1); restore through the reprogramming link (H-1, H-2); check every
-image before it runs (H-1, H-2); refuse commands and firmware not from the
+image before it runs (H-1, H-2, H-7); refuse commands and firmware not from the
 operator (H-2, H-5); accept the clock correction (H-4); detect and report
 faults between contacts (H-8, H-10); keep and send down every event report
 (H-10); answer every command (H-11).
 
 \medskip
 \noindent\textbf{Must not work:} write over the previous or last-resort
-firmware (H-1); run firmware not released by the operator (H-2); run a command
+firmware (H-1); run firmware not from the operator (H-2); run a command
 not from the operator (H-5); run a dangerous command without a valid arm, or
 any command twice (H-6); confirm firmware not judged good (H-7); inject faults
 (H-12).

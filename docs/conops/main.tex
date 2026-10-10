@@ -310,62 +310,100 @@ outside the System; it uses them as given.
 \subsection{Modes of Operations}
 \noindent\textbf{Life-cycle modes of the System}
 \begin{description}[leftmargin=3cm]
-\item[Test] On the bench, the System runs with the radio link degraded and
-  faults injected on purpose, to prove the scenarios.
-\item[Operation] The controller modes below.
-\item[Disposal] Not applicable; bench demonstration.
+\item[Test] Ground bench execution with simulated radio link degradation and
+  intentional fault injection to demonstrate operational scenarios.
+\item[Operation] Active mission execution using the controller modes detailed
+  below.
+\item[Disposal] Not applicable; limited to bench demonstration scope.
 \end{description}
 
 \medskip
 \noindent\textbf{Controller modes during operation}
 \begin{description}[leftmargin=3cm]
-\item[OPERATE] Runs confirmed firmware. New firmware can arrive while it runs
-  \tbr{receive}.
-\item[TRIAL] Entered at the switch to new firmware. Runs it for a limited time
-  \tbd{trialtime} until it is judged good, then returns to OPERATE.
-\item[FALLBACK] Entered when a trial or a start fails. Runs the previous
-  firmware, or the last-resort firmware.
-\item[RECOVERY] Entered when no firmware can run. Runs nothing; the onboard
-  computer restores it through the reprogramming link.
+\item[OPERATE] Nominal state executing confirmed firmware. New firmware images
+  can be staged in the background during execution \tbr{receive}.
+\item[TRIAL] Entered upon transitioning to updated firmware. Executes the new
+  image for a bounded evaluation window \tbd{trialtime}. If the new image is
+  judged good, the update is committed and the controller returns to OPERATE;
+  if not, it enters FALLBACK.
+\item[FALLBACK] Entered following a failed firmware trial or boot failure.
+  Reverts execution to the previous known-good firmware image or the
+  last-resort firmware.
+\item[RECOVERY] Entered when no operational firmware image can be executed.
+  Controller software execution is halted while the onboard computer restores
+  functional firmware via the reprogramming link.
 \end{description}
 
 \subsection{Proposed Capabilities}
+\noindent\textbf{Telemetry} (serves G-2 Observability)
 \begin{description}[leftmargin=3cm]
-\item[Telemetry-1] Send regular health reports: alive, firmware, uptime, last restart
-  reason, temperature \tbr{telemetry}.
-\item[Telemetry-2] Report important events at once \tbr{telemetry}.
+\item[Telemetry-1] Send regular health reports: alive or not, firmware
+  version, time since start, reason for the last restart, temperature
+  \tbr{telemetry}.
+\item[Telemetry-2] Send a report as soon as something important happens
+  \tbr{telemetry}.
 \item[Telemetry-3] Timestamp every report \tbr{telemetry}.
-\item[Telemetry-4] Store reports between contacts, send all at the next one, report any
-  lost.
-\item[Telemetry-5] Report the health of each data-link connection \tbr{telemetry}.
-\item[Command-1] Accept commands only from the operator. Refuse replayed commands.
-\item[Command-2] Answer every command: received, refused with reason, or done with
-  result.
-\item[Command-3] Refuse commands not allowed in the current state.
-\item[Command-4] Run a resent command at most once.
-\item[Command-5] Dangerous commands need two steps: arm, then execute.
-\item[Command-6] Refuse impossible values.
-\item[Command-7] Let the operator cancel an update, leaving known-good firmware
-  running.
-\item[Command-8] Run commands at a set time. Refuse expired commands.
-\item[Command-9] Log every command and its answer.
-\item[Fault-1] Notice a silent controller and try to bring it back \tbr{faults}.
-\item[Fault-2] Carry on over the other connection when one dies \tbr{faults}.
-\item[Fault-3] Restart crashed onboard programs and continue \tbr{faults}.
-\item[Fault-4] Record every fault and action for the ground \tbr{faults}.
-\item[Update-1] Take firmware from the ground through dropping links.
-\item[Update-2] Refuse firmware that is damaged, not from the operator, for
-  something else, or below the minimum version.
-\item[Update-3] Get the firmware to the controller.
-\item[Update-4] Switch the controller to it \tbd{switch}.
-\item[Update-5] Decide whether it is good \tbd{confirm}.
-\item[Update-6] Go back to working firmware if not, with nobody's help.
-\item[Update-7] Tell the ground what happened.
-\item[Update-8] Never leave the controller without runnable firmware.
-\item[Test-1] Degrade the radio link on purpose.
-\item[Test-2] Cut controller power and break one connection on command
-  \tbr{faultinject}.
+\item[Telemetry-4] Store reports between contacts and send them all at the next
+  contact; report any that were lost.
+\item[Telemetry-5] Report the health of each data-link connection
+  \tbr{telemetry}.
 \end{description}
+
+\medskip
+\noindent\textbf{Commands} (serves G-1 Operability)
+\begin{description}[leftmargin=3cm]
+\item[Command-1] Accept commands only from the operator; refuse copies of old
+  commands sent again.
+\item[Command-2] Answer every command: received, refused with the reason, or
+  done with the result.
+\item[Command-3] Refuse a command that is not allowed in the current mode.
+\item[Command-4] Run a command that arrives twice only once.
+\item[Command-5] Require two steps for a dangerous command: arm, then execute.
+\item[Command-6] Refuse commands with impossible values.
+\item[Command-7] Let the operator cancel an update in progress, leaving working
+  firmware running.
+\item[Command-8] Run commands at a time the operator sets; refuse commands that
+  waited past their expiry.
+\item[Command-9] Log every command and its answer.
+\end{description}
+
+\medskip
+\noindent\textbf{Fault handling} (serves G-1 Operability) \tbr{faults}
+\begin{description}[leftmargin=3cm]
+\item[Fault-1] Notice when the controller goes silent and try to bring it back.
+\item[Fault-2] Continue over the other data-link connection when one fails.
+\item[Fault-3] Restart onboard programs that crash, and continue where they
+  stopped.
+\item[Fault-4] Record every fault found and the action taken, for the ground.
+\end{description}
+
+\medskip
+\noindent\textbf{Update} (serves G-3 Correctability)
+\begin{description}[leftmargin=3cm]
+\item[Update-1] Receive firmware from the ground even when the radio link keeps
+  dropping.
+\item[Update-2] Refuse firmware that is damaged, not from the operator, built
+  for another controller, or older than the minimum version.
+\item[Update-3] Deliver new firmware to the controller.
+\item[Update-4] Switch the controller to the new firmware. When the switch
+  happens is still open \tbd{switch}.
+\item[Update-5] Judge whether the new firmware is good. Who judges is still
+  open \tbd{confirm}.
+\item[Update-6] If the new firmware is not good, return the controller to
+  working firmware without outside help.
+\item[Update-7] Report the outcome of every update to the ground.
+\end{description}
+
+\medskip
+\noindent\textbf{Test} (verification only)
+\begin{description}[leftmargin=3cm]
+\item[Test-1] Degrade the radio link on purpose.
+\item[Test-2] On command, cut the controller's power or break one data-link
+  connection \tbr{faultinject}.
+\end{description}
+
+\medskip
+\noindent\textbf{Disposal:} none; bench demonstration.
 
 % ===========================================================================
 \section{Physical Environment}

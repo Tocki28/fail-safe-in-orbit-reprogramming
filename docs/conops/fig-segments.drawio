@@ -5,16 +5,7 @@
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- Earth: a wide ellipse whose lower half is hidden by a white band -->
-        <mxCell id="earth" value="" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=none;" vertex="1" parent="1">
-          <mxGeometry x="0" y="330" width="640" height="90" as="geometry" />
-        </mxCell>
-        <mxCell id="earthmask" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=none;" vertex="1" parent="1">
-          <mxGeometry x="-5" y="368" width="650" height="54" as="geometry" />
-        </mxCell>
-        <mxCell id="earthlabel" value="Earth" style="text;html=1;align=right;verticalAlign=middle;fontSize=12;fontColor=#555555;" vertex="1" parent="1">
-          <mxGeometry x="540" y="345" width="80" height="20" as="geometry" />
-        </mxCell>
+        
 
         <!-- Orbit -->
         <mxCell id="orbit" value="" style="curved=1;endArrow=none;html=1;dashed=1;strokeColor=#999999;" edge="1" parent="1">
@@ -31,19 +22,7 @@
           <mxGeometry x="10" y="125" width="50" height="20" as="geometry" />
         </mxCell>
 
-        <!-- Call-out lines from the satellite to the inside view -->
-        <mxCell id="zoom1" value="" style="endArrow=none;html=1;strokeColor=#AAAAAA;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="300" y="45" as="sourcePoint" />
-            <mxPoint x="370" y="55" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="zoom2" value="" style="endArrow=none;html=1;strokeColor=#AAAAAA;" edge="1" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="300" y="98" as="sourcePoint" />
-            <mxPoint x="370" y="255" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
+        
 
         <!-- Space segment -->
         <mxCell id="spacelabel" value="&lt;b&gt;Space segment&lt;/b&gt; (in orbit, out of reach)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;" vertex="1" parent="1">
@@ -83,6 +62,10 @@
 
         <mxCell id="i3label" value="I-3 recovery path" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="448" y="190" width="120" height="22" as="geometry" />
+        </mxCell>
+
+        <mxCell id="zoom" value="" style="endArrow=classic;html=1;strokeColor=#777777;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;endSize=6;" edge="1" parent="1" source="sat" target="inside">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
         <!-- Ground segment -->

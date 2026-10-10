@@ -60,7 +60,7 @@
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="i3label" value="&lt;b&gt;Reprogramming link&lt;/b&gt;: the last resort&lt;br&gt;flashes the controller directly&lt;br&gt;when its firmware cannot run" style="text;html=1;align=center;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="i3label" value="&lt;b&gt;Reprogramming link&lt;/b&gt;: the last resort&lt;br&gt;restores working firmware when&lt;br&gt;the controller's firmware cannot run" style="text;html=1;align=center;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="408" y="190" width="200" height="48" as="geometry" />
         </mxCell>
 

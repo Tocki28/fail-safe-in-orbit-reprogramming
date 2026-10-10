@@ -150,38 +150,51 @@ NASA/SP-2016-6105 Rev~2, 2016.
 
 % ===========================================================================
 \section{Ground Rules}
-These rules are set before the analysis: what counts as a failure, which
-failures are included and the fault tolerance required [3,~Sec.~3.1], and how
-failures are modelled and named [4,~pp.~23--24].
+These rules set the boundary, the failures included, the fault tolerance
+required and how failures are modelled and named, before the analysis starts
+[3,~Sec.~3.1; 4,~pp.~23--24].
 
+\subsection{Definitions and Boundary}
 \begin{itemize}
 \item \textbf{Hazard:} a state with the potential to cause harm [1,~p.~13].
-  Here, harm is losing what the need asks for: a controller that runs, and
-  that the operator can command, observe and correct.
-\item \textbf{Boundary:} the radio equipment and the spacecraft power supply
-  are outside the System [5,~Sec.~1.2.2]. Their failures enter as causes and
-  are not analysed further.
-\item \textbf{Failures included} [1,~App.~A, Table~2, pp.~62--68]:
-  \begin{itemize}[leftmargin=2.0cm, labelwidth=1.8cm, labelsep=0.2cm, align=left]
-  \item[\textit{Software}] a hang, crash, overflow or wrong state in any of the
-    three software items;
-  \item[\textit{Data}] a message corrupted, lost, repeated or late on any link;
-    a full buffer;
-  \item[\textit{Memory}] a write cut short by power loss; a bit flipped by
-    radiation (A-5); a stored value that wrongly survives a restart;
-  \item[\textit{Timing}] a watchdog reset; a restart loop; a wrong or reset
-    onboard clock;
-  \item[\textit{Power}] lost at any moment (A-2);
-  \item[\textit{Hardware}] a failed data-link connection or reprogramming link;
-  \item[\textit{Operator}] a wrong or mistimed command (A-4);
-  \item[\textit{Security}] the means of proving origin disclosed.
-  \end{itemize}
-  Physical tampering is excluded: nobody can reach the spacecraft (A-1).
+  Here, harm is the loss of the controller's operability, observability or
+  correctability.
 \item \textbf{Controls:} ``means of reducing the risk of exposure to a hazard''
   [1,~p.~13]: a check, a backup, an automatic response or an operator
-  procedure. A control with a scenario number comes from the ConOps; one
-  without is new.
-\item \textbf{Operator errors:} each counts as a wrong or mistimed command.
+  procedure.
+\item \textbf{Boundary:} the radio equipment and the spacecraft power supply lie
+  outside the System [5,~Sec.~1.2.2]. Their failures enter as causes and are
+  not analysed further.
+\item \textbf{Physical tampering:} excluded; nobody can reach the spacecraft
+  (Assumption A-1).
+\end{itemize}
+
+\subsection{Failures Included}
+The failures below are taken from the software causes of hazards
+[1,~App.~A, Table~2, pp.~62--68].
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+Domain & Failures \\
+\midrule
+Software & Hang, crash, buffer overflow or invalid state in any software item \\
+Data & Message corrupted, lost, repeated or late on any link; full buffer \\
+Memory & Write cut short by power loss; single-event upset (a bit flipped by
+  radiation, A-5); corrupted value that survives a restart \\
+Timing & Watchdog timeout; restart loop; onboard clock wrong, drifting or reset \\
+Power & Unannounced loss at any moment (A-2) \\
+Hardware link & Physical failure of a data-link connection or the
+  reprogramming link \\
+Operator & Invalid, out-of-sequence or mistimed telecommand (A-4) \\
+Security & Means of proving origin disclosed \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Analysis Rules}
+\begin{itemize}
 \item \textbf{Counting failures:} one cause that disables several controls at
   once counts as one failure.
 \item \textbf{Severity:} how bad the outcome is if the hazard happens
@@ -201,20 +214,8 @@ failures are modelled and named [4,~pp.~23--24].
   to answer [7,~Sec.~3.2.2, p.~44]; between contacts, no operator can (A-3). At
   this stage, the full effort makes a fault tree mandatory and a failure modes
   analysis highly recommended [7,~Table~6-3, p.~107].
-\item \textbf{Naming:} hazards H-1 to H-17 in order of severity; fault-tree
-  gates G01 to G05 and primary events B01 to B10. A number is never reused.
 \item \textbf{Assumptions:} those of the ConOps, A-1 to A-5; this analysis
-  adds none. Numbers of objectives (O), assumptions (A), constraints (C), risks
-  (R), capabilities and scenarios refer to the ConOps
-  [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0].
-\item \textbf{Software role} [2,~Sec.~3.2.2]: CAUSE, a software fault can lead
-  to the hazard; CONTROL, software prevents it; MITIGATION, software limits its
-  effect; MONITOR, software detects and reports it.
-\item \textbf{Verification method} [8,~Sec.~5.3.1.2.1, p.~92]:
-  \textsf{\small TEST}, using the product to obtain detailed data;
-  \textsf{\small DEMONSTRATION}, using it to show the control works, without
-  detailed data; \textsf{\small INSPECTION}, examining the product or its
-  records; \textsf{\small ANALYSIS}, modelling or calculation.
+  adds none.
 \end{itemize}
 
 \medskip
@@ -236,6 +237,25 @@ for the System
   system damage''. Nothing is lost; the operator has extra work or gets data a
   contact later.
 \end{description}
+
+\subsection{Naming}
+\begin{itemize}
+\item \textbf{Hazards:} H-1 to H-17, in order of severity.
+\item \textbf{Fault tree:} gates G01 to G06; primary events B01 to B10. No
+  identifier is ever reused.
+\item \textbf{ConOps numbers:} objectives (O), assumptions (A), constraints
+  (C), risks (R), capabilities and scenarios refer to the ConOps
+  [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0]. A control with a scenario number
+  comes from the ConOps; one without is new.
+\item \textbf{Software role} [2,~Sec.~3.2.2]: CAUSE, a software fault can lead
+  to the hazard; CONTROL, software prevents it; MITIGATION, software limits its
+  effect; MONITOR, software detects and reports it.
+\item \textbf{Verification method} [8,~Sec.~5.3.1.2.1, p.~92]:
+  \textsf{\small TEST}, using the product to obtain detailed data;
+  \textsf{\small DEMONSTRATION}, using it to show the control works, without
+  detailed data; \textsf{\small INSPECTION}, examining the product or its
+  records; \textsf{\small ANALYSIS}, modelling or calculation.
+\end{itemize}
 
 % ===========================================================================
 \section{Preliminary Hazard List}
@@ -271,7 +291,7 @@ H-17 & A command is refused with a wrong or unclear reason & NEGLIGIBLE \\
 Figure~\ref{fig:tree} develops the worst hazard, H-1. Each box states what
 fails and when [4,~p.~50].
 
-\begin{figure}[tbp]
+\begin{figure}[H]
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
@@ -378,7 +398,7 @@ H-12 & CRITICAL & 2 & 2 & YES \\
 \end{table}
 
 \noindent\textbf{Legend.} Needed: failures the fault tolerance rule requires
-before the hazard can occur (Section~3.0). Fewest: failures that cause it now.
+before the hazard can occur (Section~3.3). Fewest: failures that cause it now.
 Meets rule: YES when Fewest is at least Needed.
 
 \medskip

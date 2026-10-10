@@ -457,24 +457,28 @@ outside the scope of bench demonstration.
 % ===========================================================================
 \section{Support Environment}
 \begin{description}[leftmargin=4.4cm]
-\item[Operational planning] The operator plans each contact in advance: which
-  commands to send, which firmware to upload, and which reports to read.
-  Contact times follow from the orbit \tbd{window}.
-\item[Commanding and uploads] The operator decides commands; the ground
-  software prepares and checks them. They are sent during a contact or
-  scheduled to run later. Firmware is built and released on the ground; one
-  upload may span several contacts.
-\item[Maintenance and repair] None in orbit; there is no physical access
-  (A-1). Faults are handled by the System itself, or by the operator through
-  commands and new firmware.
-\item[Sparing] No hardware spares in orbit. The onboard computer keeps the last
-  known-good firmware for the controller, and the controller keeps its
-  last-resort firmware.
-\item[Upgrades] New controller firmware is the only upgrade path; update rate
-  \tbd{frequency}. The onboard computer's own software is not upgraded
+\item[Operational planning] The ground operator plans contact windows in
+  advance, defining telecommand queues, firmware uploads, and telemetry
+  retrieval profiles, with schedule timing derived from orbital parameters
+  \tbd{window}.
+\item[Commanding and uploads] Ground software formats and validates operator
+  telecommands for real-time execution or time-tagged scheduling, while
+  verified firmware images are released from the ground segment and uploaded
+  across one or multiple contact windows.
+\item[Maintenance and repair] Physical maintenance is excluded, as there is no
+  physical access in orbit (assumption A-1); anomalies are managed by
+  autonomous onboard fault protection or remotely through operator
+  telecommands and firmware updates.
+\item[Sparing] Physical hardware spares are not available; the onboard
+  computer retains a known-good firmware image and the controller maintains
+  its last-resort firmware.
+\item[Upgrades] Controller firmware updates constitute the sole operational
+  upgrade mechanism, governed by a defined release cadence \tbd{frequency},
+  while the onboard computer's baseline software remains fixed
   \tbr{obcupdate}.
-\item[Continued support] The engineer stays available to build and release new
-  firmware for the life of the mission \tbr{support}.
+\item[Continued support] Engineering sustainment support remains allocated for
+  firmware build, verification, and release throughout the active mission
+  life cycle \tbr{support}.
 \end{description}
 
 % ===========================================================================

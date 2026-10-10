@@ -456,10 +456,26 @@ outside the scope of bench demonstration.
 
 % ===========================================================================
 \section{Support Environment}
-Firmware is built and released on the ground and sent up during contacts, one
-transfer across several if needed. The onboard computer keeps the last
-known-good firmware. Update rate \tbd{frequency}. Nothing is repaired after
-deployment.
+\begin{description}[leftmargin=4.4cm]
+\item[Operational planning] The operator plans each contact in advance: which
+  commands to send, which firmware to upload, and which reports to read.
+  Contact times follow from the orbit \tbd{window}.
+\item[Commanding and uploads] The operator decides commands; the ground
+  software prepares and checks them. They are sent during a contact or
+  scheduled to run later. Firmware is built and released on the ground; one
+  upload may span several contacts.
+\item[Maintenance and repair] None in orbit; there is no physical access
+  (A-1). Faults are handled by the System itself, or by the operator through
+  commands and new firmware.
+\item[Sparing] No hardware spares in orbit. The onboard computer keeps the last
+  known-good firmware for the controller, and the controller keeps its
+  last-resort firmware.
+\item[Upgrades] New controller firmware is the only upgrade path; update rate
+  \tbd{frequency}. The onboard computer's own software is not upgraded
+  \tbr{obcupdate}.
+\item[Continued support] The engineer stays available to build and release new
+  firmware for the life of the mission \tbr{support}.
+\end{description}
 
 % ===========================================================================
 \section{Operational Scenarios}
@@ -582,6 +598,8 @@ Unmarked statements were stated or accepted by the author on 9--10 October
   connections lost.}
 \tbritem{bitflip}{Stored firmware checked before start; damaged copy skipped.}
 \tbritem{faultinject}{Test setup can cut power and break one connection.}
+\tbritem{support}{The engineer stays available to build and release new
+  controller firmware for the life of the mission.}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{date}{Demonstration date.}
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}

@@ -179,30 +179,30 @@ controller's firmware cannot run.}
 \end{figure}
 
 \subsubsection{System Scope}
-The scope is the System's boundary: what is inside, who uses it, and what
-touches it from outside. NASA calls this the system context
+The system context defines the boundary of the System: the system of interest,
+its users, and the external elements that interface with it
 [7, Sec.~8.3, p.~24].
 
 \begin{table}[H]
 \centering
 \begin{tabular}{@{}ll@{}}
 \toprule
-NASA's term & This System \\
+Context Element & System Boundary \\
 \midrule
-System of interest & Onboard computer, controller, ground software in the MOC \\
-Users & Operator \\
-External elements & Radio equipment, spacecraft power supply \\
+System of Interest & Onboard computer, controller, ground software in the MOC \\
+Users & Ground operator \\
+External Elements & Radio equipment, spacecraft power supply \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{itemize}
-\item \textbf{Enabling systems:} firmware build tools and the bench test setup,
-  needed to build and test the System but not part of it.
-\item \textbf{In scope:} commanding, telemetry, firmware updates, and fault
-  handling between contacts \tbr{faults}.
-\item \textbf{Out of scope:} the onboard computer's own software updates
-  \tbr{obcupdate}, and the radio equipment, which is used as given.
+\item \textbf{Enabling systems:} firmware build tools and bench test setups
+  required for development and verification, external to operational scope.
+\item \textbf{In scope:} commanding, telemetry, firmware updates, and autonomous
+  fault handling between contact windows \tbr{faults}.
+\item \textbf{Out of scope:} onboard computer software updates \tbr{obcupdate},
+  and the radio equipment, which is used as given.
 \end{itemize}
 
 % ===========================================================================

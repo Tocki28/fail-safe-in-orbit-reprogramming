@@ -89,19 +89,27 @@ Issue & Rev. & Date & Change \\
 \subsection{Project Description}
 
 \subsubsection{Background}
-The System exists to meet one need: \emph{a controller that nobody can reach
-must stay operable, observable and correctable for its whole life}
-(see Section~\ref{sec:ngo}).
+\noindent\textbf{Purpose.} The System lets an operator on the ground command,
+monitor and update a controller in space that nobody can reach
+\tbr{situation}, and keeps that controller working between contacts.
 
-A controller in space must be updated, watched and commanded from the ground,
-with nobody able to reach it \tbr{situation}. A failed update can leave it
-unable to run any firmware or accept new firmware. Without physical access that
-state is permanent. It is the worst outcome this System guards against.
+\medskip
+\noindent\textbf{Need.} \emph{A controller that nobody can reach must stay
+operable, observable and correctable for its whole life.} Operation,
+observability, and maintenance including in-flight modification over the
+specified lifetime are the three areas a space software specification must
+cover [3, Annex~B, items 5.11--5.13, p.~113].
 
-Rationale: the loss has happened. NASA records a mission terminated after an
-in-flight software upload omitted a patch for a defective countdown timer; its
-recommendations include test-bed verification of in-flight software updates
-[4, Lesson 0559, p.~199].
+\medskip
+\noindent\textbf{Worst outcome.} A failed update can leave the controller
+unable to run any firmware and unable to accept new firmware. Without physical
+access that state is permanent.
+
+\medskip
+\noindent\textbf{Rationale.} The loss has happened. NASA records a mission
+terminated after an in-flight software upload omitted a patch for a defective
+countdown timer; its recommendations include test-bed verification of in-flight
+software updates [4, Lesson 0559, p.~199].
 
 \subsubsection{Assumptions and Constraints}
 \begin{description}

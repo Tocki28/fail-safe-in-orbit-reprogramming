@@ -14,6 +14,7 @@
 \usepackage{fancyhdr}
 \usepackage{lastpage}
 \usepackage{needspace}
+\setlength{\emergencystretch}{1.5em}
 \usepackage{tocloft}
 \usepackage[hidelinks]{hyperref}
 
@@ -337,73 +338,83 @@ outside the System; it uses them as given.
 \subsection{Proposed Capabilities}
 \noindent\textbf{Telemetry} (serves G-2 Observability)
 \begin{description}[leftmargin=3cm]
-\item[Telemetry-1] Send regular health reports: alive or not, firmware
-  version, time since start, reason for the last restart, temperature
+\item[Telemetry-1] Generate periodic health reports detailing operational
+  status, active firmware version, uptime, reset cause, and thermal telemetry
   \tbr{telemetry}.
-\item[Telemetry-2] Send a report as soon as something important happens
+\item[Telemetry-2] Generate asynchronous event-driven reports immediately upon
+  significant state changes or operational events \tbr{telemetry}.
+\item[Telemetry-3] Apply time tags to all generated telemetry reports
   \tbr{telemetry}.
-\item[Telemetry-3] Timestamp every report \tbr{telemetry}.
-\item[Telemetry-4] Store reports between contacts and send them all at the next
-  contact; report any that were lost.
-\item[Telemetry-5] Report the health of each data-link connection
-  \tbr{telemetry}.
+\item[Telemetry-4] Store telemetry reports during out-of-contact periods for
+  downlink during subsequent contact windows, including notification of any
+  unrecoverable telemetry data loss.
+\item[Telemetry-5] Monitor and report health status for each connection of the
+  data link \tbr{telemetry}.
 \end{description}
 
 \medskip
 \noindent\textbf{Commands} (serves G-1 Operability)
 \begin{description}[leftmargin=3cm]
-\item[Command-1] Accept commands only from the operator; refuse copies of old
-  commands sent again.
-\item[Command-2] Answer every command: received, refused with the reason, or
-  done with the result.
-\item[Command-3] Refuse a command that is not allowed in the current mode.
-\item[Command-4] Run a command that arrives twice only once.
-\item[Command-5] Require two steps for a dangerous command: arm, then execute.
-\item[Command-6] Refuse commands with impossible values.
-\item[Command-7] Let the operator cancel an update in progress, leaving working
-  firmware running.
-\item[Command-8] Run commands at a time the operator sets; refuse commands that
-  waited past their expiry.
-\item[Command-9] Log every command and its answer.
+\item[Command-1] Execute telecommands originating exclusively from the
+  authorized ground operator and reject replay attacks.
+\item[Command-2] Acknowledge command reception, disposition (executed or
+  rejected with cause), and completion status for every incoming telecommand.
+\item[Command-3] Reject telecommands invalid for the current operational mode.
+\item[Command-4] Run a repeated telecommand only once.
+\item[Command-5] Enforce a two-step ``arm and execute'' protocol for critical
+  operations.
+\item[Command-6] Reject telecommands containing out-of-bounds parameter values.
+\item[Command-7] Allow the operator to abort an in-progress firmware update
+  while preserving current operational firmware.
+\item[Command-8] Support time-tagged command execution and reject expired
+  commands.
+\item[Command-9] Maintain a command log recording all incoming telecommands and
+  execution responses.
 \end{description}
 
 \medskip
 \noindent\textbf{Fault handling} (serves G-1 Operability) \tbr{faults}
 \begin{description}[leftmargin=3cm]
-\item[Fault-1] Notice when the controller goes silent and try to bring it back.
-\item[Fault-2] Continue over the other data-link connection when one fails.
-\item[Fault-3] Restart onboard programs that crash, and continue where they
+\item[Fault-1] Detect controller unresponsiveness and initiate autonomous
+  recovery sequences.
+\item[Fault-2] Automatically fail over to the redundant data-link connection
+  upon single-path failure.
+\item[Fault-3] Restart crashed onboard processes and continue where they
   stopped.
-\item[Fault-4] Record every fault found and the action taken, for the ground.
+\item[Fault-4] Log all detected fault events and executed recovery actions for
+  subsequent downlink.
 \end{description}
 
 \medskip
 \noindent\textbf{Update} (serves G-3 Correctability)
 \begin{description}[leftmargin=3cm]
-\item[Update-1] Receive firmware from the ground even when the radio link keeps
-  dropping.
-\item[Update-2] Refuse firmware that is damaged, not from the operator, built
-  for another controller, or older than the minimum version.
-\item[Update-3] Deliver new firmware to the controller.
-\item[Update-4] Switch the controller to the new firmware. When the switch
-  happens is still open \tbd{switch}.
-\item[Update-5] Judge whether the new firmware is good. Who judges is still
-  open \tbd{confirm}.
-\item[Update-6] If the new firmware is not good, return the controller to
-  working firmware without outside help.
-\item[Update-7] Report the outcome of every update to the ground.
+\item[Update-1] Support reliable firmware image reception across intermittent
+  radio contact windows.
+\item[Update-2] Validate firmware integrity, source authentication, target
+  compatibility, and version policy (preventing unauthorized rollbacks).
+\item[Update-3] Transfer validated firmware images to the controller.
+\item[Update-4] Transition execution to newly uploaded firmware, with the
+  activation trigger and scheduling criteria \tbd{switch}.
+\item[Update-5] Evaluate new firmware operational validity post-boot; who
+  judges is open \tbd{confirm}.
+\item[Update-6] Automatically roll back to operational firmware if trial
+  evaluation fails, without ground intervention.
+\item[Update-7] Downlink firmware update outcome reports to the ground
+  segment.
 \end{description}
 
 \medskip
 \noindent\textbf{Test} (verification only)
 \begin{description}[leftmargin=3cm]
-\item[Test-1] Degrade the radio link on purpose.
-\item[Test-2] On command, cut the controller's power or break one data-link
-  connection \tbr{faultinject}.
+\item[Test-1] Provide controlled, deliberate radio link degradation during
+  bench testing.
+\item[Test-2] Support command-driven injection of power interrupts and
+  data-link disconnection faults \tbr{faultinject}.
 \end{description}
 
 \medskip
-\noindent\textbf{Disposal:} none; bench demonstration.
+\noindent\textbf{Disposal:} none; operational scope limited to bench
+demonstration.
 
 % ===========================================================================
 \section{Physical Environment}

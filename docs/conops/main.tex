@@ -245,11 +245,11 @@ NASA-HDBK-1009A, 12 March 2025.
   maintenance including in-flight modification over the specified lifetime
   [3, Annex~B, items 5.11--5.13, p.~113].
 \item[G-5] Operable: the controller keeps running its function and acts on the
-  operator's commands. Capabilities CMD, FM.
+  operator's commands. Capabilities Command, Fault.
 \item[G-6] Observable: the ground can know what the System is doing, how
-  healthy it is, and what happened between contacts. Capabilities TM.
+  healthy it is, and what happened between contacts. Capabilities Telemetry.
 \item[G-7] Correctable: the controller's firmware can be replaced for its whole
-  life without losing the controller. Capabilities UPD.
+  life without losing the controller. Capabilities Update.
 \item[G-1] No update, and no failure during one, leaves the controller without
   firmware it can run.
 \item[G-2] The System acts only on firmware and commands from the operator.
@@ -304,41 +304,41 @@ NASA-HDBK-1009A, 12 March 2025.
 \end{description}
 
 \subsection{Proposed Capabilities}
-\begin{description}
-\item[TM-1] Send regular health reports: alive, firmware, uptime, last restart
+\begin{description}[leftmargin=3cm]
+\item[Telemetry-1] Send regular health reports: alive, firmware, uptime, last restart
   reason, temperature \tbr{telemetry}.
-\item[TM-2] Report important events at once \tbr{telemetry}.
-\item[TM-3] Timestamp every report \tbr{telemetry}.
-\item[TM-4] Store reports between contacts, send all at the next one, report any
+\item[Telemetry-2] Report important events at once \tbr{telemetry}.
+\item[Telemetry-3] Timestamp every report \tbr{telemetry}.
+\item[Telemetry-4] Store reports between contacts, send all at the next one, report any
   lost.
-\item[TM-5] Report the health of each data-link connection \tbr{telemetry}.
-\item[CMD-1] Accept commands only from the operator. Refuse replayed commands.
-\item[CMD-2] Answer every command: received, refused with reason, or done with
+\item[Telemetry-5] Report the health of each data-link connection \tbr{telemetry}.
+\item[Command-1] Accept commands only from the operator. Refuse replayed commands.
+\item[Command-2] Answer every command: received, refused with reason, or done with
   result.
-\item[CMD-3] Refuse commands not allowed in the current state.
-\item[CMD-4] Run a resent command at most once.
-\item[CMD-5] Dangerous commands need two steps: arm, then execute.
-\item[CMD-6] Refuse impossible values.
-\item[CMD-7] Let the operator cancel an update, leaving known-good firmware
+\item[Command-3] Refuse commands not allowed in the current state.
+\item[Command-4] Run a resent command at most once.
+\item[Command-5] Dangerous commands need two steps: arm, then execute.
+\item[Command-6] Refuse impossible values.
+\item[Command-7] Let the operator cancel an update, leaving known-good firmware
   running.
-\item[CMD-8] Run commands at a set time. Refuse expired commands.
-\item[CMD-9] Log every command and its answer.
-\item[FM-1] Notice a silent controller and try to bring it back \tbr{faults}.
-\item[FM-2] Carry on over the other connection when one dies \tbr{faults}.
-\item[FM-3] Restart crashed onboard programs and continue \tbr{faults}.
-\item[FM-4] Record every fault and action for the ground \tbr{faults}.
-\item[UPD-1] Take firmware from the ground through dropping links.
-\item[UPD-2] Refuse firmware that is damaged, not from the operator, for
+\item[Command-8] Run commands at a set time. Refuse expired commands.
+\item[Command-9] Log every command and its answer.
+\item[Fault-1] Notice a silent controller and try to bring it back \tbr{faults}.
+\item[Fault-2] Carry on over the other connection when one dies \tbr{faults}.
+\item[Fault-3] Restart crashed onboard programs and continue \tbr{faults}.
+\item[Fault-4] Record every fault and action for the ground \tbr{faults}.
+\item[Update-1] Take firmware from the ground through dropping links.
+\item[Update-2] Refuse firmware that is damaged, not from the operator, for
   something else, or below the minimum version.
-\item[UPD-3] Get the firmware to the controller.
-\item[UPD-4] Switch the controller to it \tbd{switch}.
-\item[UPD-5] Decide whether it is good \tbd{confirm}.
-\item[UPD-6] Go back to working firmware if not, with nobody's help.
-\item[UPD-7] Tell the ground what happened.
-\item[UPD-8] Never leave the controller without runnable firmware.
-\item[VER-1] Degrade the radio link on purpose (test only).
-\item[VER-2] Cut controller power and break one connection on command (test
-  only) \tbr{faultinject}.
+\item[Update-3] Get the firmware to the controller.
+\item[Update-4] Switch the controller to it \tbd{switch}.
+\item[Update-5] Decide whether it is good \tbd{confirm}.
+\item[Update-6] Go back to working firmware if not, with nobody's help.
+\item[Update-7] Tell the ground what happened.
+\item[Update-8] Never leave the controller without runnable firmware.
+\item[Test-1] Degrade the radio link on purpose.
+\item[Test-2] Cut controller power and break one connection on command
+  \tbr{faultinject}.
 \end{description}
 
 % ===========================================================================
@@ -351,9 +351,9 @@ stop and return when the condition ends.
 \toprule
 Condition & Response & Scenario \\
 \midrule
-No ground contact & OPERATE & OPS-110 \\
-Controller power loss at any instant & SURVIVE & OPS-340 \\
-Single-bit memory error & OPERATE & OPS-400 \\
+No ground contact & OPERATE & Scenario-110 \\
+Controller power loss at any instant & SURVIVE & Scenario-340 \\
+Single-bit memory error & OPERATE & Scenario-400 \\
 Temperature range & \tbd{temp} & --- \\
 \bottomrule
 \end{tabular}
@@ -369,53 +369,53 @@ deployment.
 \section{Operational Scenarios}
 
 \subsection{Nominal Conditions}
-\begin{description}
-\item[OPS-100] Update: release, upload over one or more contacts, check,
+\begin{description}[leftmargin=3cm]
+\item[Scenario-100] Update: release, upload over one or more contacts, check,
   transfer \tbr{receive}, switch \tbd{switch}, judged good \tbd{confirm},
   confirmed, outcome reported.
-\item[OPS-110] Telemetry: reports stamped and stored between contacts, all sent
+\item[Scenario-110] Telemetry: reports stamped and stored between contacts, all sent
   at the next one.
-\item[OPS-120] Scheduled command: received during a contact, runs at its time,
+\item[Scenario-120] Scheduled command: received during a contact, runs at its time,
   answer sent at the next contact.
 \end{description}
 
 \subsection{Off-Nominal Conditions}
 Trigger, then expected outcome. Sources in brackets are items of [2, App.~A,
 Table~2].
-\begin{description}
-\item[OPS-200] Ground link lost mid-transfer: resumes next contact where it
+\begin{description}[leftmargin=3cm]
+\item[Scenario-200] Ground link lost mid-transfer: resumes next contact where it
   stopped.
-\item[OPS-210] Command not from operator or replayed: refused, logged [2, p.~62].
-\item[OPS-220] Answer lost, command resent: not run again, ``already done''.
-\item[OPS-230] Command wrong for current state: refused with reason [2, p.~63].
-\item[OPS-240] Impossible value: refused with reason [2, p.~62].
-\item[OPS-250] Dangerous command not armed: refused with reason.
-\item[OPS-260] Command expired: refused with reason [2, p.~63].
-\item[OPS-270] Report storage full: ground told how many were lost.
-\item[OPS-300] Firmware damaged in transfer: refused before the controller
+\item[Scenario-210] Command not from operator or replayed: refused, logged [2, p.~62].
+\item[Scenario-220] Answer lost, command resent: not run again, ``already done''.
+\item[Scenario-230] Command wrong for current state: refused with reason [2, p.~63].
+\item[Scenario-240] Impossible value: refused with reason [2, p.~62].
+\item[Scenario-250] Dangerous command not armed: refused with reason.
+\item[Scenario-260] Command expired: refused with reason [2, p.~63].
+\item[Scenario-270] Report storage full: ground told how many were lost.
+\item[Scenario-300] Firmware damaged in transfer: refused before the controller
   [2, p.~63].
-\item[OPS-310] Firmware not from operator: refused.
-\item[OPS-320] Firmware below minimum version: refused.
-\item[OPS-330] Firmware for another controller: refused [2, p.~63].
-\item[OPS-340] Power lost during firmware write: previous firmware runs; retry
+\item[Scenario-310] Firmware not from operator: refused.
+\item[Scenario-320] Firmware below minimum version: refused.
+\item[Scenario-330] Firmware for another controller: refused [2, p.~63].
+\item[Scenario-340] Power lost during firmware write: previous firmware runs; retry
   possible [2, p.~63].
-\item[OPS-350] New firmware hangs: back to previous, unaided.
-\item[OPS-360] New firmware restart loop: back to previous after \tbd{bootcount}
+\item[Scenario-350] New firmware hangs: back to previous, unaided.
+\item[Scenario-360] New firmware restart loop: back to previous after \tbd{bootcount}
   starts [2, p.~64].
-\item[OPS-370] New firmware never judged good: back to previous.
-\item[OPS-380] Previous firmware also bad: last-resort firmware runs.
-\item[OPS-390] Operator cancels update: known-good firmware left running.
-\item[OPS-400] Bit error in stored firmware: detected, not run \tbr{bitflip}
+\item[Scenario-370] New firmware never judged good: back to previous.
+\item[Scenario-380] Previous firmware also bad: last-resort firmware runs.
+\item[Scenario-390] Operator cancels update: known-good firmware left running.
+\item[Scenario-400] Bit error in stored firmware: detected, not run \tbr{bitflip}
   [2, p.~63].
-\item[OPS-410] No firmware can run: restored through the reprogramming link
+\item[Scenario-410] No firmware can run: restored through the reprogramming link
   [2, p.~63].
-\item[OPS-500] One data-link connection fails: everything continues on the
+\item[Scenario-500] One data-link connection fails: everything continues on the
   other; reported.
-\item[OPS-510] Both data-link connections fail: controller keeps working; loss
+\item[Scenario-510] Both data-link connections fail: controller keeps working; loss
   reported; reprogramming link still usable \tbr{bothlinks}.
-\item[OPS-520] Controller silent: noticed, recovery tried, recorded
+\item[Scenario-520] Controller silent: noticed, recovery tried, recorded
   \tbr{faults}.
-\item[OPS-530] Onboard program crash: it restarts and resumes any update; the
+\item[Scenario-530] Onboard program crash: it restarts and resumes any update; the
   controller is unaffected \tbr{faults}.
 \end{description}
 
@@ -441,17 +441,12 @@ Not applicable: bench demonstration.
 
 \section{Acronyms}
 \begin{description}[leftmargin=2.2cm]
-\item[CMD] Command
 \item[ConOps] Concept of Operations
-\item[FM] Fault management
 \item[MOC] Mission operations center
-\item[OPS] Operational scenario
 \item[TBD] To Be Determined
 \item[TBR] To Be Resolved
 \item[TC] Telecommand
 \item[TM] Telemetry
-\item[UPD] Update
-\item[VER] Verification
 \end{description}
 
 \section{Glossary}
@@ -480,9 +475,9 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 
 \subsection*{Open}
 \begin{description}
-\tbritem{telemetry}{TM-1, TM-2, TM-3, TM-5 as written (shown 10 Oct, not yet
+\tbritem{telemetry}{Telemetry-1, Telemetry-2, Telemetry-3, Telemetry-5 as written (shown 10 Oct, not yet
   accepted).}
-\tbritem{faults}{G-4, FM-1 to FM-4 as written (shown 10 Oct, not yet
+\tbritem{faults}{G-4, Fault-1 to Fault-4 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}
 \tbritem{obcupdate}{Onboard computer's own update out of scope.}

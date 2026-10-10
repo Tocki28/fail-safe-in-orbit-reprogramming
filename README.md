@@ -44,31 +44,32 @@ changes it: NASA applies these processes "iteratively and recursively"
 
 ## Core Rules
 
-- **Traceability:** Every fact and number includes a source citation (with
-  page numbers).
-- **Open Items:** Tracked explicitly via TBD (unknown values) and TBR (pending
-  proposals).
-- **Fault Coverage:** Every safety mechanism documents what could make it fail,
-  and what else fails at the same time from the same cause (common-cause
-  failure).
-- **Audit Trail:** Immutable revision histories; corrections are appended,
-  never rewritten.
-- **Hardware Validation:** "Done" means verified on physical hardware.
+- **Traceability:** Every fact and number carries a page-level source citation.
+- **Open Items:** Explicitly tracked via TBD (unknown values) and TBR (proposals
+  not yet accepted).
+- **Fault Coverage:** Every protection documents how it could itself fail, and
+  what else fails at the same time from the same cause (common-cause failure).
+- **Audit Trail:** Immutable revision history; corrections are appended, never
+  rewritten.
+- **Hardware Validation:** "Done" means measured on physical hardware.
   Untested protections are unproven.
 
 ## How We Use AI
 
-| Phase | The question we ask | How AI helps answer it | What the engineer does |
+AI can now do the analysis at every phase. What it cannot do is be answerable
+for the result: every cell in the last column is a risk a person accepts.
+
+| Phase | The question we ask | How AI helps answer it | The risk the engineer accepts |
 |---|---|---|---|
-| 1. ConOps | Why do we need this system, and how will it be used, normally and when it fails? | Asks the questions, proposes failure scenarios from NASA's hazard-cause list, writes the document in NASA's outline. | States the need. Decides every capability and scenario. Unaccepted proposals stay TBR. |
-| 2. Software Classification | How bad is each part's worst failure, and how much rigor does it need? | Matches each part against the class definitions in NPR 7150.2D, quoting the clause. | Assigns each class. |
-| 3. Hazard Analysis | What can go wrong, and what stops it? | Drafts the fault tree and failure-mode table. Walks NASA's hazard-cause list item by item. Asks what could defeat each protection and what fails with it. A separate AI session then hunts for gaps. | Judges severity. Accepts the hazard list. |
-| 4. Requirements | What exactly must the system do? | Turns each hazard and scenario into numbered, single-claim statements. Checks them against NASA's requirement-writing checklist. Traces each to its source. | Accepts every requirement and every number. |
-| 5. Architecture | Which design meets the requirements with the fewest ways to fail? | Lays out the alternatives as a trade study. Reads datasheets and quotes hardware facts with page numbers. | Chooses the design. |
-| 6. Interfaces | What crosses each boundary, byte by byte? | Drafts the message layouts and the compile-time size checks that enforce them. | Approves them before any code. |
-| 7. Verification Plan | How will each requirement be proven? | Proposes a method and a pass criterion per requirement. Flags any requirement that cannot be verified. | Accepts the plan. |
-| 8. Implementation | Does the code do what the requirements say, and nothing else? | Drafts the code with the reason for each decision in comments. Drafts the tests separately from the code. | Reviews and can explain every line. The compiler and static analysis judge the code, not the AI. |
-| 9. Verification | Does the system work on hardware, including under injected faults? | Writes the test and fault-injection scripts. Tabulates the results. | Runs the tests on hardware and judges pass or fail. Measured results are the evidence. |
+| 1. ConOps | Why do we need this system, and how will it be used, normally and when it fails? | Asks the questions, proposes failure scenarios from NASA's hazard-cause list, writes the document in NASA's outline. | The need, every capability and every scenario. |
+| 2. Software Classification | How bad is each part's worst failure, and how much rigor does it need? | Matches each part against the class definitions in NPR 7150.2D, quoting the clause. | Each class, and so the rigor each part gets. |
+| 3. Hazard Analysis | What can go wrong, and what stops it? | Drafts the fault tree and failure-mode table. Walks NASA's hazard-cause list item by item. Asks what could defeat each protection and what fails with it. A separate AI session then hunts for gaps. | The hazard list and each severity. |
+| 4. Requirements | What exactly must the system do? | Turns each hazard and scenario into numbered, single-claim statements. Checks them against NASA's requirement-writing checklist. Traces each to its source. | Every requirement and every number. |
+| 5. Architecture | Which design meets the requirements with the fewest ways to fail? | Lays out the alternatives as a trade study. Reads datasheets and quotes hardware facts with page numbers. | The chosen design over the alternatives. |
+| 6. Interfaces | What crosses each boundary, byte by byte? | Drafts the message layouts and the compile-time size checks that enforce them. | The interfaces, before any code. |
+| 7. Verification Plan | How will each requirement be proven? | Proposes a method and a pass criterion per requirement. Flags any requirement that cannot be verified. | The plan, including any requirement left unverified. |
+| 8. Implementation | Does the code do what the requirements say, and nothing else? | Writes one small subsystem at a time, from its requirements and interface, under the coding rules it is given. States the reason for each decision in comments. Drafts the tests separately from the code. | Splits the system into the smallest subsystems. Chooses the coding rules (e.g. JPL's "Power of Ten"). Evaluates each subsystem against them, then accepts it or sends it back. |
+| 9. Verification | Does the system work on hardware, including under injected faults? | Writes the test and fault-injection scripts. Tabulates the results. | The results as evidence, or not. |
 
 At every phase:
 

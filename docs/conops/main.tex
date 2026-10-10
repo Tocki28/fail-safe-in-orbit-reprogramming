@@ -155,7 +155,8 @@ App.~C.\par}
 
 \subsubsection{Overview}
 The System has two segments, far apart. The ground segment is on Earth: the
-operator and the ground station. The space segment is in orbit: the onboard
+operator, the mission operations center that runs the ground software, and the
+ground station antenna [6, \S11.2, p.~305]. The space segment is in orbit: the onboard
 computer and the controller, out of physical reach \tbr{situation}. The only
 link between the two is radio (I-1). It exists only while the ground station can
 see the spacecraft, during a contact window \tbd{window}. Between contacts the
@@ -198,6 +199,10 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
 
 \noindent [5] NASA, \emph{NASA Software Engineering Requirements}, NPR 7150.2D.
 
+\noindent [6] NASA, \emph{State-of-the-Art of Small Spacecraft Technology},
+Chapter 11, ``Ground Data Systems and Mission Operations'', 2026 edition.
+Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
+
 % ===========================================================================
 \section{Description of Envisioned System}
 
@@ -230,9 +235,14 @@ NASA-STD-8739.8B, 2022. Off-nominal scenarios cite App.~A, Table~2.
 \end{description}
 
 \subsection{Overview of System and Key Elements}
-\begin{description}[leftmargin=3.6cm]
-\item[Ground] Operator releases firmware, sends firmware and commands, reads
-  reports.
+\begin{description}[leftmargin=4.4cm]
+\item[Operator] Releases firmware, decides commands, reads reports. Works
+  through the mission operations center.
+\item[Mission operations center] Runs the ground software: commands the
+  spacecraft and monitors its performance [6, \S11.2, p.~305]. Packages released
+  firmware, checks commands before they are sent, and stores reports.
+\item[Ground station] Antenna and radio that carry I-1 during contacts
+  [6, \S11.2, p.~305].
 \item[Onboard computer] Checks and passes on firmware and commands, stores
   reports, watches and restores the controller.
 \item[Controller] Does its job, reports, keeps known-good firmware to fall back
@@ -393,7 +403,7 @@ Not applicable: bench demonstration.
 \renewcommand{\thesection}{\Alph{section}}
 
 \section{Acronyms}
-CMD command; ConOps Concept of Operations; FM fault management; OPS operational
+CMD command; ConOps Concept of Operations; FM fault management; MOC mission operations center; OPS operational
 scenario; TBD To Be Determined; TBR To Be Resolved; TM telemetry; UPD update;
 VER verification.
 

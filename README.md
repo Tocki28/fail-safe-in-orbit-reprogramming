@@ -22,8 +22,8 @@ its document before the next phase starts. A phase is revisited when later work
 changes it: NASA applies these processes "iteratively and recursively"
 (NASA/SP-2016-6105 Rev 2, p. 7).
 
-1. **ConOps:** The need for the system, and its normal and failure-mode
-   operational behavior.
+1. **ConOps:** What the system is for and why it is needed, and its normal and
+   failure-mode operational behavior.
    **Draft:** [Issue 1, Rev 0](docs/conops/ConOps_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
 2. **Software Classification:** Failure severity and required rigor.
    *Not started.*
@@ -62,7 +62,7 @@ risk explicitly accepted by a human engineer.**
 
 | Phase | The Question We Ask | How AI Helps Answer It | The Risk the Engineer Accepts |
 |---|---|---|---|
-| **1. ConOps** | Why do we need this system, and how will it be used normally and during failures? | Generates operational questions, proposes failure scenarios using NASA hazard lists, and drafts the document in NASA's standard outline. | Accepts the system need, all defining capabilities, and every failure scenario. |
+| **1. ConOps** | What is the system for, why do we need it, and how will it be used normally and during failures? | Asks what problem the system solves and for whom, and proposes a single need statement. Then generates operational questions, proposes failure scenarios using NASA hazard lists, and drafts the document in NASA's standard outline. | Accepts the system's purpose and need, all defining capabilities, and every failure scenario. |
 | **2. Software Classification** | How severe is each component's worst-case failure, and how much rigor does it require? | Maps system components against NPR 7150.2D class definitions and cites the relevant clauses. | Formally assigns software classes and commits to the required engineering rigor. |
 | **3. Hazard Analysis** | What can go wrong, and what mechanisms prevent it? | Drafts fault trees and failure-mode tables by evaluating NASA's hazard-cause lists. A separate AI session audits for gaps, protection defeats, and common-cause failures. | Accepts the hazard list, severity classifications, and mitigation completeness. |
 | **4. Requirements** | What exact, unambiguous rules must the system obey? | Converts hazards and scenarios into numbered, single-claim statements, checks them against NASA checklists, and traces them to sources. | Approves every requirement statement, threshold, and numerical value. |

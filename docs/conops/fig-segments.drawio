@@ -34,20 +34,20 @@
 
         <!-- Inside the spacecraft -->
         <mxCell id="inside" value="&lt;b&gt;Inside the spacecraft&lt;/b&gt;" style="rounded=1;arcSize=4;dashed=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;verticalAlign=top;align=left;spacingLeft=8;spacingTop=2;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="370" y="25" width="268" height="180" as="geometry" />
+          <mxGeometry x="370" y="25" width="268" height="210" as="geometry" />
         </mxCell>
         <mxCell id="obc" value="Onboard&lt;br&gt;computer" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="385" y="80" width="80" height="50" as="geometry" />
+          <mxGeometry x="385" y="100" width="80" height="50" as="geometry" />
         </mxCell>
         <mxCell id="ctl" value="Controller" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#FFFFFF;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="550" y="80" width="80" height="50" as="geometry" />
+          <mxGeometry x="550" y="100" width="80" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="i2a" value="I-2" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;labelBackgroundColor=none;fontSize=13;endSize=5;startSize=5;" edge="1" parent="1" source="obc" target="ctl">
+        <mxCell id="i2a" value="" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.3;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;labelBackgroundColor=none;fontSize=13;endSize=5;startSize=5;" edge="1" parent="1" source="obc" target="ctl">
           <mxGeometry relative="1" as="geometry">
             <mxPoint y="-10" as="offset" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="i2b" value="redundant" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;labelBackgroundColor=none;fontSize=12;endSize=5;startSize=5;" edge="1" parent="1" source="obc" target="ctl">
+        <mxCell id="i2b" value="" style="endArrow=classic;startArrow=classic;html=1;exitX=1;exitY=0.7;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;labelBackgroundColor=none;fontSize=12;endSize=5;startSize=5;" edge="1" parent="1" source="obc" target="ctl">
           <mxGeometry relative="1" as="geometry">
             <mxPoint y="10" as="offset" />
           </mxGeometry>
@@ -55,17 +55,21 @@
         <mxCell id="i3" value="" style="curved=1;endArrow=classic;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;strokeWidth=2;labelBackgroundColor=#FFFFFF;fontSize=13;endSize=6;" edge="1" parent="1" source="obc" target="ctl">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="508" y="182" />
+              <mxPoint x="508" y="202" />
             </Array>
           </mxGeometry>
         </mxCell>
 
-        <mxCell id="i3label" value="I-3 recovery path" style="text;html=1;align=center;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="448" y="160" width="120" height="22" as="geometry" />
+        <mxCell id="i3label" value="Reprogramming link (IF-3)&lt;br&gt;rewrites the controller even&lt;br&gt;when its firmware cannot run" style="text;html=1;align=center;verticalAlign=top;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="418" y="180" width="180" height="48" as="geometry" />
         </mxCell>
 
         <mxCell id="zoom" value="" style="endArrow=classic;html=1;strokeColor=#777777;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;endSize=6;" edge="1" parent="1" source="sat" target="inside">
           <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="i2label" value="Data link (IF-2)&lt;br&gt;2 connections" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="455" y="64" width="105" height="32" as="geometry" />
         </mxCell>
 
         <!-- Ground segment -->
@@ -88,11 +92,11 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- I-1 radio link across the gap -->
+        <!-- IF-1 radio link across the gap -->
         <mxCell id="i1" value="" style="endArrow=classic;startArrow=classic;html=1;dashed=1;strokeWidth=2;endSize=6;startSize=6;" edge="1" parent="1" source="dish" target="sat">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="i1label" value="I-1 ground link&lt;br&gt;radio, long distance&lt;br&gt;contact windows only" style="text;html=1;align=right;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
+        <mxCell id="i1label" value="Radio link (IF-1)&lt;br&gt;long distance,&lt;br&gt;only during contacts" style="text;html=1;align=right;verticalAlign=middle;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="85" y="146" width="155" height="58" as="geometry" />
         </mxCell>
       </root>

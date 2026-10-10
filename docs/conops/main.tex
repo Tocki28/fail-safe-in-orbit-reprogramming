@@ -158,17 +158,19 @@ The System has two segments, far apart. The ground segment is on Earth: the
 operator, the mission operations center that runs the ground software, and the
 ground station antenna [6, \S11.2, p.~305]. The space segment is in orbit: the onboard
 computer and the controller, out of physical reach \tbr{situation}. The only
-link between the two is radio (I-1). It exists only while the ground station can
+link between the two is the radio link (IF-1). It exists only while the ground station can
 see the spacecraft, during a contact window \tbd{window}. Between contacts the
 space segment works alone. Inside the spacecraft, the onboard computer reaches
-the controller over a redundant internal link (I-2) and can rewrite it through
-the recovery path (I-3). Figure~\ref{fig:segments} shows the layout.
+the controller over a data link with two separate connections (IF-2). Through
+a reprogramming link (IF-3) it can rewrite and restart the controller even when
+the controller's firmware cannot run. Figure~\ref{fig:segments} shows the layout.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig-segments.pdf}
 \caption{Ground and space segments. They are far apart and joined only by radio
-during contact windows. I-3 works with no firmware running on the controller.
+during contact windows. IF = interface. The reprogramming link (IF-3) works
+even when the controller's firmware cannot run.
 Editable source: \texttt{fig-segments.drawio}.}
 \label{fig:segments}
 \end{figure}
@@ -223,7 +225,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[G-1] No update, and no failure during one, leaves the controller without
   firmware it can run.
 \item[G-2] The System acts only on firmware and commands from the operator.
-\item[G-3] Losing one connection of the internal link stops nothing.
+\item[G-3] Losing one connection of the data link (IF-2) stops nothing.
 \item[G-4] Between contacts the System handles faults alone and reports them
   later \tbr{faults}.
 \item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
@@ -241,7 +243,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[Mission operations center] Runs the ground software: commands the
   spacecraft and monitors its performance [6, \S11.2, p.~305]. Packages released
   firmware, checks commands before they are sent, and stores reports.
-\item[Ground station] Antenna and radio that carry I-1 during contacts
+\item[Ground station] Antenna and radio that carry the radio link (IF-1) during contacts
   [6, \S11.2, p.~305].
 \item[Onboard computer] Checks and passes on firmware and commands, stores
   reports, watches and restores the controller.
@@ -251,11 +253,15 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 
 \subsection{Interfaces}
 \begin{description}
-\item[I-1] Ground link. Radio, contact windows only.
-\item[I-2] Internal link. Redundant: losing one connection does not cut the
-  controller off.
-\item[I-3] Recovery path. Rewrites and restarts the controller with no
-  controller firmware running.
+\item[IF-1] Radio link, ground station to onboard computer. Carries commands
+  and firmware up and reports down. Exists only during contact windows.
+\item[IF-2] Data link, onboard computer to controller. Carries commands,
+  firmware and reports over two separate connections. If one connection fails,
+  the other carries everything.
+\item[IF-3] Reprogramming link, onboard computer to controller. Lets the
+  onboard computer rewrite the controller's firmware and restart it directly,
+  even when the controller's own firmware cannot run. It is the last-resort
+  repair.
 \end{description}
 
 \subsection{Modes of Operations}
@@ -264,7 +270,8 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[TRIAL] Runs new firmware not yet judged good \tbd{trialtime}.
 \item[FALLBACK] Runs previous or last-resort firmware after a failed trial or
   start.
-\item[RECOVERY] Runs nothing. Restored through I-3.
+\item[RECOVERY] Runs no firmware. The onboard computer rewrites it through the
+  reprogramming link (IF-3).
 \end{description}
 
 \subsection{Proposed Capabilities}
@@ -276,7 +283,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[TM-3] Timestamp every report \tbr{telemetry}.
 \item[TM-4] Store reports between contacts, send all at the next one, report any
   lost.
-\item[TM-5] Report the health of each internal connection \tbr{telemetry}.
+\item[TM-5] Report the health of each data-link connection \tbr{telemetry}.
 \item[CMD-1] Accept commands only from the operator. Refuse replayed commands.
 \item[CMD-2] Answer every command: received, refused with reason, or done with
   result.
@@ -301,7 +308,7 @@ Ground system architecture in \S11.2 and Fig.~11.2, pp.~305--306.
 \item[UPD-6] Go back to working firmware if not, with nobody's help.
 \item[UPD-7] Tell the ground what happened.
 \item[UPD-8] Never leave the controller without runnable firmware.
-\item[VER-1] Degrade the ground link on purpose (test only).
+\item[VER-1] Degrade the radio link (IF-1) on purpose (test only).
 \item[VER-2] Cut controller power and break one connection on command (test
   only) \tbr{faultinject}.
 \end{description}
@@ -372,11 +379,12 @@ Table~2].
 \item[OPS-390] Operator cancels update: known-good firmware left running.
 \item[OPS-400] Bit error in stored firmware: detected, not run \tbr{bitflip}
   [2, p.~63].
-\item[OPS-410] No firmware can run: restored through I-3 [2, p.~63].
-\item[OPS-500] One internal connection fails: everything continues on the
+\item[OPS-410] No firmware can run: rewritten through the reprogramming link (IF-3)
+  [2, p.~63].
+\item[OPS-500] One data-link connection fails: everything continues on the
   other; reported.
-\item[OPS-510] Whole internal link fails: controller keeps working; loss
-  reported; I-3 still usable \tbr{bothlinks}.
+\item[OPS-510] Both data-link connections fail: controller keeps working; loss
+  reported; reprogramming link (IF-3) still usable \tbr{bothlinks}.
 \item[OPS-520] Controller silent: noticed, recovery tried, recorded
   \tbr{faults}.
 \item[OPS-530] Onboard program crash: it restarts and resumes any update; the
@@ -390,10 +398,11 @@ Not applicable: bench demonstration.
 % ===========================================================================
 \section{Risks and Potential Issues}
 \begin{description}
-\item[R-1] Both internal connections may share software; one defect could cut
+\item[R-1] Both data-link connections may share software; one defect could cut
   both.
 \item[R-2] Controller memory may not hold last-resort plus two working firmwares.
-\item[R-3] Second internal connection and recovery path not yet shown on bench.
+\item[R-3] Second data-link connection and reprogramming link not yet shown on
+  bench.
 \item[R-4] Demonstration date \tbd{date}; undemonstrated scenarios are declared,
   not dropped.
 \end{description}
@@ -403,7 +412,7 @@ Not applicable: bench demonstration.
 \renewcommand{\thesection}{\Alph{section}}
 
 \section{Acronyms}
-CMD command; ConOps Concept of Operations; FM fault management; MOC mission operations center; OPS operational
+CMD command; ConOps Concept of Operations; FM fault management; IF interface; MOC mission operations center; OPS operational
 scenario; TBD To Be Determined; TBR To Be Resolved; TM telemetry; UPD update;
 VER verification.
 
@@ -432,7 +441,7 @@ Unmarked statements were stated or accepted by the author on 9--10 October
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}
 \tbritem{obcupdate}{Onboard computer's own update out of scope.}
-\tbritem{bothlinks}{Recovery path still usable with the whole internal link
+\tbritem{bothlinks}{Reprogramming link (IF-3) still usable with both data-link
   lost.}
 \tbritem{bitflip}{Stored firmware checked before start; damaged copy skipped.}
 \tbritem{faultinject}{Test setup can cut power and break one connection.}

@@ -244,24 +244,25 @@ NASA-HDBK-1009A, 12 March 2025.
   space software specification must cover: operation, observability, and
   maintenance including in-flight modification over the specified lifetime
   [3, Annex~B, items 5.11--5.13, p.~113].
-\item[G-5] Operable: the controller keeps running its function and acts on the
+\item[G-1] \textbf{Operability:} the controller keeps running and acts on the
   operator's commands. Capabilities Command, Fault.
-\item[G-6] Observable: the ground can know what the System is doing, how
-  healthy it is, and what happened between contacts. Capabilities Telemetry.
-\item[G-7] Correctable: the controller's firmware can be replaced for its whole
-  life without losing the controller. Capabilities Update.
-\item[G-1] No update, and no failure during one, leaves the controller without
+\item[G-2] \textbf{Observability:} the ground can know what the System is
+  doing, how healthy it is, and what happened between contacts. Capabilities
+  Telemetry.
+\item[G-3] \textbf{Correctability:} the controller's firmware can be replaced
+  for its whole life without losing the controller. Capabilities Update.
+\item[G-4] No update, and no failure during one, leaves the controller without
   firmware it can run.
-\item[G-2] The System acts only on firmware and commands from the operator.
-\item[G-3] Losing one connection of the data link stops nothing.
-\item[G-4] Between contacts the System handles faults alone and reports them
+\item[G-5] The System acts only on firmware and commands from the operator.
+\item[G-6] Losing one connection of the data link stops nothing.
+\item[G-7] Between contacts the System handles faults alone and reports them
   later \tbr{faults}.
 \item[O-1] Every scenario in Section~6.0 is demonstrated on hardware and
   recorded.
-\item[N-1] Retired during drafting; now G-7. NASA requires a single need statement
-  [1, Sec.~4.1, p.~49].
-\item[N-2] Retired during drafting; now G-6.
-\item[N-3] Retired during drafting; now G-5.
+\item[N-1] Retired during drafting; now G-3. NASA requires a single need
+  statement [1, Sec.~4.1, p.~49].
+\item[N-2] Retired during drafting; now G-2.
+\item[N-3] Retired during drafting; now G-1.
 \end{description}
 
 \subsection{Overview of System and Key Elements}
@@ -477,7 +478,7 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \begin{description}
 \tbritem{telemetry}{Telemetry-1, Telemetry-2, Telemetry-3, Telemetry-5 as written (shown 10 Oct, not yet
   accepted).}
-\tbritem{faults}{G-4, Fault-1 to Fault-4 as written (shown 10 Oct, not yet
+\tbritem{faults}{G-7, Fault-1 to Fault-4 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}
 \tbritem{obcupdate}{Onboard computer's own update out of scope.}

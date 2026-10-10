@@ -88,7 +88,7 @@ Cited by number and page. The documents themselves are not copied here.
 
 ## Licence
 
-TBD.
+MIT. See [LICENSE](LICENSE).
 
 ## Author
 

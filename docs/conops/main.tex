@@ -260,7 +260,7 @@ Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
   maintenance including in-flight modification over the specified lifetime
   [3, Annex~B, items 5.11--5.13, p.~113].
 \item[G-5] Operable: the controller keeps running its function and acts on the
-  operator's commands. Capabilities FN, CMD, FM.
+  operator's commands. Capabilities CMD, FM.
 \item[G-6] Observable: the ground can know what the System is doing, how
   healthy it is, and what happened between contacts. Capabilities TM.
 \item[G-7] Correctable: the controller's firmware can be replaced for its whole
@@ -320,8 +320,6 @@ Ground system architecture in Sec.~11.2 and Fig.~11.2, pp.~305--306.
 
 \subsection{Proposed Capabilities}
 \begin{description}
-\item[FN-1] Run a stand-in function, so that updates and telemetry have
-  something to protect and report on.
 \item[TM-1] Send regular health reports: alive, firmware, uptime, last restart
   reason, temperature \tbr{telemetry}.
 \item[TM-2] Report important events at once \tbr{telemetry}.
@@ -457,7 +455,7 @@ Not applicable: bench demonstration.
 \renewcommand{\thesection}{\Alph{section}}
 
 \section{Acronyms}
-CMD command; ConOps Concept of Operations; FM fault management; FN function; MOC mission operations center; OPS operational
+CMD command; ConOps Concept of Operations; FM fault management; MOC mission operations center; OPS operational
 scenario; TC telecommand; TBD To Be Determined; TBR To Be Resolved; TM telemetry; UPD update;
 VER verification.
 
@@ -483,8 +481,6 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbrresolved{power}{Controller power can drop at any instant, including
   mid-write. Accepted by the author, 10 October 2026.}
 \tbrresolved{operator}{One operator. Accepted by the author, 10 October 2026.}
-\tbdresolvedat{job}{3}{Controller functions: out of scope; a stand-in function
-  runs on the bench. Decided by the author, 10 October 2026.}
 \end{description}
 
 \subsection*{Open}
@@ -501,7 +497,6 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbritem{faultinject}{Test setup can cut power and break one connection.}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{date}{Demonstration date.}
-\stepcounter{tbd}% TBD-3 is resolved; its number is kept
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}
 \tbditem{confirm}{Who judges new firmware good: controller or operator.}
 \tbditem{window}{Contact window length and gap (sourced, or a test parameter).}

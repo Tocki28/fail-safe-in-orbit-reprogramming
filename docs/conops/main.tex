@@ -306,13 +306,25 @@ outside the System; it uses them as given.
 \end{description}
 
 \subsection{Modes of Operations}
+\noindent\textbf{Life-cycle modes of the System}
 \begin{description}[leftmargin=3cm]
-\item[OPERATE] Runs confirmed firmware. New firmware can arrive \tbr{receive}.
-\item[TRIAL] Runs new firmware not yet judged good \tbd{trialtime}.
-\item[FALLBACK] Runs previous or last-resort firmware after a failed trial or
-  start.
-\item[RECOVERY] Runs no firmware. The onboard computer restores it through the
-  reprogramming link.
+\item[Test] On the bench, the System runs with the radio link degraded and
+  faults injected on purpose, to prove the scenarios.
+\item[Operation] The controller modes below.
+\item[Disposal] Not applicable; bench demonstration.
+\end{description}
+
+\medskip
+\noindent\textbf{Controller modes during operation}
+\begin{description}[leftmargin=3cm]
+\item[OPERATE] Runs confirmed firmware. New firmware can arrive while it runs
+  \tbr{receive}.
+\item[TRIAL] Entered at the switch to new firmware. Runs it for a limited time
+  \tbd{trialtime} until it is judged good, then returns to OPERATE.
+\item[FALLBACK] Entered when a trial or a start fails. Runs the previous
+  firmware, or the last-resort firmware.
+\item[RECOVERY] Entered when no firmware can run. Runs nothing; the onboard
+  computer restores it through the reprogramming link.
 \end{description}
 
 \subsection{Proposed Capabilities}

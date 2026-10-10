@@ -145,6 +145,9 @@ Controller --- Software Classification}, Issue~1, Revision~0, Draft.
 \noindent [8] NASA, \emph{NASA Systems Engineering Handbook},
 NASA/SP-2016-6105 Rev~2, 2016.
 
+\noindent [9] NASA, \emph{Fault Management Handbook}, NASA-HDBK-1002, Draft~2,
+2 April 2012. A draft, not a released standard.
+
 % ===========================================================================
 \section{Ground Rules}
 These rules are set before the analysis: what counts as a failure, which
@@ -177,10 +180,13 @@ failures are modelled and named [4,~pp.~23--24].
 \item \textbf{Operator errors:} each counts as a wrong or mistimed command.
 \item \textbf{Counting failures:} one cause that disables several controls at
   once counts as one failure.
-\item \textbf{Fault tolerance:} the number of failures that must happen
-  together before a hazard can occur. A catastrophic hazard must need at least
-  three; a critical hazard at least two [3,~Sec.~3.1] \tbr{credible}. Each
-  hazard is checked by finding the smallest set of failures that causes it.
+\item \textbf{Fault tolerance:} ``the ability to perform a function in the
+  presence of any of a specified number of coincident, independent failure
+  causes of specified types'' [9,~p.~18]. The types are the failures included
+  above. The number depends on severity: a catastrophic hazard must need at
+  least three failures together, a critical hazard at least two [3,~Sec.~3.1]
+  \tbr{credible}. Each hazard is checked by finding the smallest set of
+  failures that causes it.
 \item \textbf{Severity:} rated on the worst effect with no control working, so
   no control lowers a hazard's severity \tbr{severity}.
 \item \textbf{Likelihood:} not rated; it depends on the design

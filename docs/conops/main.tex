@@ -489,8 +489,11 @@ trigger, then the expected outcome.
 \begin{description}[leftmargin=3cm]
 \item[Scenario-200] The radio link is lost during a firmware upload. The upload
   resumes at the next contact from where it stopped.
-\item[Scenario-210] Report storage fills during a long gap between contacts. At
-  the next contact, the ground is told how many reports were lost.
+\item[Scenario-210] A long gap between contacts fills the report storage on the
+  onboard computer. From then on, the System drops the oldest regular health
+  reports to make room and keeps every event report. At the next contact, it
+  sends what it stored and tells the ground how many health reports were
+  dropped and the time span they covered.
 \end{description}
 
 \medskip

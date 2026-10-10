@@ -1,0 +1,162 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{totcount}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage[hidelinks]{hyperref}
+\setlength{\emergencystretch}{1.5em}
+
+% Section numbers in the same style as the ConOps: 1.0, 1.1.
+\renewcommand{\thesection}{\arabic{section}.0}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+
+% Controlled-document header on every page.
+\newcommand{\docref}{Reference TBD}
+\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small Remote Controller with Fail-Safe Update --- Software Classification}
+\rhead{\small \docrev}
+\lfoot{\small \docref}
+\rfoot{\small Page \thepage\ of \pageref{LastPage}}
+
+% Open items: values not yet known, listed in App. A; the total is counted.
+\newtotcounter{tbd}
+\newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
+\newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
+
+\setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
+\setlist[itemize]{nosep}
+
+\begin{document}
+
+\thispagestyle{fancy}
+\begin{center}
+{\LARGE\bfseries Remote Controller with Fail-Safe Update\par}
+\vspace{0.4em}
+{\Large Software Classification\par}
+\vspace{1em}
+\begin{tabular}{@{}ll@{}}
+Reference & TBD \tbd{ref} \\
+Issue / revision & Issue 1, Revision 0 --- DRAFT \\
+Date & 10 October 2026 \\
+Author & Andrew Toma \\
+Open items & \total{tbd} TBD (App.~A) \\
+\end{tabular}
+\end{center}
+
+\subsection*{Document change record}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Issue & Rev. & Date & Change \\
+\midrule
+1 & 0 & 2026-10-10 & First draft \\
+\bottomrule
+\end{tabular}
+
+% ===========================================================================
+\section{Purpose and Scope}
+This document answers one question: how severe is the worst failure of each
+software item, and so how much rigour does each item need? It is the record of
+each software classification determination [1, Sec.~3.5.2, p.~25].
+
+The items are the software of the System and of its enabling systems, as
+defined in the Concept of Operations [4, Sec.~1.2.2]. The System imitates an
+uncrewed spacecraft whose primary mission objectives depend on this software; a
+failure would cost those objectives. Every statement in this document was
+stated or accepted by the author on 10 October 2026.
+
+% ===========================================================================
+\section{Documents}
+\noindent [1] NASA, \emph{NASA Software Engineering Requirements}, NPR 7150.2D.
+
+\noindent [2] NASA, \emph{Software Assurance and Software Safety Standard},
+NASA-STD-8739.8B, 2022.
+
+\noindent [3] NASA, \emph{NASA Software Engineering Handbook}, NASA-HDBK-2203,
+Version~D, page ``SWE-020 -- Software Classification''.
+
+\noindent [4] \emph{Remote Controller with Fail-Safe Update --- Concept of
+Operations}, Issue~1, Revision~0, Draft.
+
+% ===========================================================================
+\section{Classification}
+Each item takes the highest class whose definition applies
+[1, Sec.~3.5.1, p.~24].
+
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+Software item & Use & Class \\
+\midrule
+Controller firmware & FLIGHT & B \\
+Onboard computer software & FLIGHT & B \\
+Ground software in the mission operations center & GROUND & B \\
+Bench test tools & TEST & C \\
+Firmware build tools & BUILD & D \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Legend: FLIGHT = runs in the space segment; GROUND = runs in the
+ground segment; TEST = used only to test the System; BUILD = used only to build
+it. Classes as defined in [1, App.~D, pp.~79--86].
+
+\subsection{Rationale}
+\noindent\textbf{Controller firmware: Class B.} Class B covers flight software
+  ``required to operate the vehicle or space asset \ldots{} such as commanding
+  of the vehicle or asset'' [1, App.~D, p.~81]; its examples include ``fault
+  protection'' [1, App.~D, p.~81]. The controller runs commands and returns to
+  working firmware on its own when new firmware fails.\par\smallskip
+\noindent\textbf{Onboard computer software: Class B.} The same definition applies. It
+  passes every command and firmware image to the controller, watches it, and
+  restores it when its firmware cannot run.\par\smallskip
+\noindent\textbf{Ground software: Class B.} Class B examples include ``command and control
+  ground systems'' [1, App.~D, p.~81]. The ground software prepares and checks
+  every command and firmware image sent to the spacecraft.\par\smallskip
+\noindent\textbf{Bench test tools: Class C.} Class C covers ``software used for the testing
+  of space assets'' [1, App.~D, p.~82], and Class B excludes systems ``used in
+  testing Class B systems'' in a development environment [1, App.~D, p.~81].\par\smallskip
+\noindent\textbf{Firmware build tools: Class D.} Class D covers ``ground software tools that
+  support engineering development'' [1, App.~D, p.~83].\par\smallskip
+\noindent\textbf{Why not Class A.} Class A is software for human space flight
+  [1, App.~D, p.~79]. The imitated spacecraft carries no crew.\par\smallskip
+
+% ===========================================================================
+\section{Safety-Critical Designation}
+Software is safety-critical when a hazard analysis traces a hazard to it
+[2, Sec.~4.2, p.~20]; the determination is made for each component
+[1, Sec.~3.7.1, p.~26]. The designation of each item above is set after the
+hazard analysis \tbd{safety}.
+
+% ===========================================================================
+\section{Tailoring and Review}
+\begin{itemize}
+\item Software engineering and software assurance are expected to agree on each
+  classification [1, Sec.~3.5.1 Note, p.~25]. One engineer builds the System,
+  with no independent assurance team (ConOps constraint C-3), so the
+  classification is the author's alone.
+\item The classification is revisited at each later phase [3, Sec.~3.5.1]. If
+  a class changes, the plans are updated to match [1, Sec.~2.2.8, p.~19].
+\end{itemize}
+
+% ===========================================================================
+\appendix
+\renewcommand{\thesection}{\Alph{section}}
+
+\section{Open Items}
+The values below are not yet known.
+\begin{description}
+\tbditem{ref}{Project name and document reference.}
+\tbditem{safety}{Safety-critical designation of each software item, from the
+  hazard analysis.}
+\end{description}
+
+\end{document}

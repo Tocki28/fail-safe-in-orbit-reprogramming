@@ -26,7 +26,7 @@ changes it: NASA applies these processes "iteratively and recursively"
    failure-mode operational behavior.
    **Draft:** [Issue 1, Rev 0](docs/conops/ConOps_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
 2. **Software Classification:** Failure severity and required rigor.
-   *Not started.*
+   **Draft:** [Issue 1, Rev 0](docs/classification/Software-Classification_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
 3. **Hazard Analysis:** Top-down and bottom-up fault identification.
    *Not started.*
 4. **Requirements:** Traceable, testable, single-claim rules.

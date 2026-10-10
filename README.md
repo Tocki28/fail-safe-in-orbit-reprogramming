@@ -89,7 +89,3 @@ Cited by number and page. The documents themselves are not copied here.
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
-
-## Author
-
-Andrew Toma

@@ -22,7 +22,8 @@ its document before the next phase starts. A phase is revisited when later work
 changes it: NASA applies these processes "iteratively and recursively"
 (NASA/SP-2016-6105 Rev 2, p. 7).
 
-1. **ConOps:** Normal and failure-mode operational behavior.
+1. **ConOps:** The need for the system, and its normal and failure-mode
+   operational behavior.
    **Draft:** [Issue 1, Rev 0](docs/conops/ConOps_Remote-Controller-Fail-Safe-Update_Iss1_Rev0_DRAFT.pdf)
 2. **Software Classification:** Failure severity and required rigor.
    *Not started.*
@@ -59,7 +60,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 
 | Phase | The question we ask | How AI helps answer it | What the engineer does |
 |---|---|---|---|
-| 1. ConOps | How is the system used, and what happens when it fails? | Asks the questions, proposes failure scenarios from NASA's hazard-cause list, writes the document in NASA's outline. | Decides every capability and scenario. Unaccepted proposals stay TBR. |
+| 1. ConOps | Why do we need this system, and how will it be used, normally and when it fails? | Asks the questions, proposes failure scenarios from NASA's hazard-cause list, writes the document in NASA's outline. | States the need. Decides every capability and scenario. Unaccepted proposals stay TBR. |
 | 2. Software Classification | How bad is each part's worst failure, and how much rigor does it need? | Matches each part against the class definitions in NPR 7150.2D, quoting the clause. | Assigns each class. |
 | 3. Hazard Analysis | What can go wrong, and what stops it? | Drafts the fault tree and failure-mode table. Walks NASA's hazard-cause list item by item. Asks what could defeat each protection and what fails with it. A separate AI session then hunts for gaps. | Judges severity. Accepts the hazard list. |
 | 4. Requirements | What exactly must the system do? | Turns each hazard and scenario into numbered, single-claim statements. Checks them against NASA's requirement-writing checklist. Traces each to its source. | Accepts every requirement and every number. |

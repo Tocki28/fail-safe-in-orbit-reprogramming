@@ -336,77 +336,23 @@ outside the System; it uses them as given.
 \end{description}
 
 \subsection{Proposed Capabilities}
-\noindent\textbf{Telemetry} (serves G-2 Observability)
+Each capability is shown in detail by the scenarios in Section~6.0.
 \begin{description}[leftmargin=3cm]
-\item[Capability-1] Generate periodic health reports detailing operational
-  status, active firmware version, uptime, reset cause, and thermal telemetry.
-\item[Capability-2] Generate asynchronous event-driven reports immediately upon
-  significant state changes or operational events.
-\item[Capability-3] Apply time tags to all generated telemetry reports.
-\item[Capability-4] Store telemetry reports during out-of-contact periods for
-  downlink during subsequent contact windows, including notification of any
-  unrecoverable telemetry data loss.
-\item[Capability-5] Monitor and report health status for each connection of the
-  data link.
+\item[Capability-1] \textbf{Telemetry} (serves G-2): regular and event health
+  reports, time-tagged, stored between contacts and sent down at the next one,
+  with any loss reported.
+\item[Capability-2] \textbf{Command handling} (serves G-1): accept only the
+  operator's valid telecommands, answer and log every one, and support arming
+  and time-tagged execution.
+\item[Capability-3] \textbf{Fault handling} (serves G-1): detect faults between
+  contacts, respond without the ground, and record them \tbr{faults}.
+\item[Capability-4] \textbf{Update} (serves G-3): receive, check, install and
+  judge new firmware, and return to working firmware without outside help if
+  it fails \tbd{switch} \tbd{confirm}.
+\item[Capability-5] \textbf{Test} (verification only): degrade the radio link;
+  cut power or break a data-link connection on command \tbr{faultinject}.
+\item[Disposal] None; bench demonstration.
 \end{description}
-
-\medskip
-\noindent\textbf{Command handling} (serves G-1 Operability)
-\begin{description}[leftmargin=3cm]
-\item[Capability-6] Execute telecommands originating exclusively from the authorized ground operator and reject replay attacks.
-\item[Capability-7] Acknowledge command reception, disposition (executed or rejected with cause), and completion status for every incoming telecommand.
-\item[Capability-8] Reject telecommands invalid for the current operational mode.
-\item[Capability-9] Run a repeated telecommand only once.
-\item[Capability-10] Enforce a two-step ``arm and execute'' protocol for critical operations.
-\item[Capability-11] Reject telecommands containing out-of-bounds parameter values.
-\item[Capability-12] Allow the operator to abort an in-progress firmware update while preserving current operational firmware.
-\item[Capability-13] Support time-tagged command execution and reject expired commands.
-\item[Capability-14] Maintain a command log recording all incoming telecommands and execution responses.
-\end{description}
-
-\medskip
-\noindent\textbf{Fault handling} (serves G-1 Operability) \tbr{faults}
-\begin{description}[leftmargin=3cm]
-\item[Capability-15] Detect controller unresponsiveness and initiate autonomous
-  recovery sequences.
-\item[Capability-16] Automatically fail over to the redundant data-link connection
-  upon single-path failure.
-\item[Capability-17] Restart crashed onboard processes and continue where they
-  stopped.
-\item[Capability-18] Log all detected fault events and executed recovery actions for
-  subsequent downlink.
-\end{description}
-
-\medskip
-\noindent\textbf{Update} (serves G-3 Correctability)
-\begin{description}[leftmargin=3cm]
-\item[Capability-19] Support reliable firmware image reception across intermittent
-  radio contact windows.
-\item[Capability-20] Validate firmware integrity, source authentication, target
-  compatibility, and version policy (preventing unauthorized rollbacks).
-\item[Capability-21] Transfer validated firmware images to the controller.
-\item[Capability-22] Transition execution to newly uploaded firmware, with the
-  activation trigger and scheduling criteria \tbd{switch}.
-\item[Capability-23] Evaluate new firmware operational validity post-boot; who
-  judges is open \tbd{confirm}.
-\item[Capability-24] Automatically roll back to operational firmware if trial
-  evaluation fails, without ground intervention.
-\item[Capability-25] Downlink firmware update outcome reports to the ground
-  segment.
-\end{description}
-
-\medskip
-\noindent\textbf{Test} (verification only)
-\begin{description}[leftmargin=3cm]
-\item[Capability-26] Provide controlled, deliberate radio link degradation during
-  bench testing.
-\item[Capability-27] Support command-driven injection of power interrupts and
-  data-link disconnection faults \tbr{faultinject}.
-\end{description}
-
-\medskip
-\noindent\textbf{Disposal:} none; operational scope limited to bench
-demonstration.
 
 % ===========================================================================
 \section{Physical Environment}
@@ -678,13 +624,12 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbrresolved{power}{Controller power can drop at any instant, including
   mid-write. Accepted by the author, 10 October 2026.}
 \tbrresolved{operator}{One operator. Accepted by the author, 10 October 2026.}
-\tbrresolved{telemetry}{Capability-1, Capability-2, Capability-3 and Capability-5 as
-  written. Accepted by the author, 10 October 2026.}
+\tbrresolved{telemetry}{The telemetry capabilities as written. Accepted by the author, 10 October 2026.}
 \end{description}
 
 \subsection*{Open}
 \begin{description}
-\tbritem{faults}{O-4 and Capability-15 to Capability-18 as written (shown 10 Oct, not yet
+\tbritem{faults}{O-4 and Capability-3 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}
 \tbritem{obcupdate}{Onboard computer's own update out of scope.}

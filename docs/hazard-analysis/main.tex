@@ -4,6 +4,7 @@
 \usepackage{booktabs}
 \usepackage{float}
 \usepackage{tabularx}
+\usepackage{xltabular}
 \usepackage{array}
 \usepackage{enumitem}
 \usepackage{totcount}
@@ -11,7 +12,7 @@
 \usepackage{lastpage}
 \usepackage{needspace}
 \usepackage{tikz}
-\usetikzlibrary{positioning}
+\usetikzlibrary{positioning, shapes.geometric, calc}
 \usepackage[hidelinks]{hyperref}
 \setlength{\emergencystretch}{1.5em}
 
@@ -24,8 +25,8 @@
 \newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
 \pagestyle{fancy}
 \fancyhf{}
-\lhead{\small Remote Controller with Fail-Safe Update --- Hazard Analysis}
-\rhead{\small \docrev}
+\lhead{\footnotesize Fail-Safe In-Orbit Reprogramming of a Spacecraft Controller --- Hazard Analysis}
+\cfoot{\small \docrev}
 \lfoot{\small \docref}
 \rfoot{\small Page \thepage\ of \pageref{LastPage}}
 
@@ -40,21 +41,24 @@
 
 \setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
 \setlist[itemize]{nosep}
-\setlist[enumerate]{nosep}
 
-% One hazard report: ID, hazard, severity, software role.
-\newcommand{\hazard}[4]{\par\needspace{8\baselineskip}\medskip
-  \noindent\textbf{#1\enspace #2}\par
-  \noindent Severity: #3.\quad Software: #4.\par\smallskip}
-\newenvironment{hazfields}{\begin{description}[leftmargin=3.3cm]}{\end{description}}
-\newenvironment{hazlist}{\begin{enumerate}[label=(\alph*),leftmargin=*,topsep=0pt]}{\end{enumerate}}
+% One hazard report: ID, hazard, severity, software role; then run-in fields.
+\newcommand{\hazard}[4]{\par\needspace{6\baselineskip}\medskip
+  \noindent\textbf{#1\enspace #2}\hskip 0.6em plus 0.3em #3.\hskip 0.6em plus 0.3em Software: #4.\par}
+\newcommand{\field}[1]{\par\noindent\textbf{#1:}~}
+\newcommand{\fieldin}[1]{\enspace\textbf{#1:}~}
+% Verification method of one control (legend in Section 3.0).
+\newcommand{\ver}[1]{~\textsf{\small #1}}
 
-% Fault tree symbols [4,~Table 4-1, p. 34]. Each gate pic has its output at
-% the origin and its inputs below.
+% Fault tree symbols [4, Table 4-1, p. 34]; ID boxes as in [4, Fig. 4-1,
+% p. 33]. Each gate pic has its output at the origin and its inputs below.
 \tikzset{
   ev/.style={draw, rectangle, align=center, font=\scriptsize, inner sep=2pt,
     minimum height=1.05cm},
-  basic/.style={draw, circle, minimum size=0.3cm, inner sep=0pt},
+  idbox/.style={draw, rectangle, font=\tiny, inner sep=1pt, minimum width=0.7cm,
+    minimum height=0.32cm},
+  basic/.style={draw, circle, minimum size=0.32cm, inner sep=0pt},
+  undev/.style={draw, diamond, minimum size=0.42cm, inner sep=0pt},
   andgate/.pic={\draw[thick] (-0.3,-0.7) -- (-0.3,-0.3) arc (180:0:0.3)
     -- (0.3,-0.7) -- cycle;},
   orgate/.pic={\draw[thick] (-0.3,-0.7) .. controls (-0.3,-0.3) and
@@ -67,7 +71,7 @@
 
 \thispagestyle{fancy}
 \begin{center}
-{\LARGE\bfseries Remote Controller with Fail-Safe Update\par}
+{\LARGE\bfseries Fail-Safe In-Orbit Reprogramming\\[0.2em] of a Spacecraft Controller\par}
 \vspace{0.4em}
 {\Large Hazard Analysis\par}
 \vspace{1em}
@@ -91,21 +95,16 @@ Issue & Rev. & Date & Change \\
 
 % ===========================================================================
 \section{Purpose and Scope}
-This document identifies the hazards of the System, the causes of each, its
-severity, and the controls proposed against it. It is the Phase~0 and Phase~1
-delivery of the hazard analysis, combined as for a small project: the top
-hazards and causes, then all known hazards with their causes and controls
-[2,~Sec.~4].
+This document is the preliminary hazard analysis of the System: its hazards,
+their causes and severity, and the controls proposed against them. It is the
+Phase~0 and Phase~1 delivery, combined as for a small project [2,~Sec.~4].
+The controls are proposals that the requirements turn into rules. Each names
+its verification method [7,~App.~F.3, p.~348]; the verification is planned in
+the Phase~2 update [2,~Sec.~3.1].
 
-The controls are proposals; the requirements turn them into rules. The
-verification of each control is added in the Phase~2 update, once a design
-exists [2,~Sec.~3.1]. This document also decides which software is
-safety-critical, which the Software Classification left open
-[6,~Sec.~4.0].
-
-The analysis covers the software items of the Software Classification in
-operation [6,~Sec.~3.0]. Bench and build tools are covered where they can
-affect operation.
+The document also decides which software is safety-critical, which the
+Software Classification left open [6,~Sec.~4.0]. It covers the software items
+of that classification in operation [6,~Sec.~3.0].
 
 % ===========================================================================
 \section{Documents}
@@ -121,66 +120,80 @@ Version~D, Topic 8.05 ``SW Failure Modes and Effects Analysis''.
 \noindent [4] NASA, \emph{Fault Tree Handbook with Aerospace Applications},
 Version~1.1, August 2002.
 
-\noindent [5] \emph{Remote Controller with Fail-Safe Update --- Concept of
-Operations}, Issue~1, Revision~0, Draft.
+\noindent [5] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Concept of Operations}, Issue~1, Revision~0, Draft.
 
-\noindent [6] \emph{Remote Controller with Fail-Safe Update --- Software
-Classification}, Issue~1, Revision~0, Draft.
+\noindent [6] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Software Classification}, Issue~1, Revision~0, Draft.
+
+\noindent [7] NASA, \emph{NASA Software Safety Guidebook}, NASA-GB-8719.13,
+2004.
+
+\noindent [8] NASA, \emph{NASA Systems Engineering Handbook},
+NASA/SP-2016-6105 Rev~2, 2016.
 
 % ===========================================================================
 \section{Ground Rules}
 \begin{itemize}
 \item \textbf{Hazard:} a state, or a set of conditions, with the potential to
   cause harm [1,~p.~13].
-\item \textbf{Sources:} the ConOps and the list of software causes of hazards
-  [1,~App.~A, Table~2, pp.~62--68]. Numbers of objectives (O), assumptions (A),
-  constraints (C), risks (R), capabilities and scenarios refer to the ConOps
-  [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0].
-\item \textbf{Points of view:} functional, operational, software,
-  environment, human and organizational [2,~Sec.~3.2.2]. The physical view
-  needs the architecture and is added with it.
-\item \textbf{Severity:} the worst credible effect, rated as if no control
-  worked \tbr{severity}.
+\item \textbf{Sources:} the ConOps and the software causes of hazards
+  [1,~App.~A, Table~2, pp.~62--68]. Numbers of objectives (O), assumptions
+  (A), constraints (C), risks (R), capabilities and scenarios refer to the
+  ConOps [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0].
+\item \textbf{Points of view:} functional, operational, software, environment,
+  human and organizational [2,~Sec.~3.2.2]. The physical view follows the
+  architecture.
+\item \textbf{Safety effort:} full [7,~Sec.~3.2.1, p.~44], chosen by the author
+  on 10 October 2026. A moderate effort suits hazards that operators have time
+  to answer [7,~Sec.~3.2.2, p.~44]; between contacts, no operator can (A-3). At
+  this stage, the full effort makes a fault tree mandatory and a failure modes
+  analysis highly recommended [7,~Table~6-3, p.~107].
+\item \textbf{Severity:} the worst credible effect, with no control working
+  \tbr{severity}.
 \item \textbf{Credible failures:} up to two at once for a catastrophic hazard,
-  and one for a critical hazard [3,~Sec.~3.1] \tbr{credible}.
-\item \textbf{Likelihood:} not rated yet; it depends on the design
+  one for a critical hazard [3,~Sec.~3.1] \tbr{credible}.
+\item \textbf{Likelihood:} not rated; it depends on the design
   \tbd{likelihood}.
 \item \textbf{Controls:} a control with a scenario number comes from the
-  ConOps. A control without one is new and proposed here.
+  ConOps; one without is new.
+\item \textbf{Software role} [2,~Sec.~3.2.2]: CAUSE, a software fault can lead
+  to the hazard; CONTROL, software prevents it; MITIGATION, software limits its
+  effect; MONITOR, software detects and reports it.
+\item \textbf{Verification method} [8,~Sec.~5.3.1.2.1, p.~92]:
+  \textsf{\small TEST}, using the product to obtain detailed data;
+  \textsf{\small DEMONSTRATION}, using it to show the control works, without
+  detailed data; \textsf{\small INSPECTION}, examining the product or its
+  records; \textsf{\small ANALYSIS}, modelling or calculation.
 \end{itemize}
 
 \medskip
-\noindent\textbf{Legend: severity} (names from [3,~Sec.~6])
-\begin{description}[leftmargin=4cm]
-\item[CATASTROPHIC] The controller is lost, or can no longer be commanded,
-  observed or corrected, for the rest of the mission.
-\item[CRITICAL] The controller acts against the operator's intent, or cannot
-  be commanded, observed or corrected until the ground acts.
-\item[MARGINAL] A function is degraded or interrupted, but none of the above
-  happens.
-\item[NEGLIGIBLE] No function is degraded; the operator has extra work or a
+\noindent\textbf{Legend: severity}, as defined in [7,~Table~2-2, p.~27], then
+for the System
+\begin{description}[leftmargin=3.9cm]
+\item[CATASTROPHIC] ``Loss of human life or permanent disability; loss of
+  entire system; loss of ground facility; severe environmental damage''. The
+  controller is lost, or can no longer be commanded, observed or corrected,
+  for the rest of the mission.
+\item[CRITICAL] ``Severe injury or temporary disability; major system or
+  environmental damage''. The controller acts against the operator's intent,
+  or cannot be commanded, observed or corrected until the ground acts.
+\item[MODERATE] ``Minor injury; minor system damage''. A function is degraded
+  or interrupted, but none of the above happens.
+\item[NEGLIGIBLE] ``No injury or minor injury; some system stress, but no
+  system damage''. No function is degraded; the operator has extra work or a
   delay.
 \end{description}
 
-\medskip
-\noindent\textbf{Legend: software role} [2,~Sec.~3.2.2]
-\begin{description}[leftmargin=4cm]
-\item[CAUSE] A software fault can lead to the hazard.
-\item[CONTROL] Software prevents the hazard.
-\item[MITIGATION] Software limits the effect once the hazard occurs.
-\item[MONITOR] Software detects and reports the hazard.
-\end{description}
-
 % ===========================================================================
-\section{Hazard List}
+\section{Preliminary Hazard List}
 The hazards in order of severity \tbr{hazards}:
 
-\begin{table}[H]
-\centering
-\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xl@{}}
+\begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xl@{}}
 \toprule
 ID & Hazard & Severity \\
 \midrule
+\endhead
 H-1  & The controller is left with no firmware it can run, and cannot be restored & CATASTROPHIC \\
 H-2  & Firmware not released by the operator runs on the controller & CATASTROPHIC \\
 H-3  & New firmware can no longer reach the controller & CATASTROPHIC \\
@@ -193,95 +206,92 @@ H-9  & The ground is shown a false state of the System & CRITICAL \\
 H-10 & A fault between contacts never reaches the ground & CRITICAL \\
 H-11 & A valid command is not acted on, and the ground is not told & CRITICAL \\
 H-12 & A test function acts outside a test & CRITICAL \\
-H-13 & A fault response is taken when there is no fault & MARGINAL \\
-H-14 & An update cannot be completed & MARGINAL \\
-H-15 & Health reports are lost & MARGINAL \\
+H-13 & A fault response is taken when there is no fault & MODERATE \\
+H-14 & An update cannot be completed & MODERATE \\
+H-15 & Health reports are lost & MODERATE \\
 H-16 & Reports reach the ground later than planned & NEGLIGIBLE \\
 H-17 & A command is refused with a wrong or unclear reason & NEGLIGIBLE \\
 \bottomrule
-\end{tabularx}
-\end{table}
+\end{xltabular}
 
 % ===========================================================================
 \section{Top-Down Analysis}
-Figure~\ref{fig:tree} develops the worst hazard, H-1, from the top down.
+Figure~\ref{fig:tree} develops the worst hazard, H-1. Each box states what
+fails and when [4,~p.~50].
 
 \begin{figure}[H]
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}
-% Levels: event tops at 0.5, -1.75, -3.9, -6.1; gate outputs at -0.75,
-% -2.95, -5.1. Lines leave a gate's base and meet a bus above the events.
-\node[ev, anchor=north, text width=4.2cm] (T) at (1.66,0.5) {H-1: no firmware can run, and none can be restored};
-\pic at (1.66,-0.75) {andgate};
-\draw (T.south) -- (1.66,-0.75);
-\node[ev, anchor=north, text width=3.4cm] (E1) at (-2.375,-1.75) {No firmware image can run};
-\node[ev, anchor=north, text width=3.6cm] (E2) at (5.7,-1.75) {The restore through the reprogramming link fails};
-\draw (1.66,-1.45) -- (1.66,-1.6) -| (E1.north);
-\draw (1.66,-1.6) -| (E2.north);
-\pic at (-2.375,-2.95) {orgate};
-\pic at (5.7,-2.95) {orgate};
-\draw (E1.south) -- (-2.375,-2.95);
-\draw (E2.south) -- (5.7,-2.95);
-% Two ways no image can run.
-\node[ev, anchor=north, text width=2.6cm] (E3) at (-5.35,-3.9) {Each image fails on its own};
-\node[ev, anchor=north, text width=2.6cm] (E4) at (0.6,-3.9) {One cause stops every image};
-\draw (-2.375,-3.55) -- (-2.375,-3.75) -| (E3.north);
-\draw (-2.375,-3.75) -| (E4.north);
+% Event tops at 0.5, -1.87, -4.15, -6.52. Below each event: its ID box, then
+% its gate or symbol. Lines leave a gate's base and meet a bus above the row.
+\node[ev, anchor=north, text width=4.6cm] (T) at (1.66,0.5) {H-1: after a restart, no firmware on the controller can run, and the restore fails};
+\node[idbox, below=0pt of T] (iT) {G01};
+\pic at (iT.south) {andgate};
+\node[ev, anchor=north, text width=3.4cm] (E1) at (-2.375,-1.87) {No firmware image starts when the controller restarts};
+\node[ev, anchor=north, text width=3.6cm] (E2) at (5.7,-1.87) {The restore through the reprogramming link fails when it is needed};
+\coordinate (g1) at ($(iT.south)+(0,-0.7)$);
+\draw (g1) -- (g1 |- 0,-1.72) -| (E1.north);
+\draw (g1 |- 0,-1.72) -| (E2.north);
+\node[idbox, below=0pt of E1] (iE1) {G02};
+\node[idbox, below=0pt of E2] (iE2) {G03};
+\pic at (iE1.south) {orgate};
+\pic at (iE2.south) {orgate};
+% Two ways no image starts.
+\node[ev, anchor=north, text width=2.6cm] (E3) at (-5.35,-4.15) {Each image fails on its own at the restart};
+\node[ev, anchor=north, text width=2.6cm] (E4) at (0.6,-4.15) {One cause stops every image at the restart};
+\coordinate (g2) at ($(iE1.south)+(0,-0.6)$);
+\draw (g2) -- (g2 |- 0,-4.0) -| (E3.north);
+\draw (g2 |- 0,-4.0) -| (E4.north);
 % Why the restore fails.
-\foreach \x/\t [count=\i] in {3.3/Reprogramming link has failed,
-    5.7/Onboard computer does not notice,
-    8.1/Its known-good copy is damaged} {
-  \node[ev, anchor=north, text width=2.15cm] (R\i) at (\x,-3.9) {\t};
-  \node[basic, below=0pt of R\i] {};
-  \draw (5.7,-3.55) -- (5.7,-3.75) -| (R\i.north);
+\coordinate (g3) at ($(iE2.south)+(0,-0.6)$);
+\foreach \x/\t/\s/\n in {3.3/Reprogramming link fails (hardware)/basic/B08,
+    5.7/Onboard computer misses the need/undev/B09,
+    8.1/Its known-good copy is damaged/undev/B10} {
+  \node[ev, anchor=north, text width=2.15cm] (R) at (\x,-4.15) {\t};
+  \node[idbox, below=0pt of R] (iR) {\n};
+  \node[\s, below=0pt of iR] {};
+  \draw (g3) -- (g3 |- 0,-4.0) -| (R.north);
 }
-\pic at (-5.35,-5.1) {andgate};
-\pic at (0.6,-5.1) {orgate};
-\draw (E3.south) -- (-5.35,-5.1);
-\draw (E4.south) -- (0.6,-5.1);
-% Basic events.
-\foreach \x/\t [count=\i] in {-7.6/Current firmware cannot run,
-    -5.35/Previous firmware cannot run,
-    -3.1/Last-resort firmware cannot run} {
-  \node[ev, anchor=north, text width=1.95cm] (A\i) at (\x,-6.1) {\t};
-  \node[basic, below=0pt of A\i] {};
-  \draw (-5.35,-5.8) -- (-5.35,-5.95) -| (A\i.north);
+\node[idbox, below=0pt of E3] (iE3) {G04};
+\node[idbox, below=0pt of E4] (iE4) {G05};
+\pic at (iE3.south) {andgate};
+\pic at (iE4.south) {orgate};
+% Primary events.
+\coordinate (g4) at ($(iE3.south)+(0,-0.7)$);
+\foreach \x/\t/\n in {-7.6/Current firmware fails to start/B01,
+    -5.35/Previous firmware fails to start/B02,
+    -3.1/Last-resort firmware fails to start/B03} {
+  \node[ev, anchor=north, text width=1.95cm] (A) at (\x,-6.52) {\t};
+  \node[idbox, below=0pt of A] (iA) {\n};
+  \node[undev, below=0pt of iA] {};
+  \draw (g4) -- (g4 |- 0,-6.37) -| (A.north);
 }
-\foreach \x/\t [count=\i] in {-0.7/Start-up code fails,
-    1.55/Data kept over restarts stops every image,
-    3.8/Restart loop never reaches the fall-back,
-    6.05/Same defect in every image} {
-  \node[ev, anchor=north, text width=1.95cm] (B\i) at (\x,-6.1) {\t};
-  \node[basic, below=0pt of B\i] {};
-  \draw (0.6,-5.7) -- (0.6,-5.95) -| (B\i.north);
+\coordinate (g5) at ($(iE4.south)+(0,-0.6)$);
+\foreach \x/\t/\n in {-0.7/Start-up code fails/B04,
+    1.55/Data kept over restarts stops every image/B05,
+    3.8/Restart loop never reaches the fall-back/B06,
+    6.05/Same defect in every image/B07} {
+  \node[ev, anchor=north, text width=1.95cm] (B) at (\x,-6.52) {\t};
+  \node[idbox, below=0pt of B] (iB) {\n};
+  \node[undev, below=0pt of iB] {};
+  \draw (g5) -- (g5 |- 0,-6.37) -| (B.north);
 }
 \end{tikzpicture}}
-\caption{Fault tree of H-1. Symbols as in [4,~Table 4-1, p.~34].}
+\caption{Fault tree of H-1. Rectangle: event developed by the gate below it.
+Circle: basic event, needing no further development. Diamond: undeveloped
+event; the design that would develop it does not exist yet. Flat base: AND
+gate. Curved base: OR gate. ID box: gate (G) or primary event (B). Symbols
+as in [4,~Table~4-1, p.~34] and [4,~Fig.~4-1, p.~33].}
 \label{fig:tree}
 \end{figure}
 
-\noindent\textbf{Legend: symbols}
-\begin{description}[leftmargin=3.4cm]
-\item[Rectangle] An event developed further by the gate below it.
-\item[Circle] A basic event, not developed further here.
-\item[AND gate] Flat base: the event above occurs if all events below occur.
-\item[OR gate] Curved base: the event above occurs if at least one event below
-  occurs.
-\end{description}
-
-\medskip
-A minimal cut set is the smallest combination of basic events that causes the
-top event [4,~Sec.~1.3, p.~3]. H-1 has two kinds:
-\begin{itemize}
-\item \textbf{Four events:} the current, previous and last-resort firmware all
-  fail on their own, and the restore fails.
-\item \textbf{Two events:} one cause stops every image, and the restore
-  fails.
-\end{itemize}
-Two failures at once are credible for a catastrophic hazard (Section~3.0). The
-causes that stop every image are therefore the weakest point of H-1: they
-defeat three layers of firmware with one event.
+A minimal cut set is the smallest combination of primary events that causes
+the top event [4,~Sec.~1.3, p.~3]. H-1 has two kinds: four events (B01, B02 and
+B03, with one of B08 to B10) and two events (one of B04 to B07, with one of B08
+to B10). Two failures are credible for a catastrophic hazard (Section~3.0), so
+B04 to B07 are the weakest point of H-1: one event defeats three layers of
+firmware.
 
 % ===========================================================================
 \section{Bottom-Up Analysis}
@@ -289,13 +299,12 @@ Before a design exists, the components examined are the System's functions
 [3,~Sec.~4]. Each function is examined for each way it can fail, and each
 failure is traced to the hazard it leads to.
 
-\begin{table}[H]
-\centering
-\small
-\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xllll@{}}
+{\small
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}Xllll@{}}
 \toprule
 Function & OMITTED & INCORRECT & UNWANTED & MISTIMED \\
 \midrule
+\endhead
 \multicolumn{5}{@{}l}{\itshape Telemetry (Capability-1)} \\
 Make health and event reports & H-10, H-15 & H-9 & H-4, H-15 & H-9 \\
 Time-tag and store reports & H-10, H-15 & H-9 & H-15 & H-9 \\
@@ -320,533 +329,303 @@ Restore through the reprogramming link & H-1 & H-1, H-2 & H-13 & H-1 \\
 \multicolumn{5}{@{}l}{\itshape Test (Capability-5)} \\
 Inject faults & NONE & NONE & H-12 & H-12 \\
 \bottomrule
-\end{tabularx}
-\end{table}
+\end{xltabular}}
 
-\noindent\textbf{Legend: failure mode}
-\begin{description}[leftmargin=3.4cm]
-\item[OMITTED] The function is not performed.
-\item[INCORRECT] The function is performed with a wrong result.
-\item[UNWANTED] The function is performed when it must not be.
-\item[MISTIMED] The function is performed too early, too late or out of order.
-\item[NONE] The failure leads to no hazard.
-\end{description}
-
-\medskip
-Every failure leads to a hazard of the list in Section~4.0, or to none.
+\noindent\textbf{Legend: failure mode.} OMITTED: not performed. INCORRECT:
+performed with a wrong result. UNWANTED: performed when it must not be.
+MISTIMED: performed too early, too late or out of order. NONE: leads to no
+hazard. Every failure leads to a hazard of Section~4.0, or to none.
 
 % ===========================================================================
 \section{Common Causes}
-A common cause defeats several controls at once; it can negate a redundancy
-[4,~Sec.~1.3, p.~3]. It includes the same defect in software that runs in
-more than one place [1,~App.~A.1.1, p.~62]. The common causes found are:
+A common cause defeats several controls at once and can negate a redundancy
+[4,~Sec.~1.3, p.~3], including the same defect in software that runs in more
+than one place [1,~App.~A.1.1, p.~62].
 
-\noindent\textbf{Wrong onboard clock.} Expiry, arm time-outs, scheduled commands,
-time-tags and the trial time limit all depend on the onboard clock
-[1,~p.~65]. Hazards: H-4, H-6, H-9, H-11, H-13.\par\smallskip
-\noindent\textbf{Code shared by every image.} The start-up code, and any defect common to
-the current, previous and last-resort firmware, stops all of them at once.
-Hazards: H-1, H-8.\par\smallskip
-\noindent\textbf{Data kept over restarts.} Stored settings, counters and flags survive a
-restart. A wrong value can stop every image or keep a wrong state
-[1,~p.~64]. Hazards: H-1, H-6, H-13.\par\smallskip
-\noindent\textbf{One power supply.} The onboard computer and the controller share the
-spacecraft power supply [5,~Sec.~3.3]. A power loss stops the controller and
-the computer that would restore it, and interrupts reports and commands.
-Hazards: H-1, H-8, H-10, H-11, H-15.\par\smallskip
-\noindent\textbf{Same software at both data-link ends.} One defect can cut both
-connections (R-1) [1,~p.~66]. Hazards: H-4.\par\smallskip
-\noindent\textbf{One means of proving origin.} If one means proves that both commands and
-firmware come from the operator, its disclosure opens both. Hazards: H-2,
-H-5.\par\smallskip
-\noindent\textbf{Radiation.} Bit errors can strike stored firmware, running memory, stored
-reports, held commands and the arm state (A-5) [1,~p.~63]. Hazards: H-1, H-6,
-H-8, H-9, H-10.\par\smallskip
-\noindent\textbf{One set of build tools.} The same tools build every image; a tool defect
-enters all of them. Hazards: H-1, H-7, H-12.\par\smallskip
-\noindent\textbf{Onboard computer software that cannot be updated.} It stays fixed for the
-mission [5,~Sec.~5.0], so a defect in it is never corrected. Hazards: H-1,
-H-3, H-4.\par\smallskip
-\noindent\textbf{One engineer and AI-drafted code.} The same misunderstanding can enter a
-function and the check meant to catch it (C-3, R-2) [1,~p.~67]. Hazards:
-all.\par\smallskip
+\medskip
+\noindent\textbf{Wrong onboard clock:} expiry, arm time-outs, scheduled
+commands, time-tags and the trial time limit depend on it [1,~p.~65]. H-4,
+H-6, H-9, H-11, H-13.\par
+\noindent\textbf{Shared image code:} start-up code, or a defect common to the
+current, previous and last-resort firmware, stops all of them. H-1, H-8.\par
+\noindent\textbf{Data kept over restarts:} a wrong stored setting, counter or
+flag can stop every image or keep a wrong state [1,~p.~64]. H-1, H-6,
+H-13.\par
+\noindent\textbf{One power supply:} it feeds both the onboard computer and the
+controller [5,~Sec.~3.3]; one loss stops the controller and the computer that
+would restore it. H-1, H-8, H-10, H-11, H-15.\par
+\noindent\textbf{Same data-link software:} one defect at both ends cuts both
+connections (R-1) [1,~p.~66]. H-4.\par
+\noindent\textbf{One proof of origin:} if one means proves both commands and
+firmware, its disclosure opens both. H-2, H-5.\par
+\noindent\textbf{Radiation:} bit errors strike stored firmware, running
+memory, stored reports, held commands and the arm state (A-5) [1,~p.~63].
+H-1, H-6, H-8, H-9, H-10.\par
+\noindent\textbf{One set of build tools:} a tool defect enters every image.
+H-1, H-7, H-12.\par
+\noindent\textbf{Fixed onboard computer software:} it is not updated during
+the mission [5,~Sec.~5.0], so its defects stay. H-1, H-3, H-4.\par
+\noindent\textbf{One engineer, AI-drafted code:} one misunderstanding can enter
+both a function and its check (C-3, R-2) [1,~p.~67]. All hazards.\par
 
 % ===========================================================================
 \section{Hazard Reports}
-Each report gives the conditions, causes, worst effect, proposed controls, how
-the controls can fail, and the common causes that defeat them [2,~Sec.~4].
+Reports cover the catastrophic and critical hazards, the two categories of
+the hazard report form [7,~Fig.~F-1, p.~351]; the others stay in the
+preliminary hazard list. Each report gives the conditions, worst effect,
+causes, proposed controls, how the controls fail, and their common causes
+[2,~Sec.~4].
 
 % ---------------------------------------------------------------- H-1
 \hazard{H-1}{The controller is left with no firmware it can run, and cannot be restored.}{CATASTROPHIC}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] During an update, at any restart, or when a restore is needed.
-\item[Causes] \begin{hazlist}
-  \item Power is lost while firmware is written (Scenario-600) [1,~p.~63].
-  \item A bit error changes stored firmware (Scenario-610) [1,~p.~63].
-  \item An update writes over the firmware the controller would fall back to
-    [1,~p.~65].
-  \item The new and the previous firmware both fail (Scenario-460).
-  \item The last-resort firmware has changed unnoticed by the time it is
-    needed [1,~p.~63].
-  \item A restart loop never reaches the fall-back [1,~p.~64].
-  \item The start-up code fails, or its stored copy is damaged [1,~p.~63].
-  \item The reprogramming link has failed, or the onboard computer does not
-    notice that a restore is needed (Scenario-520).
-  \item The onboard computer's known-good copy of the firmware is damaged
-    [1,~p.~63].
-  \end{hazlist}
-\item[Effect] The controller is lost for the rest of the mission; nobody can
-  reach it (A-1).
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item An update never writes over the firmware the controller would fall back
-    to (Scenario-600).
-  \item Every firmware image is checked before it runs (Scenario-610).
-  \item Failed starts are counted; after a set number, the controller returns
-    to its previous firmware (Scenario-440).
-  \item A last-resort firmware that updates never replace (Scenario-460).
-  \item A restore through the reprogramming link, which does not depend on the
-    controller's software (Scenario-480).
-  \item Stored firmware and the reprogramming link are checked between uses,
-    so a hidden fault is reported before it is needed.
-  \end{enumerate}
-\item[Control fails if] The image check passes damaged firmware; the
-  failed-start count is lost at each restart; the last-resort firmware shares
-  the defect that stops the others.
-\item[Common causes] Code shared by every image; data kept over restarts; one
-  power supply; radiation; one set of build tools; onboard computer software
-  that cannot be updated.
-\end{hazfields}
+\field{When} An update, any restart, or a needed restore.
+\fieldin{Effect} The controller is lost for the rest of the mission (A-1).
+\field{Causes} (a)~power lost while firmware is written (Scenario-600)
+[1,~p.~63]; (b)~a bit error in stored firmware (Scenario-610) [1,~p.~63];
+(c)~an update writes over the previous or last-resort firmware [1,~p.~65];
+(d)~new and previous firmware both fail (Scenario-460); (e)~the last-resort
+firmware has changed unnoticed [1,~p.~63]; (f)~a restart loop never reaches
+the fall-back [1,~p.~64]; (g)~the start-up code fails or is damaged
+[1,~p.~63]; (h)~the reprogramming link fails, or the onboard computer misses
+the need to restore (Scenario-520); (i)~the onboard computer's known-good copy
+is damaged [1,~p.~63].
+\field{Controls} (1)~an update never writes over the previous or last-resort
+firmware (Scenario-600)\ver{TEST}; (2)~every image is checked before it runs
+(Scenario-610)\ver{TEST}; (3)~after a set number of failed starts, the
+controller returns to its previous firmware (Scenario-440)\ver{TEST}; (4)~a
+last-resort firmware that updates never replace (Scenario-460)\ver{TEST};
+(5)~a restore through the reprogramming link, independent of the controller's
+software (Scenario-480)\ver{TEST}; (6)~stored firmware and the reprogramming
+link are checked between uses\ver{TEST}.
+\field{Fails if} The image check passes damaged firmware; the failed-start
+count is lost at a restart; the last-resort firmware shares the defect.
+\fieldin{Common causes} Shared image code; data kept over restarts; one power
+supply; radiation; one set of build tools; fixed onboard computer software.
 
 % ---------------------------------------------------------------- H-2
 \hazard{H-2}{Firmware not released by the operator runs on the controller.}{CATASTROPHIC}{CONTROL}
-\begin{hazfields}
-\item[When] During an update, a fall-back or a restore.
-\item[Causes] \begin{hazlist}
-  \item Firmware not from the operator arrives (Scenario-410) [1,~p.~67].
-  \item Firmware is changed after it is checked, in transfer or in storage
-    [1,~p.~63].
-  \item Firmware older than the minimum version, which the operator no longer
-    releases, is sent again (Scenario-420).
-  \item The means of proving that firmware comes from the operator is
-    disclosed.
-  \item A fall-back or a restore starts an image that was never released.
-  \end{hazlist}
-\item[Effect] Firmware of unknown behaviour runs the controller. It can refuse
-  further updates and report a false state. The restore is used only when no
-  firmware can run (Scenario-480), so firmware that runs is never removed.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item The onboard computer refuses firmware that is not released by the
-    operator (Scenario-410), damaged (Scenario-400), older than the minimum
-    version (Scenario-420), or built for another controller (Scenario-360).
-  \item The controller checks firmware again before it runs it
-    (Scenario-610).
-  \item The operator can order a restore through the reprogramming link while
-    firmware is running.
-  \end{enumerate}
-\item[Control fails if] The check accepts what it should refuse; the check is
-  made before the last transfer, not after it.
-\item[Common causes] One means of proving origin; radiation.
-\end{hazfields}
+\field{When} An update, a fall-back or a restore.
+\fieldin{Effect} Firmware of unknown behaviour runs the controller and can
+refuse updates and report a false state. The restore starts only when no
+firmware can run (Scenario-480), so this firmware is never removed.
+\field{Causes} (a)~firmware not from the operator arrives (Scenario-410)
+[1,~p.~67]; (b)~firmware changes after its check, in transfer or in storage
+[1,~p.~63]; (c)~firmware older than the minimum version is sent again
+(Scenario-420); (d)~the means of proving origin is disclosed; (e)~a fall-back
+or a restore starts an image never released.
+\field{Controls} (1)~the onboard computer refuses firmware not released
+(Scenario-410), damaged (Scenario-400), older than the minimum version
+(Scenario-420) or built for another controller (Scenario-360)\ver{TEST};
+(2)~the controller checks firmware again before it runs it
+(Scenario-610)\ver{TEST}; (3)~the operator can order a restore while firmware
+runs\ver{DEMONSTRATION}.
+\field{Fails if} The check accepts what it should refuse, or is made before
+the last transfer.
+\fieldin{Common causes} One proof of origin; radiation.
 
 % ---------------------------------------------------------------- H-3
 \hazard{H-3}{New firmware can no longer reach the controller.}{CATASTROPHIC}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] After an update is confirmed, or after a fault in the onboard
-  computer.
-\item[Causes] \begin{hazlist}
-  \item Confirmed firmware runs, but cannot receive new firmware.
-  \item A defect in the onboard computer's update path.
-  \item A stored minimum version or controller identity is wrong, so all new
-    firmware is refused [1,~p.~67].
-  \item Storage for firmware on the onboard computer stays full [1,~p.~66].
-  \end{hazlist}
-\item[Effect] The controller can no longer be corrected for the rest of the
-  mission.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item New firmware runs a trial before it is confirmed (Scenario-430 to
-    Scenario-450).
-  \item New firmware is judged good only after it has received firmware itself.
-  \item The last-resort firmware can always receive new firmware.
-  \item The operator can order a return to the last-resort firmware.
-  \end{enumerate}
-\item[Control fails if] The trial does not test the update path; the defect is
-  in the onboard computer, which no control can reach.
-\item[Common causes] Onboard computer software that cannot be updated; data
-  kept over restarts.
-\end{hazfields}
+\field{When} After an update is confirmed, or after a fault in the onboard
+computer.
+\fieldin{Effect} The controller can no longer be corrected for the rest of
+the mission.
+\field{Causes} (a)~confirmed firmware runs, but cannot receive firmware;
+(b)~a defect in the onboard computer's update path; (c)~a wrong stored minimum
+version or controller identity refuses all firmware [1,~p.~67]; (d)~firmware
+storage on the onboard computer stays full [1,~p.~66].
+\field{Controls} (1)~new firmware runs a trial before it is confirmed
+(Scenario-430 to Scenario-450)\ver{TEST}; (2)~it is judged good only after it
+has received firmware itself\ver{TEST}; (3)~the last-resort firmware can
+always receive firmware\ver{TEST}; (4)~the operator can order a return to the
+last-resort firmware\ver{DEMONSTRATION}.
+\field{Fails if} The trial skips the update path; the defect is in the
+onboard computer, out of every control's reach.
+\fieldin{Common causes} Fixed onboard computer software; data kept over
+restarts.
 
 % ---------------------------------------------------------------- H-4
 \hazard{H-4}{The controller can no longer be commanded or observed.}{CATASTROPHIC}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] At any time.
-\item[Causes] \begin{hazlist}
-  \item Both data-link connections fail (Scenario-510).
-  \item One software defect cuts both connections (R-1) [1,~p.~66].
-  \item A controller that never stops sending blocks the data link
-    [1,~p.~63].
-  \item The onboard clock is wrong, so every command is refused as expired,
-    including the one that would correct the clock [1,~p.~65].
-  \item The ground loses the means of proving that commands come from the
-    operator, so no command is accepted.
-  \item A fault response marks both connections failed (H-13).
-  \end{hazlist}
-\item[Effect] The controller runs on with its current firmware, but nobody can
-  command or observe it for the rest of the mission.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Two separate data-link connections; one is enough (O-3,
-    Scenario-500).
-  \item The loss of a connection is reported (Scenario-500, Scenario-510).
-  \item The reprogramming link stays usable (Scenario-510).
-  \item The command that corrects the onboard clock does not depend on the
-    onboard clock.
-  \end{enumerate}
-\item[Control fails if] Both connections fail from one cause. No control yet
-  covers a lost means of proving origin.
-\item[Common causes] Same software at both data-link ends; wrong onboard clock;
-  onboard computer software that cannot be updated.
-\end{hazfields}
+\field{When} At any time.
+\fieldin{Effect} The controller runs on its current firmware, but nobody can
+command or observe it for the rest of the mission.
+\field{Causes} (a)~both data-link connections fail (Scenario-510); (b)~one
+software defect cuts both (R-1) [1,~p.~66]; (c)~a controller that never stops
+sending blocks the data link [1,~p.~63]; (d)~a wrong onboard clock makes every
+command expire, including the clock correction [1,~p.~65]; (e)~the ground
+loses the means of proving origin; (f)~a false fault response marks both
+connections failed (H-13).
+\field{Controls} (1)~two separate data-link connections, one enough (O-3,
+Scenario-500)\ver{TEST}; (2)~a lost connection is reported
+(Scenario-510)\ver{TEST}; (3)~the reprogramming link stays usable
+(Scenario-510)\ver{TEST}; (4)~the clock correction does not depend on the
+onboard clock\ver{TEST}.
+\field{Fails if} One cause cuts both connections. No control yet covers a
+lost means of proving origin.
+\fieldin{Common causes} Same data-link software; wrong onboard clock; fixed
+onboard computer software.
 
 % ---------------------------------------------------------------- H-5
 \hazard{H-5}{Someone other than the operator commands the System.}{CATASTROPHIC}{CONTROL}
-\begin{hazfields}
-\item[When] During a contact, or at any time for a source on the spacecraft.
-\item[Causes] \begin{hazlist}
-  \item A command not from the operator arrives (Scenario-300) [1,~p.~67].
-  \item The means of proving that a command comes from the operator is
-    disclosed.
-  \item Someone other than the operator uses the operator interface; no second
-    person checks a command (A-4).
-  \item A command arrives from an unexpected system on the spacecraft
-    [1,~p.~62].
-  \end{hazlist}
-\item[Effect] Another party can do anything the operator can, and hide it.
-  Control of the controller is lost for the rest of the mission.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Every command is proven to come from the operator; any other is refused
-    and logged (O-2, Scenario-300).
-  \item Only the operator can use the operator interface.
-  \end{enumerate}
-\item[Control fails if] The means of proof is disclosed; the check accepts what
-  it should refuse.
-\item[Common causes] One means of proving origin.
-\end{hazfields}
+\field{When} During a contact, or at any time for a source on the spacecraft.
+\fieldin{Effect} Another party can do anything the operator can, and hide it,
+for the rest of the mission.
+\field{Causes} (a)~a command not from the operator arrives (Scenario-300)
+[1,~p.~67]; (b)~the means of proving origin is disclosed; (c)~someone else uses
+the operator interface, and no second person checks a command (A-4); (d)~a
+command arrives from an unexpected system on the spacecraft [1,~p.~62].
+\field{Controls} (1)~every command is proven to come from the operator; any
+other is refused and logged (O-2, Scenario-300)\ver{TEST}; (2)~only the
+operator can use the operator interface\ver{DEMONSTRATION}.
+\field{Fails if} The means of proof is disclosed.
+\fieldin{Common causes} One proof of origin.
 
 % ---------------------------------------------------------------- H-6
 \hazard{H-6}{A command is acted on in a form or at a time the operator did not intend.}{CRITICAL}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] While a command is checked, held or run.
-\item[Causes] \begin{hazlist}
-  \item A command is changed in transfer [1,~p.~62].
-  \item An old command is sent again (Scenario-300).
-  \item A command is run twice after a lost answer (Scenario-350).
-  \item A command not allowed in the current mode arrives (Scenario-310)
-    [1,~p.~63].
-  \item A command with impossible values arrives (Scenario-320) [1,~p.~62].
-  \item A dangerous command arrives without a valid arm (Scenario-330,
-    Scenario-335) [1,~p.~63].
-  \item A command arrives after its expiry (Scenario-340) [1,~p.~63].
-  \item A scheduled command runs at the wrong time, or again after a restart
-    [1,~p.~64].
-  \item A bit error changes a held command or the arm state [1,~p.~63].
-  \item The ground software builds a wrong command, or the operator enters one
-    (A-4) [1,~p.~63].
-  \end{hazlist}
-\item[Effect] The controller does what the operator did not intend, and the
-  ground learns of it only at the next contact.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item The onboard computer checks that every command is new, allowed in the
-    current mode, has possible values and has not expired (Scenario-120).
-  \item A dangerous command needs an arm, which expires (Scenario-330,
-    Scenario-335).
-  \item A command sent again is not run twice; the answer is ``already done''
-    (Scenario-350).
-  \item The ground software checks every command before it is sent
-    (Scenario-120).
-  \item Every command and its answers are logged (Scenario-120).
-  \end{enumerate}
-\item[Control fails if] The checks use a wrong onboard clock; a held command or
-  the arm state changes after it is checked.
-\item[Common causes] Wrong onboard clock; radiation; data kept over restarts.
-\end{hazfields}
+\field{When} While a command is checked, held or run.
+\fieldin{Effect} The controller does what the operator did not intend; the
+ground learns of it at the next contact.
+\field{Causes} A command (a)~changed in transfer [1,~p.~62]; (b)~sent again
+from an old copy (Scenario-300); (c)~run twice after a lost answer
+(Scenario-350); (d)~not allowed in the current mode (Scenario-310) [1,~p.~63];
+(e)~with impossible values (Scenario-320) [1,~p.~62]; (f)~dangerous, without
+a valid arm (Scenario-330, Scenario-335) [1,~p.~63]; (g)~past its expiry
+(Scenario-340) [1,~p.~63]; (h)~scheduled, run at the wrong time or again after
+a restart [1,~p.~64]; (i)~held, or the arm state, changed by a bit error
+[1,~p.~63]; (j)~built wrongly by the ground software or entered wrongly by the
+operator (A-4) [1,~p.~63].
+\field{Controls} (1)~the onboard computer checks that every command is new,
+allowed in the mode, has possible values and has not expired
+(Scenario-120)\ver{TEST}; (2)~a dangerous command needs an arm, which expires
+(Scenario-330, Scenario-335)\ver{TEST}; (3)~a repeated command is answered
+``already done'' (Scenario-350)\ver{TEST}; (4)~the ground software checks every
+command before it is sent (Scenario-120)\ver{TEST}; (5)~every command and
+answer is logged (Scenario-120)\ver{INSPECTION}.
+\field{Fails if} The checks use a wrong clock; a held command or the arm
+state changes after its check.
+\fieldin{Common causes} Wrong onboard clock; radiation; data kept over
+restarts.
 
 % ---------------------------------------------------------------- H-7
 \hazard{H-7}{Defective firmware released by the operator is confirmed.}{CRITICAL}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] During the trial of new firmware, and after it is confirmed.
-\item[Causes] \begin{hazlist}
-  \item The trial does not exercise the defect.
-  \item The wrong build is released [1,~p.~67].
-  \item The release carries wrong configuration values [1,~p.~67].
-  \item Firmware built for a different controller is released (Scenario-360).
-  \item The build tools put a defect into the firmware.
-  \item Code is released without being fully tested [1,~p.~67].
-  \end{hazlist}
-\item[Effect] The controller misbehaves until a further update. If the defect
-  stops updates, H-3 follows.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item New firmware not judged good within the trial time is given up
-    (Scenario-430 to Scenario-450).
-  \item Firmware built for another controller is refused (Scenario-360).
-  \item The ground software checks every release before it is sent
-    (Scenario-100).
-  \item The operator can order a return to the previous firmware.
-  \end{enumerate}
-\item[Control fails if] The judgement checks too little; the trial is shorter
-  than the time the defect takes to show.
-\item[Common causes] One set of build tools; one engineer and AI-drafted code.
-\end{hazfields}
+\field{When} During and after the trial of new firmware.
+\fieldin{Effect} The controller misbehaves until a further update; if the
+defect stops updates, H-3 follows.
+\field{Causes} (a)~the trial does not exercise the defect; (b)~the wrong build
+is released [1,~p.~67]; (c)~the release carries wrong configuration values
+[1,~p.~67]; (d)~firmware built for another controller is released
+(Scenario-360); (e)~the build tools add a defect; (f)~code is released not
+fully tested [1,~p.~67].
+\field{Controls} (1)~firmware not judged good within the trial time is given
+up (Scenario-430 to Scenario-450)\ver{TEST}; (2)~firmware for another
+controller is refused (Scenario-360)\ver{TEST}; (3)~the ground software checks
+every release before it is sent (Scenario-100)\ver{TEST}; (4)~the operator can
+order a return to the previous firmware\ver{DEMONSTRATION}.
+\field{Fails if} The judgement checks too little, or the trial ends before the
+defect shows.
+\fieldin{Common causes} One set of build tools; one engineer, AI-drafted code.
 
 % ---------------------------------------------------------------- H-8
 \hazard{H-8}{The controller stops working between contacts and is not brought back.}{CRITICAL}{CAUSE, CONTROL, MONITOR}
-\begin{hazfields}
-\item[When] In any controller mode.
-\item[Causes] \begin{hazlist}
-  \item A bit error in the memory the controller runs from (Scenario-620)
-    [1,~p.~63].
-  \item The firmware hangs, deadlocks or overloads [1,~p.~63].
-  \item The controller restarts but does not resume [1,~p.~63].
-  \item The restart takes longer than the time to the next failure
-    [1,~p.~64].
-  \item The controller misbehaves when no command arrives for a long time
-    [1,~p.~65].
-  \item The onboard computer does not notice the silence, or its watching
-    program has crashed (Scenario-520, Scenario-530).
-  \end{hazlist}
-\item[Effect] The controller's work stops until the ground acts at the next
-  contact.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item The controller restarts on its own and resumes (Scenario-620).
-  \item The onboard computer notices the silence, tries to bring the controller
-    back, and records what it did (Scenario-520).
-  \item A program on the onboard computer that crashes restarts and resumes
-    (Scenario-530).
-  \item New firmware that hangs is given up (Scenario-430).
-  \end{enumerate}
-\item[Control fails if] The controller's own restart and the onboard
-  computer's watch fail from one fault.
-\item[Common causes] Radiation; data kept over restarts; one power supply;
-  code shared by every image.
-\end{hazfields}
+\field{When} In any controller mode.
+\fieldin{Effect} The controller's work stops until the ground acts at the next
+contact.
+\field{Causes} (a)~a bit error in running memory (Scenario-620) [1,~p.~63];
+(b)~the firmware hangs, deadlocks or overloads [1,~p.~63]; (c)~a restart does
+not resume [1,~p.~63]; (d)~the restart takes longer than the time to the next
+failure [1,~p.~64]; (e)~the controller misbehaves when no command arrives for a
+long time [1,~p.~65]; (f)~the onboard computer misses the silence, or its
+watching program has crashed (Scenario-520, Scenario-530).
+\field{Controls} (1)~the controller restarts on its own and resumes
+(Scenario-620)\ver{TEST}; (2)~the onboard computer notices the silence, tries
+to bring the controller back and records it (Scenario-520)\ver{TEST}; (3)~a
+crashed onboard computer program restarts and resumes
+(Scenario-530)\ver{TEST}; (4)~new firmware that hangs is given up
+(Scenario-430)\ver{TEST}.
+\field{Fails if} The controller's restart and the onboard computer's watch
+fail from one fault.
+\fieldin{Common causes} Radiation; data kept over restarts; one power supply;
+shared image code.
 
 % ---------------------------------------------------------------- H-9
 \hazard{H-9}{The ground is shown a false state of the System.}{CRITICAL}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] At every contact.
-\item[Causes] \begin{hazlist}
-  \item Reports carry a wrong time-tag [1,~p.~64].
-  \item Old reports are shown as current [1,~p.~63].
-  \item A report is changed in storage or in transfer [1,~p.~62].
-  \item An answer says ``done'' or ``already done'' for a command that did not
-    run.
-  \item The ground software stores or shows a report wrongly [1,~p.~62].
-  \end{hazlist}
-\item[Effect] The operator decides on false information: a harmful command can
-  follow (H-6), or a fault is missed (H-10).
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item The onboard computer time-tags every report (Scenario-110).
-  \item Every report is checked for damage when it arrives.
-  \item The ground software keeps every report received [5,~Sec.~3.2].
-  \end{enumerate}
-\item[Control fails if] The onboard clock is wrong; a report is damaged before
-  its check is made.
-\item[Common causes] Wrong onboard clock; radiation.
-\end{hazfields}
+\field{When} At every contact.
+\fieldin{Effect} The operator decides on false information; a harmful command
+(H-6) or a missed fault (H-10) follows.
+\field{Causes} (a)~wrong time-tags [1,~p.~64]; (b)~old reports shown as
+current [1,~p.~63]; (c)~a report changed in storage or in transfer
+[1,~p.~62]; (d)~``done'' or ``already done'' answered for a command that did
+not run; (e)~the ground software stores or shows a report wrongly
+[1,~p.~62].
+\field{Controls} (1)~the onboard computer time-tags every report
+(Scenario-110)\ver{TEST}; (2)~every report is checked for damage on
+arrival\ver{TEST}; (3)~the ground software keeps every report received
+[5,~Sec.~3.2]\ver{INSPECTION}.
+\field{Fails if} The onboard clock is wrong; a report is damaged before its
+check.
+\fieldin{Common causes} Wrong onboard clock; radiation.
 
 % ---------------------------------------------------------------- H-10
 \hazard{H-10}{A fault between contacts never reaches the ground.}{CRITICAL}{CAUSE, MONITOR}
-\begin{hazfields}
-\item[When] Between contacts.
-\item[Causes] \begin{hazlist}
-  \item The fault is not detected [1,~p.~66].
-  \item It is detected, but no event report is made [1,~p.~65].
-  \item The event report is lost: storage is full, a program crashes, or power
-    is lost before it is stored (Scenario-210, Scenario-530).
-  \item The ground loses it after it arrives.
-  \end{hazlist}
-\item[Effect] The ground does not know of the fault. Hidden faults pile up, for
-  example a damaged last-resort firmware (H-1).
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Event reports are kept when storage is full (Scenario-210).
-  \item No report is lost without the ground being told (O-5).
-  \item Stored reports survive a power loss and a restart.
-  \end{enumerate}
-\item[Control fails if] Fault detection depends on the part that has failed.
-\item[Common causes] One power supply; radiation.
-\end{hazfields}
+\field{When} Between contacts.
+\fieldin{Effect} The ground does not know of the fault; hidden faults pile up,
+such as a damaged last-resort firmware (H-1).
+\field{Causes} (a)~the fault is not detected [1,~p.~66]; (b)~no event report
+is made [1,~p.~65]; (c)~the report is lost to full storage, a crash or a power
+loss (Scenario-210, Scenario-530); (d)~the ground loses it.
+\field{Controls} (1)~event reports are kept when storage is full
+(Scenario-210)\ver{TEST}; (2)~no report is lost without the ground being told
+(O-5)\ver{TEST}; (3)~stored reports survive a power loss and a
+restart\ver{TEST}.
+\field{Fails if} Fault detection depends on the part that has failed.
+\fieldin{Common causes} One power supply; radiation.
 
 % ---------------------------------------------------------------- H-11
 \hazard{H-11}{A valid command is not acted on, and the ground is not told.}{CRITICAL}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] While a command is checked, held or run.
-\item[Causes] \begin{hazlist}
-  \item The command is lost in a full buffer [1,~p.~63].
-  \item It is refused as expired because the onboard clock is wrong
-    (Scenario-340).
-  \item A scheduled command is lost at a restart (Scenario-130).
-  \item Heavy traffic on the data link stops it getting through [1,~p.~63].
-  \item Its answer is lost (Scenario-350).
-  \end{hazlist}
-\item[Effect] The operator believes an action was taken that was not; for
-  example, a cancelled update goes on (Scenario-470).
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Every command gets two answers: received, then done with the result
-    (Scenario-120).
-  \item A refused command is answered with the reason (Scenario-310 to
-    Scenario-340).
-  \item Scheduled commands survive a restart.
-  \end{enumerate}
-\item[Control fails if] The answers are lost along with the command.
-\item[Common causes] Wrong onboard clock; one power supply.
-\end{hazfields}
+\field{When} While a command is checked, held or run.
+\fieldin{Effect} The operator believes an action was taken that was not, for
+example a cancelled update (Scenario-470).
+\field{Causes} (a)~a full buffer drops the command [1,~p.~63]; (b)~a wrong
+onboard clock expires it (Scenario-340); (c)~a scheduled command is lost at a
+restart (Scenario-130); (d)~data-link traffic blocks it [1,~p.~63]; (e)~its
+answer is lost (Scenario-350).
+\field{Controls} (1)~every command gets two answers, received and then done
+with the result (Scenario-120)\ver{TEST}; (2)~a refusal carries its reason
+(Scenario-310 to Scenario-340)\ver{TEST}; (3)~scheduled commands survive a
+restart\ver{TEST}.
+\field{Fails if} The answers are lost with the command.
+\fieldin{Common causes} Wrong onboard clock; one power supply.
 
 % ---------------------------------------------------------------- H-12
 \hazard{H-12}{A test function acts outside a test.}{CRITICAL}{CAUSE}
-\begin{hazfields}
-\item[When] In operation.
-\item[Causes] \begin{hazlist}
-  \item Fault-injection functions stay in the operating software
-    [1,~p.~64].
-  \item A wrong command, or one not from the operator, starts them.
-  \end{hazlist}
-\item[Effect] Power is cut, a data-link connection is broken, or the radio link
-  is degraded during operation. Each is a cause of H-1 or H-4.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Test functions are for verification only (Capability-5).
-  \item Test functions are not part of the operating software.
-  \end{enumerate}
-\item[Control fails if] A bench build is released for operation [1,~p.~67].
-\item[Common causes] One set of build tools.
-\end{hazfields}
-
-% ---------------------------------------------------------------- H-13
-\hazard{H-13}{A fault response is taken when there is no fault.}{MARGINAL}{CAUSE}
-\begin{hazfields}
-\item[When] In any controller mode.
-\item[Causes] \begin{hazlist}
-  \item Fault detection reports a fault that is not there [1,~p.~66].
-  \item The trial time is too short for good firmware to be judged good
-    (Scenario-450).
-  \item A failed-start count or a flag is not cleared [1,~p.~66].
-  \end{hazlist}
-\item[Effect] Good firmware is given up, the controller restarts for no
-  reason, or a good data-link connection is marked failed. Repeated, it becomes
-  a restart loop (H-1) or the loss of both connections (H-4).
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Every fault response is recorded and reported (Capability-3).
-  \item A given-up update can be repeated (Scenario-600).
-  \end{enumerate}
-\item[Control fails if] The record of the response is lost with it.
-\item[Common causes] Data kept over restarts; wrong onboard clock.
-\end{hazfields}
-
-% ---------------------------------------------------------------- H-14
-\hazard{H-14}{An update cannot be completed.}{MARGINAL}{CAUSE, CONTROL}
-\begin{hazfields}
-\item[When] During an update.
-\item[Causes] \begin{hazlist}
-  \item The radio link is lost again and again during the upload
-    (Scenario-200).
-  \item A resumed upload is put together wrongly and refused.
-  \item Storage on the onboard computer is full of reports (Scenario-210)
-    [1,~p.~66].
-  \item Good firmware is refused because the check is wrong.
-  \end{hazlist}
-\item[Effect] The current firmware keeps running; the correction waits. If it
-  never completes, H-3 follows.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item An upload resumes from where it stopped (Scenario-200).
-  \item A crashed program on the onboard computer resumes the update
-    (Scenario-530).
-  \item The operator can cancel an update (Scenario-470).
-  \end{enumerate}
-\item[Control fails if] The point where the upload stopped is stored wrongly.
-\item[Common causes] Data kept over restarts.
-\end{hazfields}
-
-% ---------------------------------------------------------------- H-15
-\hazard{H-15}{Health reports are lost.}{MARGINAL}{CAUSE, MITIGATION}
-\begin{hazfields}
-\item[When] Between contacts.
-\item[Causes] \begin{hazlist}
-  \item Storage fills during a long gap between contacts (Scenario-210).
-  \item Power is lost, or a program crashes, before a report is stored.
-  \item A bit error damages stored reports [1,~p.~62].
-  \end{hazlist}
-\item[Effect] The health history between contacts has gaps; a slow change can
-  be missed. Event reports are covered by H-10.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item The oldest health reports are dropped first, and the ground is told how
-    many and over what time span (Scenario-210).
-  \end{enumerate}
-\item[Control fails if] The count of dropped reports is itself lost.
-\item[Common causes] One power supply; radiation.
-\end{hazfields}
-
-% ---------------------------------------------------------------- H-16
-\hazard{H-16}{Reports reach the ground later than planned.}{NEGLIGIBLE}{CAUSE}
-\begin{hazfields}
-\item[When] At a contact after a long gap.
-\item[Causes] \begin{hazlist}
-  \item A contact is too short to send everything stored (A-3).
-  \end{hazlist}
-\item[Effect] No report is lost; the operator sees some of them a contact
-  later.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item Event reports are sent before health reports.
-  \end{enumerate}
-\item[Control fails if] Event reports alone fill the contact.
-\item[Common causes] None.
-\end{hazfields}
-
-% ---------------------------------------------------------------- H-17
-\hazard{H-17}{A command is refused with a wrong or unclear reason.}{NEGLIGIBLE}{CAUSE}
-\begin{hazfields}
-\item[When] When a command is refused.
-\item[Causes] \begin{hazlist}
-  \item The ground and the onboard software use different lists of commands or
-    reasons [1,~p.~66].
-  \item Errors are handled differently in different places [1,~p.~63].
-  \end{hazlist}
-\item[Effect] The operator spends a contact finding out why, then sends the
-  command again.
-\item[Controls] \begin{enumerate}[leftmargin=*,topsep=0pt]
-  \item One list of commands and refusal reasons, shared by the ground and the
-    onboard software.
-  \end{enumerate}
-\item[Control fails if] The two copies of the list drift apart.
-\item[Common causes] None.
-\end{hazfields}
+\field{When} In operation.
+\fieldin{Effect} Power is cut, a data-link connection is broken or the radio
+link is degraded in operation; each is a cause of H-1 or H-4.
+\field{Causes} (a)~fault-injection functions stay in the operating software
+[1,~p.~64]; (b)~a wrong command, or one not from the operator, starts them.
+\field{Controls} (1)~test functions serve verification only and are not part
+of the operating software (Capability-5)\ver{INSPECTION}.
+\field{Fails if} A bench build is released for operation [1,~p.~67].
+\fieldin{Common causes} One set of build tools.
 
 % ===========================================================================
 \section{Must-Work and Must-Not-Work Functions}
-The hazard reports identify the functions that must work and those that must
-not work [1,~App.~A.1.2, p.~62].
+The hazard analysis identifies the functions that must work and those that
+must not work [1,~App.~A.1.2, p.~62]. Both lists hold in operation.
 
 \medskip
-\noindent\textbf{Must work}
-\begin{itemize}
-\item Return to working firmware when new firmware fails (H-1).
-\item Restore the controller through the reprogramming link (H-1, H-2).
-\item Check every firmware image before it runs (H-1, H-2).
-\item Refuse commands and firmware not from the operator (H-2, H-5).
-\item Accept the command that corrects the onboard clock (H-4).
-\item Detect and report faults between contacts (H-8, H-10).
-\item Keep and send down every event report (H-10).
-\item Answer every command (H-11).
-\end{itemize}
+\noindent\textbf{Must work:} return to working firmware when new firmware
+fails (H-1); restore through the reprogramming link (H-1, H-2); check every
+image before it runs (H-1, H-2); refuse commands and firmware not from the
+operator (H-2, H-5); accept the clock correction (H-4); detect and report
+faults between contacts (H-8, H-10); keep and send down every event report
+(H-10); answer every command (H-11).
 
 \medskip
-\noindent\textbf{Must not work}
-\begin{itemize}
-\item Write over the firmware the controller would fall back to, or over the
-  last-resort firmware (H-1).
-\item Run firmware not released by the operator (H-2).
-\item Run a command not from the operator (H-5).
-\item Run a dangerous command without a valid arm (H-6).
-\item Run a command twice (H-6).
-\item Confirm firmware that has not been judged good (H-7).
-\item Inject faults outside a test (H-12).
-\end{itemize}
+\noindent\textbf{Must not work:} write over the previous or last-resort
+firmware (H-1); run firmware not released by the operator (H-2); run a command
+not from the operator (H-5); run a dangerous command without a valid arm, or
+any command twice (H-6); confirm firmware not judged good (H-7); inject faults
+(H-12).
 
 % ===========================================================================
 \section{Safety-Critical Software}
@@ -870,15 +649,12 @@ Firmware build tools & NO & NONE & NONE \\
 \end{tabularx}
 \end{table}
 
-\noindent\textbf{Legend: criteria} [1,~Sec.~4.2, p.~20]
-\begin{description}[leftmargin=1.4cm]
-\item[a] Causes or contributes to a system hazardous condition or event.
-\item[b] Controls functions identified in a system hazard.
-\item[c] Provides mitigation for a system hazardous condition or event.
-\item[d] Mitigates damage if a hazardous condition or event occurs.
-\item[e] Detects, reports and takes corrective action if the system reaches a
-  potentially hazardous state.
-\end{description}
+\noindent\textbf{Legend: criteria} [1,~Sec.~4.2, p.~20]. a: causes or
+contributes to a system hazardous condition or event. b: controls functions
+identified in a system hazard. c: provides mitigation for a system hazardous
+condition or event. d: mitigates damage if a hazardous condition or event
+occurs. e: detects, reports and takes corrective action if the system reaches
+a potentially hazardous state.
 
 \medskip
 {\itshape \noindent\textbf{Note.} Bench test tools stay out of operation
@@ -901,7 +677,7 @@ The values below are not yet known.
 \noindent The proposals below await the author's acceptance.
 \begin{description}
 \tbritem{severity}{Severity rated as the worst credible effect with no control
-  working, and the definitions of the four severity categories.}
+  working, and the meaning of each severity category for the System.}
 \tbritem{credible}{Up to two failures at once credible for a catastrophic
   hazard, and one for a critical hazard.}
 \tbritem{hazards}{The hazard list and the severity of each hazard.}

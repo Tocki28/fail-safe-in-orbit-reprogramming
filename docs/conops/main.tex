@@ -184,10 +184,13 @@ controller's firmware cannot run.}
 \item Software: three programs to build and verify: the ground software in the
   mission operations center, the onboard computer's software, and the
   controller's firmware.
-\item Behaviour: 4 controller modes, 28 capabilities and 27 operational
-  scenarios, 24 of them off-nominal. Most of the work is in handling failures,
-  not in normal operation.
-\item Code size: \tbd{codesize}.
+\item Modes: the controller moves between four modes: running confirmed
+  firmware, trying new firmware, falling back to older firmware, and being
+  restored by the onboard computer.
+\item Situations: the System must handle 27 situations, and 24 of them are
+  failures, for example power lost during an update, new firmware that hangs,
+  or a lost connection.
+\item Program size: not known until the architecture is chosen \tbd{codesize}.
 \end{itemize}
 
 \medskip

@@ -339,17 +339,15 @@ outside the System; it uses them as given.
 \noindent\textbf{Telemetry} (serves G-2 Observability)
 \begin{description}[leftmargin=3cm]
 \item[Telemetry-1] Generate periodic health reports detailing operational
-  status, active firmware version, uptime, reset cause, and thermal telemetry
-  \tbr{telemetry}.
+  status, active firmware version, uptime, reset cause, and thermal telemetry.
 \item[Telemetry-2] Generate asynchronous event-driven reports immediately upon
-  significant state changes or operational events \tbr{telemetry}.
-\item[Telemetry-3] Apply time tags to all generated telemetry reports
-  \tbr{telemetry}.
+  significant state changes or operational events.
+\item[Telemetry-3] Apply time tags to all generated telemetry reports.
 \item[Telemetry-4] Store telemetry reports during out-of-contact periods for
   downlink during subsequent contact windows, including notification of any
   unrecoverable telemetry data loss.
 \item[Telemetry-5] Monitor and report health status for each connection of the
-  data link \tbr{telemetry}.
+  data link.
 \end{description}
 
 \medskip
@@ -547,12 +545,12 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbrresolved{power}{Controller power can drop at any instant, including
   mid-write. Accepted by the author, 10 October 2026.}
 \tbrresolved{operator}{One operator. Accepted by the author, 10 October 2026.}
+\tbrresolved{telemetry}{Telemetry-1, Telemetry-2, Telemetry-3 and Telemetry-5 as
+  written. Accepted by the author, 10 October 2026.}
 \end{description}
 
 \subsection*{Open}
 \begin{description}
-\tbritem{telemetry}{Telemetry-1, Telemetry-2, Telemetry-3, Telemetry-5 as written (shown 10 Oct, not yet
-  accepted).}
 \tbritem{faults}{O-4 and Fault-1 to Fault-4 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}

@@ -148,17 +148,20 @@ App.~C.\par}
 \subsection{Overview of the Envisioned System}
 
 \subsubsection{Overview}
-The System has two segments, far apart. The ground segment is on Earth: the
-operator, the mission operations center that runs the ground software, and the
-ground station antenna [6, \S11.2, p.~305]. The space segment is in orbit: the onboard
-computer and the controller, out of physical reach. The only
-link between the two is the radio link. It exists only while the ground station can
-see the spacecraft, during a contact window \tbd{window}. Between contacts the
-space segment works alone. Inside the spacecraft, the onboard computer talks to
-the controller over the data link, the normal path, which has two separate
-connections. When the controller's firmware cannot run, the onboard computer
-uses the reprogramming link as a last resort, to restore working firmware
-without any help from the controller's own software. Figure~\ref{fig:segments} shows the layout.
+The System comprises two spatially separated operational segments. The
+\textbf{ground segment} on Earth includes the operator, the mission operations
+center running ground software, and the ground station antenna
+[6, \S11.2, p.~305]. The \textbf{space segment} in orbit consists of the onboard
+computer and the controller, which operate without physical access.
+
+Communication between segments is strictly established via a radio link during
+line-of-sight contact windows \tbd{window}. Outside contact windows, the space
+segment operates autonomously. Within the spacecraft, the onboard computer
+communicates with the controller over the data link during normal operation.
+If the controller's main firmware fails to execute, the onboard computer
+utilizes the reprogramming link to restore functional firmware independently of
+the controller's primary software. Figure~\ref{fig:segments} illustrates this
+segment layout.
 
 \begin{figure}[H]
 \centering

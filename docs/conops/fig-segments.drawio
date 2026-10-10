@@ -28,7 +28,7 @@
         <mxCell id="spacelabel" value="&lt;b&gt;Space segment&lt;/b&gt; (in orbit, out of reach)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;" vertex="1" parent="1">
           <mxGeometry x="110" y="0" width="255" height="24" as="geometry" />
         </mxCell>
-        <mxCell id="sat" value="" style="shape=mxgraph.networks.satellite;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;" vertex="1" parent="1">
+        <mxCell id="sat" value="" style="shape=mxgraph.networks.satellite;aspect=fixed;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;" vertex="1" parent="1">
           <mxGeometry x="235" y="35" width="70" height="70" as="geometry" />
         </mxCell>
 
@@ -76,14 +76,14 @@
         <mxCell id="groundlabel" value="&lt;b&gt;Ground segment&lt;/b&gt; (Earth)" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;" vertex="1" parent="1">
           <mxGeometry x="10" y="208" width="220" height="24" as="geometry" />
         </mxCell>
-        <mxCell id="op" value="Operator" style="shape=mxgraph.office.users.user;html=1;fillColor=#5A5A5A;strokeColor=none;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="15" y="245" width="30" height="45" as="geometry" />
+        <mxCell id="op" value="Operator" style="shape=mxgraph.office.users.user;aspect=fixed;html=1;fillColor=#5A5A5A;strokeColor=none;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="14" y="250" width="37" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="dish" value="Ground station" style="shape=mxgraph.networks.satellite_dish;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="216" y="243" width="50" height="50" as="geometry" />
+        <mxCell id="dish" value="Ground station" style="shape=mxgraph.networks.satellite_dish;aspect=fixed;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="222" y="242" width="45" height="50" as="geometry" />
         </mxCell>
-        <mxCell id="moc" value="Mission operations&lt;br&gt;center" style="shape=mxgraph.networks.pc;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="103" y="247" width="50" height="43" as="geometry" />
+        <mxCell id="moc" value="Mission operations&lt;br&gt;center" style="shape=mxgraph.networks.pc;aspect=fixed;html=1;fillColor=#5A5A5A;strokeColor=#FFFFFF;outlineConnect=0;verticalLabelPosition=bottom;verticalAlign=top;labelPosition=center;align=center;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="100" y="247" width="64" height="45" as="geometry" />
         </mxCell>
         <mxCell id="opmoc" value="" style="endArrow=none;html=1;" edge="1" parent="1" source="op" target="moc">
           <mxGeometry relative="1" as="geometry" />

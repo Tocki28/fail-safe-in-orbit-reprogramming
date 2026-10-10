@@ -338,75 +338,69 @@ outside the System; it uses them as given.
 \subsection{Proposed Capabilities}
 \noindent\textbf{Telemetry} (serves G-2 Observability)
 \begin{description}[leftmargin=3cm]
-\item[Telemetry-1] Generate periodic health reports detailing operational
+\item[Capability-1] Generate periodic health reports detailing operational
   status, active firmware version, uptime, reset cause, and thermal telemetry.
-\item[Telemetry-2] Generate asynchronous event-driven reports immediately upon
+\item[Capability-2] Generate asynchronous event-driven reports immediately upon
   significant state changes or operational events.
-\item[Telemetry-3] Apply time tags to all generated telemetry reports.
-\item[Telemetry-4] Store telemetry reports during out-of-contact periods for
+\item[Capability-3] Apply time tags to all generated telemetry reports.
+\item[Capability-4] Store telemetry reports during out-of-contact periods for
   downlink during subsequent contact windows, including notification of any
   unrecoverable telemetry data loss.
-\item[Telemetry-5] Monitor and report health status for each connection of the
+\item[Capability-5] Monitor and report health status for each connection of the
   data link.
 \end{description}
 
 \medskip
-\noindent\textbf{Commands} (serves G-1 Operability)
+\noindent\textbf{Command handling} (serves G-1 Operability)
 \begin{description}[leftmargin=3cm]
-\item[Command-1] Execute telecommands originating exclusively from the
-  authorized ground operator and reject replay attacks.
-\item[Command-2] Acknowledge command reception, disposition (executed or
-  rejected with cause), and completion status for every incoming telecommand.
-\item[Command-3] Reject telecommands invalid for the current operational mode.
-\item[Command-4] Run a repeated telecommand only once.
-\item[Command-5] Enforce a two-step ``arm and execute'' protocol for critical
-  operations.
-\item[Command-6] Reject telecommands containing out-of-bounds parameter values.
-\item[Command-7] Allow the operator to abort an in-progress firmware update
-  while preserving current operational firmware.
-\item[Command-8] Support time-tagged command execution and reject expired
-  commands.
-\item[Command-9] Maintain a command log recording all incoming telecommands and
-  execution responses.
+\item[Capability-6] Execute telecommands originating exclusively from the authorized ground operator and reject replay attacks.
+\item[Capability-7] Acknowledge command reception, disposition (executed or rejected with cause), and completion status for every incoming telecommand.
+\item[Capability-8] Reject telecommands invalid for the current operational mode.
+\item[Capability-9] Run a repeated telecommand only once.
+\item[Capability-10] Enforce a two-step ``arm and execute'' protocol for critical operations.
+\item[Capability-11] Reject telecommands containing out-of-bounds parameter values.
+\item[Capability-12] Allow the operator to abort an in-progress firmware update while preserving current operational firmware.
+\item[Capability-13] Support time-tagged command execution and reject expired commands.
+\item[Capability-14] Maintain a command log recording all incoming telecommands and execution responses.
 \end{description}
 
 \medskip
 \noindent\textbf{Fault handling} (serves G-1 Operability) \tbr{faults}
 \begin{description}[leftmargin=3cm]
-\item[Fault-1] Detect controller unresponsiveness and initiate autonomous
+\item[Capability-15] Detect controller unresponsiveness and initiate autonomous
   recovery sequences.
-\item[Fault-2] Automatically fail over to the redundant data-link connection
+\item[Capability-16] Automatically fail over to the redundant data-link connection
   upon single-path failure.
-\item[Fault-3] Restart crashed onboard processes and continue where they
+\item[Capability-17] Restart crashed onboard processes and continue where they
   stopped.
-\item[Fault-4] Log all detected fault events and executed recovery actions for
+\item[Capability-18] Log all detected fault events and executed recovery actions for
   subsequent downlink.
 \end{description}
 
 \medskip
 \noindent\textbf{Update} (serves G-3 Correctability)
 \begin{description}[leftmargin=3cm]
-\item[Update-1] Support reliable firmware image reception across intermittent
+\item[Capability-19] Support reliable firmware image reception across intermittent
   radio contact windows.
-\item[Update-2] Validate firmware integrity, source authentication, target
+\item[Capability-20] Validate firmware integrity, source authentication, target
   compatibility, and version policy (preventing unauthorized rollbacks).
-\item[Update-3] Transfer validated firmware images to the controller.
-\item[Update-4] Transition execution to newly uploaded firmware, with the
+\item[Capability-21] Transfer validated firmware images to the controller.
+\item[Capability-22] Transition execution to newly uploaded firmware, with the
   activation trigger and scheduling criteria \tbd{switch}.
-\item[Update-5] Evaluate new firmware operational validity post-boot; who
+\item[Capability-23] Evaluate new firmware operational validity post-boot; who
   judges is open \tbd{confirm}.
-\item[Update-6] Automatically roll back to operational firmware if trial
+\item[Capability-24] Automatically roll back to operational firmware if trial
   evaluation fails, without ground intervention.
-\item[Update-7] Downlink firmware update outcome reports to the ground
+\item[Capability-25] Downlink firmware update outcome reports to the ground
   segment.
 \end{description}
 
 \medskip
 \noindent\textbf{Test} (verification only)
 \begin{description}[leftmargin=3cm]
-\item[Test-1] Provide controlled, deliberate radio link degradation during
+\item[Capability-26] Provide controlled, deliberate radio link degradation during
   bench testing.
-\item[Test-2] Support command-driven injection of power interrupts and
+\item[Capability-27] Support command-driven injection of power interrupts and
   data-link disconnection faults \tbr{faultinject}.
 \end{description}
 
@@ -545,13 +539,13 @@ Unmarked statements were stated or accepted by the author on 9--10 October
 \tbrresolved{power}{Controller power can drop at any instant, including
   mid-write. Accepted by the author, 10 October 2026.}
 \tbrresolved{operator}{One operator. Accepted by the author, 10 October 2026.}
-\tbrresolved{telemetry}{Telemetry-1, Telemetry-2, Telemetry-3 and Telemetry-5 as
+\tbrresolved{telemetry}{Capability-1, Capability-2, Capability-3 and Capability-5 as
   written. Accepted by the author, 10 October 2026.}
 \end{description}
 
 \subsection*{Open}
 \begin{description}
-\tbritem{faults}{O-4 and Fault-1 to Fault-4 as written (shown 10 Oct, not yet
+\tbritem{faults}{O-4 and Capability-15 to Capability-18 as written (shown 10 Oct, not yet
   accepted).}
 \tbritem{receive}{Controller keeps working while new firmware arrives.}
 \tbritem{obcupdate}{Onboard computer's own update out of scope.}

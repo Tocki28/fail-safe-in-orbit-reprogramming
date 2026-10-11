@@ -261,14 +261,17 @@ Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
   independence is achieved through isolated software codebases rather than
   organizational team separation; one engineer writing every codebase limits
   their diversity.
-\item[R-4] The System has one onboard computer. A spacecraft can carry a
-  second, redundant one, as the Mars Reconnaissance Orbiter does
+\item[R-4] The space segment relies on a single onboard computer. A spacecraft
+  can carry a second, redundant one, as the Mars Reconnaissance Orbiter does
   [12,~App.~F.2.15, Lesson 2041, p.~197]; how many is a spacecraft decision,
-  outside this project [5,~Sec.~5.2]. Losing the one onboard computer for good
-  stops commands, reports and restores. The risk is accepted, so H-4 cannot
-  meet the fault tolerance rule.
-\item[C-4] The System runs on two given development boards. The design does not
-  depend on them; they are checked against it at the end of this document.
+  outside this project. Its permanent failure halts command handling,
+  telemetry reporting and firmware restoration. This single-point failure risk
+  is formally accepted, so H-4 does not meet the fault tolerance rule
+  [5,~Sec.~5.2].
+\item[C-4] The onboard computer software and the controller firmware execute on
+  two given development boards. The architectural design remains
+  hardware-agnostic, with board compatibility evaluated separately at the end of
+  this document.
 \end{description}
 
 % ===========================================================================

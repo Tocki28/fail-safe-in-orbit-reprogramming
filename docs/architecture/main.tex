@@ -784,8 +784,31 @@ Link encryptor & Encrypts everything sent to the spacecraft, at the point of tra
 Release checker & Checks every firmware release before signing, and the signed image before it is sent, with the checks the onboard computer makes. & REQ-090, REQ-114 \\
 Report archive & Keeps every report received and checks it for damage. & REQ-092, REQ-093 \\
 Contact planner & Plans commands, uploads and report retrieval for coming contacts, and sends a planned command sequence, stopping at the first command refused or not answered. & REQ-097, REQ-115, REQ-116 \\
-\multicolumn{3}{@{}l}{\textit{All software items}} \\
-Every component & Rules that apply to all software. & REQ-098, REQ-101~to~111 \\
+\bottomrule
+\end{xltabular}}
+
+\medskip
+\noindent Twelve requirements apply to every component rather than to one
+[6,~Sec.~7.0]:
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+Requirement & What it asks of every component \\
+\midrule
+\endhead
+REQ-098 & Its part in the fault tolerance rule: every catastrophic hazard still needs three failures together and every critical hazard two, so each component keeps the separations Section~\ref{sec:decisions} decided. \\
+REQ-101 & No fault-injection function in the operating software; test functions exist only in builds used on the bench. \\
+REQ-102 & When any function finishes, it leaves the System in a known safe state. \\
+REQ-103 & No single event or action of the software can start a hazard by itself. \\
+REQ-104 & Each off-nominal condition is answered fast enough to prevent the hazard; the times are set in the requirements. \\
+REQ-105 & Every error the software detects is handled; none is ignored. \\
+REQ-106 & The software can always put the System into a safe state. \\
+REQ-107 & Every input and output on every link is checked for damage. \\
+REQ-108 & Tested to full modified condition/decision coverage: every condition in every decision is shown, in a test, to change the decision's outcome on its own. \\
+REQ-109 & Every function stays at a cyclomatic complexity of 15 or lower, meaning at most 15 independent paths through it. \\
+REQ-110 & Written to the project's coding standard, which is still to be chosen. \\
+REQ-111 & Checked with static analysis tools for defects, security weaknesses, coverage and complexity. \\
 \bottomrule
 \end{xltabular}}
 % ===========================================================================

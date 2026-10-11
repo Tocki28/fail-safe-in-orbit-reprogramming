@@ -259,7 +259,7 @@ REQ-085 & After a replacement of the means of proving origin, only the new means
 REQ-086 & A replacement of the means of proving origin interrupted at any point shall leave the current means working. & H-4 cause g & TEST \\
 REQ-087 & The onboard computer software shall send the ground a log of every command acted on, so that a command the operator did not send can be noticed. & Shared cause: one proof of origin & TEST \\
 REQ-112 & The onboard computer software shall pass a dangerous command to the controller only after a valid arming command that has not expired, and refuse it with the reason otherwise. & H-6 control 6; Scenario-330; Scenario-335 & TEST \\
-REQ-118 & The restore shall write to the controller only firmware that has passed the same checks as an update: origin, damage, minimum version and target controller, made with checking code of its own. & H-2 control 1; H-7 control 2 & TEST \\
+REQ-118 & The restore shall write to the controller only images, the bootloader and the last-resort firmware included, that have passed the same checks as an update: origin, damage, minimum version and target controller. & H-2 control 1; H-7 control 2 & TEST \\
 \bottomrule
 \end{xltabular}}
 

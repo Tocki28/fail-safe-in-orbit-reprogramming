@@ -465,9 +465,10 @@ analysis counts these shared causes when it is re-run on this design.
 
 The debug port stays open in flight. After launch nobody can reach the hardware
 (A-1), and locking the port would remove a way in. Because the port writes
-memory around the controller's own checks, the restore writes only firmware
-that has passed the same checks as an update, made with checking code of its
-own [6,~REQ-118]. Before launch the hardware can be reached during integration
+memory around the controller's own checks, the restore writes only images that
+have passed the same checks as an update, the bootloader included
+[6,~REQ-118]; the port gives an attacker nothing the onboard computer has not
+already checked. Before launch the hardware can be reached during integration
 and testing; protecting it then is a ground procedure outside this System.
 
 \field{Adds}
@@ -750,7 +751,7 @@ Data-link drivers & One driver for each data-link connection, sharing no code. &
 Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & REQ-004, REQ-009, REQ-010 \\
 \multicolumn{3}{@{}l}{\textit{Onboard computer software}} \\
 Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & REQ-064~to~067, REQ-087, REQ-100, REQ-112 \\
-Origin checker & Decrypts commands and firmware, checks their two signatures, and replaces the means of checking them on command. & REQ-043, REQ-064, REQ-084~to~086 \\
+Origin checker & Decrypts commands and firmware, checks their two signatures, and replaces the means of checking them on command. & REQ-043, REQ-064, REQ-084~to~086, REQ-118 \\
 Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & REQ-068, REQ-069 \\
 Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & REQ-043~to~053, REQ-063 \\
 Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & REQ-070, REQ-071, REQ-074~to~079 \\
@@ -759,7 +760,7 @@ Controller watch & Notices a silent controller, restarts it, and calls the resto
 Supervisor & Restarts any program of the onboard computer software that crashes. & REQ-062 \\
 Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099 \\
 Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083 \\
-Restore program & A separate program with its own firmware store and its own checking code. Checks every firmware before writing it, restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083, REQ-118 \\
+Restore program & A separate program with its own firmware store. Has every image checked before writing it, restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083, REQ-118 \\
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\

@@ -80,7 +80,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 10 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD, \total{tbr} TBR (App.~A) \\
+Open items & \total{tbd} TBD, \total{tbr} TBR (App.~B) \\
 \end{tabular}
 \end{center}
 
@@ -154,11 +154,10 @@ These rules set the boundary, the failures included, the fault tolerance
 required and how failures are modelled and named, before the analysis starts
 [3,~Sec.~3.1; 4,~pp.~23--24].
 
-\subsection{Definitions and Boundary}
+\subsection{Boundary}
 \begin{itemize}
-\item \textbf{Hazard:} a state with the potential to cause harm [1,~p.~13].
-  Here, harm is the loss of the controller's operability, observability or
-  correctability.
+\item \textbf{Harm:} the loss of the controller's operability, observability
+  or correctability.
 \item \textbf{Boundary:} the radio equipment and the spacecraft power supply lie
   outside the System [5,~Sec.~1.2.2]. Their failures enter as causes and are
   not analysed further.
@@ -192,20 +191,14 @@ Security & Means of proving origin disclosed \\
 
 \subsection{Analysis Rules}
 \begin{itemize}
-\item \textbf{Controls:} ``means of reducing the risk of exposure to a hazard''
-  [1,~p.~13]: a check, a backup, an automatic response or an operator
-  procedure.
 \item \textbf{Counting failures:} one cause that disables several controls at
   once counts as one failure.
-\item \textbf{Severity:} how bad the outcome is if the hazard happens.
-  Controls do not change it: they make a hazard less likely, not less bad.
-\item \textbf{Fault tolerance:} ``the ability to perform a function in the
-  presence of any of a specified number of coincident, independent failure
-  causes of specified types'' [9,~p.~18]. The types are the failures included
-  above. The number depends on severity: a catastrophic hazard must need at
-  least three failures together, a critical hazard at least two [3,~Sec.~3.1]
-  \tbr{credible}. Each hazard is checked by finding the smallest set of
-  failures that causes it.
+\item \textbf{Severity:} rated on the outcome if the hazard happens; controls
+  do not change it.
+\item \textbf{Fault tolerance:} a catastrophic hazard must need at least
+  three of the failures in Section~3.2 together, a critical hazard at least two
+  [3,~Sec.~3.1] \tbr{credible}. Each hazard is checked by finding the smallest
+  set of failures that causes it.
 \item \textbf{Likelihood:} not rated; it depends on the design
   \tbd{likelihood}.
 \item \textbf{Safety effort:} full [7,~Sec.~3.2.1, p.~44], chosen by the author
@@ -213,8 +206,12 @@ Security & Means of proving origin disclosed \\
   to answer [7,~Sec.~3.2.2, p.~44]; between contacts, no operator can (A-3). At
   this stage, the full effort makes a fault tree mandatory and a failure modes
   analysis highly recommended [7,~Table~6-3, p.~107].
-\item \textbf{Assumptions:} those of the ConOps, A-1 to A-5; this analysis
-  adds none.
+\item \textbf{Assumptions:} those of the ConOps, A-1 to A-5, and two of this
+  analysis, each the worst case until the design shows otherwise
+  \tbr{assume}: the image the restore puts back has the same start-up code,
+  defects and kept data as the other images; and one means proves that both
+  commands and firmware come from the operator, used by both the onboard
+  computer and the controller.
 \end{itemize}
 
 \medskip
@@ -365,8 +362,7 @@ as in [4,~Table~4-1, p.~34] and [4,~Fig.~4-1, p.~33].}
 \label{fig:tree}
 \end{figure}
 
-A minimal cut set is the smallest combination of primary events that causes
-the top event [4,~Sec.~1.3, p.~3]. H-1 has three: one event (B04, B05 or B07);
+H-1 has three kinds of minimal cut set: one event (B04, B05 or B07);
 two events (B06 with one of B08 to B10); four events (B01, B02 and B03 with
 one of B08 to B10). Until the design shows otherwise, B04, B05 and B07 also
 stop the image the restore puts back, so each causes H-1 alone.
@@ -459,8 +455,7 @@ hazard. Every failure leads to a hazard of Section~4.0, or to none.
 
 % ===========================================================================
 \section{Common Causes}
-A common cause defeats several controls at once and can negate a redundancy
-[4,~Sec.~1.3, p.~3], including the same defect in software that runs in more
+The common causes below include the same defect in software that runs in more
 than one place [1,~App.~A.1.1, p.~62].
 
 \medskip
@@ -786,6 +781,21 @@ firmware is a common cause (Section~7.0).\par}
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 
+\section{Glossary}
+\begin{description}[leftmargin=3.4cm]
+\item[Common cause] A cause that defeats several controls at once; it can
+  negate a redundancy [4,~Sec.~1.3, p.~3].
+\item[Control] Hazard control: ``means of reducing the risk of exposure to a
+  hazard'' [1,~p.~13].
+\item[Fault tolerance] ``The ability to perform a function in the presence of
+  any of a specified number of coincident, independent failure causes of
+  specified types'' \mbox{[9,~pp.~18--19]}.
+\item[Hazard] ``A state or a set of conditions, internal or external to a
+  system that has the potential to cause harm'' [1,~p.~13].
+\item[Minimal cut set] ``The smallest combination of basic events that result
+  in the top event'' [4,~Sec.~1.3, p.~3].
+\end{description}
+
 \section{Open Items}
 The values below are not yet known.
 \begin{description}
@@ -803,6 +813,7 @@ the author's acceptance.
   together; a critical hazard at least two.}
 \tbritem{hazards}{The hazard list and the severity of each hazard.}
 \tbritem{safety}{The safety-critical designation of each software item.}
+\tbritem{assume}{The two assumptions of this analysis (Section~3.3).}
 \end{description}
 
 \end{document}

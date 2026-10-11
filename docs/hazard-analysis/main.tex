@@ -215,8 +215,7 @@ baseline assumptions governing the formal hazard and fault tree analyses
   here: a fault tree is mandatory and a failure modes analysis highly
   recommended [7,~Table~6-3, p.~107].
 \item \textbf{Assumptions:} the analysis relies on the ConOps assumptions A-1 to
-  A-5. It adds two of its own, each the worst case, because the design that
-  would settle them does not exist yet \tbr{assume}:
+  A-5, and adds two of its own, each taken as the worst case:
   \begin{enumerate}[nosep, leftmargin=1.8em]
   \item the last-resort firmware the restore puts back has the same start-up
     code, defects and kept data as the other images, so a cause that stops
@@ -225,8 +224,6 @@ baseline assumptions governing the formal hazard and fault tree analyses
     operator, and both the onboard computer and the controller use it, so
     disclosing it opens both.
   \end{enumerate}
-  If the design shows either is false, the hazards that rely on it are
-  recounted.
 \end{itemize}
 
 \medskip
@@ -379,8 +376,8 @@ as in [4,~Table~4-1, p.~34] and [4,~Fig.~4-1, p.~33].}
 
 H-1 has three kinds of minimal cut set: one event (B04, B05 or B07);
 two events (B06 with one of B08 to B10); four events (B01, B02 and B03 with
-one of B08 to B10). Until the design shows otherwise, B04, B05 and B07 also
-stop the image the restore puts back, so each causes H-1 alone.
+one of B08 to B10). By assumption 1 (Section~3.3), B04, B05 and B07 also stop
+the image the restore puts back, so each causes H-1 alone.
 
 The table below gives the same count for every catastrophic and critical
 hazard, with the proposed controls working.
@@ -820,12 +817,12 @@ The values below are not yet known.
 \medskip
 \noindent The author accepted the severity rule, the meaning of each severity
 category and the full safety effort on 10 October 2026, and the fault
-tolerance rule on 11 October 2026 (Section~3.3). The proposals below await
+tolerance rule and the two assumptions of this analysis on 11 October 2026
+(Section~3.3). The proposals below await
 the author's acceptance.
 \begin{description}
 \tbritem{hazards}{The hazard list and the severity of each hazard.}
 \tbritem{safety}{The safety-critical designation of each software item.}
-\tbritem{assume}{The two assumptions of this analysis (Section~3.3).}
 \end{description}
 
 \end{document}

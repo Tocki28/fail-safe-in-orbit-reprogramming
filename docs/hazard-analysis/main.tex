@@ -575,7 +575,7 @@ b & An old command is sent again & Scenario-300 & 1 \\
 c & A command is run twice after a lost answer & Scenario-350 & 3 \\
 d & A command not allowed in the current mode arrives & Scenario-310; [1,~p.~63] & 1 \\
 e & A command with impossible values arrives & Scenario-320; [1,~p.~62] & 1 \\
-f & A dangerous command arrives without a valid arm & Scenarios 330, 335; [1,~p.~63] & 2 \\
+f & A dangerous command arrives without a valid arm & Scenarios 330, 335; [1,~p.~63] & 2, 6 \\
 g & A command arrives past its expiry & Scenario-340; [1,~p.~63] & 1 \\
 h & A scheduled command runs at the wrong time, or again after a restart & [1,~p.~64] & \textbf{NONE} \\
 i & A bit error changes a held command or the arm state & [1,~p.~63] & \textbf{NONE} \\
@@ -588,10 +588,11 @@ j & The ground software builds a wrong command, or the operator enters one & A-4
  & Control & Source & Verified by \\
 \midrule
 1 & The onboard computer checks that every command comes from the operator, is new and has not expired; the controller checks that it is allowed in the current mode and has possible values & Scenario-120 & TEST \\
-2 & A dangerous command needs an arm, which expires & Scenarios 330, 335 & TEST \\
+2 & The controller runs a dangerous command only after an arm, which expires & Scenarios 330, 335 & TEST \\
 3 & A repeated command is answered ``already done'' & Scenario-350 & TEST \\
 4 & The ground software checks every command before it is sent & Scenario-120 & TEST \\
 5 & Every command and answer is logged & Scenario-120 & INSPECTION \\
+6 & The onboard computer passes a dangerous command on only after an arm, which expires & Scenarios 330, 335 & TEST \\
 \bottomrule
 \end{tabularx}}
 \par\smallskip

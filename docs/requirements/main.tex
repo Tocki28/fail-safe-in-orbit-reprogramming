@@ -123,10 +123,11 @@ They meet over the radio link, the two data-link connections, the
 reprogramming link and the operator interface [3,~Sec.~3.3].
 
 The ConOps says which item does most functions. For the few it leaves open,
-this document assigns one \tbr{alloc}:
+this document assigns one:
 \begin{itemize}
-\item the controller checks the arming command before a dangerous command,
-  answers every command, and tests itself;
+\item the onboard computer and the controller both check the arming command
+  before a dangerous command, so that one fault cannot let it through;
+\item the controller answers every command and tests itself;
 \item the onboard computer holds scheduled commands until they run, refuses
   new firmware during a trial, numbers reports, compares the onboard clock with
   ground time, and clears the controller's kept data when it restores it.
@@ -254,6 +255,7 @@ REQ-084 & The onboard computer software shall accept a new means of proving orig
 REQ-085 & After a replacement of the means of proving origin, only the new means shall be accepted. & H-2 control 4; H-5 control 3; Scenario-370 & TEST \\
 REQ-086 & A replacement of the means of proving origin interrupted at any point shall leave the current means working. & H-4 cause g & TEST \\
 REQ-087 & The onboard computer software shall send the ground a log of every command acted on, so that a command the operator did not send can be noticed. & Shared cause: one proof of origin & TEST \\
+REQ-112 & The onboard computer software shall pass a dangerous command to the controller only after a valid arming command that has not expired, and refuse it with the reason otherwise. & H-6 control 6; Scenario-330; Scenario-335 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -333,14 +335,14 @@ H-4 control 2 & REQ-081 & H-4 control 3 & REQ-042, REQ-083 & H-4 control 4 & REQ
 H-4 control 5 & REQ-082 & H-5 control 1 & REQ-064, REQ-067 & H-5 control 2 & REQ-091 \\
 H-5 control 3 & REQ-085 & H-6 control 1 & REQ-027, REQ-028, REQ-065, REQ-066 & H-6 control 2 & REQ-029, REQ-030 \\
 H-6 control 3 & REQ-031 & H-6 control 4 & REQ-089 & H-6 control 5 & REQ-036 \\
-H-7 control 1 & REQ-013 & H-7 control 2 & REQ-044, REQ-045, REQ-046, REQ-047 & H-7 control 3 & REQ-005 \\
-H-7 control 4 & REQ-090 & H-7 control 5 & REQ-055 & H-8 control 1 & REQ-022 \\
-H-8 control 2 & REQ-026, REQ-061 & H-8 control 3 & REQ-062 & H-8 control 4 & REQ-014 \\
-H-8 control 5 & REQ-024 & H-9 control 1 & REQ-070 & H-9 control 2 & REQ-079, REQ-093 \\
-H-9 control 3 & REQ-092 & H-9 control 4 & REQ-040, REQ-095 & H-10 control 1 & REQ-075 \\
-H-10 control 2 & REQ-076 & H-10 control 3 & REQ-077 & H-10 control 4 & REQ-092 \\
-H-11 control 1 & REQ-033, REQ-094 & H-11 control 2 & REQ-035 & H-11 control 3 & REQ-069 \\
-H-12 control 1 & REQ-101 &  &  &  &  \\
+H-6 control 6 & REQ-112 & H-7 control 1 & REQ-013 & H-7 control 2 & REQ-044, REQ-045, REQ-046, REQ-047 \\
+H-7 control 3 & REQ-005 & H-7 control 4 & REQ-090 & H-7 control 5 & REQ-055 \\
+H-8 control 1 & REQ-022 & H-8 control 2 & REQ-026, REQ-061 & H-8 control 3 & REQ-062 \\
+H-8 control 4 & REQ-014 & H-8 control 5 & REQ-024 & H-9 control 1 & REQ-070 \\
+H-9 control 2 & REQ-079, REQ-093 & H-9 control 3 & REQ-092 & H-9 control 4 & REQ-040, REQ-095 \\
+H-10 control 1 & REQ-075 & H-10 control 2 & REQ-076 & H-10 control 3 & REQ-077 \\
+H-10 control 4 & REQ-092 & H-11 control 1 & REQ-033, REQ-094 & H-11 control 2 & REQ-035 \\
+H-11 control 3 & REQ-069 & H-12 control 1 & REQ-101 &  &  \\
 \bottomrule
 \end{longtable}}
 
@@ -389,7 +391,7 @@ Write over the previous or last-resort firmware & REQ-007 \\
 Start failed firmware again without an operator order & REQ-019 \\
 Run firmware not from the operator & REQ-006, REQ-043 \\
 Run a command not from the operator & REQ-064 \\
-Run a dangerous command without a valid arm & REQ-029 \\
+Run a dangerous command without a valid arm & REQ-029, REQ-112 \\
 Run a command twice, past its expiry, or at the wrong time & REQ-031, REQ-066 \\
 Confirm firmware not judged good & REQ-020 \\
 Inject faults & REQ-101 \\
@@ -407,7 +409,7 @@ Item & Requirements & Item & Requirements & Item & Requirements \\
 Scenario-100 & REQ-011, REQ-021, REQ-048, REQ-090 & Scenario-110 & REQ-037, REQ-070, REQ-074 & Scenario-120 & REQ-033, REQ-089 \\
 Scenario-130 & REQ-068 & Scenario-200 & REQ-049 & Scenario-210 & REQ-075, REQ-076, REQ-078 \\
 Scenario-300 & REQ-064, REQ-065, REQ-088 & Scenario-310 & REQ-027 & Scenario-320 & REQ-028 \\
-Scenario-330 & REQ-029 & Scenario-335 & REQ-030 & Scenario-340 & REQ-035, REQ-066 \\
+Scenario-330 & REQ-029, REQ-112 & Scenario-335 & REQ-030, REQ-112 & Scenario-340 & REQ-035, REQ-066 \\
 Scenario-350 & REQ-031 & Scenario-360 & REQ-046 & Scenario-370 & REQ-084, REQ-085 \\
 Scenario-400 & REQ-044 & Scenario-410 & REQ-043 & Scenario-420 & REQ-045 \\
 Scenario-425 & REQ-002, REQ-050 & Scenario-430 & REQ-014, REQ-040 & Scenario-440 & REQ-015 \\
@@ -490,10 +492,7 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent The proposal below awaits the author's acceptance.
-\begin{description}
-\tbritem{alloc}{Allocation of the functions the ConOps does not allocate
-  (Section~3.1).}
-\end{description}
+\noindent The author accepted the allocation of functions in Section~3.1 on
+11 October 2026.
 
 \end{document}

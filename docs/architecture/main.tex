@@ -285,8 +285,7 @@ Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
 \label{sec:decisions}
 Each decision targets hazards that do not yet meet the fault tolerance rule
 [5,~Sec.~5.2]. It states the problem, weighs the options, and lists the
-requirements the choice adds; these enter the requirements at their next
-revision. Where a proven design exists, it is one of the options
+requirements the choice added to the requirements [6,~App.~A.9]. Where a proven design exists, it is one of the options
 [3,~Sec.~4].
 
 Options are compared by the smallest number of failures that, together, cause
@@ -424,12 +423,9 @@ first.}
 
 \field{Adds}
 \begin{itemize}
-\item The bootloader shall share no code with the main firmware or the
-  last-resort firmware.
-\item The restore shall put the last-resort firmware in the bootloader's
-  place, so that it runs first.
-\item The onboard computer software shall put back the bootloader and
-  the main firmware through the reprogramming link when the operator orders it.
+\item REQ-119: The bootloader shall share no code with the main firmware or the last-resort firmware.
+\item REQ-120: The restore shall put the last-resort firmware in the bootloader's place, so that it runs first.
+\item REQ-121: The onboard computer software shall put back the bootloader and the main firmware through the reprogramming link when the operator orders it.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.2
@@ -475,14 +471,10 @@ and testing; protecting it then is a ground procedure outside this System.
 
 \field{Adds}
 \begin{itemize}
-\item The reprogramming link shall have two connections, independent of each
-  other: the controller's debug port and its factory loader, each able to load
-  the controller's memory whatever that memory holds.
-\item The onboard computer software shall drive the debug port and the factory
-  loader with separate drivers that share no code.
-\item The onboard computer software shall be able to restart the controller.
-\item No controller firmware shall be able to disable the debug port or the
-  factory loader.
+\item REQ-122: The reprogramming link shall have two connections, independent of each other: the controller's debug port and its factory loader, each able to load the controller's memory whatever that memory holds.
+\item REQ-123: The onboard computer software shall drive the debug port and the factory loader with separate drivers that share no code.
+\item REQ-124: The onboard computer software shall be able to restart the controller.
+\item REQ-125: No controller firmware shall be able to disable the debug port or the factory loader.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.3
@@ -522,8 +514,7 @@ an accepted risk.
 
 \field{Adds}
 \begin{itemize}
-\item The restore program shall share no code or stored data with the update
-  manager.
+\item REQ-126: The restore program shall share no code or stored data with the update manager.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.4
@@ -592,14 +583,10 @@ computer's check; firmware is checked again on the controller.}
 
 \field{Adds}
 \begin{itemize}
-\item Every command and firmware image shall be encrypted from the ground
-  software to the onboard computer software [11,~Sec.~4.1.1, p.~9].
-\item Every command and firmware image shall carry two signatures, made with
-  two keys kept apart from each other and from the encryption key.
-\item The onboard computer software shall act on a command or firmware image
-  only when it decrypts and both signatures are valid.
-\item The controller firmware shall check firmware signatures with code
-  different from the onboard computer software's.
+\item REQ-127: Every command and firmware image shall be encrypted from the ground software to the onboard computer software.
+\item REQ-128: Every command and firmware image shall carry two signatures, made with two keys kept apart from each other and from the encryption key.
+\item REQ-129: The onboard computer software shall act on a command or firmware image only when it decrypts and both signatures are valid.
+\item REQ-130: The controller firmware shall check firmware signatures with code different from the onboard computer software's.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.5
@@ -653,15 +640,11 @@ reach both.}
 
 \field{Adds}
 \begin{itemize}
-\item The controller firmware shall keep its own clock, from a time source
-  separate from the onboard computer's.
-\item The controller's clock shall be set only by time values sent from the
-  ground, never from the onboard computer's clock.
-\item The controller firmware shall refuse a command past its expiry, by its
-  own clock.
-\item The controller firmware shall run a scheduled command only when its own
-  clock agrees with the scheduled time within \tbd{agree}.
-\item Every report shall carry the time of both clocks.
+\item REQ-131: The controller firmware shall keep its own clock, from a time source separate from the onboard computer's.
+\item REQ-132: The controller's clock shall be set only by time values sent from the ground, never from the onboard computer's clock.
+\item REQ-133: The controller firmware shall refuse a command past its expiry, by its own clock.
+\item REQ-134: The controller firmware shall run a scheduled command only when its own clock agrees with the scheduled time within \tbd{agree}.
+\item REQ-135: Every report shall carry the time of both clocks.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.6
@@ -695,9 +678,8 @@ feature; option c can be added where the hardware has it.
 
 \field{Adds}
 \begin{itemize}
-\item Every held command and the kept data shall be stored with a check value
-  and checked just before use.
-\item The arm state shall be stored so that no single bit error makes it armed.
+\item REQ-136: Every held command and the kept data shall be stored with a check value and checked just before use.
+\item REQ-137: The arm state shall be stored so that no single bit error makes it armed.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.7
@@ -728,7 +710,7 @@ cut (O-3). H-4 still falls to the loss of the onboard computer (R-4).
 
 \field{Adds}
 \begin{itemize}
-\item The two data-link connections shall be of different kinds.
+\item REQ-138: The two data-link connections shall be of different kinds.
 \end{itemize}
 
 % ===========================================================================
@@ -736,9 +718,8 @@ cut (O-3). H-4 still falls to the loss of the onboard computer (R-4).
 \section{Components}
 \label{sec:components}
 Each component, its role, and the requirements it meets [2,~Sec.~3.3].
-Every requirement [6,~Secs.~4.0--7.0] is met by at least one component;
-requirements that the decisions add are allocated when they enter the
-requirements.
+Every requirement [6,~Secs.~4.0--7.0] is met by at least one component,
+including those the design decisions added.
 
 Every component is safety-critical [7,~Sec.~4.0]. Every component is new code
 written for this System, except four that also use a published cryptographic
@@ -757,31 +738,31 @@ Component & Role & Requirements \\
 \midrule
 \endhead
 \multicolumn{3}{@{}l}{\textit{Controller firmware}} \\
-Bootloader & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113 \\
-Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113, REQ-117 \\
-Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & REQ-027~to~036, REQ-100 \\
+Bootloader & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113, REQ-119, REQ-125, REQ-130, REQ-136 \\
+Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113, REQ-117, REQ-125, REQ-136 \\
+Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & REQ-027~to~036, REQ-100, REQ-133, REQ-134, REQ-136, REQ-137 \\
 Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & REQ-007, REQ-008 \\
-Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & REQ-022, REQ-037~to~041 \\
-Controller clock & Keeps the controller's own time, set only from ground time. & REQ-030 \\
-Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-042, REQ-099 \\
-Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & REQ-004, REQ-009, REQ-010 \\
+Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & REQ-022, REQ-037~to~041, REQ-135 \\
+Controller clock & Keeps the controller's own time, set only from ground time. & REQ-030, REQ-131, REQ-132 \\
+Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-042, REQ-099, REQ-138 \\
+Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & REQ-004, REQ-009, REQ-010, REQ-125 \\
 \multicolumn{3}{@{}l}{\textit{Onboard computer software}} \\
-Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & REQ-064~to~067, REQ-087, REQ-100, REQ-112 \\
-Command and image checker & Decrypts every command and image and checks its signatures; also checks every image for damage, minimum version and target controller, for both the update and the restore; replaces the means of checking on command. & REQ-043~to~046, REQ-064, REQ-084~to~086, REQ-118 \\
-Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & REQ-068, REQ-069 \\
-Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & REQ-043~to~053, REQ-063 \\
-Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & REQ-070, REQ-071, REQ-074~to~079 \\
+Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & REQ-064~to~067, REQ-087, REQ-100, REQ-112, REQ-129, REQ-137 \\
+Command and image checker & Decrypts every command and image and checks its signatures; also checks every image for damage, minimum version and target controller, for both the update and the restore; replaces the means of checking on command. & REQ-043~to~046, REQ-064, REQ-084~to~086, REQ-118, REQ-127, REQ-129 \\
+Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & REQ-068, REQ-069, REQ-136 \\
+Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & REQ-043~to~053, REQ-063, REQ-126 \\
+Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & REQ-070, REQ-071, REQ-074~to~079, REQ-135 \\
 Clock keeper & Compares the onboard clock with ground time and applies corrections. & REQ-072, REQ-073 \\
-Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & REQ-061 \\
+Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & REQ-061, REQ-124 \\
 Supervisor & Restarts any program of the onboard computer software that crashes. & REQ-062 \\
-Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099 \\
-Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083 \\
-Restore program & A separate program with its own firmware store. Has every image checked before writing it, restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083, REQ-118 \\
+Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099, REQ-138 \\
+Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083, REQ-120, REQ-122~to~124 \\
+Restore program & A separate program with its own firmware store. Has every image checked before writing it, restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083, REQ-118, REQ-120, REQ-121, REQ-126 \\
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
-Signing & Signs every command and firmware image twice: with key A from its own key store and with key B from a hardware security key the operator holds; keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
-Link encryptor & Encrypts everything sent to the spacecraft, at the point of transmission, with a key kept only there. & REQ-088 \\
+Signing & Signs every command and firmware image twice: with key A from its own key store and with key B from a hardware security key the operator holds; keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096, REQ-128 \\
+Link encryptor & Encrypts everything sent to the spacecraft, at the point of transmission, with a key kept only there. & REQ-088, REQ-127 \\
 Release checker & Checks every firmware release before signing, and the signed image before it is sent, with the checks the onboard computer makes. & REQ-090, REQ-114 \\
 Report archive & Keeps every report received and checks it for damage. & REQ-092, REQ-093 \\
 Contact planner & Plans commands, uploads and report retrieval for coming contacts, and sends a planned command sequence, stopping at the first command refused or not answered. & REQ-097, REQ-115, REQ-116 \\

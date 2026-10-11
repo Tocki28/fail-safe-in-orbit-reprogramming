@@ -104,6 +104,9 @@ Controller --- Hazard Analysis}, Issue~1, Revision~0, Draft.
 \noindent [6] NASA, \emph{NASA Systems Engineering Handbook},
 NASA/SP-2016-6105 Rev~2, 2016.
 
+\noindent [7] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Software Architecture}, Issue~1, Revision~0, Draft.
+
 % ===========================================================================
 \section{Overview}
 
@@ -143,7 +146,8 @@ this document assigns one:
   negligible hazard, which has no report [5,~Sec.~4.0]. Scenarios, capabilities and
   objectives (O) are those of the ConOps [3,~Secs.~3.1, 3.5 and 6.0]. SWE-$n$ is
   rule $n$ of NPR 7150.2D [1,~App.~C, pp.~56--78]. A shared cause is a finding
-  of the hazard analysis [5,~Sec.~5.2].
+  of the hazard analysis [5,~Sec.~5.2]. ``Architecture 5.1'' is a design
+  decision of the architecture [7,~Sec.~5.1].
 \item \textbf{Verified by} [6,~Sec.~5.3.1.2.1, p.~92]: TEST, using the product
   to obtain detailed data; DEMONSTRATION, using it to show the requirement is
   met, without detailed data; INSPECTION, examining the product or its
@@ -202,6 +206,13 @@ REQ-041 & The controller firmware shall detect a change in its own memory and re
 REQ-042 & The controller firmware shall never send on the data link in a way that stops the onboard computer reaching it. & H-4 cause c & TEST \\
 REQ-113 & The controller shall return to its previous firmware when the operator orders it. & H-7 control 5 & TEST \\
 REQ-117 & In FALLBACK, the controller shall keep running the firmware it fell back to until the operator sends new firmware or a command that changes its firmware or mode. & Mode table; Scenario-460 & TEST \\
+REQ-119 & The bootloader shall share no code with the main firmware or the last-resort firmware. & Architecture 5.1 & INSPECTION \\
+REQ-125 & No controller firmware shall be able to disable the debug port or the factory loader. & Architecture 5.2 & INSPECTION \\
+REQ-130 & The controller firmware shall check firmware signatures with code different from the onboard computer software's. & Architecture 5.4 & INSPECTION \\
+REQ-131 & The controller firmware shall keep its own clock, from a time source separate from the onboard computer's. & Architecture 5.5 & TEST \\
+REQ-132 & The controller's clock shall be set only by time values sent from the ground, never from the onboard computer's clock. & Architecture 5.5 & TEST \\
+REQ-133 & The controller firmware shall refuse a command past its expiry, by its own clock. & Architecture 5.5 & TEST \\
+REQ-134 & The controller firmware shall run a scheduled command only when its own clock agrees with the scheduled time within \tbd{agree}. & Architecture 5.5 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -260,6 +271,13 @@ REQ-086 & A replacement of the means of proving origin interrupted at any point 
 REQ-087 & The onboard computer software shall send the ground a log of every command acted on, so that a command the operator did not send can be noticed. & Shared cause: one proof of origin & TEST \\
 REQ-112 & The onboard computer software shall pass a dangerous command to the controller only after a valid arming command that has not expired, and refuse it with the reason otherwise. & H-6 control 6; Scenario-330; Scenario-335 & TEST \\
 REQ-118 & The restore shall write to the controller only images, the bootloader and the last-resort firmware included, that have passed the same checks as an update: origin, damage, minimum version and target controller. & H-2 control 1; H-7 control 2 & TEST \\
+REQ-120 & The restore shall put the last-resort firmware in the bootloader's place, so that it runs first. & Architecture 5.1 & TEST \\
+REQ-121 & The onboard computer software shall put back the bootloader and the main firmware through the reprogramming link when the operator orders it. & Architecture 5.1 & TEST \\
+REQ-122 & The reprogramming link shall have two connections, independent of each other: the controller's debug port and its factory loader, each able to load the controller's memory whatever that memory holds. & Architecture 5.2 & TEST \\
+REQ-123 & The onboard computer software shall drive the debug port and the factory loader with separate drivers that share no code. & Architecture 5.2 & INSPECTION \\
+REQ-124 & The onboard computer software shall be able to restart the controller. & Architecture 5.2 & TEST \\
+REQ-126 & The restore program shall share no code or stored data with the update manager. & Architecture 5.3 & INSPECTION \\
+REQ-129 & The onboard computer software shall act on a command or firmware image only when it decrypts and both signatures are valid. & Architecture 5.4 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -284,6 +302,7 @@ REQ-097 & The ground software shall let the operator plan commands, uploads and 
 REQ-114 & The ground software shall check every signed firmware image with the checks the onboard computer software makes, before it is sent. & H-14; Capability-4 & TEST \\
 REQ-115 & The ground software shall let the operator send a planned sequence of commands with one action. & Capability-2 & TEST \\
 REQ-116 & In a sequence, the ground software shall send each command only after the previous one is answered done, and stop at the first command refused or not answered. & H-6 control 7 & TEST \\
+REQ-128 & Every command and firmware image shall carry two signatures, made with two keys kept apart from each other and from the encryption key. & Architecture 5.4 & INSPECTION \\
 \bottomrule
 \end{xltabular}}
 
@@ -312,6 +331,11 @@ REQ-108 & The safety-critical software shall reach 100\,\% modified condition/de
 REQ-109 & Each safety-critical software component shall have a cyclomatic complexity of 15 or lower. & SWE-220 & INSPECTION \\
 REQ-110 & All software shall follow the coding standard \tbd{coding}. & SWE-061 & INSPECTION \\
 REQ-111 & All software shall be analysed with static analysis tools for defects, security, coverage and complexity. & SWE-135 & INSPECTION \\
+REQ-127 & Every command and firmware image shall be encrypted from the ground software to the onboard computer software. & Architecture 5.4 & TEST \\
+REQ-135 & Every report shall carry the time of both clocks. & Architecture 5.5 & TEST \\
+REQ-136 & Every held command and the kept data shall be stored with a check value and checked just before use. & Architecture 5.6 & TEST \\
+REQ-137 & The arm state shall be stored so that no single bit error makes it armed. & Architecture 5.6 & TEST \\
+REQ-138 & The two data-link connections shall be of different kinds. & Architecture 5.7 & INSPECTION \\
 \bottomrule
 \end{xltabular}}
 
@@ -501,6 +525,26 @@ H-17 & REQ-100 \\
 \bottomrule
 \end{xltabular}}
 
+\subsection{Architecture Decisions}
+The design decisions of the architecture [7,~Sec.~5.0], each with the
+requirements it adds.
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{6.2cm}@{}}
+\toprule
+Item & Requirements \\
+\midrule
+\endhead
+Architecture 5.1 & REQ-119, REQ-120, REQ-121 \\
+Architecture 5.2 & REQ-122, REQ-123, REQ-124, REQ-125 \\
+Architecture 5.3 & REQ-126 \\
+Architecture 5.4 & REQ-127, REQ-128, REQ-129, REQ-130 \\
+Architecture 5.5 & REQ-131, REQ-132, REQ-133, REQ-134, REQ-135 \\
+Architecture 5.6 & REQ-136, REQ-137 \\
+Architecture 5.7 & REQ-138 \\
+\bottomrule
+\end{xltabular}}
+
 \section{Open Items}
 The values below are not yet known.
 \begin{description}
@@ -520,6 +564,8 @@ The values below are not yet known.
 \tbditem{window}{Contact window length and gap (ConOps TBD-4).}
 \tbditem{response}{Response time for each off-nominal condition.}
 \tbditem{coding}{The coding standard.}
+\tbditem{agree}{Largest allowed difference between the controller's clock and
+  the time of a scheduled command.}
 \end{description}
 
 \medskip

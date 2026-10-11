@@ -40,7 +40,7 @@
 \newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
 
 % Run-in label for the parts of a design decision.
-\newcommand{\field}[1]{\par\smallskip\noindent\textbf{#1.}~}
+\newcommand{\field}[1]{\par\needspace{4\baselineskip}\smallskip\noindent\textbf{#1.}~}
 
 \setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
 \setlist[itemize]{nosep}
@@ -90,7 +90,7 @@ component, with its algorithms and data, is recorded before that component is
 coded [1,~Sec.~4.3.2, p.~34].
 
 \noindent\textbf{How to read it.} Section~\ref{sec:overview} shows every
-component on one figure. Section~\ref{sec:decisions} holds the design
+component and one update on two figures. Section~\ref{sec:decisions} holds the design
 decisions, each with the options weighed and the hazards it targets.
 Section~\ref{sec:components} gives each component's role and the requirements
 it meets. Section~\ref{sec:hardware} lists what the hardware must provide.
@@ -121,6 +121,18 @@ Controller --- Software Classification}, Issue~1, Revision~1, Draft.
 \noindent [8] NASA, \emph{NASA Software Safety Guidebook}, NASA-GB-8719.13,
 2004.
 
+\noindent [9] MCUboot project, \emph{Bootloader} design document,
+\texttt{docs/design.md}, commit 1d2643c, 11 September 2026.
+
+\noindent [10] G.~Reeves and T.~Neilson, ``The Mars Rover Spirit FLASH
+Anomaly'', IEEE Aerospace Conference, paper 1426, 2005.
+
+\noindent [11] NASA, \emph{Space System Protection Standard}, NASA-STD-1006A,
+15 July 2022.
+
+\noindent [12] NASA, \emph{Fault Management Handbook}, NASA-HDBK-1002,
+Draft~2, 2 April 2012. A draft, not a released standard.
+
 % ===========================================================================
 \section{System Overview}
 \label{sec:overview}
@@ -134,6 +146,7 @@ acts on commands, reports its state and handles its own faults. It tries new
 firmware before keeping it and returns to working firmware on its own when the
 new firmware fails: a start-up selector chooses which copy runs, and the
 last-resort firmware takes over when the main firmware cannot.
+Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 
 \begin{figure}[H]
 \centering
@@ -190,6 +203,31 @@ the controller whatever its memory holds.}
 \label{fig:overview}
 \end{figure}
 
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  head/.style={draw, fill=black!5, minimum width=3.4cm, minimum height=0.6cm, font=\footnotesize\bfseries, align=center},
+  act/.style={draw, fill=white, text width=3.8cm, align=center, inner sep=2pt},
+  msg/.style={-{Latex[length=1.6mm]}, thick}]
+\node[head] at (0,0) {Ground software};
+\node[head] at (6,0) {Onboard computer\\software};
+\node[head] at (12,0) {Controller firmware};
+\foreach \x in {0,6,12} \draw[dashed, black!40] (\x,-0.5) -- (\x,-9.0);
+\node[act] at (0,-1.1) {1. Release checked, encrypted and signed twice};
+\draw[msg] (0,-2.0) -- node[above]{2. Upload over the radio link, across contacts} (6,-2.0);
+\node[act] at (6,-2.9) {3. Decrypted; signatures, damage, version and target checked; stored};
+\draw[msg] (6,-4.1) -- node[above]{4. Delivered over the data link} (12,-4.1);
+\node[act] at (12,-5.0) {5. Written to the copy that is not confirmed, while the controller keeps working};
+\node[act] at (12,-6.1) {6. Switches to the new copy and restarts};
+\node[act] at (12,-7.1) {7. Start-up selector checks it; trial; judged good; confirmed};
+\draw[msg] (12,-8.4) -- node[above]{8. Reports which firmware runs} (6,-8.4);
+\draw[msg] (6,-8.4) -- node[above]{9. Reports at the next contact} (0,-8.4);
+\end{tikzpicture}
+\caption{One update, from release to confirmed firmware. If the trial fails,
+the controller returns to the previous copy (Figure~\ref{fig:startup}).}
+\label{fig:update}
+\end{figure}
+
 % ===========================================================================
 \section{Constraints}
 Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
@@ -209,7 +247,8 @@ Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
 Each decision targets hazards that do not yet meet the fault tolerance rule
 [5,~Sec.~5.2]. It states the problem, weighs the options, and lists the
 requirements the choice adds; these enter the requirements at their next
-revision.
+revision. Where a proven design exists, it is one of the options
+[3,~Sec.~4].
 
 Options are compared by the smallest number of failures that, together, cause
 the hazard with that option in place. The counts leave out the permanent loss
@@ -217,7 +256,8 @@ of the onboard computer, an accepted risk (R-4). They are design targets, which
 the hazard analysis confirms in its design phase [5,~Sec.~1.0]. Chosen: YES or
 NO.
 
-% ---------------------------------------------------------------- 6.1
+% ---------------------------------------------------------------- 5.1
+\needspace{9\baselineskip}
 \subsection{Start-Up and Fall-Back}
 \label{sec:startup}
 \field{Problem} Every firmware copy, including the one the restore puts back,
@@ -230,16 +270,77 @@ H-8.
 \toprule
  & Option & H-1 & H-8 & Chosen \\
 \midrule
-a & The main firmware runs first and chooses its copy; the restore puts back a stored copy of it & 2 & 1 & NO \\
-b & The last-resort firmware runs first and chooses; the restore puts it back & 2 & 1 & NO \\
-c & A start-up selector, sharing no code with either firmware, runs first and chooses; the restore puts the last-resort firmware in its place & 3 & 2 & YES \\
+a & The last-resort firmware runs first and chooses; the restore puts it back & 2 & 1 & NO \\
+b & A start-up selector runs first and chooses between two copies; a new copy runs as a test and is reverted unless it confirms itself, as in MCUboot [9,~Sec.~Boot Swap Types]; the restore puts back the same selector & 2 & 1 & NO \\
+c & As b, plus a last-resort firmware sharing no code with the selector or either copy; the restore puts it in the selector's place & 3 & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{Choice} Option c \tbr{startup}. A defect in the start-up selector, or
-one in both main firmware copies, no longer stops the controller: the
-last-resort firmware shares no code with them [6,~REQ-009] and runs in their
-place.
+\field{Choice} Option c \tbr{startup}, shown in Figures~\ref{fig:startup} and
+\ref{fig:memory}. It keeps MCUboot's test and revert, which exists to keep bad
+firmware from leaving a device unusable [9,~Sec.~Boot Swap Types], and adds a
+last-resort firmware sharing no code with the rest [6,~REQ-009]. The
+last-resort firmware is the controller's safe mode: it still accepts commands
+from the ground [12,~Sec.~6.4.3.2.4, p.~85].
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  st/.style={draw, rounded corners=3pt, text width=3.0cm, align=center, minimum height=0.9cm, inner sep=3pt},
+  add/.style={st, fill=black!12},
+  tr/.style={-{Latex[length=1.6mm]}, thick},
+  lab/.style={font=\scriptsize, align=center}]
+\node[st] (sel) at (0,0) {Start-up selector checks the copies and counts failed starts};
+\node[st] (trial) at (5.1,0) {TRIAL\\new copy runs};
+\node[st] (op) at (10.2,0) {OPERATE\\confirmed copy runs};
+\node[st] (prev) at (5.1,-2.7) {FALLBACK\\previous copy runs};
+\node[add] (lr) at (10.2,-2.7) {FALLBACK\\last-resort firmware runs};
+\node[add] (rec) at (10.2,-5.4) {RECOVERY\\the onboard computer restores the controller};
+\draw[tr] (sel) -- node[above, lab]{new copy\\waiting} (trial);
+\draw[tr] (trial) -- node[above, lab]{judged good:\\confirmed} (op);
+\draw[tr] (sel.north) to[bend left=16] node[above, lab]{no new copy} (op.north);
+\draw[tr] (trial) -- node[left, lab]{not judged good, hangs,\\or too many failed starts} (prev);
+\draw[tr] (prev) -- node[above, lab]{previous\\copy fails} (lr);
+\draw[tr] ([xshift=-0.6cm]lr.south) -- node[left, lab]{fails: the\\controller is silent} ([xshift=-0.6cm]rec.north);
+\draw[tr] ([xshift=0.6cm]rec.north) -- node[right, lab]{the restore puts the\\last-resort firmware first} ([xshift=0.6cm]lr.south);
+\draw[tr] (sel.south) |- node[pos=0.3, right, lab]{start-up selector fails:\\the controller is silent} (rec.west);
+\end{tikzpicture}
+\caption{Start-up and fall-back. White: the two-copy test and revert of
+MCUboot [9,~Sec.~Boot Swap Types]. Grey: added for a controller that nobody
+can reach, the last-resort firmware and the restore.}
+\label{fig:startup}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  cell/.style={draw, minimum width=2.6cm, minimum height=0.95cm, text width=2.4cm, align=center, inner sep=1pt},
+  addc/.style={cell, fill=black!12},
+  idle/.style={cell, text=black!45},
+  row/.style={anchor=east, font=\footnotesize\bfseries, align=right}]
+\node[row] at (-0.1,0) {In operation};
+\node[cell] (a0) at (1.3,0) {Start-up selector};
+\node[cell] (a1) at (3.9,0) {Main firmware\\copy 1};
+\node[cell] (a2) at (6.5,0) {Main firmware\\copy 2};
+\node[cell] (a3) at (9.1,0) {Last-resort\\firmware};
+\node[cell] (a4) at (11.7,0) {Kept data};
+\node[below=2pt of a0, align=center] {written only\\by the restore};
+\node[align=center] at ($(a1.south)!0.5!(a2.south)+(0,-0.35)$) {an update writes only the copy\\that is not confirmed};
+\node[below=2pt of a3, align=center] {written only\\by the restore};
+\node[below=2pt of a4, align=center] {check value;\\cleared by a restore};
+\node[row] at (-0.1,-2.2) {After a restore};
+\node[addc] (b0) at (1.3,-2.2) {Last-resort\\firmware};
+\node[idle] (b1) at (3.9,-2.2) {Main firmware\\copy 1};
+\node[idle] (b2) at (6.5,-2.2) {Main firmware\\copy 2};
+\node[cell] (b3) at (9.1,-2.2) {Last-resort\\firmware};
+\node[cell] (b4) at (11.7,-2.2) {Kept data,\\cleared};
+\node[align=center] at ($(b1.south)!0.5!(b2.south)+(0,-0.35)$) {not run until the operator puts back\\the start-up selector};
+\end{tikzpicture}
+\caption{The controller's memory, not to scale. After a restore, the
+last-resort firmware (grey) sits in the start-up selector's place and runs
+first.}
+\label{fig:memory}
+\end{figure}
 
 \field{Adds}
 \begin{itemize}
@@ -251,7 +352,8 @@ place.
   the main firmware through the reprogramming link when the operator orders it.
 \end{itemize}
 
-% ---------------------------------------------------------------- 6.2
+% ---------------------------------------------------------------- 5.2
+\needspace{9\baselineskip}
 \subsection{The Way Back In}
 \label{sec:wayback}
 \field{Problem} A restore that goes through any controller software fails
@@ -269,8 +371,12 @@ c & Two such links, independent of each other & 4 & NO \\
 \bottomrule
 \end{tabularx}}
 
-\field{Choice} Option b \tbr{wayback}. One link meets the rule; a second adds
-a connection to build and to check between uses [6,~REQ-059] for a margin the
+\field{Choice} Option b \tbr{wayback}. It follows the principle of hardware
+commands, which a spacecraft executes on receipt without any flight software
+[11,~Sec.~3.2, p.~9]. Such a command let the Spirit rover's team regain control
+while its flight software kept resetting: it made the software start without
+its flash memory [10,~pp.~4 and 9]. One link meets the rule; a second adds a
+connection to build and to check between uses [6,~REQ-059] for a margin the
 rule does not ask for.
 
 \field{Adds}
@@ -281,7 +387,8 @@ rule does not ask for.
 \item No controller firmware shall be able to disable the reprogramming link.
 \end{itemize}
 
-% ---------------------------------------------------------------- 6.3
+% ---------------------------------------------------------------- 5.3
+\needspace{9\baselineskip}
 \subsection{Restore Apart From Update}
 \label{sec:apart}
 \field{Problem} The update path and the restore share onboard computer
@@ -308,7 +415,8 @@ controller through the restore program, which loads firmware from the ground
   manager.
 \end{itemize}
 
-% ---------------------------------------------------------------- 6.4
+% ---------------------------------------------------------------- 5.4
+\needspace{9\baselineskip}
 \subsection{Proof of Origin}
 \label{sec:origin}
 \field{Problem} One means proves that both commands and firmware come from the
@@ -321,29 +429,56 @@ load firmware [5,~Sec.~5.2]. Targets H-2 and H-5.
  & Option & H-2 & H-5 & Chosen \\
 \midrule
 a & One secret, held on the ground and on board, checks commands and firmware & 1 & 1 & NO \\
-b & Digital signatures made with one key: on board is only the means to check them, so the key can be disclosed only on the ground & 1 & 1 & NO \\
-c & Signatures made with two keys kept in two separate places; the radio link's own protection, outside this project, as a third barrier & 2 & 2 & NO \\
-d & Signatures made with three keys kept in three separate places; every command and firmware image carries all three & 3 & 3 & YES \\
+b & Signatures made with one key; on board is only the means to check them, as in MCUboot [9,~Sec.~Security] & 1 & 1 & NO \\
+c & Encryption of every command and firmware image [11,~Sec.~4.1.1, p.~9], plus one signature; the two keys kept in two separate places & 2 & 2 & NO \\
+d & As c, with a second signature; the three keys kept in three separate places & 3 & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{Choice} Option d \tbr{origin}. Each disclosure exposes one key, so
-another party needs three. The controller checks firmware signatures again
-before running it [6,~REQ-006], with code different from the onboard
-computer's, so that one defect in that code cannot pass forged firmware
-through both checks [8,~Sec.~7.4.2, p.~141].
+\field{Choice} Option d \tbr{origin}, shown in Figure~\ref{fig:origin}. Each
+disclosure exposes one key, so another party needs three. The command stack
+must be encrypted [11,~Sec.~4.1.1, p.~9], and encryption with authentication
+is the recommended defence in depth [11,~Sec.~4.1.1.c, p.~10]. The controller
+checks firmware signatures again before running it [6,~REQ-006], with code
+different from the onboard computer's, so that one defect in that code cannot
+pass forged firmware through both checks [8,~Sec.~7.4.2, p.~141].
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  box/.style={draw, text width=2.7cm, align=center, minimum height=0.8cm, inner sep=2pt},
+  key/.style={box, fill=black!5, text width=2.2cm},
+  ar/.style={-{Latex[length=1.6mm]}, thick}]
+\node[key] (k1) at (0,1.0) {Encryption key\\place 1};
+\node[key] (k2) at (0,0) {Signing key A\\place 2};
+\node[key] (k3) at (0,-1.0) {Signing key B\\place 3};
+\node[box] (sg) at (3.6,0) {Signing\\(ground software)};
+\node[box] (oc) at (8.3,0) {Origin checker (onboard computer): decrypts and checks both signatures};
+\node[box] (ss) at (12.9,0) {Start-up selector (controller): checks the signatures again, with different code};
+\foreach \k in {k1,k2,k3} \draw[ar] (\k.east) -- (sg.west);
+\draw[ar] (sg) -- node[above]{encrypted,} node[below]{signed twice} (oc);
+\draw[ar] (oc) -- node[above]{firmware} (ss);
+\end{tikzpicture}
+\caption{Proof of origin. Each key is kept in its own place, so one disclosed
+key is not enough. Commands stop at the onboard computer's check; firmware is
+checked again on the controller.}
+\label{fig:origin}
+\end{figure}
 
 \field{Adds}
 \begin{itemize}
-\item Every command and firmware image shall carry signatures made with three
-  keys kept in three separate places on the ground.
+\item Every command and firmware image shall be encrypted from the ground
+  software to the onboard computer software [11,~Sec.~4.1.1, p.~9].
+\item Every command and firmware image shall carry two signatures, made with
+  two keys kept apart from each other and from the encryption key.
 \item The onboard computer software shall act on a command or firmware image
-  only when all three signatures are valid.
+  only when it decrypts and both signatures are valid.
 \item The controller firmware shall check firmware signatures with code
   different from the onboard computer software's.
 \end{itemize}
 
-% ---------------------------------------------------------------- 6.5
+% ---------------------------------------------------------------- 5.5
+\needspace{9\baselineskip}
 \subsection{Two Clocks}
 \label{sec:clocks}
 \field{Problem} Expiry, arm time-outs, scheduled commands, time-tags and the
@@ -362,9 +497,31 @@ c & A second clock in the controller, with its own time source, set only from gr
 \bottomrule
 \end{tabularx}}
 
-\field{Choice} Option c \tbr{clocks}. A wrong clock on one processor is caught
-by the other. The controller's clock is never set from the onboard clock, so
-one wrong value cannot reach both.
+\field{Choice} Option c \tbr{clocks}, shown in Figure~\ref{fig:clocks}. A
+wrong clock on one processor is caught by the other.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  box/.style={draw, text width=3.3cm, align=center, minimum height=0.8cm, inner sep=2pt},
+  ar/.style={-{Latex[length=1.6mm]}, thick}]
+\node[box, fill=black!5] (gt) at (5,1.6) {Ground time};
+\node[box] (oc) at (0,0) {Onboard clock\\(onboard computer)};
+\node[box] (cc) at (10,0) {Controller clock\\(its own time source)};
+\draw[ar] (gt) -- node[above left]{corrections} (oc);
+\draw[ar] (gt) -- node[above right]{set only from ground time} (cc);
+\node[align=center] at (5,0) {neither clock is\\set from the other};
+\node[box] (oc2) at (0,-1.8) {Passes a scheduled command at its time};
+\node[box] (cc2) at (10,-1.8) {Runs it only if its own clock agrees within \tbd{agree}};
+\draw[ar] (oc) -- (oc2);
+\draw[ar] (cc) -- (cc2);
+\draw[ar] (oc2) -- node[above]{scheduled command} (cc2);
+\node[align=center] at (5,-2.9) {Every report carries the time of both clocks.};
+\end{tikzpicture}
+\caption{Two clocks. Neither is set from the other, so one wrong value cannot
+reach both.}
+\label{fig:clocks}
+\end{figure}
 
 \field{Adds}
 \begin{itemize}
@@ -378,7 +535,8 @@ one wrong value cannot reach both.
 \item Every report shall carry the time of both clocks.
 \end{itemize}
 
-% ---------------------------------------------------------------- 6.6
+% ---------------------------------------------------------------- 5.6
+\needspace{9\baselineskip}
 \subsection{Held Data}
 \label{sec:held}
 \field{Problem} A bit error can change a held command, the arm state or the
@@ -396,8 +554,10 @@ c & Memory that corrects bit errors on its own & 2 & NO \\
 \end{tabularx}}
 
 \field{Choice} Option b \tbr{held}. A bit error must also produce a matching
-check value, a second failure. Unlike option c, it needs no hardware feature;
-option c can be added where the hardware has it.
+check value, a second failure. MCUboot notes the same risk: skipping the check
+before use lets an image changed after a good check run unchecked
+[9,~Sec.~Integrity Check]. Unlike option c, option b needs no hardware
+feature; option c can be added where the hardware has it.
 
 \field{Adds}
 \begin{itemize}
@@ -406,7 +566,8 @@ option c can be added where the hardware has it.
 \item The arm state shall be stored so that no single bit error makes it armed.
 \end{itemize}
 
-% ---------------------------------------------------------------- 6.7
+% ---------------------------------------------------------------- 5.7
+\needspace{9\baselineskip}
 \subsection{Two Kinds of Connection}
 \label{sec:links}
 \field{Problem} The two data-link connections share software at both ends, so
@@ -433,6 +594,7 @@ falls to the loss of the onboard computer (R-4).
 \end{itemize}
 
 % ===========================================================================
+% ===========================================================================
 \section{Components}
 \label{sec:components}
 Each component, its role, and the requirements it meets [2,~Sec.~3.3].
@@ -442,16 +604,13 @@ requirements.
 
 All components are new code and safety-critical [7,~Sec.~4.0], with four
 exceptions. The start-up selector, the origin checker and signing are built
-around a published signature library. The contact planner is not
+around a published cryptographic library. The contact planner is not
 safety-critical \tbr{planner}: it passes plans to the command builder, which
 checks every command it builds.
 
 The components from the mode manager to the data-link drivers form the main
-firmware; the controller keeps two copies of it, new and previous. The
-start-up selector runs at every start. Then, in OPERATE the confirmed copy
-runs, in TRIAL the new copy, and in FALLBACK the previous copy or the
-last-resort firmware; in RECOVERY nothing runs on the controller, and the
-restore program works through the reprogramming link [4,~Sec.~3.4].
+firmware; the controller keeps two copies of it. Figure~\ref{fig:startup}
+shows which copy runs in each controller mode [4,~Sec.~3.4].
 
 \needspace{12\baselineskip}
 {\footnotesize
@@ -471,7 +630,7 @@ Data-link drivers & One driver for each data-link connection, sharing no code. &
 Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & REQ-004, REQ-009, REQ-010 \\
 \multicolumn{3}{@{}l}{\textit{Onboard computer software}} \\
 Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & REQ-064~to~067, REQ-087, REQ-100, REQ-112 \\
-Origin checker & Checks the signatures on commands and firmware, and replaces the means of checking them on command. & REQ-043, REQ-064, REQ-084~to~086 \\
+Origin checker & Decrypts commands and firmware, checks their two signatures, and replaces the means of checking them on command. & REQ-043, REQ-064, REQ-084~to~086 \\
 Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & REQ-068, REQ-069 \\
 Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & REQ-043~to~053, REQ-063 \\
 Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & REQ-070, REQ-071, REQ-074~to~079 \\
@@ -483,7 +642,7 @@ Restore program & A separate program with its own firmware store. Restores the c
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
-Signing & Signs every command and firmware image with keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
+Signing & Encrypts and signs every command and firmware image with three keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
 Release checker & Checks every firmware release before it is sent. & REQ-090 \\
 Report archive & Keeps every report received and checks it for damage. & REQ-092, REQ-093 \\
 Contact planner & Plans commands, uploads and report retrieval for coming contacts. & REQ-097 \\
@@ -529,7 +688,7 @@ A way for the restore to make the last-resort firmware run first & Section~\ref{
 Room in the controller for the start-up selector, two main firmware copies, the last-resort firmware and the kept data & Section~\ref{sec:startup} \\
 Kept data in the controller that survives a restart and a power loss & REQ-017 \\
 Room on the onboard computer for two separate firmware stores & Section~\ref{sec:apart} \\
-Processing in the controller to check three signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\
+Processing in the controller to check two signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\
 A time source in the controller separate from the onboard computer's & Section~\ref{sec:clocks} \\
 Two different kinds of connection between the onboard computer and the controller & Section~\ref{sec:links} \\
 \bottomrule

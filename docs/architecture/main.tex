@@ -144,6 +144,21 @@ Draft~2, 2 April 2012. A draft, not a released standard.
 \noindent [13] MCUboot project, \emph{Serial recovery},
 \texttt{docs/serial\_recovery.md}, commit 1d2643c, 11 September 2026.
 
+\noindent [14] STMicroelectronics, \emph{STM32G4 Series Reference Manual},
+RM0440 Rev~9.
+
+\noindent [15] STMicroelectronics, \emph{STM32G431x6/x8/xB Datasheet},
+DS12589 Rev~6.
+
+\noindent [16] STMicroelectronics, \emph{Introduction to System Memory Boot
+Mode on STM32 MCUs}, AN2606 Rev~70.
+
+\noindent [17] STMicroelectronics, \emph{STM32G4 Nucleo-32 Board (MB1430)},
+UM2397 Rev~2.
+
+\noindent [18] STMicroelectronics, \emph{Discovery Kit with STM32MP257F MPU},
+UM3385 Rev~2.
+
 % ===========================================================================
 \section{System Overview}
 \label{sec:overview}
@@ -824,8 +839,7 @@ Reprogramming link B & Reprogramming drivers and controller & The controller's f
 \section{Hardware Needs}
 \label{sec:hardware}
 The hardware must provide what the design decisions and the requirements rely
-on. Each need is checked against the two boards before this document is
-released \tbd{boards}.
+on. Section~8.1 checks each need against the two boards.
 
 \smallskip
 {\small\renewcommand{\arraystretch}{1.3}\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xl@{}}
@@ -849,6 +863,39 @@ Need & From \\
 \bottomrule
 \end{tabularx}}
 
+\subsection{Board Check}
+\label{sec:boardcheck}
+Each need, checked against the controller board, NUCLEO-G431KB, and the
+onboard computer board, STM32MP257F-DK. Result: MET; PARTLY, met with the limit
+stated; NOT MET; TO MEASURE, settled only by a measurement on the bench.
+
+{\footnotesize\renewcommand{\arraystretch}{1.2}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}l>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+Need & Result & Source & What it means \\
+\midrule
+\endhead
+Debug port & PARTLY & [14, p.~2091]; [17, pp.~22--23] & The chip allows it, but the controller board brings the debug pins only to its own programmer; wires must be soldered on, or that programmer used. \\
+Factory loader & MET & [14, p.~189]; [16, p.~274] & A serial port on two header pins, as long as the boot pin is honoured. \\
+Control wires & NOT MET & [17, pp.~16, 22--23] & The boot pin is on no header and drives an LED; the reset pin is shared with the board's programmer. \\
+No firmware lock-out & NOT MET & [14, pp.~205, 207, 271] & Firmware can rewrite the chip's option settings with published keys: one setting, read-out protection level~2, ends both ways in for good; others switch off the boot pin or the reset pin. \\
+Reprogramming protocols & PARTLY & [18, p.~35] & The onboard computer board offers a serial port and spare pins; the speed of a debug port driven from software must be measured. \\
+Writable start position & MET & [14, p.~92] & The start position is ordinary flash, writable once its protections are cleared. \\
+Controller memory size & TO MEASURE & [15, pp.~1, 18] & 128\,KB of flash and 32\,KB of working memory; checked once the code sizes are known. \\
+Writing while running & PARTLY & [14, pp.~188, 195]; [15, p.~107] & One flash bank: code running from flash stops for up to 24.47\,ms during each page erase. \\
+Kept data storage & MET & [15, p.~107] & Flash keeps it through power loss; on this package the backup registers do not. \\
+Independent watchdog & PARTLY & [14, pp.~201, 1557] & Once running it cannot be stopped, but starting it at power-on is an option setting that firmware could rewrite. \\
+Independent time source & PARTLY & [15, pp.~51, 105]; [17, p.~15] & No 32\,kHz crystal on this package; the internal oscillator runs up to about 8\,\% off, unless the board's 24\,MHz crystal is connected by two solder bridges. \\
+Two kinds of data link, both ends & MET & [15, p.~14]; [18, p.~35] & A serial line and SPI exist on both boards; CAN would need an external transceiver on the controller board. \\
+Signature checking speed & TO MEASURE & [15, pp.~1, 14] & A 170\,MHz processor with no cryptographic hardware; the time for two signatures must be measured. \\
+Onboard computer storage & MET & [18, pp.~2, 18] & 8\,GB of eMMC and a microSD slot: two separate stores fit. \\
+\bottomrule
+\end{xltabular}}
+
+\noindent Needs 3 and 4 are not met by the boards as delivered, and four more
+are met only in part; the response is open \tbd{boardfix}.
+
+
 % ===========================================================================
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
@@ -860,7 +907,8 @@ The values below are not yet known.
 \tbditem{ref}{Project name and document reference.}
 \tbditem{agree}{Largest allowed difference between the controller's clock and
   the time of a scheduled command.}
-\tbditem{boards}{Check of each hardware need against the two boards.}
+\tbditem{boardfix}{The response to the board check (Section~\ref{sec:boardcheck}):
+  board changes, other boards, or the risks accepted.}
 \end{description}
 
 \medskip

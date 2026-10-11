@@ -455,13 +455,20 @@ c & Two separate ways in that share nothing: the controller's debug port, which 
 \end{tabularx}}
 
 
-\field{Choice} Option c \tbr{wayback}. It follows the principle of hardware
+\field{Choice} Option c. It follows the principle of hardware
 commands, which a spacecraft executes on receipt without any flight software
 [11,~Sec.~3.2, p.~9]. Such a command let the Spirit rover's team regain control
 while its flight software kept resetting: it made the software start without
 its flash memory [10,~pp.~4 and 9]. Two ways in are the fewest that meet the
 rule. They still share the controller's memory and its reset wire; the hazard
 analysis counts these shared causes when it is re-run on this design.
+
+The debug port stays open in flight. After launch nobody can reach the hardware
+(A-1), and locking the port would remove a way in. Because the port writes
+memory around the controller's own checks, the restore writes only firmware
+that has passed the same checks as an update, made with checking code of its
+own [6,~REQ-118]. Before launch the hardware can be reached during integration
+and testing; protecting it then is a ground procedure outside this System.
 
 \field{Adds}
 \begin{itemize}
@@ -752,7 +759,7 @@ Controller watch & Notices a silent controller, restarts it, and calls the resto
 Supervisor & Restarts any program of the onboard computer software that crashes. & REQ-062 \\
 Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099 \\
 Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083 \\
-Restore program & A separate program with its own firmware store. Restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083 \\
+Restore program & A separate program with its own firmware store and its own checking code. Checks every firmware before writing it, restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083, REQ-118 \\
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
@@ -827,7 +834,6 @@ The values below are not yet known.
 \medskip
 \noindent The proposals below await the author's acceptance.
 \begin{description}
-\tbritem{wayback}{The way back in: option c (Section~\ref{sec:wayback}).}
 \tbritem{apart}{Restore apart from update: option b (Section~\ref{sec:apart}).}
 \tbritem{origin}{Proof of origin: option d (Section~\ref{sec:origin}).}
 \tbritem{clocks}{Two clocks: option c (Section~\ref{sec:clocks}).}
@@ -837,7 +843,7 @@ The values below are not yet known.
 
 \medskip
 \noindent The author accepted, on 11 October 2026, option c of
-Section~\ref{sec:startup} and the risk of a wrong ground time that passes the
+Section~\ref{sec:startup}, option c of Section~\ref{sec:wayback}, and the risk of a wrong ground time that passes the
 ground software's check (Section~\ref{sec:clocks}).
 
 \end{document}

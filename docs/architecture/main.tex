@@ -150,8 +150,8 @@ Draft~2, 2 April 2012. A draft, not a released standard.
 The System has three software items [6,~Sec.~3.1], each made of components
 (Figure~\ref{fig:overview}). The ground software builds and checks
 the operator's commands, singly or as a planned sequence. It checks each
-firmware release the operator approves, encrypts and signs it, and checks the
-signed result before sending it. It keeps every report that comes back. The onboard computer software checks everything that arrives and passes
+firmware release the operator approves, signs it, checks the signed result,
+and encrypts everything as it is sent. It keeps every report that comes back. The onboard computer software checks everything that arrives and passes
 it on; between contacts it stores the controller's reports, watches the
 controller, and restores it when no firmware can run. The controller firmware
 acts on commands, reports its state and handles its own faults. It tries new
@@ -175,9 +175,10 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 \node[title] (gt) at (0,1.5) {Ground\\software};
 \node[comp] (g1) at (0,0) {\cmp{Operator console}{authenticates the operator and displays telemetry and system state}};
 \node[comp, below=0.2cm of g1] (g2) {\cmp{Command builder}{formats and validates outgoing telecommands}};
-\node[comp, below=0.2cm of g2] (g3) {\cmp{Signing}{encrypts telecommands and firmware images and generates cryptographic signatures}};
-\node[comp, below=0.2cm of g3] (g4) {\cmp{Release checker}{verifies firmware releases before signing, and signed images before upload}};
-\node[comp, below=0.2cm of g4] (g5) {\cmp{Report archive}{ingests, validates and stores downlinked telemetry reports}};
+\node[comp, below=0.2cm of g2] (g3) {\cmp{Signing}{signs every command and image twice, with keys kept apart}};
+\node[comp, below=0.2cm of g3] (g4) {\cmp{Link encryptor}{encrypts everything sent, with a key kept only there}};
+\node[comp, below=0.2cm of g4] (g4b) {\cmp{Release checker}{verifies firmware releases before signing, and signed images before upload}};
+\node[comp, below=0.2cm of g4b] (g5) {\cmp{Report archive}{ingests, validates and stores downlinked telemetry reports}};
 \node[comp, below=0.2cm of g5] (g6) {\cmp{Contact planner}{plans upcoming contacts; runs command sequences, halting at the first refusal}};
 \node[item, fit=(gt)(g1)(g6)] (gbox) {};
 
@@ -215,7 +216,7 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 \draw[link] (op.south) -- (gbox.north) node[midway, right, lab] {operator interface};
 
 % Links
-\draw[link] (g2.east -| gbox.east) -- (g2.east -| obox.west) node[midway, above, lab] {radio link};
+\draw[link] (g4.east -| gbox.east) -- (g4.east -| obox.west) node[midway, above, lab] {radio link};
 \draw[link] ($(o8.east -| obox.east)+(0,0.1)$) -- ($(m6.west -| cbox.west)+(0,0.1)$)
   node[midway, above, lab] {data link A};
 \draw[link] ($(o8.east -| obox.east)+(0,-0.1)$) -- ($(m6.west -| cbox.west)+(0,-0.1)$)
@@ -242,8 +243,8 @@ memory holds.}
 \node[head] at (6,0) {Onboard computer\\software};
 \node[head] at (12,0) {Controller firmware};
 \foreach \x in {0,6,12} \draw[dashed, black!40] (\x,-0.5) -- (\x,-9.0);
-\node[act] at (0,-1.1) {1. Release checked; encrypted and signed twice; signed result checked};
-\draw[msg] (0,-2.0) -- node[above]{2. Upload over the radio link, across contacts} (6,-2.0);
+\node[act] at (0,-1.1) {1. Release checked; signed twice; signed result checked};
+\draw[msg] (0,-2.0) -- node[above]{2. Encrypted and uploaded over the radio link, across contacts} (6,-2.0);
 \node[act] at (6,-2.9) {3. Decrypted; signatures, damage, version and target checked; stored};
 \draw[msg] (6,-4.1) -- node[above]{4. Delivered over the data link} (12,-4.1);
 \node[act] at (12,-5.0) {5. Written to the copy that is not confirmed, while the controller keeps working};
@@ -542,40 +543,49 @@ commanding the System.
 \midrule
 a & One shared secret: the same secret is stored on the ground and on the spacecraft, and every command and image carries a code computed from it. Whoever learns the secret, from the ground or by reading the spacecraft's memory, can make commands and images that pass every check. & 1 & 1 & NO \\
 b & One digital signature: the ground signs every command and image with a signing key that never leaves the ground. The spacecraft holds only a checking key, which can check a signature but cannot make one, as in MCUboot [9,~Sec.~Security]. Reading the spacecraft's memory gives nothing away, but whoever steals the one signing key from the ground can sign anything. & 1 & 1 & NO \\
-c & Encryption and one signature: every command and image is also encrypted, so the spacecraft accepts only what was encrypted with the right key [11,~Sec.~4.1.1, p.~9]. The encryption key and the signing key are kept in two separate places on the ground, for example the ground software's key store and a hardware token the operator carries. A false command or image takes stealing both keys. & 2 & 2 & NO \\
-d & As c, plus a second signature made with a third key kept in a third place, for example an offline signing computer. A false command or image takes stealing all three keys. & 3 & 3 & YES \\
+c & Encryption and one signature: every command and image is also encrypted, so the spacecraft accepts only what was encrypted with the right key [11,~Sec.~4.1.1, p.~9]. The encryption key and the signing key are kept in two separate places on the ground: the encryption key only at the link encryptor, where transmissions are made, and the signing key in the ground software's key store. A false command or image takes stealing both keys. & 2 & 2 & NO \\
+d & As c, plus a second signature made with a third key held on a hardware security key the operator carries, which signs inside itself and never lets the key out. A false command or image takes stealing all three keys, from three places. & 3 & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
 
-\field{Choice} Option d \tbr{origin}, shown in Figure~\ref{fig:origin}.
+\field{Choice} Option d, shown in Figure~\ref{fig:origin}.
 Encryption is required along the whole command chain, from the operations
 center to execution on board [11,~Secs.~3.2 and 4.1.1, pp.~8--9], and
 encryption together with signatures is the recommended defence in depth
 [11,~Sec.~4.1.1.c, p.~10]. The controller checks firmware signatures again
 before running it [6,~REQ-006], with different checking code from the onboard
 computer's, so that one defect in that code cannot let forged firmware through
-both checks [8,~Sec.~7.4.2, p.~141].
+both checks [8,~Sec.~7.4.2, p.~141]. The encryption key also sits on the
+onboard computer, which must decrypt; taking it from there means taking over
+the onboard computer, which would already give control of the whole System.
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\scriptsize,
-  box/.style={draw, text width=2.7cm, align=center, minimum height=0.8cm, inner sep=2pt},
-  key/.style={box, fill=black!5, text width=2.2cm},
-  ar/.style={-{Latex[length=1.6mm]}, thick}]
-\node[key] (k1) at (0,1.0) {Encryption key\\place 1};
-\node[key] (k2) at (0,0) {Signing key A\\place 2};
-\node[key] (k3) at (0,-1.0) {Signing key B\\place 3};
-\node[box] (sg) at (3.6,0) {Signing\\(ground software)};
-\node[box] (oc) at (8.3,0) {Command and image checker (onboard computer): decrypts and checks both signatures};
-\node[box] (ss) at (12.9,0) {Bootloader (controller): checks the signatures again, with different code};
-\foreach \k in {k1,k2,k3} \draw[ar] (\k.east) -- (sg.west);
-\draw[ar] (sg) -- node[above]{encrypted,} node[below]{signed twice} (oc);
+  box/.style={draw, text width=3.4cm, align=center, minimum height=0.9cm, inner sep=3pt, execute at begin node=\nohyph},
+  key/.style={box, fill=black!5},
+  ar/.style={-{Latex[length=1.6mm]}, thick},
+  lane/.style={font=\footnotesize\bfseries, anchor=west}]
+\node[lane] at (-2.0,1.6) {Ground};
+\node[lane] at (-2.0,-1.75) {Spacecraft};
+\draw[dashed, black!40] (-2.0,-1.4) -- (12.1,-1.4);
+\node[key] (ka) at (0,0.65) {Signing key A\\in the ground software's key store};
+\node[key] (kb) at (0,-0.6) {Signing key B\\on a hardware security key the operator holds};
+\node[box] (sg) at (5.1,0) {Signing (ground software)\\signs every command and image twice};
+\node[key] (le) at (10.2,0) {Link encryptor (ground software)\\holds the encryption key and encrypts everything sent};
+\node[box] (oc) at (10.2,-3.0) {Command and image checker (onboard computer)\\holds the encryption key and checking keys A and B; decrypts and checks both signatures};
+\node[box] (ss) at (5.1,-3.0) {Bootloader (controller)\\holds checking keys A and B; checks both signatures again, with different code};
+\draw[ar] (ka.east) -- (sg.west);
+\draw[ar] (kb.east) -- (sg.west);
+\draw[ar] (sg) -- node[above, align=center]{signed\\twice} (le);
+\draw[ar] (le) -- node[pos=0.5, right, align=left, fill=white, inner sep=1pt]{radio link,\\encrypted} (oc);
 \draw[ar] (oc) -- node[above]{firmware} (ss);
 \end{tikzpicture}
-\caption{Proof of origin. Each key is kept in its own place, so one disclosed
-key is not enough. Commands stop at the onboard computer's check; firmware is
-checked again on the controller.}
+\caption{Proof of origin. Each key is kept in its own place, so one stolen key
+is not enough. The spacecraft holds only checking keys, which cannot sign, and
+the encryption key, which it needs to decrypt. Commands stop at the onboard
+computer's check; firmware is checked again on the controller.}
 \label{fig:origin}
 \end{figure}
 
@@ -729,9 +739,10 @@ Every requirement [6,~Secs.~4.0--7.0] is met by at least one component;
 requirements that the decisions add are allocated when they enter the
 requirements.
 
-All components are safety-critical [7,~Sec.~4.0] and new code, except the
-bootloader, the command and image checker and signing, which are built around a
-published cryptographic library.
+Every component is safety-critical [7,~Sec.~4.0]. Every component is new code
+written for this System, except four that also use a published cryptographic
+library for their signing or encryption: the bootloader, the command and image
+checker, signing, and the link encryptor.
 
 The components from the mode manager to the data-link drivers form the main
 firmware; the controller keeps two copies of it. Figure~\ref{fig:startup}
@@ -768,7 +779,8 @@ Restore program & A separate program with its own firmware store. Has every imag
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
-Signing & Encrypts and signs every command and firmware image with three keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
+Signing & Signs every command and firmware image twice: with key A from its own key store and with key B from a hardware security key the operator holds; keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
+Link encryptor & Encrypts everything sent to the spacecraft, at the point of transmission, with a key kept only there. & REQ-088 \\
 Release checker & Checks every firmware release before signing, and the signed image before it is sent, with the checks the onboard computer makes. & REQ-090, REQ-114 \\
 Report archive & Keeps every report received and checks it for damage. & REQ-092, REQ-093 \\
 Contact planner & Plans commands, uploads and report retrieval for coming contacts, and sends a planned command sequence, stopping at the first command refused or not answered. & REQ-097, REQ-115, REQ-116 \\
@@ -789,7 +801,7 @@ design.
 Interface & Between & Carries \\
 \midrule
 Operator interface & Operator and ground software & The operator's decisions; reports and the System's state \\
-Radio link & Ground software and onboard computer software & Signed commands and firmware; answers and reports \\
+Radio link & Link encryptor and onboard computer software & Encrypted, signed commands and firmware; answers and reports \\
 Data link A & Onboard computer and controller & Commands, answers, reports and firmware \\
 Data link B & Onboard computer and controller & The same as data link A, over a different kind of connection \\
 Reprogramming link A & Reprogramming drivers and controller & The controller's debug port: its restart, and memory writes with the processor stopped \\
@@ -837,17 +849,20 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent The proposals below await the author's acceptance.
-\begin{description}
-\tbritem{origin}{Proof of origin: option d (Section~\ref{sec:origin}).}
-\end{description}
+\noindent No proposal awaits the author's acceptance.
 
 \medskip
-\noindent The author accepted, on 11 October 2026, option c of
-Section~\ref{sec:startup}, option c of Section~\ref{sec:wayback}, option b of
-Section~\ref{sec:apart} with the risk of a defect in the checks both its programs
-rely on, option c of Section~\ref{sec:clocks} with the risk of a wrong
-ground time that passes the ground software's check, option b of
-Section~\ref{sec:held}, and option c of Section~\ref{sec:links}.
+\noindent The author accepted, on 11 October 2026:
+\begin{itemize}
+\item option c of Section~\ref{sec:startup};
+\item option c of Section~\ref{sec:wayback};
+\item option b of Section~\ref{sec:apart}, with the risk of a defect in the checks
+  both its programs rely on;
+\item option d of Section~\ref{sec:origin};
+\item option c of Section~\ref{sec:clocks}, with the risk of a wrong ground time
+  that passes the ground software's check;
+\item option b of Section~\ref{sec:held};
+\item option c of Section~\ref{sec:links}.
+\end{itemize}
 
 \end{document}

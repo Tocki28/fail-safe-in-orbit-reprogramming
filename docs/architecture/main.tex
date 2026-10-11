@@ -257,11 +257,16 @@ the controller returns to the previous copy (Figure~\ref{fig:startup}).}
 \section{Constraints}
 Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
 \begin{description}
-\item[C-3] One engineer builds the System. Independence between components
-  comes from separate code, not from separate teams.
-\item[R-4] There is one onboard computer. Its permanent loss stops commands,
-  reports and restores. The risk is accepted, so H-4 cannot meet the fault
-  tolerance rule [5,~Sec.~5.2].
+\item[C-3] System development is conducted by a single engineer. Component
+  independence is achieved through isolated software codebases rather than
+  organizational team separation; one engineer writing every codebase limits
+  their diversity.
+\item[R-4] The System has one onboard computer. A spacecraft can carry a
+  second, redundant one, as the Mars Reconnaissance Orbiter does
+  [12,~App.~F.2.15, Lesson 2041, p.~197]; how many is a spacecraft decision,
+  outside this project [5,~Sec.~5.2]. Losing the one onboard computer for good
+  stops commands, reports and restores. The risk is accepted, so H-4 cannot
+  meet the fault tolerance rule.
 \item[C-4] The System runs on two given development boards. The design does not
   depend on them; they are checked against it at the end of this document.
 \end{description}

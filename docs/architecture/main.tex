@@ -43,6 +43,9 @@
 \newcommand{\nohyph}{\hyphenpenalty=10000\exhyphenpenalty=10000\relax}
 \newcommand{\cmp}[2]{#1\\[-1pt]{\scriptsize\color{black!70}#2}}
 
+% Column head of an options table: hazard, with its severity beneath.
+\newcommand{\sev}[2]{\begin{tabular}[b]{@{}c@{}}#1\\{\scriptsize #2}\end{tabular}}
+
 % Run-in label for the parts of a design decision.
 \newcommand{\field}[1]{\par\needspace{4\baselineskip}\smallskip\noindent\textbf{#1.}~}
 
@@ -287,7 +290,8 @@ revision. Where a proven design exists, it is one of the options
 [3,~Sec.~4].
 
 Options are compared by the smallest number of failures that, together, cause
-the hazard with that option in place. The counts leave out the permanent loss
+the hazard with that option in place. A catastrophic hazard needs at least three, a
+critical one two [5,~Sec.~3.3]. The counts leave out the permanent loss
 of the onboard computer, an accepted risk (R-4). They are design targets, which
 the hazard analysis confirms in its design phase [5,~Sec.~1.0]. In each
 options table, the last column marks the option the decision picks (YES) and
@@ -308,7 +312,7 @@ and no way to restore it.
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
- & Option & H-8 & Chosen \\
+ & Option & \sev{H-8}{CRITICAL} & Chosen \\
 \midrule
 a & No bootloader: the last-resort firmware is the first code to run and decides which copy runs. A defect in it stops every start, and the restore puts the same firmware back, so the controller stays down until the ground loads a correction at the next contact. & 1 & NO \\
 b & MCUboot's design [9,~Sec.~Boot Swap Types]: a small bootloader runs first, runs a new copy as a test and returns to the old copy unless the new one confirms itself. It survives a defect in any copy, but not one in the bootloader itself: that stops every start, and the restore writes the same bootloader back. & 1 & NO \\
@@ -408,7 +412,7 @@ and H-4.
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
- & Option & H-1 & Chosen \\
+ & Option & \sev{H-1}{CATASTROPHIC} & Chosen \\
 \midrule
 a & The restore is an order that the controller's own firmware carries out. A broken bootloader means no firmware runs, so nothing carries the order out and nothing can load a correction. & 1 & NO \\
 b & One path into the controller's memory that does not use its firmware at all; the onboard computer drives it and can restart the controller. A broken bootloader is bypassed, but if this one path also fails, nothing else reaches the controller. & 2 & NO \\
@@ -447,7 +451,7 @@ ground [6,~REQ-058].
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
- & Option & H-3 & Chosen \\
+ & Option & \sev{H-3}{CATASTROPHIC} & Chosen \\
 \midrule
 a & One program updates and restores, from one firmware store. A defect in it, or damage to the store, closes both ways at once; only the correction by the system outside this project (A-6) is left. & 2 & NO \\
 b & A restore program separate from the update manager, with its own code and its own firmware store. Closing both ways takes a defect in each program and the outside correction failing as well. & 3 & YES \\
@@ -475,7 +479,7 @@ on the controller, and H-5, someone else commanding the System.
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
 \toprule
- & Option & H-2 & H-5 & Chosen \\
+ & Option & \sev{H-2}{CATASTROPHIC} & \sev{H-5}{CATASTROPHIC} & Chosen \\
 \midrule
 a & One secret proves both commands and firmware, stored on the ground and on board. Disclosing it from either place hands over both. & 1 & 1 & NO \\
 b & A digital signature made with one key kept on the ground; the spacecraft holds only the means to check it, as in MCUboot [9,~Sec.~Security]. Nothing on board can be disclosed, but one disclosed key on the ground still hands over both. & 1 & 1 & NO \\
@@ -539,7 +543,7 @@ and H-9, here reports shown with wrong times.
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
 \toprule
- & Option & H-6 & H-9 & Chosen \\
+ & Option & \sev{H-6}{CRITICAL} & \sev{H-9}{CRITICAL} & Chosen \\
 \midrule
 a & One clock, compared with ground time only at contacts [6,~REQ-072]. Between contacts, a wrong clock runs scheduled commands at the wrong time and stamps wrong times on reports, and nothing notices. & 1 & 1 & NO \\
 b & Report and command numbers replace times where possible. The order of reports survives a wrong clock, but scheduled commands and time-tags still need it. & 1 & 1 & NO \\
@@ -596,7 +600,7 @@ here a command acted on in a form the operator did not intend.
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
- & Option & H-6 & Chosen \\
+ & Option & \sev{H-6}{CRITICAL} & Chosen \\
 \midrule
 a & Each item is checked once, on arrival. A bit error afterwards goes unnoticed. & 1 & NO \\
 b & Each held item carries a check value and is checked again just before use; the arm state is stored as a pattern that no single bit error turns into armed. A bit error now has to produce a matching check value as well. & 2 & YES \\

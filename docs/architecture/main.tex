@@ -84,10 +84,11 @@ tolerance rule [5,~Sec.~5.0]. The software qualities it is built for are the
 two a high-risk project emphasises, fault tolerance and security
 [3,~Sec.~4], and the testability the requirements demand.
 
-It names no hardware. It says what each component does, not which device does
-it, and ends with what the hardware must provide. The detailed design of each
-component, with its algorithms and data, is recorded before that component is
-coded [1,~Sec.~4.3.2, p.~34].
+The architecture remains strictly hardware-agnostic, defining functional
+component behavior rather than the hardware that executes it, and concludes
+with the capabilities the hardware must provide. Detailed component designs,
+including specific algorithms and data structures, are documented before each
+component is implemented [1,~Sec.~4.3.2, p.~34].
 
 \noindent\textbf{How to read it.} Section~\ref{sec:overview} shows every
 component and one update on two figures. Section~\ref{sec:decisions} holds the design

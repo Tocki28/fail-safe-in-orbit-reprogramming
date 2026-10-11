@@ -141,6 +141,9 @@ Anomaly'', IEEE Aerospace Conference, paper 1426, 2005.
 \noindent [12] NASA, \emph{Fault Management Handbook}, NASA-HDBK-1002,
 Draft~2, 2 April 2012. A draft, not a released standard.
 
+\noindent [13] MCUboot project, \emph{Serial recovery},
+\texttt{docs/serial\_recovery.md}, commit 1d2643c, 11 September 2026.
+
 % ===========================================================================
 \section{System Overview}
 \label{sec:overview}
@@ -168,48 +171,43 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
   link/.style={{Latex[length=1.8mm]}-{Latex[length=1.8mm]}, thick},
   lab/.style={font=\scriptsize, align=center},
 ]
-% Ground software
+% Ground software: boxes stacked with an even gap
 \node[title] (gt) at (0,1.5) {Ground\\software};
-\foreach \n/\a/\b [count=\i from 0] in {
-  g1/Operator console/authenticates the operator and displays telemetry and system state,
-  g2/Command builder/formats and validates outgoing telecommands,
-  g3/Signing/encrypts telecommands and firmware images and generates cryptographic signatures,
-  g4/Release checker/verifies firmware releases before signing{,} and signed images before upload,
-  g5/Report archive/ingests{,} validates and stores downlinked telemetry reports,
-  g6/Contact planner/plans upcoming contacts; runs command sequences{,} halting at the first refusal}
-  \node[comp] (\n) at (0,{-1.85*\i}) {\cmp{\a}{\b}};
+\node[comp] (g1) at (0,0) {\cmp{Operator console}{authenticates the operator and displays telemetry and system state}};
+\node[comp, below=0.2cm of g1] (g2) {\cmp{Command builder}{formats and validates outgoing telecommands}};
+\node[comp, below=0.2cm of g2] (g3) {\cmp{Signing}{encrypts telecommands and firmware images and generates cryptographic signatures}};
+\node[comp, below=0.2cm of g3] (g4) {\cmp{Release checker}{verifies firmware releases before signing, and signed images before upload}};
+\node[comp, below=0.2cm of g4] (g5) {\cmp{Report archive}{ingests, validates and stores downlinked telemetry reports}};
+\node[comp, below=0.2cm of g5] (g6) {\cmp{Contact planner}{plans upcoming contacts; runs command sequences, halting at the first refusal}};
 \node[item, fit=(gt)(g1)(g6)] (gbox) {};
 
 % Onboard computer software
 \node[title] (ot) at (5.7,1.5) {Onboard computer\\software};
-\foreach \n/\a/\b [count=\i from 0] in {
-  o1/Command gate/enforces telecommand authentication{,} replay protection{,} expiry and arming,
-  o2/Origin checker/decrypts incoming packets and verifies cryptographic signatures,
-  o3/Scheduler/buffers time-tagged commands and dispatches them at their execution times,
-  o4/Update manager/verifies{,} stages and transfers firmware images to the controller,
-  o5/Report store/buffers telemetry reports between contacts for downlink,
-  o6/Clock keeper/keeps the onboard clock aligned with ground time,
-  o7/Controller watch/detects an unresponsive controller{,} restarts it and triggers the restore,
-  o8/Data-link drivers/one driver per data-link connection{,} with no shared code,
-  o9/Restore program/restores controller firmware over the reprogramming link,
-  o10/Supervisor/monitors programs and restarts any that crash}
-  \node[comp] (\n) at (5.7,{-1.85*\i}) {\cmp{\a}{\b}};
-\node[item, fit=(ot)(o1)(o10)] (obox) {};
+\node[comp] (o1) at (5.7,0) {\cmp{Command gate}{enforces telecommand authentication, replay protection, expiry and arming}};
+\node[comp, below=0.2cm of o1] (o2) {\cmp{Origin checker}{decrypts incoming packets and verifies cryptographic signatures}};
+\node[comp, below=0.2cm of o2] (o3) {\cmp{Scheduler}{buffers time-tagged commands and dispatches them at their execution times}};
+\node[comp, below=0.2cm of o3] (o4) {\cmp{Update manager}{verifies, stages and transfers firmware images to the controller}};
+\node[comp, below=0.2cm of o4] (o5) {\cmp{Report store}{buffers telemetry reports between contacts for downlink}};
+\node[comp, below=0.2cm of o5] (o6) {\cmp{Clock keeper}{keeps the onboard clock aligned with ground time}};
+\node[comp, below=0.2cm of o6] (o7) {\cmp{Controller watch}{detects an unresponsive controller, restarts it and triggers the restore}};
+\node[comp, below=0.2cm of o7] (o8) {\cmp{Data-link drivers}{one driver per data-link connection, with no shared code}};
+\node[comp, below=0.2cm of o8] (o9) {\cmp{Reprogramming drivers}{one for the debug port, one for the factory loader; no shared code}};
+\node[comp, below=0.2cm of o9] (o10) {\cmp{Restore program}{restores controller firmware over the reprogramming link}};
+\node[comp, below=0.2cm of o10] (o11) {\cmp{Supervisor}{monitors programs and restarts any that crash}};
+\node[item, fit=(ot)(o1)(o11)] (obox) {};
 
-% Controller firmware
+% Controller firmware: the data-link drivers face those of the onboard computer
 \node[title] (ct) at (11.65,1.5) {Controller\\firmware};
 \node[comp] (c0) at (11.65,0) {\cmp{Bootloader}{verifies each firmware copy and selects the one to run}};
-\foreach \n/\a/\b [count=\i from 0] in {
-  m1/Mode manager/manages controller modes and the firmware trial,
-  m2/Command checker/validates and acknowledges incoming commands,
-  m3/Update receiver/writes incoming firmware to the copy that is not confirmed,
-  m4/Health monitor/executes self-tests{,} detects internal faults and generates telemetry,
-  m5/Controller clock/keeps the controller's own time{,} set only from ground time,
-  m6/Data-link drivers/one driver per data-link connection{,} with no shared code}
-  \node[comp] (\n) at (11.65,{-3.7-1.85*\i}) {\cmp{\a}{\b}};
+\node[comp] at (o8 -| c0) (m6) {\cmp{Data-link drivers}{one driver per data-link connection, with no shared code}};
+\node[comp, above=0.2cm of m6] (m5) {\cmp{Controller clock}{keeps the controller's own time, set only from ground time}};
+\node[comp, above=0.2cm of m5] (m4) {\cmp{Health monitor}{executes self-tests, detects internal faults and generates telemetry}};
+\node[comp, above=0.2cm of m4] (m3) {\cmp{Update receiver}{writes incoming firmware to the copy that is not confirmed}};
+\node[comp, above=0.2cm of m3] (m2) {\cmp{Command checker}{validates and acknowledges incoming commands}};
+\node[comp, above=0.2cm of m2] (m1) {\cmp{Mode manager}{manages controller modes and the firmware trial}};
 \node[font=\scriptsize\itshape, align=center, above=1pt of m1] (mt) {Main firmware:\\new and previous copies};
 \node[draw, dashed, rounded corners=2pt, inner sep=2pt, fit=(mt)(m1)(m6)] (main) {};
-\node[comp] (c9) at (11.65,-14.8) {\cmp{Last-resort firmware}{the safe mode; shares no code, accepts commands and new firmware}};
+\node[comp] at (o9 -| c0) (c9) {\cmp{Last-resort firmware}{the safe mode; shares no code, accepts commands and new firmware}};
 \node[item, fit=(ct)(c0)(main)(c9)] (cbox) {};
 
 % Operator
@@ -436,21 +434,23 @@ first.}
 \needspace{9\baselineskip}
 \subsection{The Way Back In}
 \label{sec:wayback}
-\field{Problem} A restore that goes through any controller software fails
-whenever that software fails, which the requirements forbid [6,~REQ-056].
-Targets H-1, the controller left with no firmware it can run and no way to
-restore it, not even by the ground, which can otherwise load corrected firmware
-through the reprogramming link [6,~REQ-058]. The same way in also serves H-3
-and H-4.
+\field{Problem} When the bootloader is broken (Section~\ref{sec:startup}),
+the controller runs nothing, and only a restore can bring it back. A restore
+that needed any software on the controller to receive it would fail at exactly
+that moment, which the requirements forbid [6,~REQ-056]. The restore therefore
+needs a way into the controller's memory that works with nothing running on
+it, and the ground needs the same way in to load corrected firmware
+[6,~REQ-058]. Targets H-1, the controller left with no firmware it can run and
+no way to restore it. The same way in also serves H-3 and H-4.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & \sev{H-1}{CATASTROPHIC} & Chosen \\
 \midrule
-a & The restore is an order that the controller's own firmware carries out. A broken bootloader means no firmware runs, so nothing carries the order out and nothing can load a correction. & 1 & NO \\
-b & One path into the controller's memory that does not use its firmware at all; the onboard computer drives it and can restart the controller. A broken bootloader is bypassed, but if this one path also fails, nothing else reaches the controller. & 2 & NO \\
-c & Two such paths, sharing nothing. A broken bootloader and one failed path still leave the second path. Both paths are driven by the restore program; a defect in it is corrected by the system outside this project (A-6), as for H-3. & 3 & YES \\
+a & The controller is asked to restore itself, as in MCUboot's serial recovery, which runs inside the bootloader [13,~Sec.~Entering Serial Recovery Mode]. A broken bootloader means nothing receives the order and nothing can load a correction. & 1 & NO \\
+b & One separate way in that needs nothing running on the controller; the onboard computer drives it and can restart the controller. A broken bootloader is bypassed, but if this way in also breaks, nothing reaches the controller. & 2 & NO \\
+c & Two separate ways in that share nothing: the controller's debug port, which writes memory directly with the processor stopped, and its factory loader, which a boot pin starts instead of our bootloader. A broken bootloader and one broken way in still leave the other. Each way in has its own driver on the onboard computer; a defect in the restore program that uses both is corrected by the system outside this project (A-6), as for H-3. & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
@@ -459,41 +459,52 @@ c & Two such paths, sharing nothing. A broken bootloader and one failed path sti
 commands, which a spacecraft executes on receipt without any flight software
 [11,~Sec.~3.2, p.~9]. Such a command let the Spirit rover's team regain control
 while its flight software kept resetting: it made the software start without
-its flash memory [10,~pp.~4 and 9]. Two paths are the fewest that meet the
-rule.
+its flash memory [10,~pp.~4 and 9]. Two ways in are the fewest that meet the
+rule. They still share the controller's memory and its reset wire; the hazard
+analysis counts these shared causes when it is re-run on this design.
 
 \field{Adds}
 \begin{itemize}
 \item The reprogramming link shall have two connections, independent of each
-  other, each able to load the controller's memory whatever that memory holds.
+  other: the controller's debug port and its factory loader, each able to load
+  the controller's memory whatever that memory holds.
+\item The onboard computer software shall drive the debug port and the factory
+  loader with separate drivers that share no code.
 \item The onboard computer software shall be able to restart the controller.
-\item No controller firmware shall be able to disable either reprogramming
-  connection.
+\item No controller firmware shall be able to disable the debug port or the
+  factory loader.
 \end{itemize}
 
 % ---------------------------------------------------------------- 5.3
 \needspace{9\baselineskip}
 \subsection{Restore Apart From Update}
 \label{sec:apart}
-\field{Problem} The update path and the restore share onboard computer
-software and stored firmware. One fault there stops both until the outside
-system corrects it (A-6) [5,~Sec.~5.2]. Targets H-3, new firmware no longer
-able to reach the controller. Firmware has two ways in: the update over the
-data link, and the restore program, which can also load firmware from the
-ground [6,~REQ-058].
+\field{Problem} New firmware can reach the controller in two ways. In the
+normal update, the onboard computer sends it over the data link to the
+controller's running firmware, which writes it into memory. In the restore,
+the onboard computer writes it into the controller's memory itself, through the
+reprogramming link [6,~REQ-058]. Both start on the onboard computer, from a
+copy of the firmware stored there. If one program did both jobs from one stored
+copy, a single defect in that program, or a single damaged copy, would block
+both ways at once. New firmware could then reach the controller only after the
+system outside this project corrects the onboard computer's software (A-6)
+[5,~Sec.~5.2]. Targets H-3, new firmware no longer able to reach the
+controller.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & \sev{H-3}{CATASTROPHIC} & Chosen \\
 \midrule
-a & One program updates and restores, from one firmware store. A defect in it, or damage to the store, closes both ways at once; only the correction by the system outside this project (A-6) is left. & 2 & NO \\
-b & A restore program separate from the update manager, with its own code and its own firmware store. Closing both ways takes a defect in each program and the outside correction failing as well. & 3 & YES \\
+a & One program does both the update and the restore, and both read the same stored copy of the firmware. One defect in that program, or damage to that copy, blocks both ways; the only barrier left is the outside system correcting the onboard computer (A-6). & 2 & NO \\
+b & Two separate programs, the update manager and the restore program, each with its own code and its own stored copy of the firmware. Blocking both ways takes a defect in each program, and the outside correction failing as well. & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
 
-\field{Choice} Option b \tbr{apart}.
+\field{Choice} Option b \tbr{apart}. The two programs share nothing that one defect
+could reach: when the update fails, the restore still works, and the other way
+round.
 
 \field{Adds}
 \begin{itemize}
@@ -710,7 +721,7 @@ Component & Role & Requirements \\
 \endhead
 \multicolumn{3}{@{}l}{\textit{Controller firmware}} \\
 Bootloader & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113 \\
-Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113 \\
+Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113, REQ-117 \\
 Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & REQ-027~to~036, REQ-100 \\
 Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & REQ-007, REQ-008 \\
 Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & REQ-022, REQ-037~to~041 \\
@@ -727,7 +738,8 @@ Clock keeper & Compares the onboard clock with ground time and applies correctio
 Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & REQ-061 \\
 Supervisor & Restarts any program of the onboard computer software that crashes. & REQ-062 \\
 Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099 \\
-Restore program & A separate program with its own firmware store. Restores the controller through the reprogramming link, loads firmware from the ground through it, and checks its store and the link between uses. & REQ-054~to~060, REQ-083 \\
+Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083 \\
+Restore program & A separate program with its own firmware store. Restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083 \\
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
@@ -755,8 +767,8 @@ Operator interface & Operator and ground software & The operator's decisions; re
 Radio link & Ground software and onboard computer software & Signed commands and firmware; answers and reports \\
 Data link A & Onboard computer and controller & Commands, answers, reports and firmware \\
 Data link B & Onboard computer and controller & The same as data link A, over a different kind of connection \\
-Reprogramming link A & Restore program and controller & The controller's restart, and its memory contents \\
-Reprogramming link B & Restore program and controller & The same as reprogramming link A, independent of it \\
+Reprogramming link A & Reprogramming drivers and controller & The controller's debug port: its restart, and memory writes with the processor stopped \\
+Reprogramming link B & Reprogramming drivers and controller & The controller's factory loader: started by a boot pin, it accepts new firmware \\
 \bottomrule
 \end{tabularx}}
 
@@ -771,9 +783,10 @@ checked against the two boards before this document is released \tbd{boards}.
 \toprule
 Need & Needed by \\
 \midrule
-Two independent loading paths into the controller that work whatever its memory holds, driven by the onboard computer & Section~\ref{sec:wayback} \\
-A way for the onboard computer to restart the controller & Section~\ref{sec:wayback} \\
-No way for controller firmware to disable either loading path & Section~\ref{sec:wayback} \\
+A debug port that writes the controller's memory whatever it holds & Section~\ref{sec:wayback} \\
+A factory loader in the controller that firmware cannot change, started by a boot pin & Section~\ref{sec:wayback} \\
+Wires from the onboard computer to the controller's reset and boot pins & Section~\ref{sec:wayback} \\
+No way for controller firmware to disable the debug port or the factory loader & Section~\ref{sec:wayback} \\
 A way for the restore to make the last-resort firmware run first & Section~\ref{sec:startup} \\
 Room in the controller for the bootloader, two main firmware copies, the last-resort firmware and the kept data & Section~\ref{sec:startup} \\
 Kept data in the controller that survives a restart and a power loss & REQ-017 \\

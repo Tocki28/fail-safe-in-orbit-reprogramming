@@ -1,0 +1,634 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{xltabular}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{totcount}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{needspace}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usepackage[hidelinks]{hyperref}
+\setlength{\emergencystretch}{1.5em}
+
+% Section numbers in the same style as the ConOps: 1.0, 1.1.
+\renewcommand{\thesection}{\arabic{section}.0}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+
+% Controlled-document header on every page.
+\newcommand{\docref}{Reference TBD}
+\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\footnotesize Fail-Safe In-Orbit Reprogramming of a Spacecraft Controller --- Software Architecture}
+\lfoot{\small \docref}
+\cfoot{\small \docrev}
+\rfoot{\small Page \thepage\ of \pageref{LastPage}}
+
+% Open items. TBD = not known. TBR = proposal awaiting the author's
+% acceptance. Listed in App. B; totals counted, not typed.
+\newtotcounter{tbd}
+\newtotcounter{tbr}
+\newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
+\newcommand{\tbritem}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
+\newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
+\newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
+
+% Run-in label for the parts of a design decision.
+\newcommand{\field}[1]{\par\smallskip\noindent\textbf{#1.}~}
+
+\setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
+\setlist[itemize]{nosep}
+
+\begin{document}
+
+\thispagestyle{fancy}
+\begin{center}
+{\LARGE\bfseries Fail-Safe In-Orbit Reprogramming\\[0.2em] of a Spacecraft Controller\par}
+\vspace{0.4em}
+{\Large Software Architecture\par}
+\vspace{1em}
+\begin{tabular}{@{}ll@{}}
+Reference & TBD \tbd{ref} \\
+Issue / revision & Issue 1, Revision 0 --- DRAFT \\
+Date & 11 October 2026 \\
+Author & Andrew Toma \\
+Open items & \total{tbd} TBD, \total{tbr} TBR (App.~B) \\
+\end{tabular}
+\end{center}
+
+\subsection*{Document change record}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Issue & Rev. & Date & Change \\
+\midrule
+1 & 0 & 2026-10-11 & First draft \\
+\bottomrule
+\end{tabular}
+
+% ===========================================================================
+\section{Purpose and Scope}
+This document records the software architecture of the System: its
+components, what each does, how they connect, and the design decisions behind
+them [1,~Sec.~4.2.3, p.~33]. It covers the three software items of the
+requirements [6,~Sec.~3.1].
+
+The architecture concentrates on ``the most pressing risks'' [3,~Sec.~4]: the
+eight catastrophic and critical hazards that do not yet meet the fault
+tolerance rule [5,~Sec.~5.0].
+
+It names no hardware. It says what each component does, not which device does
+it, and ends with what the hardware must provide. The detailed design of each
+component, with its algorithms and data, is recorded before that component is
+coded [1,~Sec.~4.3.2, p.~34].
+
+\noindent\textbf{How to read it.} Section~3.0 shows every component on one
+figure. Section~6.0 holds the design decisions, each with the options weighed
+and the hazards it targets. Section~7.0 describes the components, and
+Appendix~A shows which component meets each requirement. Section~9.0 lists
+what the hardware must provide.
+
+% ===========================================================================
+\section{Documents}
+\noindent [1] NASA, \emph{NASA Software Engineering Requirements}, NPR 7150.2D.
+
+\noindent [2] NASA, \emph{NASA Software Engineering Handbook}, NASA-HDBK-2203,
+Version~D, Topic 5.13 ``SwDD -- Software Design Description''.
+
+\noindent [3] NASA, \emph{NASA Software Engineering Handbook}, NASA-HDBK-2203,
+Version~D, SWE-057 ``Software Architecture''.
+
+\noindent [4] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Concept of Operations}, Issue~1, Revision~1, Draft.
+
+\noindent [5] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Hazard Analysis}, Issue~1, Revision~0, Draft.
+
+\noindent [6] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Software Requirements Specification}, Issue~1, Revision~0,
+Draft.
+
+\noindent [7] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Software Classification}, Issue~1, Revision~1, Draft.
+
+\noindent [8] NASA, \emph{NASA Software Safety Guidebook}, NASA-GB-8719.13,
+2004.
+
+% ===========================================================================
+\section{System Overview}
+The System has three software items [6,~Sec.~3.1], each made of components
+(Figure~\ref{fig:overview}). The ground software prepares and signs what the
+operator decides, and keeps what comes back. The onboard computer software
+checks everything that arrives, holds it, passes it on, and watches and
+restores the controller. The controller firmware runs the controller: a
+start-up selector chooses which firmware copy runs, the main firmware does the
+work, and the last-resort firmware takes over when the main firmware cannot.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\footnotesize,
+  comp/.style={draw, fill=black!5, minimum width=3.3cm, minimum height=0.5cm, inner sep=1pt, align=center},
+  title/.style={font=\footnotesize\bfseries, align=center},
+  item/.style={draw, rounded corners=3pt, inner sep=4pt},
+  link/.style={{Latex[length=1.8mm]}-{Latex[length=1.8mm]}, thick},
+  lab/.style={font=\scriptsize, align=center},
+]
+% Ground software
+\node[title] (gt) at (0,0.75) {Ground\\software};
+\foreach \n/\t [count=\i from 0] in {g1/Operator console, g2/Command builder, g3/Signing,
+  g4/Release checker, g5/Report archive, g6/Contact planner}
+  \node[comp] (\n) at (0,{-0.7*\i}) {\t};
+\node[item, fit=(gt)(g1)(g6)] (gbox) {};
+
+% Onboard computer software
+\node[title] (ot) at (5.9,0.75) {Onboard computer\\software};
+\foreach \n/\t [count=\i from 0] in {o1/Command gate, o2/Origin checker, o3/Scheduler,
+  o4/Update manager, o5/Report store, o6/Clock keeper, o7/Controller watch,
+  o8/Data-link drivers, o9/Restore program, o10/Supervisor}
+  \node[comp] (\n) at (5.9,{-0.7*\i}) {\t};
+\node[item, fit=(ot)(o1)(o10)] (obox) {};
+
+% Controller firmware
+\node[title] (ct) at (11.8,0.75) {Controller\\firmware};
+\node[comp] (c0) at (11.8,0.1) {Start-up selector};
+\foreach \n/\t [count=\i from 0] in {m1/Mode manager, m2/Command checker, m3/Update receiver,
+  m4/Health monitor, m5/Controller clock, m6/Data-link drivers}
+  \node[comp] (\n) at (11.8,{-1.4-0.7*\i}) {\t};
+\node[font=\scriptsize\itshape, align=center, above=1pt of m1] (mt) {Main firmware:\\new and previous copies};
+\node[draw, dashed, rounded corners=2pt, inner sep=2pt, fit=(mt)(m1)(m6)] (main) {};
+\node[comp] (c9) at (11.8,-6.1) {Last-resort firmware};
+\node[item, fit=(ct)(c0)(main)(c9)] (cbox) {};
+
+% Operator
+\node[draw, rounded corners=2pt, minimum width=2.2cm, minimum height=0.5cm] (op) at (0,2.0) {Operator};
+\draw[link] (op.south) -- (gbox.north) node[midway, right, lab] {operator interface};
+
+% Links
+\draw[link] (g2.east -| gbox.east) -- (g2.east -| obox.west) node[midway, above, lab] {radio link};
+\draw[link] ($(o8.east -| obox.east)+(0,0.1)$) -- ($(m6.west -| cbox.west)+(0,0.1)$)
+  node[midway, above, lab] {data link A};
+\draw[link] ($(o8.east -| obox.east)+(0,-0.1)$) -- ($(m6.west -| cbox.west)+(0,-0.1)$)
+  node[midway, below, lab] {data link B};
+\draw[-{Latex[length=1.8mm]}, thick, dashed] (o9.east -| obox.east) -- (o9.east -| cbox.west)
+  node[midway, below, lab] {reprogramming\\link};
+\end{tikzpicture}
+\caption{The three software items and their components. The data link has two
+connections, A and B. The dashed arrow is the reprogramming link, which reaches
+the controller whatever its memory holds.}
+\label{fig:overview}
+\end{figure}
+
+% ===========================================================================
+\section{Constraints}
+The architecture works within the constraints and assumptions of the ConOps
+[4,~Sec.~1.1.2] and its accepted risks [4,~Sec.~8.0]. Those below shape it.
+\begin{description}
+\item[C-1] Every command, report and firmware image passes through the onboard
+  computer, so the onboard computer is on every path between the ground and the
+  controller.
+\item[C-3] One engineer builds the System. Independence between components
+  comes from separate code, not from separate teams.
+\item[A-2] Power can be lost at any moment, including while memory is being
+  written.
+\item[A-5] Bit errors can change stored data and held commands.
+\item[A-6] The onboard computer's own software, including its operating system,
+  is corrected by a system outside this project.
+\item[R-4] There is one onboard computer. Its permanent loss stops commands,
+  reports and restores. The risk is accepted, so H-4 cannot meet the fault
+  tolerance rule [5,~Sec.~5.2].
+\item[C-4] The System runs on two given development boards. The design does not
+  depend on them; they are checked against it at the end of this document.
+\end{description}
+
+% ===========================================================================
+\section{Software Qualities}
+The software qualities [1,~Sec.~4.2.3, p.~33] that drive this design are the
+two a high-risk project emphasises, fault tolerance and security
+[3,~Sec.~4], and the testability the requirements demand.
+\begin{description}[leftmargin=3.4cm]
+\item[Fault tolerance] Every catastrophic hazard needs at least three failures
+  together to occur, and every critical hazard two [5,~Sec.~3.3].
+\item[Security] Only the operator's commands and firmware are acted on (O-2).
+\item[Testability] Each safety-critical component can be tested on its own on
+  the bench, including under injected faults, to full modified
+  condition/decision coverage [6,~REQ-108].
+\end{description}
+
+% ===========================================================================
+\section{Design Decisions}
+Each decision targets hazards that do not yet meet the fault tolerance rule
+[5,~Sec.~5.2]. It states the problem, weighs the options, and lists the
+requirements the choice adds; these enter the requirements at their next
+revision.
+
+Options are compared by the smallest number of failures that, together, cause
+the hazard with that option in place. The counts leave out the permanent loss
+of the onboard computer, an accepted risk (R-4). They are design targets, which
+the hazard analysis confirms in its design phase [5,~Sec.~1.0]. Chosen: YES or
+NO.
+
+% ---------------------------------------------------------------- 6.1
+\subsection{Start-Up and Fall-Back}
+\field{Problem} Every firmware copy, including the one the restore puts back,
+shares the start-up code and the data kept over restarts. One defect there
+stops them all, and the restore brings it back [5,~Sec.~5.2]. Targets H-1 and
+H-8.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
+\toprule
+ & Option & H-1 & H-8 & Chosen \\
+\midrule
+a & The main firmware runs first and chooses its copy; the restore puts back a stored copy of it & 2 & 1 & NO \\
+b & The last-resort firmware runs first and chooses; the restore puts it back & 2 & 1 & NO \\
+c & A start-up selector, sharing no code with either firmware, runs first and chooses; the restore puts the last-resort firmware in its place & 3 & 2 & YES \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option c \tbr{startup}. A defect in the start-up selector, or
+one in both main firmware copies, no longer stops the controller: the
+last-resort firmware shares no code with them [6,~REQ-009] and runs in their
+place.
+
+\field{Adds}
+\begin{itemize}
+\item The start-up selector shall share no code with the main firmware or the
+  last-resort firmware.
+\item The restore shall put the last-resort firmware in the start-up
+  selector's place, so that it runs first.
+\item The onboard computer software shall put back the start-up selector and
+  the main firmware through the reprogramming link when the operator orders it.
+\end{itemize}
+
+% ---------------------------------------------------------------- 6.2
+\subsection{The Way Back In}
+\field{Problem} A restore that goes through any controller software fails
+whenever that software fails, which the requirements forbid [6,~REQ-056].
+Targets H-1, H-3 and H-4.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+ & Option & H-1 & Chosen \\
+\midrule
+a & The restore is a command that the controller's firmware carries out & 2 & NO \\
+b & The reprogramming link loads the controller's memory whatever it holds; the onboard computer drives it and can restart the controller & 3 & YES \\
+c & Two such links, independent of each other & 4 & NO \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option b \tbr{wayback}. One link meets the rule; a second adds
+a connection to build and to check between uses [6,~REQ-059] for a margin the
+rule does not ask for.
+
+\field{Adds}
+\begin{itemize}
+\item The reprogramming link shall load the controller's memory whatever that
+  memory holds.
+\item The onboard computer software shall be able to restart the controller.
+\item No controller firmware shall be able to disable the reprogramming link.
+\end{itemize}
+
+% ---------------------------------------------------------------- 6.3
+\subsection{Restore Apart From Update}
+\field{Problem} The update path and the restore share onboard computer
+software and stored firmware. One fault there stops both until the outside
+system corrects it (A-6) [5,~Sec.~5.2]. Targets H-3.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+ & Option & H-3 & Chosen \\
+\midrule
+a & One program updates and restores, from one firmware store & 2 & NO \\
+b & A restore program, separate from the update manager, with its own firmware store & 3 & YES \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option b \tbr{apart}. New firmware can still reach the
+controller through the restore program, which loads firmware from the ground
+[6,~REQ-058], when the update path fails.
+
+\field{Adds}
+\begin{itemize}
+\item The restore program shall share no code or stored data with the update
+  manager.
+\end{itemize}
+
+% ---------------------------------------------------------------- 6.4
+\subsection{Proof of Origin}
+\field{Problem} One means proves that both commands and firmware come from the
+operator. If it is disclosed, another party can command the controller and
+load firmware [5,~Sec.~5.2]. Targets H-2 and H-5.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
+\toprule
+ & Option & H-2 & H-5 & Chosen \\
+\midrule
+a & One secret, held on the ground and on board, checks commands and firmware & 1 & 1 & NO \\
+b & Digital signatures made with one key: on board is only the means to check them, so the key can be disclosed only on the ground & 1 & 1 & NO \\
+c & Signatures made with two keys kept in two separate places; the radio link's own protection, outside this project, as a third barrier & 2 & 2 & NO \\
+d & Signatures made with three keys kept in three separate places; every command and firmware image carries all three & 3 & 3 & YES \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option d \tbr{origin}. Each disclosure exposes one key, so
+another party needs three. The controller checks firmware signatures again
+before running it [6,~REQ-006], with code different from the onboard
+computer's, so that one defect in that code cannot pass forged firmware
+through both checks [8,~Sec.~7.4.2, p.~141].
+
+\field{Adds}
+\begin{itemize}
+\item Every command and firmware image shall carry signatures made with three
+  keys kept in three separate places on the ground.
+\item The onboard computer software shall act on a command or firmware image
+  only when all three signatures are valid.
+\item The controller firmware shall check firmware signatures with code
+  different from the onboard computer software's.
+\end{itemize}
+
+% ---------------------------------------------------------------- 6.5
+\subsection{Two Clocks}
+\field{Problem} Expiry, arm time-outs, scheduled commands, time-tags and the
+trial time limit all depend on the onboard clock. A wrong clock alone runs a
+scheduled command at the wrong time and gives reports wrong times
+[5,~Sec.~5.2]. Targets H-6 and H-9.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
+\toprule
+ & Option & H-6 & H-9 & Chosen \\
+\midrule
+a & The onboard clock alone, compared with ground time at each contact [6,~REQ-072] & 1 & 1 & NO \\
+b & Counts instead of times wherever possible, such as report and command numbers & 1 & 1 & NO \\
+c & A second clock in the controller, with its own time source, set only from ground time; each processor makes every time check with its own clock, and every report carries both times & 2 & 2 & YES \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option c \tbr{clocks}. A wrong clock on one processor is caught
+by the other. The controller's clock is never set from the onboard clock, so
+one wrong value cannot reach both.
+
+\field{Adds}
+\begin{itemize}
+\item The controller firmware shall keep its own clock, from a time source
+  separate from the onboard computer's.
+\item The controller's clock shall be set only from ground time.
+\item The controller firmware shall refuse a command past its expiry, by its
+  own clock.
+\item The controller firmware shall run a scheduled command only when its own
+  clock agrees with the scheduled time within \tbd{agree}.
+\item Every report shall carry the time of both clocks.
+\end{itemize}
+
+% ---------------------------------------------------------------- 6.6
+\subsection{Held Data}
+\field{Problem} A bit error can change a held command, the arm state or the
+kept data after its check and before its use (A-5) [5,~Sec.~5.2]. Targets H-6.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+ & Option & H-6 & Chosen \\
+\midrule
+a & Each item is checked once, when it arrives & 1 & NO \\
+b & Each held item is stored with a check value and checked again just before use; the arm state is stored as a value that no single bit error turns into armed & 2 & YES \\
+c & Memory that corrects bit errors on its own & 2 & NO \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option b \tbr{held}. A bit error must also produce a matching
+check value, a second failure. Unlike option c, it needs no hardware feature;
+option c can be added where the hardware has it.
+
+\field{Adds}
+\begin{itemize}
+\item Every held command and the kept data shall be stored with a check value
+  and checked just before use.
+\item The arm state shall be stored so that no single bit error makes it armed.
+\end{itemize}
+
+% ---------------------------------------------------------------- 6.7
+\subsection{Two Kinds of Connection}
+\field{Problem} The two data-link connections share software at both ends, so
+one defect cuts both (R-1) [5,~Sec.~5.2]. Targets H-4.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+ & Option & Failures to cut both & Chosen \\
+\midrule
+a & Two connections of one kind, one driver at each end & 1 & NO \\
+b & Two connections of one kind, a separate driver for each & 1 & NO \\
+c & Two different kinds of connection, a separate driver for each & 2 & YES \\
+\bottomrule
+\end{tabularx}}
+
+\field{Choice} Option c \tbr{links}. One defect, or one fault common to a kind
+of connection, now cuts one connection; the other carries on (O-3). H-4 still
+falls to the loss of the onboard computer (R-4).
+
+\field{Adds}
+\begin{itemize}
+\item The two data-link connections shall be of different kinds.
+\end{itemize}
+
+% ===========================================================================
+\section{Components}
+For each component: its role, whether it is new or reused, and whether it is
+safety-critical [2,~Sec.~3.3]. Origin: NEW, written for this System; MIXED, new
+code around a published library. Safety-critical: YES or NO, following the
+designation of its software item [7,~Sec.~4.0].
+
+\subsection{Controller Firmware}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+Component & Role & Origin & Safety-critical \\
+\midrule
+Start-up selector & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & MIXED & YES \\
+Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & NEW & YES \\
+Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & NEW & YES \\
+Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & NEW & YES \\
+Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & NEW & YES \\
+Controller clock & Keeps the controller's own time, set only from ground time. & NEW & YES \\
+Data-link drivers & One driver for each data-link connection, sharing no code. & NEW & YES \\
+Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & NEW & YES \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+\noindent The components from the mode manager to the data-link drivers form
+the main firmware, of which the controller keeps two copies: new and previous.
+The table below shows what runs in each controller mode [4,~Sec.~3.4]; the
+start-up selector runs at every start, before any of them.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+Mode & What runs \\
+\midrule
+OPERATE & The main firmware, confirmed copy \\
+TRIAL & The main firmware, new copy \\
+FALLBACK & The main firmware, previous copy; or the last-resort firmware \\
+RECOVERY & Nothing on the controller; the restore program works through the reprogramming link \\
+\bottomrule
+\end{tabularx}}
+
+\subsection{Onboard Computer Software}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+Component & Role & Origin & Safety-critical \\
+\midrule
+Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & NEW & YES \\
+Origin checker & Checks the signatures on commands and firmware, and replaces the means of checking them on command. & MIXED & YES \\
+Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & NEW & YES \\
+Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & NEW & YES \\
+Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & NEW & YES \\
+Clock keeper & Compares the onboard clock with ground time and applies corrections. & NEW & YES \\
+Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & NEW & YES \\
+Data-link drivers & One driver for each data-link connection, sharing no code. & NEW & YES \\
+Restore program & A separate program with its own firmware store. Restores the controller through the reprogramming link, loads firmware from the ground through it, and checks its store and the link between uses. & NEW & YES \\
+Supervisor & Restarts any program of the onboard computer software that crashes. & NEW & YES \\
+\bottomrule
+\end{tabularx}}
+
+\subsection{Ground Software}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
+\toprule
+Component & Role & Origin & Safety-critical \\
+\midrule
+Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & NEW & YES \\
+Command builder & Builds every command from the shared command list and checks it before it is sent. & NEW & YES \\
+Signing & Signs every command and firmware image with keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & MIXED & YES \\
+Release checker & Checks every firmware release before it is sent. & NEW & YES \\
+Report archive & Keeps every report received and checks it for damage. & NEW & YES \\
+Contact planner & Plans commands, uploads and report retrieval for coming contacts. & NEW & NO \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+\noindent The contact planner is the only component that is not
+safety-critical \tbr{planner}. It passes plans to the command builder, which
+checks every command it builds.
+
+% ===========================================================================
+\needspace{12\baselineskip}
+\section{Interfaces}
+Each interface is specified byte by byte before any code is written.
+Interfaces between components of one software item are set in its detailed
+design.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}p{4.6cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+Interface & Between & Carries \\
+\midrule
+Operator interface & Operator and ground software & The operator's decisions; reports and the System's state \\
+Radio link & Ground software and onboard computer software & Signed commands and firmware; answers and reports \\
+Data link A & Onboard computer and controller & Commands, answers, reports and firmware \\
+Data link B & Onboard computer and controller & The same as data link A, over a different kind of connection \\
+Reprogramming link & Restore program and controller & The controller's restart, and its memory contents \\
+\bottomrule
+\end{tabularx}}
+
+% ===========================================================================
+\section{Hardware Needs}
+The hardware must provide what the decisions above assume. Each need is
+checked against the two boards before this document is released \tbd{boards}.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xl@{}}
+\toprule
+Need & Needed by \\
+\midrule
+A loading path into the controller that works whatever its memory holds, driven by the onboard computer & Section~6.2 \\
+A way for the onboard computer to restart the controller & Section~6.2 \\
+No way for controller firmware to disable that loading path & Section~6.2 \\
+A way for the restore to make the last-resort firmware run first & Section~6.1 \\
+Room in the controller for the start-up selector, two main firmware copies, the last-resort firmware and the kept data & Section~6.1 \\
+Kept data in the controller that survives a restart and a power loss & REQ-017 \\
+Room on the onboard computer for two separate firmware stores & Section~6.3 \\
+Processing in the controller to check three signatures within the restart time & Section~6.4; REQ-023 \\
+A time source in the controller separate from the onboard computer's & Section~6.5 \\
+Two different kinds of connection between the onboard computer and the controller & Section~6.7 \\
+\bottomrule
+\end{tabularx}}
+
+% ===========================================================================
+\appendix
+\renewcommand{\thesection}{\Alph{section}}
+\renewcommand{\thesubsection}{\Alph{section}.\arabic{subsection}}
+
+\section{Requirement Allocation}
+Every requirement [6,~Secs.~4.0--7.0] and the component that meets it. Requirements that the
+decisions in Section~6.0 add are allocated when they enter the requirements.
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
+\toprule
+Component & Requirements \\
+\midrule
+\endhead
+\multicolumn{2}{@{}l}{\textit{Controller firmware}} \\
+Start-up selector & REQ-004, REQ-005, REQ-006, REQ-013, REQ-014, REQ-015, REQ-016, REQ-017, REQ-018, REQ-019, REQ-023, REQ-113 \\
+Mode manager & REQ-001, REQ-002, REQ-003, REQ-011, REQ-012, REQ-013, REQ-020, REQ-021, REQ-024, REQ-025, REQ-026, REQ-113 \\
+Command checker & REQ-027, REQ-028, REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, REQ-034, REQ-035, REQ-036, REQ-100 \\
+Update receiver & REQ-007, REQ-008 \\
+Health monitor & REQ-022, REQ-037, REQ-038, REQ-039, REQ-040, REQ-041 \\
+Controller clock & REQ-030 \\
+Data-link drivers & REQ-042, REQ-099 \\
+Last-resort firmware & REQ-004, REQ-009, REQ-010 \\
+\multicolumn{2}{@{}l}{\textit{Onboard computer software}} \\
+Command gate & REQ-064, REQ-065, REQ-066, REQ-067, REQ-087, REQ-100, REQ-112 \\
+Origin checker & REQ-043, REQ-064, REQ-084, REQ-085, REQ-086 \\
+Scheduler & REQ-068, REQ-069 \\
+Update manager & REQ-043, REQ-044, REQ-045, REQ-046, REQ-047, REQ-048, REQ-049, REQ-050, REQ-051, REQ-052, REQ-053, REQ-063 \\
+Report store & REQ-070, REQ-071, REQ-074, REQ-075, REQ-076, REQ-077, REQ-078, REQ-079 \\
+Clock keeper & REQ-072, REQ-073 \\
+Controller watch & REQ-061 \\
+Supervisor & REQ-062 \\
+Data-link drivers & REQ-080, REQ-081, REQ-082, REQ-099 \\
+Restore program & REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-060, REQ-083 \\
+\multicolumn{2}{@{}l}{\textit{Ground software}} \\
+Operator console & REQ-091, REQ-094, REQ-095 \\
+Command builder & REQ-089, REQ-100 \\
+Signing & REQ-088, REQ-096 \\
+Release checker & REQ-090 \\
+Report archive & REQ-092, REQ-093 \\
+Contact planner & REQ-097 \\
+\multicolumn{2}{@{}l}{\textit{All software items}} \\
+Every component & REQ-098, REQ-101, REQ-102, REQ-103, REQ-104, REQ-105, REQ-106, REQ-107, REQ-108, REQ-109, REQ-110, REQ-111 \\
+\bottomrule
+\end{xltabular}}
+
+\section{Open Items}
+The values below are not yet known.
+\begin{description}
+\tbditem{ref}{Project name and document reference.}
+\tbditem{agree}{Largest allowed difference between the controller's clock and
+  the time of a scheduled command.}
+\tbditem{boards}{Check of each hardware need against the two boards.}
+\end{description}
+
+\medskip
+\noindent The proposals below await the author's acceptance.
+\begin{description}
+\tbritem{startup}{Start-up and fall-back: option c (Section~6.1).}
+\tbritem{wayback}{The way back in: option b (Section~6.2).}
+\tbritem{apart}{Restore apart from update: option b (Section~6.3).}
+\tbritem{origin}{Proof of origin: option d (Section~6.4).}
+\tbritem{clocks}{Two clocks: option c (Section~6.5).}
+\tbritem{held}{Held data: option b (Section~6.6).}
+\tbritem{links}{Two kinds of connection: option c (Section~6.7).}
+\tbritem{planner}{The contact planner is not safety-critical (Section~7.3).}
+\end{description}
+
+\end{document}

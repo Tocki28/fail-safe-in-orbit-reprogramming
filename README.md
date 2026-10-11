@@ -34,7 +34,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 4. **Requirements:** Traceable, testable, single-claim rules.
    **Draft:** [Issue 1, Rev 0](docs/requirements/Software-Requirements_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 5. **Architecture:** System-level design.
-   *Not started.*
+   **Draft:** [Issue 1, Rev 0](docs/architecture/Software-Architecture_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 6. **Interfaces:** Byte-level communication specs (fixed before coding).
    *Not started.*
 7. **Verification Plan:** Test, analysis, inspection, and demonstration

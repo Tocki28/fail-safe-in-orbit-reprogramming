@@ -335,7 +335,7 @@ catastrophic and critical hazard, with the proposed controls in place:
   software, and a wrong command that starts them.
 \end{description}
 
-\subsection{Causes That Break the Rule}
+\subsection{Shared Causes That Break Fault Tolerance}
 Each single failure above comes from a cause that several controls share: one
 event defeats them all at once. The analysis looked for such shared causes,
 including the same defect in software that runs in more than one place
@@ -376,7 +376,7 @@ requirements must change.
   checked again just before it runs.
 \end{itemize}
 
-\subsection{Causes Within the Rule}
+\subsection{Other Shared Causes}
 These defeat several controls at once, but no hazard falls to them alone.
 \begin{itemize}
 \item \textbf{One power supply.} It feeds both the onboard computer and the

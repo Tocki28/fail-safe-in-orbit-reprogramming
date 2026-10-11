@@ -190,24 +190,45 @@ Security & Means of proving origin disclosed \\
 \end{table}
 
 \subsection{Analysis Rules}
+This section defines the evaluation rules, fault tolerance criteria, and
+baseline assumptions governing the formal hazard and fault tree analyses
+[3,~Sec.~3.1; 7,~Sec.~3.2.1].
+
 \begin{itemize}
-\item \textbf{Counting failures:} one cause that disables several controls at
-  once counts as one failure.
-\item \textbf{Severity:} rated on the outcome if the hazard happens; controls
-  do not change it.
-\item \textbf{Fault tolerance:} a catastrophic hazard must need at least
-  three of the failures in Section~3.2 together, a critical hazard at least two
-  [3,~Sec.~3.1] \tbr{credible}. Each hazard is checked by finding the smallest
-  set of failures that causes it.
-\item \textbf{Safety effort:} full [7,~Sec.~3.2.1, p.~44], chosen by the author
-  on 10 October 2026 because no operator can answer a hazard between contacts
-  (A-3). It makes the fault tree mandatory [7,~Table~6-3, p.~107].
-\item \textbf{Assumptions:} those of the ConOps, A-1 to A-5, and two of this
-  analysis, each the worst case until the design shows otherwise
-  \tbr{assume}: the image the restore puts back has the same start-up code,
-  defects and kept data as the other images; and one means proves that both
-  commands and firmware come from the operator, used by both the onboard
-  computer and the controller.
+\item \textbf{Counting failures:} to check a hazard, we count the failures
+  that would have to happen for it to occur. If one cause disables several
+  controls at once, it counts as one failure, not one per control. Counting
+  each control separately would make the System look more tolerant than it is.
+\item \textbf{Severity:} each hazard is rated by how bad its outcome is if it
+  happens, using the four categories in the legend below. The rating ignores
+  the controls: they make a hazard less likely, but its outcome is just as bad
+  when it does happen. A hazard therefore keeps its severity however many
+  controls it has.
+\item \textbf{Fault tolerance:} how many failures must happen together before a
+  hazard can occur. A catastrophic hazard must need at least three of the
+  failures in Section~3.2 together, a critical hazard at least two
+  [3,~Sec.~3.1] \tbr{credible}. For each hazard, we find the smallest set of
+  failures that causes it and compare it with this number. A hazard that needs
+  fewer breaks the rule, and its controls must be strengthened.
+\item \textbf{Safety effort:} NASA sets three levels of safety effort, minimum,
+  moderate and full, and the level decides which analyses this document must
+  contain [7,~Sec.~3.2, p.~42]. The author chose full on 10 October 2026,
+  because between contacts no operator can respond to a hazard (A-3). At full
+  effort, a fault tree is mandatory and a failure modes analysis highly
+  recommended [7,~Table~6-3, p.~107]; this document contains both.
+\item \textbf{Assumptions:} the analysis relies on the ConOps assumptions A-1 to
+  A-5. It adds two of its own, each the worst case, because the design that
+  would settle them does not exist yet \tbr{assume}:
+  \begin{enumerate}[nosep, leftmargin=1.8em]
+  \item the last-resort firmware the restore puts back has the same start-up
+    code, defects and kept data as the other images, so a cause that stops
+    every image also stops the restored one;
+  \item one means proves that both commands and firmware come from the
+    operator, and both the onboard computer and the controller use it, so
+    disclosing it opens both.
+  \end{enumerate}
+  If the design shows either is false, the hazards that rely on it are
+  recounted.
 \end{itemize}
 
 \medskip

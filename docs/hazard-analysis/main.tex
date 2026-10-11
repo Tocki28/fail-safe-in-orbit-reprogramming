@@ -267,13 +267,13 @@ baseline assumptions governing the formal hazard and fault tree analyses
 % ===========================================================================
 \section{Preliminary Hazard List}
 The hazards in order of severity \tbr{hazards}. For each catastrophic and
-critical hazard, the table also gives the fewest failures that cause it, with
-the proposed controls working, and whether that meets the fault tolerance rule
-(Section~3.3).
+critical hazard, the table also gives how many failures must happen together to
+cause it, with the proposed controls in place, and whether that meets the fault
+tolerance rule (Section~3.3).
 
-\begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xlcc@{}}
+\begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xl>{\centering\arraybackslash}p{2.2cm}c@{}}
 \toprule
-ID & Hazard & Severity & Fewest & Meets rule \\
+ID & Hazard & Severity & Failures to cause it & Meets rule \\
 \midrule
 \endhead
 H-1  & The controller is left with no firmware it can run, and cannot be restored & CATASTROPHIC & 1 & NO \\
@@ -296,10 +296,10 @@ H-17 & A command is refused with a wrong or unclear reason & NEGLIGIBLE & N/A & 
 \bottomrule
 \end{xltabular}
 
-\noindent\textbf{Legend.} Fewest: the fewest failures that together cause the
-hazard. Meets rule: YES when Fewest is at least three for a catastrophic hazard
-or two for a critical one; NO otherwise. N/A: the rule does not cover
-moderate and negligible hazards.
+\noindent\textbf{Legend.} Failures to cause it: the smallest number of
+failures that, happening together, make the hazard occur. Meets rule: YES when
+this is at least three for a catastrophic hazard or two for a critical one; NO
+otherwise. N/A: the rule does not cover moderate and negligible hazards.
 
 % ===========================================================================
 \section{Findings}

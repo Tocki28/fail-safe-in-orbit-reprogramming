@@ -776,25 +776,45 @@ b & A wrong command, or one not from the operator, starts them & NEW & 1 \\
 
 % ===========================================================================
 \section{Must-Work and Must-Not-Work Functions}
-The hazard analysis identifies the functions that must work and those that
-must not work [1,~App.~A.1.2, p.~62]. Both lists hold in operation.
+The hazard analysis identifies the functions that must work to prevent a
+hazard, and those that must not work because they would cause one
+[1,~App.~A.1.2, p.~62]. Each holds only in the state named under When, and
+each must be covered by the requirements [7,~App.~F.2, p.~347].
 
-\medskip
-\noindent\textbf{Must work:} return to working firmware when new firmware
-fails (H-1); restore through the reprogramming link (H-1, H-2); check every
-image before it runs (H-1, H-2, H-7); refuse commands and firmware not from the
-operator (H-2, H-5); accept the clock correction (H-4); detect and report
-faults between contacts (H-8, H-10); keep and send down every event report
-(H-10); answer every command (H-11); replace a disclosed means of proving origin
-(H-2, H-5).
+{\small
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}Xlll@{}}
+\toprule
+Function & Type & When & Hazards \\
+\midrule
+\endhead
+Return to the previous firmware when new firmware fails & MUST WORK & DURING A TRIAL & H-1, H-7 \\
+Run the last-resort firmware when the previous one fails & MUST WORK & AT A FALL-BACK & H-1 \\
+Restore through the reprogramming link & MUST WORK & NO FIRMWARE RUNS & H-1, H-2 \\
+Check every firmware image before it runs & MUST WORK & AT EVERY START & H-1, H-2, H-7 \\
+Refuse firmware and commands not from the operator & MUST WORK & ALWAYS & H-2, H-5 \\
+Accept the clock correction & MUST WORK & ALWAYS & H-4 \\
+Bring a silent controller back & MUST WORK & BETWEEN CONTACTS & H-8 \\
+Detect faults, and keep and send down every event report & MUST WORK & BETWEEN CONTACTS & H-8, H-10 \\
+Answer every command & MUST WORK & ALWAYS & H-11 \\
+Tell the ground which firmware runs & MUST WORK & AFTER A FALL-BACK & H-9 \\
+Replace a disclosed means of proving origin & MUST WORK & ON OPERATOR ORDER & H-2, H-5 \\
+Write over the previous or last-resort firmware & MUST NOT WORK & ALWAYS & H-1 \\
+Start failed firmware again without an operator order & MUST NOT WORK & AFTER A FALL-BACK & H-1 \\
+Run firmware not from the operator & MUST NOT WORK & ALWAYS & H-2 \\
+Run a command not from the operator & MUST NOT WORK & ALWAYS & H-5 \\
+Run a dangerous command without a valid arm & MUST NOT WORK & ALWAYS & H-6 \\
+Run a command twice, past its expiry, or at the wrong time & MUST NOT WORK & ALWAYS & H-6 \\
+Confirm firmware not judged good & MUST NOT WORK & DURING A TRIAL & H-7 \\
+Inject faults & MUST NOT WORK & OUTSIDE A TEST & H-12 \\
+Accept a new means of proving origin not proven with the current one & MUST NOT WORK & ALWAYS & H-4, H-5 \\
+\bottomrule
+\end{xltabular}}
 
-\medskip
-\noindent\textbf{Must not work:} write over the previous or last-resort
-firmware (H-1); run firmware not from the operator (H-2); run a command
-not from the operator (H-5); run a dangerous command without a valid arm, or
-any command twice (H-6); confirm firmware not judged good (H-7); inject faults
-(H-12); accept a new means of proving origin not proven with the current one
-(H-4, H-5).
+\noindent\textbf{Legend.} MUST WORK: must happen, to prevent the hazards
+listed. MUST NOT WORK: must never happen, as it causes the hazards listed.
+When: ALWAYS; AT EVERY START, whenever firmware starts; DURING A TRIAL; AT A
+FALL-BACK, when the controller returns to older firmware; AFTER A FALL-BACK;
+NO FIRMWARE RUNS; BETWEEN CONTACTS; ON OPERATOR ORDER; OUTSIDE A TEST.
 
 % ===========================================================================
 \appendix

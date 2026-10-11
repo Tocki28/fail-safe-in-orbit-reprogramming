@@ -12,7 +12,7 @@
 \usepackage{lastpage}
 \usepackage{needspace}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,shapes.geometric}
 \usepackage[hidelinks]{hyperref}
 \setlength{\emergencystretch}{1.5em}
 
@@ -332,34 +332,64 @@ ground's way in, is decided in Section~\ref{sec:wayback}.
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\scriptsize,
-  st/.style={draw, rounded corners=3pt, text width=3.4cm, align=center, minimum height=0.9cm, inner sep=3pt},
-  add/.style={st, fill=black!12},
+  box/.style={draw, rounded corners=3pt, text width=3.0cm, align=center, minimum height=0.8cm, inner sep=2pt},
+  add/.style={box, fill=black!12},
+  ask/.style={draw, diamond, aspect=2.4, inner sep=1pt, align=center, text width=2.1cm},
   tr/.style={-{Latex[length=1.6mm]}, thick},
-  lab/.style={font=\scriptsize, align=center}]
-\node[st] (boot) at (0,0) {Bootloader\\checks the copies and counts failed starts};
-\node[st] (trial) at (0,-2.1) {TRIAL\\the new copy runs};
-\node[st] (prev) at (0,-4.2) {FALLBACK\\the previous copy runs};
-\node[add] (lr) at (0,-6.3) {FALLBACK\\the last-resort firmware runs};
-\node[add] (rec) at (0,-8.6) {RECOVERY\\the onboard computer restores the controller};
-\node[st] (op) at (7.6,-1.05) {OPERATE\\the confirmed copy runs};
-\node[add] (wait) at (7.6,-5.25) {Keeps running and waits for the operator's new firmware or command};
-\draw[tr] (boot) -- node[right, lab]{works, and a new\\copy is waiting} (trial);
-\draw[tr] (boot.east) -- node[above, lab, sloped]{works, no new copy} ([yshift=0.2cm]op.west);
-\draw[tr] (trial.east) -- node[below, lab, sloped]{works: judged good, confirmed} ([yshift=-0.2cm]op.west);
-\draw[tr] (trial) -- node[right, lab]{fails: not judged good,\\hangs, or too many\\failed starts} (prev);
-\draw[tr] (prev.east) -- node[above, lab, sloped]{works} ([yshift=0.2cm]wait.west);
-\draw[tr] (prev) -- node[right, lab]{fails} (lr);
-\draw[tr] (lr.east) -- node[below, lab, sloped]{works} ([yshift=-0.2cm]wait.west);
-\draw[tr] ([xshift=-0.7cm]lr.south) -- node[left, lab]{fails: the\\controller is silent} ([xshift=-0.7cm]rec.north);
-\draw[tr] ([xshift=0.7cm]rec.north) -- node[right, lab]{the restore puts the\\last-resort firmware first} ([xshift=0.7cm]lr.south);
-\draw[tr] (boot.west) -- ++(-1.5,0) |- node[pos=0.25, left, lab]{fails: the\\controller\\is silent} (rec.west);
+  yn/.style={font=\scriptsize\itshape}]
+% Lanes
+\node[font=\footnotesize\bfseries] at (2.2,1.0) {Controller};
+\node[font=\footnotesize\bfseries] at (10.3,1.0) {Onboard computer};
+\draw[dashed, black!40] (7.4,1.3) -- (7.4,-15.2);
+% Controller lane
+\node[box, rounded corners=8pt] (start) at (0,0) {Start or restart};
+\node[ask] (d1) at (0,-1.5) {Bootloader runs?};
+\node[ask] (d2) at (0,-3.3) {New copy waiting?};
+\node[box] (trial) at (0,-4.95) {TRIAL\\the new copy runs};
+\node[ask] (d3) at (0,-6.6) {Judged good in time?};
+\node[box] (prev) at (0,-8.3) {FALLBACK\\the previous copy runs};
+\node[ask] (d4) at (0,-9.95) {Previous copy runs?};
+\node[add] (lr) at (0,-11.6) {FALLBACK\\the last-resort firmware runs};
+\node[ask] (d5) at (0,-13.25) {Last-resort firmware runs?};
+\node[box] (op) at (4.9,-3.3) {OPERATE\\the confirmed copy runs};
+\node[add] (w1) at (4.9,-9.95) {Keeps running; waits for the operator's new firmware or command};
+\node[add] (w2) at (4.9,-13.25) {Keeps running; waits for the operator's new firmware or command};
+% Onboard computer lane
+\node[add] (seen) at (10.3,-14.55) {Notices that the controller is silent};
+\node[add] (rec) at (10.3,-11.6) {RECOVERY\\restores the controller, putting the last-resort firmware first};
+% Flow
+\draw[tr] (start) -- (d1);
+\draw[tr] (d1) -- node[pos=0.45, right, yn]{yes} (d2);
+\draw[tr] (d2) -- node[above, yn]{no} (op);
+\draw[tr] (d2) -- node[pos=0.45, right, yn]{yes} (trial);
+\draw[tr] (trial) -- (d3);
+\draw[tr] (d3.east) -| node[pos=0.25, above, yn]{yes} (op.south);
+\draw[tr] (d3) -- node[pos=0.45, right, yn]{no} (prev);
+\draw[tr] (prev) -- (d4);
+\draw[tr] (d4) -- node[above, yn]{yes} (w1);
+\draw[tr] (d4) -- node[pos=0.45, right, yn]{no} (lr);
+\draw[tr] (lr) -- (d5);
+\draw[tr] (d5) -- node[above, yn]{yes} (w2);
+\draw[tr] (d5.south) |- node[pos=0.25, right, yn]{no} (seen.west);
+\draw[tr] (d1.east) -- (12.75,-1.5) node[pos=0.04, above, yn]{no} |- (seen.east);
+\draw[tr] (seen) -- (rec);
+\draw[tr] (rec) -- node[above]{runs first} (lr);
 \end{tikzpicture}
-\caption{Start-up and fall-back. Each box has two exits: it works, or it fails.
-White: the two-copy test and revert of MCUboot [9,~Sec.~Boot Swap Types].
-Grey: added for a controller that nobody can reach: the last-resort firmware,
-the restore, and the wait for the operator after a fall-back [6,~REQ-117].}
+\caption{Start-up and fall-back as a flow. Each diamond is a check with a yes
+and a no exit; a hang or too many failed starts counts as no. White: the
+two-copy test and revert of MCUboot [9,~Sec.~Boot Swap Types]. Grey: added for
+a controller that nobody can reach: the last-resort firmware, the wait for the
+operator after a fall-back [6,~REQ-117], and the restore by the onboard
+computer.}
 \label{fig:startup}
 \end{figure}
+
+{\itshape\noindent\textbf{Note.} The restore is how the onboard computer brings back a
+controller that runs no firmware. Through the reprogramming link, and without
+using any controller software, it restarts the controller, writes its own copy
+of the last-resort firmware into the place the controller starts from, clears
+the kept data and starts the controller again. It tells the ground at the next
+contact [6,~REQ-054 to REQ-060].\par}
 
 \begin{figure}[H]
 \centering

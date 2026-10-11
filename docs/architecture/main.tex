@@ -516,30 +516,34 @@ round.
 \needspace{9\baselineskip}
 \subsection{Proof of Origin}
 \label{sec:origin}
-\field{Problem} One means proves that both commands and firmware come from the
-operator. If it is disclosed, another party can command the controller and
-load firmware [5,~Sec.~5.2]. Targets H-2, firmware from someone else running
-on the controller, and H-5, someone else commanding the System.
+\field{Problem} The spacecraft must act only on commands and firmware that
+really come from the operator. Today a single key proves this for both
+[5,~Sec.~5.2]. Whoever steals that key can send commands and upload firmware
+that pass every check on board, as if they were the operator. Targets H-2,
+firmware from someone else running on the controller, and H-5, someone else
+commanding the System.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
 \toprule
  & Option & \sev{H-2}{CATASTROPHIC} & \sev{H-5}{CATASTROPHIC} & Chosen \\
 \midrule
-a & One secret proves both commands and firmware, stored on the ground and on board. Disclosing it from either place hands over both. & 1 & 1 & NO \\
-b & A digital signature made with one key kept on the ground; the spacecraft holds only the means to check it, as in MCUboot [9,~Sec.~Security]. Nothing on board can be disclosed, but one disclosed key on the ground still hands over both. & 1 & 1 & NO \\
-c & Every command and firmware image is also encrypted, as the command stack must be [11,~Sec.~4.1.1, p.~9]. The encryption key and the signing key are kept in two separate places, so another party needs both. & 2 & 2 & NO \\
-d & As c, with a second signature made with a third key kept in a third place. Another party needs all three keys. & 3 & 3 & YES \\
+a & One shared secret: the same secret is stored on the ground and on the spacecraft, and every command and image carries a code computed from it. Whoever learns the secret, from the ground or by reading the spacecraft's memory, can make commands and images that pass every check. & 1 & 1 & NO \\
+b & One digital signature: the ground signs every command and image with a signing key that never leaves the ground. The spacecraft holds only a checking key, which can check a signature but cannot make one, as in MCUboot [9,~Sec.~Security]. Reading the spacecraft's memory gives nothing away, but whoever steals the one signing key from the ground can sign anything. & 1 & 1 & NO \\
+c & Encryption and one signature: every command and image is also encrypted, so the spacecraft accepts only what was encrypted with the right key [11,~Sec.~4.1.1, p.~9]. The encryption key and the signing key are kept in two separate places on the ground, for example the ground software's key store and a hardware token the operator carries. A false command or image takes stealing both keys. & 2 & 2 & NO \\
+d & As c, plus a second signature made with a third key kept in a third place, for example an offline signing computer. A false command or image takes stealing all three keys. & 3 & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
 
-\field{Choice} Option d \tbr{origin}, shown in Figure~\ref{fig:origin}. The command stack
-must be encrypted [11,~Sec.~4.1.1, p.~9], and encryption with authentication
-is the recommended defence in depth [11,~Sec.~4.1.1.c, p.~10]. The controller
-checks firmware signatures again before running it [6,~REQ-006], with code
-different from the onboard computer's, so that one defect in that code cannot
-pass forged firmware through both checks [8,~Sec.~7.4.2, p.~141].
+\field{Choice} Option d \tbr{origin}, shown in Figure~\ref{fig:origin}.
+Encryption is required along the whole command chain, from the operations
+center to execution on board [11,~Secs.~3.2 and 4.1.1, pp.~8--9], and
+encryption together with signatures is the recommended defence in depth
+[11,~Sec.~4.1.1.c, p.~10]. The controller checks firmware signatures again
+before running it [6,~REQ-006], with different checking code from the onboard
+computer's, so that one defect in that code cannot let forged firmware through
+both checks [8,~Sec.~7.4.2, p.~141].
 
 \begin{figure}[H]
 \centering
@@ -579,20 +583,22 @@ checked again on the controller.}
 \needspace{9\baselineskip}
 \subsection{Two Clocks}
 \label{sec:clocks}
-\field{Problem} Expiry, arm time-outs, scheduled commands, time-tags and the
-trial time limit all depend on the onboard clock. A wrong clock alone runs a
-scheduled command at the wrong time and gives reports wrong times
-[5,~Sec.~5.2]. Targets H-6, here a scheduled command run at the wrong time,
-and H-9, here reports shown with wrong times.
+\field{Problem} The onboard computer's clock decides when a command expires,
+when an arming command times out, when a scheduled command runs, which time
+each report is stamped with, and when a trial ends. Between contacts nothing
+checks that clock. If it jumps or drifts, a scheduled command runs at the
+wrong time and every report shows a wrong time, and nobody notices before the
+next contact [5,~Sec.~5.2]. Targets H-6, here a scheduled command run at the
+wrong time, and H-9, here reports shown with wrong times.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
 \toprule
  & Option & \sev{H-6}{CRITICAL} & \sev{H-9}{CRITICAL} & Chosen \\
 \midrule
-a & One clock, compared with ground time only at contacts [6,~REQ-072]. Between contacts, a wrong clock runs scheduled commands at the wrong time and stamps wrong times on reports, and nothing notices. & 1 & 1 & NO \\
-b & Report and command numbers replace times where possible. The order of reports survives a wrong clock, but scheduled commands and time-tags still need it. & 1 & 1 & NO \\
-c & A second clock in the controller, with its own time source and set only from ground time. A scheduled command runs only when both clocks agree, and every report carries both times, so one wrong clock is caught by the other. A wrong ground time reaches both clocks; the ground software's check of every command before it is sent [6,~REQ-089] keeps that case at two failures, and a wrong time that passes it is an accepted risk. & 2 & 2 & YES \\
+a & One clock, the onboard computer's, compared with the time sent from the ground only during contacts [6,~REQ-072]. Between contacts, a wrong clock runs scheduled commands at the wrong time and stamps wrong times on reports, and nothing notices. & 1 & 1 & NO \\
+b & Counters instead of times where possible: every report and command is numbered in order. The order survives a wrong clock, but a scheduled command still needs to know when to run, and a report still needs a time. & 1 & 1 & NO \\
+c & A second clock in the controller, running from its own time source and set only by time values sent from the ground, never from the onboard computer's clock. A scheduled command runs only when both clocks agree on the time, and every report carries both times, so a wrong clock on one side shows up against the other. A wrong time sent from the ground would reach both clocks; the ground software checks every command before it is sent [6,~REQ-089], which keeps that case at two failures, and a wrong time that passes that check is an accepted risk. & 2 & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
@@ -626,7 +632,8 @@ reach both.}
 \begin{itemize}
 \item The controller firmware shall keep its own clock, from a time source
   separate from the onboard computer's.
-\item The controller's clock shall be set only from ground time.
+\item The controller's clock shall be set only by time values sent from the
+  ground, never from the onboard computer's clock.
 \item The controller firmware shall refuse a command past its expiry, by its
   own clock.
 \item The controller firmware shall run a scheduled command only when its own
@@ -638,18 +645,22 @@ reach both.}
 \needspace{9\baselineskip}
 \subsection{Held Data}
 \label{sec:held}
-\field{Problem} A bit error can change a held command, the arm state or the
-kept data after its check and before its use (A-5) [5,~Sec.~5.2]. Targets H-6,
-here a command acted on in a form the operator did not intend.
+\field{Problem} Radiation can flip single bits in memory (A-5). A command
+that waits on board before it runs, the record that an arming command has
+arrived, and the data kept over restarts are all checked when they arrive, but
+then sit in memory. A bit flipped in that time changes them after the check
+and before their use: a changed command could run, or the controller could
+take itself to be armed when it is not [5,~Sec.~5.2]. Targets H-6, here a
+command acted on in a form the operator did not intend.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & \sev{H-6}{CRITICAL} & Chosen \\
 \midrule
-a & Each item is checked once, on arrival. A bit error afterwards goes unnoticed. & 1 & NO \\
-b & Each held item carries a check value and is checked again just before use; the arm state is stored as a pattern that no single bit error turns into armed. A bit error now has to produce a matching check value as well. & 2 & YES \\
-c & Memory hardware that corrects bit errors on its own. Also two failures, but it depends on a hardware feature. & 2 & NO \\
+a & Each item is checked once, when it arrives. A bit flipped afterwards goes unnoticed. & 1 & NO \\
+b & Each waiting item is stored together with a check value, a number computed from its contents, and the check is repeated just before the item is used. The arming record is stored as a long pattern rather than a single yes-or-no bit, so one flipped bit cannot turn not armed into armed. A flipped bit now goes unnoticed only if a second error makes the check value match as well. & 2 & YES \\
+c & Error-correcting memory: memory hardware that finds and repairs a flipped bit on its own. Also two failures, but only if the chip has that feature. & 2 & NO \\
 \bottomrule
 \end{tabularx}}
 
@@ -670,19 +681,21 @@ feature; option c can be added where the hardware has it.
 \needspace{9\baselineskip}
 \subsection{Two Kinds of Connection}
 \label{sec:links}
-\field{Problem} The two data-link connections share software at both ends, so
-one defect cuts both (R-1) [5,~Sec.~5.2]. Targets H-4, the controller no
-longer commanded or observed. The count is of failures that cut both
-connections at once.
+\field{Problem} The onboard computer reaches the controller over two
+data-link connections, so that losing one does not lose contact (O-3). But if
+both connections run through the same driver program at each end, one bug in
+that driver cuts both at the same moment (R-1) [5,~Sec.~5.2]. Targets H-4, the
+controller no longer commanded or observed. The count is of failures that cut
+both connections at once.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & Failures to cut both & Chosen \\
 \midrule
-a & Two connections of one kind share one driver at each end. One defect in that driver cuts both. & 1 & NO \\
-b & Each connection has its own driver, but both are of one kind. A fault common to that kind, in its design or in its handling, cuts both. & 1 & NO \\
-c & Two different kinds, each with its own driver. Cutting both takes a separate failure in each. & 2 & YES \\
+a & Two connections of the same kind, for example two serial lines, served by one driver at each end. One bug in that driver cuts both. & 1 & NO \\
+b & Two connections of the same kind, each with its own driver. A fault that comes with that kind of connection, such as a flaw in the chip's hardware for it, still cuts both. & 1 & NO \\
+c & Two different kinds of connection, for example a serial line and a CAN bus, each with its own driver. Cutting both takes a separate failure in each. & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 

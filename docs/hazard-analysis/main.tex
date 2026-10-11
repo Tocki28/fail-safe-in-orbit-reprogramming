@@ -277,7 +277,7 @@ ID & Hazard & Severity & Failures to cause it & Meets rule \\
 \endhead
 H-1  & The controller is left with no firmware it can run, and cannot be restored & CATASTROPHIC & 1 & NO \\
 H-2  & Firmware from someone other than the operator runs on the controller & CATASTROPHIC & 1 & NO \\
-H-3  & New firmware can no longer reach the controller & CATASTROPHIC & 1 & NO \\
+H-3  & New firmware can no longer reach the controller & CATASTROPHIC & 2 & NO \\
 H-4  & The controller can no longer be commanded or observed & CATASTROPHIC & 1 & NO \\
 H-5  & Someone other than the operator commands the System & CATASTROPHIC & 1 & NO \\
 H-6  & A command is acted on in a form or at a time the operator did not intend & CRITICAL & 1 & NO \\
@@ -303,8 +303,8 @@ Section~5.1 names the failures.
 
 % ===========================================================================
 \section{Findings}
-Eight of the twelve catastrophic and critical hazards can happen from a single
-failure, so they do not meet the fault tolerance rule yet.
+Eight of the twelve catastrophic and critical hazards do not meet the fault
+tolerance rule yet: seven can happen from a single failure, and H-3 from two.
 
 \subsection{What Causes Each Hazard}
 The smallest set of failures that, happening together, causes each
@@ -315,8 +315,9 @@ catastrophic and critical hazard, with the proposed controls in place:
   a common defect (B08 to B10).
 \item[H-2] One failure: the means of proving origin is disclosed; both checks
   rely on it.
-\item[H-3] One failure: a defect in the onboard computer's update path, whose
-  software is never updated.
+\item[H-3] Two failures: a fault in the onboard computer's update path or its
+  stored data, and its correction by the system outside this project failing
+  (A-6).
 \item[H-4] One failure: a software defect that cuts both data-link
   connections, or the onboard computer failing for good.
 \item[H-5] One failure: the means of proving origin is disclosed.
@@ -335,8 +336,8 @@ catastrophic and critical hazard, with the proposed controls in place:
 \end{description}
 
 \subsection{Shared Causes That Break Fault Tolerance}
-Each single failure above comes from a cause that several controls share: one
-event defeats them all at once. The analysis looked for such shared causes,
+Each hazard above that breaks the rule does so through a cause that several
+controls share: one event defeats them all at once. The analysis looked for such shared causes,
 including the same defect in software that runs in more than one place
 [1,~App.~A.1.1, p.~62]. Each is listed with the hazards it reaches and what the
 requirements must change.
@@ -352,15 +353,16 @@ requirements must change.
   party can command the controller and load firmware. Breaks H-2 and H-5.
   \textit{To change:} a disclosure must be noticed, so the means can be
   replaced in flight (Scenario-370).
-\item \textbf{Fixed onboard computer software.} It is not updated during the
-  mission [5,~Sec.~5.0], so a defect in its update path stays for good. Breaks
-  H-3 and H-4; also reaches H-1. \textit{To change:} a decision for the author:
-  accept this risk, or require that the onboard computer software can be
-  corrected.
+\item \textbf{Onboard computer software.} It is corrected by a system outside
+  this project (A-6), so a defect in its update path stays until that system
+  corrects it. Breaks H-3, which then needs two failures; also reaches H-1 and
+  H-4. \textit{Outside this project:} the outside system must be able to
+  correct the onboard computer's update path and stored data.
 \item \textbf{One onboard computer.} It is the only path for commands, reports
   and restores; if it fails for good, all three stop (R-4). Breaks H-4; also
-  reaches H-1, H-8 and H-10. \textit{To change:} a decision for the author:
-  accept this risk, or require a second path to the controller.
+  reaches H-1, H-8 and H-10. \textit{Outside this project:} how many onboard
+  computers the spacecraft carries is a spacecraft decision; the risk is
+  accepted (R-4).
 \item \textbf{Same data-link software.} The two data-link connections share
   software at both ends, so one defect cuts both (R-1) [1,~p.~66]. Breaks H-4.
   \textit{To change:} one defect must not be able to cut both connections.
@@ -477,9 +479,9 @@ c & A restore starts a stored copy someone else replaced & NEW & 2, 3 \\
  & Cause & Source & Controls \\
 \midrule
 a & Confirmed firmware runs, but cannot receive firmware & NEW & 1, 2, 3, 4 \\
-b & A defect in the onboard computer's update path & NEW & \textbf{NONE} \\
-c & A wrong stored minimum version or controller identity refuses all firmware & [1,~p.~67] & \textbf{NONE} \\
-d & Firmware storage on the onboard computer stays full & [1,~p.~66] & \textbf{NONE} \\
+b & A defect in the onboard computer's update path & NEW & 5 \\
+c & A wrong stored minimum version or controller identity refuses all firmware & [1,~p.~67] & 5 \\
+d & Firmware storage on the onboard computer stays full & [1,~p.~66] & 5 \\
 \bottomrule
 \end{tabularx}}
 \par\smallskip\needspace{4\baselineskip}
@@ -491,10 +493,11 @@ d & Firmware storage on the onboard computer stays full & [1,~p.~66] & \textbf{N
 2 & It is judged good only after it has received firmware itself & NEW & TEST \\
 3 & The last-resort firmware can always receive firmware & NEW & TEST \\
 4 & The operator can order a return to the last-resort firmware & NEW & DEMONSTRATION \\
+5 & The system outside this project corrects the onboard computer's software and stored data & A-6 & ANALYSIS \\
 \bottomrule
 \end{tabularx}}
 \par\smallskip
-\field{Controls fail if} The trial skips the update path; the defect is in the onboard computer, out of every control's reach.
+\field{Controls fail if} The trial skips the update path; the outside system cannot correct the onboard computer.
 
 % ---------------------------------------------------------------- H-4
 \hazard{H-4}{The controller can no longer be commanded or observed.}{CATASTROPHIC}{CAUSE, CONTROL}

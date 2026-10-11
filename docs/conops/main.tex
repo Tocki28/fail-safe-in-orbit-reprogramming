@@ -84,7 +84,7 @@ Open items & \total{tbdopen} TBD (App.~C) \\
 Issue & Rev. & Date & Change \\
 \midrule
 1 & 0 & 2026-10-10 & First draft \\
-1 & 1 & 2026-10-11 & Gaps found by the hazard analysis: scope, command checks,
+1 & 1 & 2026-10-11 & Gaps found by the hazard analysis: scope, assumption A-6, command checks,
   functions per mode, origin replaced in flight, and seven scenarios and one
   risk added or completed \\
 \bottomrule
@@ -144,6 +144,8 @@ software updates [4,~Lesson 0559, p.~199].
 \item[A-5] Radiation in space can flip single bits in memory, so stored
   firmware can change on its own. The System must not run firmware that has
   changed [2,~App.~A, Table~2, p.~63].
+\item[A-6] The onboard computer's software can be corrected in flight by a
+  system outside this project, so a defect in it is not permanent.
 \end{description}
 
 \medskip
@@ -447,9 +449,9 @@ outside the scope of bench demonstration.
 \item[Sparing] Physical hardware spares are not available; the onboard
   computer retains a known-good firmware image and the controller maintains
   its last-resort firmware.
-\item[Upgrades] Controller firmware updates constitute the sole operational
-  upgrade mechanism, governed by a defined release cadence \tbd{frequency},
-  while the onboard computer's baseline software remains fixed.
+\item[Upgrades] Controller firmware updates are the upgrade this System
+  provides, at a release rate \tbd{frequency}. The onboard computer's software
+  is corrected by a system outside this project (A-6).
 \item[Continued support] Engineering sustainment support remains allocated for
   firmware build, verification, and release throughout the active mission
   life cycle.

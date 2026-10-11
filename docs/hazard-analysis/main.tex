@@ -300,18 +300,47 @@ H-17 & A command is refused with a wrong or unclear reason & NEGLIGIBLE & N/A & 
 failures that, happening together, make the hazard occur. Meets rule: YES when
 this is at least three for a catastrophic hazard or two for a critical one; NO
 otherwise. N/A: the rule does not cover moderate and negligible hazards.
+Section~5.1 names the failures.
 
 % ===========================================================================
 \section{Findings}
 Eight of the twelve catastrophic and critical hazards can happen from a single
-failure, so they do not meet the fault tolerance rule yet. Each time, the cause
-is shared: one event defeats several controls at once. The analysis looked for
-such shared causes, including the same defect in software that runs in more
-than one place [1,~App.~A.1.1, p.~62]. They are listed below with the hazards
-they reach; those that break the rule come first, each with what the
-requirements must change.
+failure, so they do not meet the fault tolerance rule yet.
+
+\subsection{What Causes Each Hazard}
+The smallest set of failures that, happening together, causes each
+catastrophic and critical hazard, with the proposed controls in place:
+\begin{description}[leftmargin=1.4cm]
+\item[H-1] One failure: a fault that every firmware copy shares, including the
+  one the restore puts back: the start-up code, the data kept over restarts, or
+  a common defect (B08 to B10).
+\item[H-2] One failure: the means of proving origin is disclosed; both checks
+  rely on it.
+\item[H-3] One failure: a defect in the onboard computer's update path, whose
+  software is never updated.
+\item[H-4] One failure: a software defect that cuts both data-link
+  connections, or the onboard computer failing for good.
+\item[H-5] One failure: the means of proving origin is disclosed.
+\item[H-6] One failure: a wrong onboard clock runs a scheduled command at the
+  wrong time, or a bit error changes a held command after its check.
+\item[H-7] Two failures: a hidden defect in new firmware, and a trial that does
+  not exercise it.
+\item[H-8] One failure: the same defect in every firmware copy; every restart,
+  and the restore, brings it back.
+\item[H-9] One failure: a wrong onboard clock gives every report a wrong time.
+\item[H-10] Two failures: a fault, and fault detection that misses it.
+\item[H-11] Two failures: a command that is lost, and a ground that does not
+  notice its answer never came.
+\item[H-12] Two failures: fault-injection functions left in the operating
+  software, and a wrong command that starts them.
+\end{description}
 
 \subsection{Causes That Break the Rule}
+Each single failure above comes from a cause that several controls share: one
+event defeats them all at once. The analysis looked for such shared causes,
+including the same defect in software that runs in more than one place
+[1,~App.~A.1.1, p.~62]. Each is listed with the hazards it reaches and what the
+requirements must change.
 \begin{itemize}
 \item \textbf{Shared image code and data.} Every firmware copy, including the
   last-resort firmware the restore puts back, shares the start-up code, the

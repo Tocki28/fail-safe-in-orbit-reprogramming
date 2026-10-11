@@ -32,7 +32,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 3. **Hazard Analysis:** Top-down and bottom-up fault identification.
    **Draft:** [Issue 1, Rev 0](docs/hazard-analysis/Hazard-Analysis_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 4. **Requirements:** Traceable, testable, single-claim rules.
-   *Not started.*
+   **Draft:** [Issue 1, Rev 0](docs/requirements/Software-Requirements_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 5. **Architecture:** System-level design.
    *Not started.*
 6. **Interfaces:** Byte-level communication specs (fixed before coding).

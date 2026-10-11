@@ -429,46 +429,76 @@ Meets rule: YES when Fewest is at least Needed.
 % ===========================================================================
 \section{Bottom-Up Analysis}
 Before a design exists, the components examined are the System's functions
-[3,~Sec.~4]. Each function is examined for each way it can fail, and each
-failure is traced to the hazard it leads to.
+[3,~Sec.~4]. Failures are listed in an events table and a data table
+[3,~Sec.~5.3]: each function for each way it can fail, and each item of data
+for each way it can be bad. Each failure is traced to the hazard it leads to.
 
-{\small
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}Xllll@{}}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}Xlllll@{}}
 \toprule
-Function & OMITTED & INCORRECT & UNWANTED & MISTIMED \\
+Function & HALT & OMISSION & INCORRECT & TIMING & UNWANTED \\
 \midrule
 \endhead
-\multicolumn{5}{@{}l}{\itshape Telemetry (Capability-1)} \\
-Make health and event reports & H-10, H-15 & H-9 & H-4, H-15 & H-9 \\
-Time-tag and store reports & H-10, H-15 & H-9 & H-15 & H-9 \\
-Send reports down & H-10, H-15 & H-9 & H-16 & H-16 \\
-Keep received reports on the ground & H-10, H-15 & H-9 & NONE & NONE \\
-\multicolumn{5}{@{}l}{\itshape Command handling (Capability-2)} \\
-Prepare and check commands on the ground & H-6 & H-6 & H-6 & H-6 \\
-Check commands onboard & H-5, H-6 & H-6, H-11, H-17 & NONE & H-4, H-6, H-11 \\
-Hold armed and scheduled commands & H-11 & H-6 & H-6 & H-6 \\
-Run commands & H-11 & H-6 & H-5, H-6 & H-6 \\
-Replace the means of proving origin & H-2, H-5 & H-4 & H-4, H-5 & H-4 \\
-Answer and log commands & H-11 & H-9, H-17 & H-9 & H-16 \\
-\multicolumn{5}{@{}l}{\itshape Fault handling (Capability-3)} \\
-Detect faults & H-8, H-10 & H-10, H-13 & H-13 & H-8 \\
-Respond to faults & H-8 & H-1, H-4, H-13 & H-13 & H-8 \\
-\multicolumn{5}{@{}l}{\itshape Update (Capability-4)} \\
-Prepare and check firmware releases & H-7 & H-3, H-7 & H-7 & NONE \\
-Receive and check firmware & H-1, H-2, H-7 & H-2, H-3, H-7, H-14 & H-14 & H-7 \\
-Install firmware and switch & H-14 & H-1 & H-6 & H-1 \\
-Judge and confirm new firmware & H-13 & H-3, H-7 & H-7 & H-7, H-13 \\
-Fall back to working firmware & H-1, H-8 & H-1, H-7 & H-13 & H-8, H-13 \\
-Restore through the reprogramming link & H-1 & H-1, H-2, H-7 & H-13 & H-1 \\
-\multicolumn{5}{@{}l}{\itshape Test (Capability-5)} \\
-Inject faults & NONE & NONE & H-12 & H-12 \\
+\multicolumn{6}{@{}l}{\itshape Telemetry (Capability-1)} \\
+Make health and event reports & H-10, H-15 & H-10, H-15 & H-9 & H-9 & H-4, H-15 \\
+Time-tag and store reports & H-10, H-15 & H-10, H-15 & H-9 & H-9 & H-15 \\
+Send reports down & H-16 & H-10, H-15 & H-9 & H-16 & H-16 \\
+Keep received reports on the ground & H-10, H-15 & H-10, H-15 & H-9 & NONE & NONE \\
+\multicolumn{6}{@{}l}{\itshape Command handling (Capability-2)} \\
+Prepare and check commands on the ground & H-11 & H-6 & H-6 & H-6 & H-6 \\
+Check commands onboard & H-11 & H-5, H-6 & H-6, H-11, H-17 & H-4, H-6, H-11 & NONE \\
+Hold armed and scheduled commands & H-11 & H-11 & H-6 & H-6 & H-6 \\
+Run commands & H-8, H-11 & H-11 & H-6 & H-6 & H-5, H-6 \\
+Replace the means of proving origin & H-4 & H-2, H-5 & H-4 & H-4 & H-4, H-5 \\
+Answer and log commands & H-9 & H-11 & H-9, H-17 & H-16 & H-9 \\
+\multicolumn{6}{@{}l}{\itshape Fault handling (Capability-3)} \\
+Detect faults & H-8, H-10 & H-8, H-10 & H-10, H-13 & H-8 & H-13 \\
+Respond to faults & H-1, H-8 & H-8 & H-1, H-4, H-13 & H-8 & H-13 \\
+\multicolumn{6}{@{}l}{\itshape Update (Capability-4)} \\
+Prepare and check firmware releases & NONE & H-7 & H-3, H-7 & NONE & H-7 \\
+Receive and check firmware & H-14 & H-1, H-2, H-7 & H-2, H-3, H-7, H-14 & H-7 & H-14 \\
+Install firmware and switch & H-1 & H-14 & H-1 & H-1 & H-6 \\
+Judge and confirm new firmware & H-13 & H-13 & H-3, H-7 & H-7, H-13 & H-7 \\
+Fall back to working firmware & H-1, H-8 & H-1, H-8 & H-1, H-7 & H-8, H-13 & H-13 \\
+Restore through the reprogramming link & H-1 & H-1 & H-1, H-2, H-7 & H-1 & H-13 \\
+\multicolumn{6}{@{}l}{\itshape Test (Capability-5)} \\
+Inject faults & NONE & NONE & NONE & H-12 & H-12 \\
 \bottomrule
 \end{xltabular}}
 
-\noindent\textbf{Legend: failure mode.} OMITTED: not performed. INCORRECT:
-performed with a wrong result. UNWANTED: performed when it must not be.
-MISTIMED: performed too early, too late or out of order. NONE: leads to no
-hazard. Every failure leads to a hazard of Section~4.0, or to none.
+\noindent\textbf{Legend: event failure type} (types from [7,~App.~D.4.8,
+p.~336]). HALT: the function stops abnormally. OMISSION: the function does not
+happen. INCORRECT: it happens with wrong logic or a wrong result. TIMING: it
+happens at the wrong time or out of sequence. UNWANTED: it happens when it is
+not expected. NONE: leads to no hazard.
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}X*{3}{>{\raggedright\arraybackslash}p{2.2cm}}*{2}{>{\raggedright\arraybackslash}p{2.65cm}}@{}}
+\toprule
+Data & OUT OF RANGE & MISSING & OUT OF SEQUENCE & OVERWRITTEN & WRONG \\
+\midrule
+\endhead
+Command & H-6 & H-11 & H-6 & H-6 & H-6 \\
+Arm state & H-6 & NONE & NONE & H-6 & H-6 \\
+Firmware image & H-7 & H-14 & H-7, H-14 & H-1, H-7 & H-2, H-7 \\
+Report & H-9 & H-10, H-15 & H-9 & H-10, H-15 & H-9 \\
+Onboard time & H-4, H-6, H-9 & H-6, H-9, H-11 & H-6, H-9 & H-6, H-9 & H-4, H-6, H-9, H-11, H-13 \\
+Kept data & H-1, H-3 & H-1, H-13 & NONE & H-1, H-3, H-13 & H-1, H-3, H-13 \\
+Means of proving origin & NONE & H-4 & NONE & H-4 & H-4 \\
+\bottomrule
+\end{xltabular}}
+
+\noindent\textbf{Legend: data failure type} (types from [7,~App.~D.4.8,
+p.~335]). OUT OF RANGE: a value outside its possible range. MISSING: the data
+is absent. OUT OF SEQUENCE: the data arrives or is used in the wrong order.
+OVERWRITTEN: valid data is replaced. WRONG: the data is valid in form but
+incorrect. NONE: leads to no hazard. Kept data: the counts, flags, minimum
+version and controller identity kept over restarts.
+
+\medskip
+The effect of each failure is the hazard in its cell; its severity, detection
+and compensation are those of that hazard. Every failure leads to a hazard of
+Section~4.0, or to none.
 
 % ===========================================================================
 \section{Common Causes}

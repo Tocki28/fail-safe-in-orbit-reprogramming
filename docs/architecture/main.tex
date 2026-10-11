@@ -677,7 +677,7 @@ c & Error-correcting memory: memory hardware that finds and repairs a flipped bi
 \end{tabularx}}
 
 
-\field{Choice} Option b \tbr{held}. MCUboot notes the same risk: skipping the check
+\field{Choice} Option b. MCUboot notes the same risk: skipping the check
 before use lets an image changed after a good check run unchecked
 [9,~Sec.~Integrity Check]. Unlike option c, option b needs no hardware
 feature; option c can be added where the hardware has it.
@@ -840,7 +840,6 @@ The values below are not yet known.
 \noindent The proposals below await the author's acceptance.
 \begin{description}
 \tbritem{origin}{Proof of origin: option d (Section~\ref{sec:origin}).}
-\tbritem{held}{Held data: option b (Section~\ref{sec:held}).}
 \tbritem{links}{Two kinds of connection: option c (Section~\ref{sec:links}).}
 \end{description}
 
@@ -848,7 +847,8 @@ The values below are not yet known.
 \noindent The author accepted, on 11 October 2026, option c of
 Section~\ref{sec:startup}, option c of Section~\ref{sec:wayback}, option b of
 Section~\ref{sec:apart} with the risk of a defect in the checks both its programs
-rely on, and option c of Section~\ref{sec:clocks} with the risk of a wrong
-ground time that passes the ground software's check.
+rely on, option c of Section~\ref{sec:clocks} with the risk of a wrong
+ground time that passes the ground software's check, and option b of
+Section~\ref{sec:held}.
 
 \end{document}

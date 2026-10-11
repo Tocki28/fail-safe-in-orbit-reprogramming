@@ -849,10 +849,10 @@ onboard computer, an accepted risk (R-4), as the architecture's do
 ID & Severity & Phase 1 & Design & Smallest set of failures that causes it & Meets rule \\
 \midrule
 H-1 & CATASTROPHIC & 1 & 3 & A broken bootloader, and both ways in failing [10,~Secs.~5.1--5.2] & YES \\
-H-2 & CATASTROPHIC & 1 & 2 & A stolen encryption key, and a defect in the onboard computer's signature check that accepts a forged image; the restore writes it past the controller's own check & NO \\
+H-2 & CATASTROPHIC & 1 & 2 & A stolen encryption key, and a defect in the onboard computer's signature check that accepts a forged image; the restore writes it past the controller's own check & ACCEPTED \\
 H-3 & CATASTROPHIC & 2 & 2 & A defect in the checks both ways in rely on, and the outside correction failing [10,~Sec.~5.3] & ACCEPTED \\
-H-4 & CATASTROPHIC & 1 & 2 & Both data-link connections failing in hardware; the reprogramming link carries no commands or reports & NO \\
-H-5 & CATASTROPHIC & 1 & 2 & A stolen encryption key, and a defect in the onboard computer's signature check: both signatures are checked by the same code & NO \\
+H-4 & CATASTROPHIC & 1 & 2 & Both data-link connections failing in hardware; the reprogramming link carries no commands or reports & ACCEPTED \\
+H-5 & CATASTROPHIC & 1 & 2 & A stolen encryption key, and a defect in the onboard computer's signature check: both signatures are checked by the same code & ACCEPTED \\
 H-6 & CRITICAL & 1 & 2 & Each cause now has a second barrier: two clocks, check values, the arming check on both processors, the sequence stop [10,~Secs.~5.5--5.6] & YES \\
 H-7 & CRITICAL & 2 & 2 & A hidden defect in new firmware, and a trial that does not exercise it & YES \\
 H-8 & CRITICAL & 1 & 2 & A broken bootloader, and a failed restore or a defect in the last-resort firmware [10,~Sec.~5.1] & YES \\
@@ -894,21 +894,19 @@ H-10 b & No event report is made & REQ-038 \\
 \end{tabularx}}
 
 \subsection{Findings}
-Eight of the twelve hazards meet the rule on the design, and H-3 is an
-accepted risk. Two findings remain, both on catastrophic hazards; the third
-item records the accepted risk the counts leave out.
+Eight of the twelve hazards meet the rule on the design. The other four,
+all catastrophic, are accepted risks: H-3 through the checks both ways in rely
+on [10,~Sec.~5.3], and H-2, H-4 and H-5 through the two findings below.
 \begin{enumerate}
 \item \textbf{One signature check for both signatures (H-2, H-5).} The
   onboard computer checks both signatures with the same code, so one defect in
   it that accepts forgeries removes both barriers at once; only the encryption
   key is left. For firmware sent through the restore, the controller's own
-  check does not help either, because the restore writes past it.
-  \textit{To change:} check the two signatures with different code, and keep
-  one check that the restore cannot bypass \tbd{answer}.
+  check does not help either, because the restore writes past it. The author
+  accepted the risk.
 \item \textbf{Two ways to command and observe (H-4).} Two data-link
   connections give two failures; the reprogramming link restores firmware but
-  carries no commands or reports. \textit{To change:} a third way to command
-  and observe the controller, or the risk accepted \tbd{answer}.
+  carries no commands or reports. The author accepted the risk.
 \item \textbf{The loss of the onboard computer (R-4)} also reaches H-1, H-3,
   H-8, H-10 and H-11. It is an accepted risk and stays outside the counts.
 \end{enumerate}
@@ -1105,15 +1103,15 @@ Section~4.0, or to none.
 The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
-\tbditem{answer}{The answer to findings 1 and 2 of Section~8.3: a change to the
-  design, or the risk accepted.}
+
 \end{description}
 
 \medskip
 \noindent The author accepted the severity rule, the meaning of each severity
 category and the full safety effort on 10 October 2026; and the fault
 tolerance rule, the two assumptions of this analysis (Section~3.3) and the
-hazard list with the severity of each hazard (Section~4.0) on 11 October 2026.
+hazard list with the severity of each hazard (Section~4.0) on 11 October 2026,
+and the risks of findings 1 and 2 of Section~8.3 on the same day.
 No proposal awaits acceptance.
 
 \end{document}

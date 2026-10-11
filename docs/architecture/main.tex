@@ -117,7 +117,7 @@ Version~D, SWE-057 ``Software Architecture''.
 Controller --- Concept of Operations}, Issue~1, Revision~1, Draft.
 
 \noindent [5] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
-Controller --- Hazard Analysis}, Issue~1, Revision~0, Draft.
+Controller --- Hazard Analysis}, Issue~1, Revision~1, Draft.
 
 \noindent [6] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
 Controller --- Software Requirements Specification}, Issue~1, Revision~0,
@@ -551,6 +551,9 @@ computer's, so that one defect in that code cannot let forged firmware through
 both checks [8,~Sec.~7.4.2, p.~141]. The encryption key also sits on the
 onboard computer, which must decrypt; taking it from there means taking over
 the onboard computer, which would already give control of the whole System.
+The hazard analysis, re-run on this design, finds two failures for H-2 and H-5
+rather than three: one code checks both signatures, and the restore writes
+past the controller's check. The author accepted that risk [5,~Sec.~8.3].
 
 \begin{figure}[H]
 \centering
@@ -706,7 +709,10 @@ c & Two different kinds of connection, for example a serial line and a CAN bus, 
 
 
 \field{Choice} Option c. One connection carries on when the other is
-cut (O-3). H-4 still falls to the loss of the onboard computer (R-4).
+cut (O-3). H-4 still falls to the loss of the onboard computer (R-4), and the
+hazard analysis, re-run on this design, finds two failures for it even without
+that loss: both connections failing in hardware. The author accepted that risk
+[5,~Sec.~8.3].
 
 \field{Adds}
 \begin{itemize}

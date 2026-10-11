@@ -300,39 +300,22 @@ the options it rejects (NO).
 \field{Problem} Every firmware copy is started by the same bootloader and
 depends on the data it keeps over restarts. A defect in the bootloader, or kept
 data it cannot handle, stops every copy, and today's restore writes back the
-same bootloader, so the defect returns [5,~Sec.~5.2]. H-1 and H-8 are
-therefore open to a single failure.
+same bootloader, so the defect returns [5,~Sec.~5.2]. One failure is then
+enough for H-8, the controller stopping between contacts with nothing on board
+to bring it back, and for H-1, the controller left with no firmware it can run
+and no way to restore it.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & H-8 & Chosen \\
 \midrule
-a & The last-resort firmware runs first and chooses; the restore puts it back & 1 & NO \\
-b & A bootloader runs first and chooses between two copies; a new copy runs as a test and is reverted unless it confirms itself, as in MCUboot [9,~Sec.~Boot Swap Types]; the restore puts back the same bootloader & 1 & NO \\
-c & As b, plus a last-resort firmware sharing no code with the bootloader or either copy; the restore puts it in the bootloader's place & 2 & YES \\
+a & No bootloader: the last-resort firmware is the first code to run and decides which copy runs. A defect in it stops every start, and the restore puts the same firmware back, so the controller stays down until the ground loads a correction at the next contact. & 1 & NO \\
+b & MCUboot's design [9,~Sec.~Boot Swap Types]: a small bootloader runs first, runs a new copy as a test and returns to the old copy unless the new one confirms itself. It survives a defect in any copy, but not one in the bootloader itself: that stops every start, and the restore writes the same bootloader back. & 1 & NO \\
+c & Option b, plus a last-resort firmware sharing no code with the bootloader or the copies. When the bootloader fails, the controller goes silent and the onboard computer restores it, putting the last-resort firmware where the bootloader was, so it runs first (Figure~\ref{fig:memory}). The controller stays down only if a second failure follows: a defect in the last-resort firmware, or a failed restore. & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} H-8 is the controller stopping between contacts with nothing on board to
-bring it back.
-\begin{description}[leftmargin=0.6cm]
-\item[a] There is no bootloader: the last-resort firmware is the first code to
-  run, and it decides which copy runs. A defect in it stops every start, and the
-  restore puts the same firmware back, so the controller stays down until the
-  ground loads a correction at the next contact. One failure is enough.
-\item[b] MCUboot's design: a small bootloader runs first. It runs a new copy as
-  a test and returns to the old copy unless the new one confirms itself, so it
-  survives a defect in any firmware copy. It does not survive a defect in the
-  bootloader itself: that stops every start, and the restore writes the same
-  bootloader back. One failure is enough.
-\item[c] Option b, plus a last-resort firmware that shares no code with the
-  bootloader or the copies. When the bootloader fails, the controller goes
-  silent; the onboard computer restores it and puts the last-resort firmware
-  where the bootloader was, so it runs first (Figure~\ref{fig:memory}). The
-  controller stays down only if a second failure follows: a defect in the
-  last-resort firmware, or a failed restore.
-\end{description}
 
 \field{Choice} Option c \tbr{startup}, shown in Figures~\ref{fig:startup} and
 \ref{fig:memory}. It keeps MCUboot's test and revert, which exists to keep bad
@@ -417,34 +400,22 @@ first.}
 \label{sec:wayback}
 \field{Problem} A restore that goes through any controller software fails
 whenever that software fails, which the requirements forbid [6,~REQ-056].
-Targets H-1, H-3 and H-4.
+Targets H-1, the controller left with no firmware it can run and no way to
+restore it, not even by the ground, which can otherwise load corrected firmware
+through the reprogramming link [6,~REQ-058]. The same way in also serves H-3
+and H-4.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & H-1 & Chosen \\
 \midrule
-a & The restore is a command that the controller's firmware carries out & 1 & NO \\
-b & One reprogramming path loads the controller's memory whatever it holds; the onboard computer drives it and can restart the controller & 2 & NO \\
-c & Two such paths, independent of each other & 3 & YES \\
+a & The restore is an order that the controller's own firmware carries out. A broken bootloader means no firmware runs, so nothing carries the order out and nothing can load a correction. & 1 & NO \\
+b & One path into the controller's memory that does not use its firmware at all; the onboard computer drives it and can restart the controller. A broken bootloader is bypassed, but if this one path also fails, nothing else reaches the controller. & 2 & NO \\
+c & Two such paths, sharing nothing. A broken bootloader and one failed path still leave the second path. Both paths are driven by the restore program; a defect in it is corrected by the system outside this project (A-6), as for H-3. & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} H-1 is the controller left with no firmware it can run and no way to restore
-it, not even by the ground, which can otherwise load corrected firmware through
-the reprogramming link [6,~REQ-058].
-\begin{description}[leftmargin=0.6cm]
-\item[a] The restore is an order that the controller's own firmware carries
-  out. A broken bootloader means no firmware runs, so nothing carries the order
-  out and nothing can load a correction. One failure is enough.
-\item[b] One path into the controller's memory that does not use its firmware
-  at all. A broken bootloader is now bypassed, but if this one path also fails,
-  nothing else reaches the controller. Two failures.
-\item[c] Two such paths, sharing nothing. A broken bootloader and one failed
-  path still leave the second path. Three failures. Both paths are driven by
-  the restore program; a defect in it is corrected by the system outside this
-  project (A-6), as for H-3.
-\end{description}
 
 \field{Choice} Option c \tbr{wayback}. It follows the principle of hardware
 commands, which a spacecraft executes on receipt without any flight software
@@ -468,33 +439,23 @@ rule.
 \label{sec:apart}
 \field{Problem} The update path and the restore share onboard computer
 software and stored firmware. One fault there stops both until the outside
-system corrects it (A-6) [5,~Sec.~5.2]. Targets H-3.
+system corrects it (A-6) [5,~Sec.~5.2]. Targets H-3, new firmware no longer
+able to reach the controller. Firmware has two ways in: the update over the
+data link, and the restore program, which can also load firmware from the
+ground [6,~REQ-058].
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & H-3 & Chosen \\
 \midrule
-a & One program updates and restores, from one firmware store & 2 & NO \\
-b & A restore program, separate from the update manager, with its own firmware store & 3 & YES \\
+a & One program updates and restores, from one firmware store. A defect in it, or damage to the store, closes both ways at once; only the correction by the system outside this project (A-6) is left. & 2 & NO \\
+b & A restore program separate from the update manager, with its own code and its own firmware store. Closing both ways takes a defect in each program and the outside correction failing as well. & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} H-3 is new firmware no longer able to reach the controller. It has two ways
-in: the update over the data link, and the restore program, which can also load
-firmware from the ground [6,~REQ-058].
-\begin{description}[leftmargin=0.6cm]
-\item[a] One program does both, from one firmware store. A defect in it, or
-  damage to the store, closes both ways at once; only the correction by the
-  system outside this project (A-6) is left. Two failures.
-\item[b] The restore program has its own code and its own store. Closing both
-  ways takes a defect in each program and the outside correction failing as
-  well. Three failures.
-\end{description}
 
-\field{Choice} Option b \tbr{apart}. New firmware can still reach the
-controller through the restore program, which loads firmware from the ground
-[6,~REQ-058], when the update path fails.
+\field{Choice} Option b \tbr{apart}.
 
 \field{Adds}
 \begin{itemize}
@@ -508,39 +469,23 @@ controller through the restore program, which loads firmware from the ground
 \label{sec:origin}
 \field{Problem} One means proves that both commands and firmware come from the
 operator. If it is disclosed, another party can command the controller and
-load firmware [5,~Sec.~5.2]. Targets H-2 and H-5.
+load firmware [5,~Sec.~5.2]. Targets H-2, firmware from someone else running
+on the controller, and H-5, someone else commanding the System.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
 \toprule
  & Option & H-2 & H-5 & Chosen \\
 \midrule
-a & One secret, held on the ground and on board, checks commands and firmware & 1 & 1 & NO \\
-b & Signatures made with one key; on board is only the means to check them, as in MCUboot [9,~Sec.~Security] & 1 & 1 & NO \\
-c & Encryption of every command and firmware image [11,~Sec.~4.1.1, p.~9], plus one signature; the two keys kept in two separate places & 2 & 2 & NO \\
-d & As c, with a second signature; the three keys kept in three separate places & 3 & 3 & YES \\
+a & One secret proves both commands and firmware, stored on the ground and on board. Disclosing it from either place hands over both. & 1 & 1 & NO \\
+b & A digital signature made with one key kept on the ground; the spacecraft holds only the means to check it, as in MCUboot [9,~Sec.~Security]. Nothing on board can be disclosed, but one disclosed key on the ground still hands over both. & 1 & 1 & NO \\
+c & Every command and firmware image is also encrypted, as the command stack must be [11,~Sec.~4.1.1, p.~9]. The encryption key and the signing key are kept in two separate places, so another party needs both. & 2 & 2 & NO \\
+d & As c, with a second signature made with a third key kept in a third place. Another party needs all three keys. & 3 & 3 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} H-2 is firmware from someone else running on the controller; H-5 is someone
-else commanding the System. Both take the means of proving origin.
-\begin{description}[leftmargin=0.6cm]
-\item[a] One secret proves both commands and firmware, and it is stored on the
-  ground and on board. Disclosing it from either place hands over both. One
-  failure.
-\item[b] A digital signature is made with a key kept on the ground; the
-  spacecraft holds only the means to check it. Nothing on board can be
-  disclosed, but one disclosed key on the ground still hands over both. One
-  failure.
-\item[c] Every command and image is also encrypted, as the command stack must
-  be [11,~Sec.~4.1.1, p.~9]. The encryption key and the signing key are kept in
-  two separate places, so another party needs both. Two failures.
-\item[d] As c, with a second signature made with a third key in a third place.
-  Three disclosures are needed. Three failures.
-\end{description}
 
-\field{Choice} Option d \tbr{origin}, shown in Figure~\ref{fig:origin}. Each
-disclosure exposes one key, so another party needs three. The command stack
+\field{Choice} Option d \tbr{origin}, shown in Figure~\ref{fig:origin}. The command stack
 must be encrypted [11,~Sec.~4.1.1, p.~9], and encryption with authentication
 is the recommended defence in depth [11,~Sec.~4.1.1.c, p.~10]. The controller
 checks firmware signatures again before running it [6,~REQ-006], with code
@@ -588,39 +533,22 @@ checked again on the controller.}
 \field{Problem} Expiry, arm time-outs, scheduled commands, time-tags and the
 trial time limit all depend on the onboard clock. A wrong clock alone runs a
 scheduled command at the wrong time and gives reports wrong times
-[5,~Sec.~5.2]. Targets H-6 and H-9.
+[5,~Sec.~5.2]. Targets H-6, here a scheduled command run at the wrong time,
+and H-9, here reports shown with wrong times.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
 \toprule
  & Option & H-6 & H-9 & Chosen \\
 \midrule
-a & The onboard clock alone, compared with ground time at each contact [6,~REQ-072] & 1 & 1 & NO \\
-b & Counts instead of times wherever possible, such as report and command numbers & 1 & 1 & NO \\
-c & A second clock in the controller, with its own time source, set only from ground time; each processor makes every time check with its own clock, and every report carries both times & 2 & 2 & YES \\
+a & One clock, compared with ground time only at contacts [6,~REQ-072]. Between contacts, a wrong clock runs scheduled commands at the wrong time and stamps wrong times on reports, and nothing notices. & 1 & 1 & NO \\
+b & Report and command numbers replace times where possible. The order of reports survives a wrong clock, but scheduled commands and time-tags still need it. & 1 & 1 & NO \\
+c & A second clock in the controller, with its own time source and set only from ground time. A scheduled command runs only when both clocks agree, and every report carries both times, so one wrong clock is caught by the other. A wrong ground time reaches both clocks; the ground software's check of every command before it is sent [6,~REQ-089] keeps that case at two failures, and a wrong time that passes it is an accepted risk. & 2 & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} H-6 here is a scheduled command run at the wrong time; H-9 is reports shown
-with wrong times.
-\begin{description}[leftmargin=0.6cm]
-\item[a] One clock, compared with ground time only at contacts. Between
-  contacts, a wrong clock runs scheduled commands at the wrong time and stamps
-  wrong times on reports, and nothing notices. One failure.
-\item[b] Report and command numbers replace times where possible. The order of
-  reports survives a wrong clock, but scheduled commands and time-tags still
-  need it. One failure.
-\item[c] The controller keeps its own clock from its own time source. A
-  scheduled command runs only when both clocks agree, and each report carries
-  both times, so one wrong clock is caught by the other. Two failures. Both
-  clocks are set from ground time, so a wrong ground time reaches both; the
-  ground software's check of every command before it is sent [6,~REQ-089]
-  keeps that case at two failures as well. A wrong ground time that passes
-  that check is an accepted risk.
-\end{description}
 
-\field{Choice} Option c \tbr{clocks}, shown in Figure~\ref{fig:clocks}. A
-wrong clock on one processor is caught by the other.
+\field{Choice} Option c \tbr{clocks}, shown in Figure~\ref{fig:clocks}.
 
 \begin{figure}[H]
 \centering
@@ -662,34 +590,22 @@ reach both.}
 \subsection{Held Data}
 \label{sec:held}
 \field{Problem} A bit error can change a held command, the arm state or the
-kept data after its check and before its use (A-5) [5,~Sec.~5.2]. Targets H-6.
+kept data after its check and before its use (A-5) [5,~Sec.~5.2]. Targets H-6,
+here a command acted on in a form the operator did not intend.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & H-6 & Chosen \\
 \midrule
-a & Each item is checked once, when it arrives & 1 & NO \\
-b & Each held item is stored with a check value and checked again just before use; the arm state is stored as a value that no single bit error turns into armed & 2 & YES \\
-c & Memory that corrects bit errors on its own & 2 & NO \\
+a & Each item is checked once, on arrival. A bit error afterwards goes unnoticed. & 1 & NO \\
+b & Each held item carries a check value and is checked again just before use; the arm state is stored as a pattern that no single bit error turns into armed. A bit error now has to produce a matching check value as well. & 2 & YES \\
+c & Memory hardware that corrects bit errors on its own. Also two failures, but it depends on a hardware feature. & 2 & NO \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} H-6 here is a held command, or the arm state, changed by a bit error after it
-was checked (A-5).
-\begin{description}[leftmargin=0.6cm]
-\item[a] Each item is checked once, on arrival. A bit error afterwards goes
-  unnoticed. One failure.
-\item[b] Each held item carries a check value and is checked again just before
-  use; the arm state is stored as a pattern that no single bit error turns into
-  armed. A bit error now has to produce a matching check value as well. Two
-  failures.
-\item[c] Memory hardware that corrects bit errors on its own. Also two
-  failures, but it depends on a hardware feature.
-\end{description}
 
-\field{Choice} Option b \tbr{held}. A bit error must also produce a matching
-check value, a second failure. MCUboot notes the same risk: skipping the check
+\field{Choice} Option b \tbr{held}. MCUboot notes the same risk: skipping the check
 before use lets an image changed after a good check run unchecked
 [9,~Sec.~Integrity Check]. Unlike option c, option b needs no hardware
 feature; option c can be added where the hardware has it.
@@ -706,33 +622,24 @@ feature; option c can be added where the hardware has it.
 \subsection{Two Kinds of Connection}
 \label{sec:links}
 \field{Problem} The two data-link connections share software at both ends, so
-one defect cuts both (R-1) [5,~Sec.~5.2]. Targets H-4.
+one defect cuts both (R-1) [5,~Sec.~5.2]. Targets H-4, the controller no
+longer commanded or observed. The count is of failures that cut both
+connections at once.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
 \toprule
  & Option & Failures to cut both & Chosen \\
 \midrule
-a & Two connections of one kind, one driver at each end & 1 & NO \\
-b & Two connections of one kind, a separate driver for each & 1 & NO \\
-c & Two different kinds of connection, a separate driver for each & 2 & YES \\
+a & Two connections of one kind share one driver at each end. One defect in that driver cuts both. & 1 & NO \\
+b & Each connection has its own driver, but both are of one kind. A fault common to that kind, in its design or in its handling, cuts both. & 1 & NO \\
+c & Two different kinds, each with its own driver. Cutting both takes a separate failure in each. & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
-\field{The options in detail} The count is of failures that cut both data-link connections at once.
-\begin{description}[leftmargin=0.6cm]
-\item[a] Two connections of one kind share one driver at each end. One defect
-  in that driver cuts both. One failure.
-\item[b] Each connection has its own driver, but both are of one kind. A fault
-  common to that kind, in its design or in its handling, cuts both. One
-  failure.
-\item[c] Two different kinds, each with its own driver. Cutting both takes a
-  separate failure in each. Two failures.
-\end{description}
 
-\field{Choice} Option c \tbr{links}. One defect, or one fault common to a kind
-of connection, now cuts one connection; the other carries on (O-3). H-4 still
-falls to the loss of the onboard computer (R-4).
+\field{Choice} Option c \tbr{links}. One connection carries on when the other is
+cut (O-3). H-4 still falls to the loss of the onboard computer (R-4).
 
 \field{Adds}
 \begin{itemize}

@@ -18,7 +18,7 @@
 
 % Controlled-document header on every page.
 \newcommand{\docref}{Reference TBD}
-\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
+\newcommand{\docrev}{Issue 1, Rev.~1 --- DRAFT}
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\footnotesize Fail-Safe In-Orbit Reprogramming of a Spacecraft Controller --- Software Classification}
@@ -30,6 +30,10 @@
 \newtotcounter{tbd}
 \newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
 \newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
+% Proposals awaiting the author's acceptance, listed in App. A.
+\newtotcounter{tbr}
+\newcommand{\tbritem}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
+\newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
 
 \setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
 \setlist[itemize]{nosep}
@@ -44,10 +48,10 @@
 \vspace{1em}
 \begin{tabular}{@{}ll@{}}
 Reference & TBD \tbd{ref} \\
-Issue / revision & Issue 1, Revision 0 --- DRAFT \\
-Date & 10 October 2026 \\
+Issue / revision & Issue 1, Revision 1 --- DRAFT \\
+Date & 11 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD (App.~A) \\
+Open items & \total{tbd} TBD, \total{tbr} TBR (App.~A) \\
 \end{tabular}
 \end{center}
 
@@ -57,6 +61,7 @@ Open items & \total{tbd} TBD (App.~A) \\
 Issue & Rev. & Date & Change \\
 \midrule
 1 & 0 & 2026-10-10 & First draft \\
+1 & 1 & 2026-10-11 & Safety-critical designation from the hazard analysis \\
 \bottomrule
 \end{tabular}
 
@@ -83,6 +88,9 @@ Version~D, page ``SWE-020 -- Software Classification''.
 
 \noindent [4] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
 Controller --- Concept of Operations}, Issue~1, Revision~0, Draft.
+
+\noindent [5] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
+Controller --- Hazard Analysis}, Issue~1, Revision~0, Draft.
 
 % ===========================================================================
 \section{Classification}
@@ -144,8 +152,36 @@ exist to prevent, detect or handle one [2, Sec.~4.2, p.~20]. Safety-critical
 software must meet extra requirements on top of its class, for example test
 coverage of every decision (MC/DC) [1, Sec.~3.7.4, pp.~26--27].
 
-Which items are safety-critical can only be decided once the hazards are known,
-in the hazard analysis \tbd{safety}.
+The hazard analysis designates the items below from its hazards [5, Sec.~4.0]. Until the architecture
+divides each item into components, the whole item is treated as
+safety-critical \tbr{safety}.
+
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{@{}lll>{\raggedright\arraybackslash}X@{}}
+\toprule
+Software item & Safety-critical & Criteria & Hazards \\
+\midrule
+Controller firmware & YES & a, b, c, e & H-1 to H-4, H-6 to H-13 \\
+Onboard computer software & YES & a, b, c, e & H-1 to H-17 \\
+Ground software & YES & a, b & H-2, H-4 to H-7, H-9, H-10, H-15, H-17 \\
+Bench test tools & NO & NONE & NONE \\
+Firmware build tools & NO & NONE & NONE \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Legend: criteria} [2, Sec.~4.2, p.~20]. a: causes or
+contributes to a system hazardous condition or event. b: controls functions
+identified in a system hazard. c: provides mitigation for a system hazardous
+condition or event. d: mitigates damage if a hazardous condition or event
+occurs. e: detects, reports and takes corrective action if the system reaches
+a potentially hazardous state. Hazards: the hazard IDs of [5, Sec.~4.0].
+
+\medskip
+{\itshape \noindent\textbf{Note.} Bench test tools stay out of operation
+(H-12). Firmware build tools never run in operation; a defect they put into
+firmware is a shared cause [5, Sec.~5.2].\par}
 
 % ===========================================================================
 \section{Tailoring and Review}
@@ -168,8 +204,12 @@ in the hazard analysis \tbd{safety}.
 The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
-\tbditem{safety}{Safety-critical designation of each software item, from the
-  hazard analysis.}
+\end{description}
+
+\noindent The proposal below awaits the author's acceptance.
+\begin{description}
+\tbritem{safety}{The safety-critical designation of each software item
+  (Section~4.0).}
 \end{description}
 
 \clearpage

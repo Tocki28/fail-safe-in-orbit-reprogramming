@@ -27,7 +27,8 @@ changes it: NASA applies these processes "iteratively and recursively"
    **Draft:** [Issue 1, Rev 1](docs/conops/ConOps_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev1_DRAFT.pdf)
    (supersedes [Rev 0](docs/conops/ConOps_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf))
 2. **Software Classification:** Failure severity and required rigor.
-   **Draft:** [Issue 1, Rev 0](docs/classification/Software-Classification_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
+   **Draft:** [Issue 1, Rev 1](docs/classification/Software-Classification_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev1_DRAFT.pdf)
+   (supersedes [Rev 0](docs/classification/Software-Classification_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf))
 3. **Hazard Analysis:** Top-down and bottom-up fault identification.
    **Draft:** [Issue 1, Rev 0](docs/hazard-analysis/Hazard-Analysis_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 4. **Requirements:** Traceable, testable, single-claim rules.

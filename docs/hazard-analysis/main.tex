@@ -317,9 +317,9 @@ fails and when [4,~p.~50].
 \node[ev, anchor=north, text width=3.6cm] (E2) at (1.7,-4.15) {The restore through the reprogramming link fails when it is needed};
 \draw (g2) -- (g2 |- 0,-4.0) -| (E1.north);
 \draw (g2 |- 0,-4.0) -| (E2.north);
-\foreach \x/\t/\n in {4.75/Start-up code fails/B04,
-    6.95/Data kept over restarts stops every image/B05,
-    9.15/Same defect in every image/B07} {
+\foreach \x/\t/\n in {4.75/Start-up code fails/B08,
+    6.95/Data kept over restarts stops every image/B09,
+    9.15/Same defect in every image/B10} {
   \node[ev, anchor=north, text width=1.95cm] (C) at (\x,-4.15) {\t};
   \node[idbox, below=0pt of C] (iC) {\n};
   \node[undev, below=0pt of iC] {};
@@ -335,12 +335,12 @@ fails and when [4,~p.~50].
 \node[ev, anchor=north, text width=2.6cm] (E3) at (-5.6,-6.52) {Each image fails on its own at the restart};
 \draw (g3) -- (g3 |- 0,-6.37) -| (E3.north);
 \node[ev, anchor=north, text width=1.95cm] (B6) at (-3.05,-6.52) {Restart loop never reaches the fall-back};
-\node[idbox, below=0pt of B6] (iB6) {B06};
+\node[idbox, below=0pt of B6] (iB6) {B04};
 \node[undev, below=0pt of iB6] {};
 \draw (g3 |- 0,-6.37) -| (B6.north);
-\foreach \x/\t/\s/\n in {-0.65/Reprogramming link fails (hardware)/basic/B08,
-    1.7/Onboard computer misses the need/undev/B09,
-    4.05/Its known-good copy is damaged/undev/B10} {
+\foreach \x/\t/\s/\n in {-0.65/Reprogramming link fails (hardware)/basic/B05,
+    1.7/Onboard computer misses the need/undev/B06,
+    4.05/Its known-good copy is damaged/undev/B07} {
   \node[ev, anchor=north, text width=2.15cm] (R) at (\x,-6.52) {\t};
   \node[idbox, below=0pt of R] (iR) {\n};
   \node[\s, below=0pt of iR] {};
@@ -377,10 +377,10 @@ fails and when [4,~p.~50].
 \label{fig:tree}
 \end{figure}
 
-H-1 has three kinds of minimal cut set: one event (B04, B05 or B07);
-two events (B06 with one of B08 to B10); four events (B01, B02 and B03 with
-one of B08 to B10). By assumption 1 (Section~3.3), B04, B05 and B07 also stop
-the image the restore puts back, so each causes H-1 alone.
+H-1 has three kinds of minimal cut set: one event (B08, B09 or B10); two
+events (B04 with one of B05 to B07); four events (B01, B02 and B03 with one of
+B05 to B07). By assumption 1 (Section~3.3), B08, B09 and B10 also stop the
+image the restore puts back, so each causes H-1 alone.
 
 The table below gives the same count for every catastrophic and critical
 hazard, with the proposed controls working.

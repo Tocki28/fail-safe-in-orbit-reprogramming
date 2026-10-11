@@ -836,25 +836,29 @@ Reprogramming link B & Reprogramming drivers and controller & The controller's f
 % ===========================================================================
 \section{Hardware Needs}
 \label{sec:hardware}
-The hardware must provide what the decisions above assume. Each need is
-checked against the two boards before this document is released \tbd{boards}.
+The hardware must provide what the design decisions and the requirements rely
+on. Each need is checked against the two boards before this document is
+released \tbd{boards}.
 
 \smallskip
-{\small\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xl@{}}
+{\small\renewcommand{\arraystretch}{1.3}\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xl@{}}
 \toprule
-Need & Needed by \\
+Need & From \\
 \midrule
-A debug port that writes the controller's memory whatever it holds & Section~\ref{sec:wayback} \\
-A factory loader in the controller that firmware cannot change, started by a boot pin & Section~\ref{sec:wayback} \\
-Wires from the onboard computer to the controller's reset and boot pins & Section~\ref{sec:wayback} \\
-No way for controller firmware to disable the debug port or the factory loader & Section~\ref{sec:wayback} \\
-A way for the restore to make the last-resort firmware run first & Section~\ref{sec:startup} \\
-Room in the controller for the bootloader, two main firmware copies, the last-resort firmware and the kept data & Section~\ref{sec:startup} \\
-Kept data in the controller that survives a restart and a power loss & REQ-017 \\
-Room on the onboard computer for two separate firmware stores & Section~\ref{sec:apart} \\
-Processing in the controller to check two signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\
-A time source in the controller separate from the onboard computer's & Section~\ref{sec:clocks} \\
-Two different kinds of connection between the onboard computer and the controller & Section~\ref{sec:links} \\
+\textbf{Debug port:} the onboard computer can write the controller's memory and restart it, whatever the memory holds, even with no firmware running & Section~\ref{sec:wayback} \\
+\textbf{Factory loader:} a loader in the controller's read-only memory, written at the factory, started by a boot pin instead of our bootloader, that accepts new firmware & Section~\ref{sec:wayback} \\
+\textbf{Control wires:} wires from the onboard computer to the controller's reset and boot pins & Section~\ref{sec:wayback} \\
+\textbf{No firmware lock-out:} controller firmware cannot disable the debug port or the factory loader & Section~\ref{sec:wayback} \\
+\textbf{Reprogramming protocols:} the onboard computer can drive the debug port's protocol and the factory loader's protocol over its own pins & Section~\ref{sec:wayback} \\
+\textbf{Writable start position:} the restore can write the last-resort firmware into the place the controller starts from & Section~\ref{sec:startup} \\
+\textbf{Controller memory size:} room for the bootloader, two main firmware copies, the last-resort firmware and the kept data; checked once the code sizes are known & Section~\ref{sec:startup} \\
+\textbf{Writing while running:} new firmware is written into one part of the controller's memory while its firmware keeps running from another & REQ-048 \\
+\textbf{Kept data storage:} memory in the controller that keeps the kept data through restarts and power loss & REQ-017 \\
+\textbf{Independent watchdog:} a watchdog with its own clock that restarts the controller when its firmware stops responding, and that firmware cannot switch off & REQ-022 \\
+\textbf{Independent time source:} a time source in the controller, separate from the onboard computer's & Section~\ref{sec:clocks} \\
+\textbf{Two kinds of data link, both ends:} hardware for two different kinds of connection on both boards, for example a serial line and a CAN bus & Section~\ref{sec:links} \\
+\textbf{Signature checking speed:} enough processing and working memory in the controller to check two signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\
+\textbf{Onboard computer storage:} room for two separate firmware stores, one for the update manager and one for the restore program & Section~\ref{sec:apart} \\
 \bottomrule
 \end{tabularx}}
 

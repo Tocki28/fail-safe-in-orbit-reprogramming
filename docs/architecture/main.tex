@@ -150,7 +150,7 @@ it on; between contacts it stores the controller's reports, watches the
 controller, and restores it when no firmware can run. The controller firmware
 acts on commands, reports its state and handles its own faults. It tries new
 firmware before keeping it and returns to working firmware on its own when the
-new firmware fails: a start-up selector chooses which copy runs, and the
+new firmware fails: a bootloader chooses which copy runs, and the
 last-resort firmware takes over when the main firmware cannot.
 Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 
@@ -195,7 +195,7 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 
 % Controller firmware
 \node[title] (ct) at (11.65,1.5) {Controller\\firmware};
-\node[comp] (c0) at (11.65,0) {\cmp{Start-up selector}{verifies each firmware copy and selects the one to run}};
+\node[comp] (c0) at (11.65,0) {\cmp{Bootloader}{verifies each firmware copy and selects the one to run}};
 \foreach \n/\a/\b [count=\i from 0] in {
   m1/Mode manager/manages controller modes and the firmware trial,
   m2/Command checker/validates and acknowledges incoming commands,
@@ -244,7 +244,7 @@ the controller whatever its memory holds.}
 \draw[msg] (6,-4.1) -- node[above]{4. Delivered over the data link} (12,-4.1);
 \node[act] at (12,-5.0) {5. Written to the copy that is not confirmed, while the controller keeps working};
 \node[act] at (12,-6.1) {6. Switches to the new copy and restarts};
-\node[act] at (12,-7.1) {7. Start-up selector checks it; trial; judged good; confirmed};
+\node[act] at (12,-7.1) {7. Bootloader checks it; trial; judged good; confirmed};
 \draw[msg] (12,-8.4) -- node[above]{8. Reports which firmware runs} (6,-8.4);
 \draw[msg] (6,-8.4) -- node[above]{9. Reports at the next contact} (0,-8.4);
 \end{tikzpicture}
@@ -294,10 +294,11 @@ the options it rejects (NO).
 \needspace{9\baselineskip}
 \subsection{Start-Up and Fall-Back}
 \label{sec:startup}
-\field{Problem} Every firmware copy, including the one the restore puts back,
-shares the start-up code and the data kept over restarts. One defect there
-stops them all, and the restore brings it back [5,~Sec.~5.2]. Targets H-1 and
-H-8.
+\field{Problem} Every firmware copy is started by the same bootloader and
+depends on the data it keeps over restarts. A defect in the bootloader, or kept
+data it cannot handle, stops every copy, and today's restore writes back the
+same bootloader, so the defect returns [5,~Sec.~5.2]. H-1 and H-8 are
+therefore open to a single failure.
 
 \smallskip
 {\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xccc@{}}
@@ -305,8 +306,8 @@ H-8.
  & Option & H-1 & H-8 & Chosen \\
 \midrule
 a & The last-resort firmware runs first and chooses; the restore puts it back & 2 & 1 & NO \\
-b & A start-up selector runs first and chooses between two copies; a new copy runs as a test and is reverted unless it confirms itself, as in MCUboot [9,~Sec.~Boot Swap Types]; the restore puts back the same selector & 2 & 1 & NO \\
-c & As b, plus a last-resort firmware sharing no code with the selector or either copy; the restore puts it in the selector's place & 3 & 2 & YES \\
+b & A bootloader runs first and chooses between two copies; a new copy runs as a test and is reverted unless it confirms itself, as in MCUboot [9,~Sec.~Boot Swap Types]; the restore puts back the same bootloader & 2 & 1 & NO \\
+c & As b, plus a last-resort firmware sharing no code with the bootloader or either copy; the restore puts it in the bootloader's place & 3 & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
@@ -324,7 +325,7 @@ from the ground [12,~Sec.~6.4.3.2.4, p.~85].
   add/.style={st, fill=black!12},
   tr/.style={-{Latex[length=1.6mm]}, thick},
   lab/.style={font=\scriptsize, align=center}]
-\node[st] (sel) at (0,0) {Start-up selector checks the copies and counts failed starts};
+\node[st] (sel) at (0,0) {Bootloader checks the copies and counts failed starts};
 \node[st] (trial) at (5.1,0) {TRIAL\\new copy runs};
 \node[st] (op) at (10.2,0) {OPERATE\\confirmed copy runs};
 \node[st] (prev) at (5.1,-2.7) {FALLBACK\\previous copy runs};
@@ -337,7 +338,7 @@ from the ground [12,~Sec.~6.4.3.2.4, p.~85].
 \draw[tr] (prev) -- node[above, lab]{previous\\copy fails} (lr);
 \draw[tr] ([xshift=-0.6cm]lr.south) -- node[left, lab]{fails: the\\controller is silent} ([xshift=-0.6cm]rec.north);
 \draw[tr] ([xshift=0.6cm]rec.north) -- node[right, lab]{the restore puts the\\last-resort firmware first} ([xshift=0.6cm]lr.south);
-\draw[tr] (sel.south) |- node[pos=0.3, right, lab]{start-up selector fails:\\the controller is silent} (rec.west);
+\draw[tr] (sel.south) |- node[pos=0.3, right, lab]{bootloader fails:\\the controller is silent} (rec.west);
 \end{tikzpicture}
 \caption{Start-up and fall-back. White: the two-copy test and revert of
 MCUboot [9,~Sec.~Boot Swap Types]. Grey: added for a controller that nobody
@@ -353,7 +354,7 @@ can reach, the last-resort firmware and the restore.}
   idle/.style={cell, text=black!45},
   row/.style={anchor=east, font=\footnotesize\bfseries, align=right}]
 \node[row] at (-0.1,0) {In operation};
-\node[cell] (a0) at (1.3,0) {Start-up selector};
+\node[cell] (a0) at (1.3,0) {Bootloader};
 \node[cell] (a1) at (3.9,0) {Main firmware\\copy 1};
 \node[cell] (a2) at (6.5,0) {Main firmware\\copy 2};
 \node[cell] (a3) at (9.1,0) {Last-resort\\firmware};
@@ -368,21 +369,21 @@ can reach, the last-resort firmware and the restore.}
 \node[idle] (b2) at (6.5,-2.2) {Main firmware\\copy 2};
 \node[cell] (b3) at (9.1,-2.2) {Last-resort\\firmware};
 \node[cell] (b4) at (11.7,-2.2) {Kept data,\\cleared};
-\node[align=center] at ($(b1.south)!0.5!(b2.south)+(0,-0.35)$) {not run until the operator puts back\\the start-up selector};
+\node[align=center] at ($(b1.south)!0.5!(b2.south)+(0,-0.35)$) {not run until the operator puts back\\the bootloader};
 \end{tikzpicture}
 \caption{The controller's memory, not to scale. After a restore, the
-last-resort firmware (grey) sits in the start-up selector's place and runs
+last-resort firmware (grey) sits in the bootloader's place and runs
 first.}
 \label{fig:memory}
 \end{figure}
 
 \field{Adds}
 \begin{itemize}
-\item The start-up selector shall share no code with the main firmware or the
+\item The bootloader shall share no code with the main firmware or the
   last-resort firmware.
-\item The restore shall put the last-resort firmware in the start-up
-  selector's place, so that it runs first.
-\item The onboard computer software shall put back the start-up selector and
+\item The restore shall put the last-resort firmware in the bootloader's
+  place, so that it runs first.
+\item The onboard computer software shall put back the bootloader and
   the main firmware through the reprogramming link when the operator orders it.
 \end{itemize}
 
@@ -488,7 +489,7 @@ pass forged firmware through both checks [8,~Sec.~7.4.2, p.~141].
 \node[key] (k3) at (0,-1.0) {Signing key B\\place 3};
 \node[box] (sg) at (3.6,0) {Signing\\(ground software)};
 \node[box] (oc) at (8.3,0) {Origin checker (onboard computer): decrypts and checks both signatures};
-\node[box] (ss) at (12.9,0) {Start-up selector (controller): checks the signatures again, with different code};
+\node[box] (ss) at (12.9,0) {Bootloader (controller): checks the signatures again, with different code};
 \foreach \k in {k1,k2,k3} \draw[ar] (\k.east) -- (sg.west);
 \draw[ar] (sg) -- node[above]{encrypted,} node[below]{signed twice} (oc);
 \draw[ar] (oc) -- node[above]{firmware} (ss);
@@ -637,7 +638,7 @@ requirements that the decisions add are allocated when they enter the
 requirements.
 
 All components are safety-critical [7,~Sec.~4.0] and new code, except the
-start-up selector, the origin checker and signing, which are built around a
+bootloader, the origin checker and signing, which are built around a
 published cryptographic library.
 
 The components from the mode manager to the data-link drivers form the main
@@ -652,7 +653,7 @@ Component & Role & Requirements \\
 \midrule
 \endhead
 \multicolumn{3}{@{}l}{\textit{Controller firmware}} \\
-Start-up selector & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113 \\
+Bootloader & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113 \\
 Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113 \\
 Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & REQ-027~to~036, REQ-100 \\
 Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & REQ-007, REQ-008 \\
@@ -717,7 +718,7 @@ A loading path into the controller that works whatever its memory holds, driven 
 A way for the onboard computer to restart the controller & Section~\ref{sec:wayback} \\
 No way for controller firmware to disable that loading path & Section~\ref{sec:wayback} \\
 A way for the restore to make the last-resort firmware run first & Section~\ref{sec:startup} \\
-Room in the controller for the start-up selector, two main firmware copies, the last-resort firmware and the kept data & Section~\ref{sec:startup} \\
+Room in the controller for the bootloader, two main firmware copies, the last-resort firmware and the kept data & Section~\ref{sec:startup} \\
 Kept data in the controller that survives a restart and a power loss & REQ-017 \\
 Room on the onboard computer for two separate firmware stores & Section~\ref{sec:apart} \\
 Processing in the controller to check two signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\

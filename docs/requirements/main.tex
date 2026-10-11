@@ -108,7 +108,9 @@ NASA/SP-2016-6105 Rev~2, 2016.
 \section{Overview}
 
 \subsection{Software Items}
-Requirements are organised by software item [2,~Sec.~3.2]:
+A software item is one program that is built, tested and released as a unit
+[2,~Sec.~3.2]. Requirements are organised by software item; the System has
+three:
 \begin{description}[leftmargin=4.8cm]
 \item[Controller firmware] Runs on the controller: acts on commands, reports
   its state, and returns to working firmware on its own.
@@ -120,11 +122,15 @@ Requirements are organised by software item [2,~Sec.~3.2]:
 They meet over the radio link, the two data-link connections, the
 reprogramming link and the operator interface [3,~Sec.~3.3].
 
-Where the ConOps does not say which item does a function, this document
-allocates it \tbr{alloc}: the controller checks the arm, answers commands and
-tests itself; the onboard computer holds scheduled commands, refuses firmware
-during a trial, numbers reports, compares the onboard clock with ground time,
-and clears kept data at a restore.
+The ConOps says which item does most functions. For the few it leaves open,
+this document assigns one \tbr{alloc}:
+\begin{itemize}
+\item the controller checks the arming command before a dangerous command,
+  answers every command, and tests itself;
+\item the onboard computer holds scheduled commands until they run, refuses
+  new firmware during a trial, numbers reports, compares the onboard clock with
+  ground time, and clears the controller's kept data when it restores it.
+\end{itemize}
 
 \subsection{Table Columns}
 \begin{itemize}
@@ -178,8 +184,8 @@ REQ-025 & The controller firmware shall keep working on its current firmware whe
 REQ-026 & The controller firmware shall keep working correctly however long no command arrives. & H-8 control 2 & TEST \\
 REQ-027 & The controller firmware shall check that every command is allowed in the current mode, and refuse it with the reason if not. & H-6 control 1; Scenario-310; SWE-134 e & TEST \\
 REQ-028 & The controller firmware shall check that every command has possible values, and refuse it with the reason if not. & H-6 control 1; Scenario-320; SWE-134 g & TEST \\
-REQ-029 & The controller firmware shall run a dangerous command only after a valid arm, and refuse it with the reason otherwise. & H-6 control 2; Scenario-330; SWE-134 d; SWE-134 h & TEST \\
-REQ-030 & An arm shall expire when the dangerous command does not follow within \tbd{arm}; a later dangerous command shall be refused with the reason. & H-6 control 2; Scenario-335 & TEST \\
+REQ-029 & The controller firmware shall run a dangerous command only after a valid arming command, and refuse it with the reason otherwise. & H-6 control 2; Scenario-330; SWE-134 d; SWE-134 h & TEST \\
+REQ-030 & An arming command shall expire when the dangerous command does not follow within \tbd{arm}; a later dangerous command shall be refused with the reason. & H-6 control 2; Scenario-335 & TEST \\
 REQ-031 & The controller firmware shall run a command sent again only once, and answer ``already done''. & H-6 control 3; Scenario-350 & TEST \\
 REQ-032 & The controller firmware shall check a held command again just before running it. & H-6 cause i; Shared cause: radiation & TEST \\
 REQ-033 & The controller firmware shall send two answers to every command: received, then done with the result. & H-11 control 1; Scenario-120; Capability-2 & TEST \\
@@ -473,7 +479,7 @@ The values below are not yet known.
 \tbditem{switch}{Switch on arrival, or only on operator command (ConOps
   TBD-2).}
 \tbditem{restart}{Longest time a controller restart may take.}
-\tbditem{arm}{Time after which an arm expires.}
+\tbditem{arm}{Time after which an arming command expires.}
 \tbditem{rate}{Rate of regular health reports.}
 \tbditem{selftest}{Interval between controller self-tests.}
 \tbditem{clock}{Largest allowed difference between the onboard clock and

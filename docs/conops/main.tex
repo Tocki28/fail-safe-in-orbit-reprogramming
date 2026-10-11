@@ -74,7 +74,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 1 --- DRAFT \\
 Date & 11 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbdopen} TBD, \total{tbropen} TBR (App.~C) \\
+Open items & \total{tbdopen} TBD (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -342,7 +342,12 @@ outside the System; it uses them as given.
 
 \medskip
 \needspace{9\baselineskip}
-\noindent What works in each controller mode \tbr{modes}:
+\noindent For each controller mode, the table below states whether the controller
+accepts commands, sends reports and can receive new firmware. During a trial,
+commands and reports continue so the new firmware can be judged, but further
+firmware is refused until the trial ends. In RECOVERY the controller's software
+is halted: the onboard computer reports for it, and the restore is the only way
+firmware arrives.
 \begin{table}[H]
 \centering
 \begin{tabular}{@{}llll@{}}
@@ -356,8 +361,7 @@ RECOVERY & NO  & NO  & NO \\
 \bottomrule
 \end{tabular}
 \end{table}
-\noindent\textbf{Legend.} YES: available. NO: not available. In RECOVERY, the
-onboard computer reports for the controller.
+\noindent\textbf{Legend.} YES: available. NO: not available.
 
 \subsection{Proposed Capabilities}
 Each capability is shown in detail by the scenarios in Section~6.0.
@@ -679,12 +683,8 @@ recorded result of every scenario stay in the repository.
 \end{description}
 
 \section{Open Items}
-All statements without a TBR mark were stated or accepted by the author on
-9--11 October 2026. The proposal below awaits the author's acceptance.
-\begin{description}
-\tbritem{modes}{What works in each controller mode (Section~3.4).}
-\end{description}
-The values below are not yet known.
+All statements in this document were stated or accepted by the author on
+9--11 October 2026. The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}

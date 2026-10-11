@@ -358,12 +358,26 @@ fails and when [4,~p.~50].
   \node[undev, below=0pt of iA] {};
   \draw (g5) -- (g5 |- 0,-8.74) -| (A.north);
 }
+% Legend, in the empty space at the bottom right: each symbol, then its
+% meaning.
+\node[anchor=west, font=\scriptsize\bfseries] at (5.4,-6.9) {Legend};
+\foreach \y/\t in {-7.5/Event developed by the gate below,
+    -8.25/AND gate: all events below happen,
+    -9.0/OR gate: any one event below,
+    -9.75/Basic event: not developed further,
+    -10.5/Undeveloped event: no information yet,
+    -11.25/Identifier of a gate (G) or event (B)} {
+  \node[anchor=west, font=\scriptsize, text width=5.2cm, align=left] at (6.15,\y) {\t};
+}
+\node[draw, rectangle, minimum width=0.55cm, minimum height=0.3cm] at (5.75,-7.5) {};
+\pic[scale=0.6] at (5.75,-8.04) {andgate};
+\pic[scale=0.6] at (5.75,-8.79) {orgate};
+\node[basic] at (5.75,-9.75) {};
+\node[undev] at (5.75,-10.5) {};
+\node[idbox] at (5.75,-11.25) {B01};
 \end{tikzpicture}}
-\caption{Fault tree of H-1. Rectangle: event developed by the gate below it.
-Circle: basic event, needing no further development. Diamond: undeveloped
-event; the design that would develop it does not exist yet. Flat base: AND
-gate. Curved base: OR gate. ID box: gate (G) or primary event (B). Symbols
-as in [4,~Table~4-1, p.~34] and [4,~Fig.~4-1, p.~33].}
+\caption{Fault tree of H-1. Symbols as in [4,~Table~4-1, p.~34] and
+[4,~Fig.~4-1, p.~33].}
 \label{fig:tree}
 \end{figure}
 

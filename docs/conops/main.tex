@@ -26,14 +26,14 @@
 \tocloftpagestyle{fancy}
 
 % Section numbers as in the NASA ConOps outline: 1.0, 1.1, 1.1.1
-% [1, App. S, pp. 251--253].
+% [1,~App. S, pp. 251--253].
 \renewcommand{\thesection}{\arabic{section}.0}
 \renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
 \renewcommand{\thesubsubsection}{\thesubsection.\arabic{subsubsection}}
 
 % Controlled-document header on every page.
 \newcommand{\docref}{Reference TBD}
-\newcommand{\docrev}{Issue 1, Rev.~0 --- DRAFT}
+\newcommand{\docrev}{Issue 1, Rev.~1 --- DRAFT}
 \pagestyle{fancy}
 \fancyhf{}
 \lhead{\footnotesize Fail-Safe In-Orbit Reprogramming of a Spacecraft Controller --- ConOps}
@@ -42,7 +42,7 @@
 \rfoot{\small Page \thepage\ of \pageref{LastPage}}
 
 % Open items. TBD = not known. TBR = proposal awaiting the author's acceptance
-% [1, App. C, pp. 197--198]. Defined once in App. C; totals counted, not typed.
+% [1,~App. C, pp. 197--198]. Defined once in App. C; totals counted, not typed.
 \newtotcounter{tbd}
 \newtotcounter{tbr}
 \newtotcounter{tbropen}
@@ -71,10 +71,10 @@
 \vspace{1em}
 \begin{tabular}{@{}ll@{}}
 Reference & TBD \tbd{ref} \\
-Issue / revision & Issue 1, Revision 0 --- DRAFT \\
-Date & 10 October 2026 \\
+Issue / revision & Issue 1, Revision 1 --- DRAFT \\
+Date & 11 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbdopen} TBD (App.~C) \\
+Open items & \total{tbdopen} TBD, \total{tbropen} TBR (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -84,6 +84,9 @@ Open items & \total{tbdopen} TBD (App.~C) \\
 Issue & Rev. & Date & Change \\
 \midrule
 1 & 0 & 2026-10-10 & First draft \\
+1 & 1 & 2026-10-11 & Gaps found by the hazard analysis: scope, command checks,
+  functions per mode, origin replaced in flight, and seven scenarios and one
+  risk added or completed \\
 \bottomrule
 \end{tabular}
 
@@ -104,7 +107,7 @@ monitor, and update a controller in space that nobody can reach, and keeps that 
 observable, and correctable for its whole life. Operation, observability, and
 maintenance including in-flight modification over the specified lifetime are
 three areas a space software specification must cover
-[3, Annex~B, items 5.11--5.13, p.~113].
+[3,~Annex~B, items 5.11--5.13, p.~113].
 
 \medskip
 \noindent\textbf{Worst-Case Failure:} A failed update can leave the controller
@@ -115,14 +118,14 @@ access, that state is permanent.
 \noindent\textbf{Rationale:} The loss has happened. NASA records a mission
 terminated after an in-flight software upload omitted a patch for a defective
 countdown timer; its recommendations include test-bed verification of in-flight
-software updates [4, Lesson 0559, p.~199].
+software updates [4,~Lesson 0559, p.~199].
 
 \subsubsection{Assumptions and Constraints}
 \begin{description}
 \item[C-1] The ground cannot talk to the controller directly. Every command,
   report, and firmware image passes through the onboard computer.
 \item[C-2] All software is built to NASA's software engineering requirements.
-  Rigor per part is set by its software class [5, Sec.~3.5.1, p.~24; App.~C].
+  Rigor per part is set by its software class [5,~Sec.~3.5.1, p.~24; App.~C].
 \item[C-3] One engineer builds and checks the System. No independent team
   reviews the work.
 \item[C-4] The System runs on commercial development boards, not on spacecraft
@@ -132,7 +135,7 @@ software updates [4, Lesson 0559, p.~199].
   is impossible; all fixes and updates must arrive by radio.
 \item[A-2] The controller can lose power at any moment, even halfway through
   writing new firmware. The System must survive that without losing the
-  controller [2, App.~A, Table~2, p.~63].
+  controller [2,~App.~A, Table~2, p.~63].
 \item[A-3] The ground can reach the spacecraft only during line-of-sight
   contact windows \tbd{window}. Between contacts the System must work on its
   own.
@@ -140,7 +143,7 @@ software updates [4, Lesson 0559, p.~199].
   command before it is sent, so the System itself must refuse wrong commands.
 \item[A-5] Radiation in space can flip single bits in memory, so stored
   firmware can change on its own. The System must not run firmware that has
-  changed [2, App.~A, Table~2, p.~63].
+  changed [2,~App.~A, Table~2, p.~63].
 \end{description}
 
 \medskip
@@ -156,7 +159,7 @@ in App.~C.\par}
 The System comprises two spatially separated operational segments. The
 \textbf{ground segment} on Earth includes the operator, the mission operations
 center running ground software, and the ground station antenna
-[6, Sec.~11.2, p.~305]. The \textbf{space segment} in orbit consists of the onboard
+[6,~Sec.~11.2, p.~305]. The \textbf{space segment} in orbit consists of the onboard
 computer and the controller, which operate without physical access.
 
 Communication between segments is strictly established via a radio link during
@@ -181,7 +184,7 @@ controller's firmware cannot run.}
 \subsubsection{System Scope}
 The system context defines the boundary of the System: the system of interest,
 its users, and the external elements that interface with it
-[7, Sec.~8.3, p.~24].
+[7,~Sec.~8.3, p.~24].
 
 \begin{table}[H]
 \centering
@@ -201,8 +204,9 @@ External Elements & Radio equipment, spacecraft power supply \\
   required for development and verification, external to operational scope.
 \item \textbf{In scope:} commanding, telemetry, firmware updates, and autonomous
   fault handling between contact windows.
-\item \textbf{Out of scope:} onboard computer software updates,
-  and the radio equipment, which is used as given.
+\item \textbf{Out of scope:} onboard computer software updates; the
+  equipment the controller drives, and its state while no firmware runs; and
+  the radio equipment, which is used as given.
 \end{itemize}
 
 % ===========================================================================
@@ -272,11 +276,13 @@ NASA-HDBK-1009A, 12 March 2025.
 \item[Ground software] In the mission operations center. Turns the operator's
   decisions into commands and firmware ready to send, checks them before they
   leave, and keeps every report received.
-\item[Onboard computer] Checks commands and firmware and passes them to the
-  controller, stores the controller's reports between contacts, watches the
-  controller, and restores it when its firmware cannot run.
-\item[Controller] Runs its firmware, acts on commands, reports its state, and
-  returns to working firmware on its own when new firmware fails.
+\item[Onboard computer] Checks every firmware image, and the origin, newness
+  and expiry of every command, and passes them to the controller. Stores the
+  controller's reports between contacts, watches the controller, and restores
+  it when its firmware cannot run.
+\item[Controller] Checks every command against its current mode and possible
+  values, runs its firmware, acts on commands, reports its state, and returns
+  to working firmware on its own when new firmware fails.
 \end{description}
 The ground station's radio equipment and the spacecraft power supply are
 outside the System; it uses them as given.
@@ -334,6 +340,25 @@ outside the System; it uses them as given.
   functional firmware via the reprogramming link.
 \end{description}
 
+\medskip
+\needspace{9\baselineskip}
+\noindent What works in each controller mode \tbr{modes}:
+\begin{table}[H]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+Mode & Commands & Reports & New firmware received \\
+\midrule
+OPERATE  & YES & YES & YES \\
+TRIAL    & YES & YES & NO \\
+FALLBACK & YES & YES & YES \\
+RECOVERY & NO  & NO  & NO \\
+\bottomrule
+\end{tabular}
+\end{table}
+\noindent\textbf{Legend.} YES: available. NO: not available. In RECOVERY, the
+onboard computer reports for the controller.
+
 \subsection{Proposed Capabilities}
 Each capability is shown in detail by the scenarios in Section~6.0.
 \begin{description}[leftmargin=3cm]
@@ -341,8 +366,9 @@ Each capability is shown in detail by the scenarios in Section~6.0.
   reports, time-tagged, stored between contacts and sent down at the next one,
   with any loss reported.
 \item[Capability-2] \textbf{Command handling} (serves G-1): accept only the
-  operator's valid telecommands, answer and log every one, and support arming
-  and time-tagged execution.
+  operator's valid telecommands, answer and log every one, support arming and
+  time-tagged execution, and replace in flight the means that proves a command
+  comes from the operator.
 \item[Capability-3] \textbf{Fault handling} (serves G-1): detect faults between
   contacts, respond without the ground, and record them.
 \item[Capability-4] \textbf{Update} (serves G-3): receive, check, install and
@@ -359,7 +385,7 @@ This section specifies the environment the System encounters across its life
 cycle, encompassing simulated mission operations and laboratory integration
 and testing. For each environmental condition, the expected system response is
 defined as nominal operation, degraded performance tolerance, or survivability
-[1, App.~S, p.~252].
+[1,~App.~S, p.~252].
 
 \begin{table}[H]
 \centering
@@ -428,9 +454,9 @@ outside the scope of bench demonstration.
 % ===========================================================================
 \section{Operational Scenarios}
 Each scenario follows one thread of events from trigger to outcome
-[1, App.~S, pp.~252--253]. Every scenario below is demonstrated on hardware and
+[1,~App.~S, pp.~252--253]. Every scenario below is demonstrated on hardware and
 recorded. Sources in brackets are items of NASA's list of software causes of
-hazards [2, App.~A, Table~2].
+hazards [2,~App.~A, Table~2].
 
 \subsection{Nominal Conditions}
 \begin{description}[leftmargin=3cm]
@@ -463,10 +489,11 @@ hazards [2, App.~A, Table~2].
   \item The operator decides a command; the ground software prepares and
     checks it.
   \item During a contact, the command goes up the radio link.
-  \item The onboard computer checks that it is from the operator, new, allowed
-    in the current mode, and has possible values. A dangerous command must
-    first be armed by a separate command; the arm expires if the command does
-    not follow within a set time.
+  \item The onboard computer checks that it is from the operator, new and not
+    expired; the controller checks that it is allowed in the current mode and
+    has possible values. Commands added by new firmware are checked the same
+    way. A dangerous command must first be armed by a separate command; the arm
+    expires if the command does not follow within a set time.
   \item The command is executed. The answers (received, then done with the
     result) go down, and the command and its answers are logged.
   \end{enumerate}
@@ -481,7 +508,7 @@ hazards [2, App.~A, Table~2].
 
 \subsection{Off-Nominal Conditions}
 The off-nominal scenarios cover low performance, operator errors, failures, and
-unexpected environmental conditions [1, App.~S, p.~253]. Each entry gives the
+unexpected environmental conditions [1,~App.~S, p.~253]. Each entry gives the
 trigger, then the expected outcome.
 
 \medskip
@@ -502,22 +529,26 @@ trigger, then the expected outcome.
 \noindent\textbf{Operator errors and unauthorized commands}
 \begin{description}[leftmargin=3cm]
 \item[Scenario-300] A command not from the operator, or an old command sent
-  again, arrives. It is refused and logged [2, p.~62].
+  again, arrives. It is refused and logged [2,~p.~62].
 \item[Scenario-310] A command not allowed in the current mode arrives, for
   example ``switch'' when no new firmware has arrived. It is refused with the
-  reason [2, p.~63].
+  reason [2,~p.~63].
 \item[Scenario-320] A command with impossible values arrives. It is refused with
-  the reason [2, p.~62].
+  the reason [2,~p.~62].
 \item[Scenario-330] A dangerous command arrives without being armed. It is
   refused with the reason.
 \item[Scenario-335] A dangerous command arrives after its arm has expired. It
   is refused with the reason; the operator must arm again.
 \item[Scenario-340] A command arrives after its expiry. It is refused with the
-  reason [2, p.~63].
+  reason [2,~p.~63].
 \item[Scenario-350] An answer is lost and the operator sends the command again.
   It is not run a second time; the answer is ``already done''.
 \item[Scenario-360] Firmware built for a different controller is uploaded. It is
-  refused before it is installed [2, p.~63].
+  refused before it is installed [2,~p.~63].
+\item[Scenario-370] The operator replaces the means that proves commands and
+  firmware come from the operator. The new means arrives in a command proven
+  with the current one; from then on, only the new one is accepted
+  [2,~p.~67].
 \end{description}
 
 \medskip
@@ -525,16 +556,18 @@ trigger, then the expected outcome.
 \noindent\textbf{Firmware update failures}
 \begin{description}[leftmargin=3cm]
 \item[Scenario-400] Firmware is damaged in transfer. The onboard computer refuses
-  it before it reaches the controller [2, p.~63].
+  it before it reaches the controller [2,~p.~63].
 \item[Scenario-410] Firmware not released by the operator arrives. It is
   refused.
 \item[Scenario-420] Firmware older than the minimum version arrives. It is
   refused.
+\item[Scenario-425] New firmware arrives during a trial. It is refused with the
+  reason until the trial ends [2,~p.~63].
 \item[Scenario-430] The new firmware hangs during TRIAL. The controller returns
   to its previous firmware without outside help.
 \item[Scenario-440] The new firmware restarts over and over. After
   \tbd{bootcount} failed starts, the controller returns to its previous
-  firmware [2, p.~64].
+  firmware [2,~p.~64].
 \item[Scenario-450] The new firmware runs but is never judged good. After the
   trial time, the controller returns to its previous firmware.
 \item[Scenario-460] The previous firmware is also unusable. The controller runs
@@ -542,8 +575,12 @@ trigger, then the expected outcome.
 \item[Scenario-470] The operator cancels an update in progress. The update stops;
   working firmware is left running.
 \item[Scenario-480] No firmware can run. The onboard computer restores the
-  controller through the reprogramming link [2, p.~63].
+  last-resort firmware through the reprogramming link and tells the ground at
+  the next contact [2,~p.~63].
 \end{description}
+\noindent In Scenario-430 to Scenario-460, the failed firmware is not started
+again unless the operator orders it, and the next reports tell the ground which
+firmware now runs.
 
 \medskip
 \needspace{4\baselineskip}
@@ -551,6 +588,8 @@ trigger, then the expected outcome.
 \begin{description}[leftmargin=3cm]
 \item[Scenario-500] One data-link connection fails. Everything continues on the
   other, and the failure is reported.
+\item[Scenario-505] A failed data-link connection works again. The System uses
+  it again and reports it.
 \item[Scenario-510] Both data-link connections fail. The controller keeps
   working on its current firmware, the loss is reported, and the
   reprogramming link is still usable.
@@ -558,6 +597,9 @@ trigger, then the expected outcome.
   tries to bring it back, and records what it did.
 \item[Scenario-530] A program on the onboard computer crashes. It restarts and
   resumes any update in progress; the controller is not affected.
+\item[Scenario-535] The whole onboard computer restarts. The controller keeps
+  working. When the onboard computer is back, it resumes any update in
+  progress, and no report is lost without the ground being told.
 \end{description}
 
 \medskip
@@ -566,12 +608,15 @@ trigger, then the expected outcome.
 \begin{description}[leftmargin=3cm]
 \item[Scenario-600] Power is lost while the controller's firmware is being
   written. When power returns, the controller runs its previous firmware, and
-  the update can be repeated [2, p.~63].
+  the update can be repeated [2,~p.~63].
+\item[Scenario-605] Power is lost during the trial. When power returns, this
+  counts as a failed start; after \tbd{bootcount} failed starts, the controller
+  returns to its previous firmware.
 \item[Scenario-610] A radiation bit error changes stored firmware. The
-  controller detects it before starting that firmware and does not run it [2, p.~63].
+  controller detects it before starting that firmware and does not run it [2,~p.~63].
 \item[Scenario-620] A radiation bit error hits the memory the controller is
   running from. The controller may crash; it restarts on its own and resumes
-  operation [2, p.~63].
+  operation [2,~p.~63].
 \end{description}
 
 % ===========================================================================
@@ -601,6 +646,9 @@ The service it provides is fail-safe in-orbit reprogramming of spacecraft contro
   before it is accepted.
 \item[R-3] Staffing: one engineer builds and supports the System. Losing that
   person stops new firmware for the rest of the mission.
+\item[R-4] Operations: the System has one onboard computer. If it fails for
+  good, the controller keeps running its current firmware but can no longer be
+  commanded, observed or updated.
 \end{description}
 \noindent\textbf{Closeout:} at the end of the project, the documents and the
 recorded result of every scenario stay in the repository.
@@ -631,8 +679,12 @@ recorded result of every scenario stay in the repository.
 \end{description}
 
 \section{Open Items}
-All statements in this document were stated or accepted by the author on
-9--10 October 2026. The values below are not yet known.
+All statements without a TBR mark were stated or accepted by the author on
+9--11 October 2026. The proposal below awaits the author's acceptance.
+\begin{description}
+\tbritem{modes}{What works in each controller mode (Section~3.4).}
+\end{description}
+The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}

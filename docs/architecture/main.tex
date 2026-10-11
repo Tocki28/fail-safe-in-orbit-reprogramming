@@ -332,28 +332,32 @@ ground's way in, is decided in Section~\ref{sec:wayback}.
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\scriptsize,
-  st/.style={draw, rounded corners=3pt, text width=3.0cm, align=center, minimum height=0.9cm, inner sep=3pt},
+  st/.style={draw, rounded corners=3pt, text width=3.4cm, align=center, minimum height=0.9cm, inner sep=3pt},
   add/.style={st, fill=black!12},
   tr/.style={-{Latex[length=1.6mm]}, thick},
   lab/.style={font=\scriptsize, align=center}]
-\node[st] (sel) at (0,0) {Bootloader checks the copies and counts failed starts};
-\node[st] (trial) at (5.1,0) {TRIAL\\new copy runs};
-\node[st] (op) at (10.2,0) {OPERATE\\confirmed copy runs};
-\node[st] (prev) at (5.1,-2.7) {FALLBACK\\previous copy runs};
-\node[add] (lr) at (10.2,-2.7) {FALLBACK\\last-resort firmware runs};
-\node[add] (rec) at (10.2,-5.4) {RECOVERY\\the onboard computer restores the controller};
-\draw[tr] (sel) -- node[above, lab]{new copy\\waiting} (trial);
-\draw[tr] (trial) -- node[above, lab]{judged good:\\confirmed} (op);
-\draw[tr] (sel.north) to[bend left=16] node[above, lab]{no new copy} (op.north);
-\draw[tr] (trial) -- node[left, lab]{not judged good, hangs,\\or too many failed starts} (prev);
-\draw[tr] (prev) -- node[above, lab]{previous\\copy fails} (lr);
-\draw[tr] ([xshift=-0.6cm]lr.south) -- node[left, lab]{fails: the\\controller is silent} ([xshift=-0.6cm]rec.north);
-\draw[tr] ([xshift=0.6cm]rec.north) -- node[right, lab]{the restore puts the\\last-resort firmware first} ([xshift=0.6cm]lr.south);
-\draw[tr] (sel.south) |- node[pos=0.3, right, lab]{bootloader fails:\\the controller is silent} (rec.west);
+\node[st] (boot) at (0,0) {Bootloader\\checks the copies and counts failed starts};
+\node[st] (trial) at (0,-2.1) {TRIAL\\the new copy runs};
+\node[st] (prev) at (0,-4.2) {FALLBACK\\the previous copy runs};
+\node[add] (lr) at (0,-6.3) {FALLBACK\\the last-resort firmware runs};
+\node[add] (rec) at (0,-8.6) {RECOVERY\\the onboard computer restores the controller};
+\node[st] (op) at (7.6,-1.05) {OPERATE\\the confirmed copy runs};
+\node[add] (wait) at (7.6,-5.25) {Keeps running and waits for the operator's new firmware or command};
+\draw[tr] (boot) -- node[right, lab]{works, and a new\\copy is waiting} (trial);
+\draw[tr] (boot.east) -- node[above, lab, sloped]{works, no new copy} ([yshift=0.2cm]op.west);
+\draw[tr] (trial.east) -- node[below, lab, sloped]{works: judged good, confirmed} ([yshift=-0.2cm]op.west);
+\draw[tr] (trial) -- node[right, lab]{fails: not judged good,\\hangs, or too many\\failed starts} (prev);
+\draw[tr] (prev.east) -- node[above, lab, sloped]{works} ([yshift=0.2cm]wait.west);
+\draw[tr] (prev) -- node[right, lab]{fails} (lr);
+\draw[tr] (lr.east) -- node[below, lab, sloped]{works} ([yshift=-0.2cm]wait.west);
+\draw[tr] ([xshift=-0.7cm]lr.south) -- node[left, lab]{fails: the\\controller is silent} ([xshift=-0.7cm]rec.north);
+\draw[tr] ([xshift=0.7cm]rec.north) -- node[right, lab]{the restore puts the\\last-resort firmware first} ([xshift=0.7cm]lr.south);
+\draw[tr] (boot.west) -- ++(-1.5,0) |- node[pos=0.25, left, lab]{fails: the\\controller\\is silent} (rec.west);
 \end{tikzpicture}
-\caption{Start-up and fall-back. White: the two-copy test and revert of
-MCUboot [9,~Sec.~Boot Swap Types]. Grey: added for a controller that nobody
-can reach, the last-resort firmware and the restore.}
+\caption{Start-up and fall-back. Each box has two exits: it works, or it fails.
+White: the two-copy test and revert of MCUboot [9,~Sec.~Boot Swap Types].
+Grey: added for a controller that nobody can reach: the last-resort firmware,
+the restore, and the wait for the operator after a fall-back [6,~REQ-117].}
 \label{fig:startup}
 \end{figure}
 

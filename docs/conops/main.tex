@@ -86,7 +86,7 @@ Issue & Rev. & Date & Change \\
 1 & 0 & 2026-10-10 & First draft \\
 1 & 1 & 2026-10-11 & Gaps found by the hazard analysis: scope, objective O-6, assumption A-6, command checks,
   functions per mode, origin replaced in flight, and seven scenarios and one
-  risk added or completed \\
+  risk added or completed; the exit from FALLBACK, from the architecture \\
 \bottomrule
 \end{tabular}
 
@@ -336,7 +336,8 @@ outside the System; it uses them as given.
   if not, it enters FALLBACK.
 \item[FALLBACK] Entered following a failed firmware trial or boot failure.
   Reverts execution to the previous known-good firmware image or the
-  last-resort firmware.
+  last-resort firmware. The controller stays in FALLBACK until the operator
+  sends new firmware or a command that changes its firmware or mode.
 \item[RECOVERY] Entered when no operational firmware image can be executed.
   Controller software execution is halted while the onboard computer restores
   functional firmware via the reprogramming link.

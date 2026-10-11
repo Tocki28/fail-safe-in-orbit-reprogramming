@@ -201,6 +201,7 @@ REQ-040 & After a fall-back, the next reports shall state which firmware runs. &
 REQ-041 & The controller firmware shall detect a change in its own memory and return to a known safe state. & SWE-134 f & TEST \\
 REQ-042 & The controller firmware shall never send on the data link in a way that stops the onboard computer reaching it. & H-4 cause c & TEST \\
 REQ-113 & The controller shall return to its previous firmware when the operator orders it. & H-7 control 5 & TEST \\
+REQ-117 & In FALLBACK, the controller shall keep running the firmware it fell back to until the operator sends new firmware or a command that changes its firmware or mode. & Mode table; Scenario-460 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -425,7 +426,7 @@ Scenario-330 & REQ-029, REQ-112 & Scenario-335 & REQ-030, REQ-112 & Scenario-340
 Scenario-350 & REQ-031 & Scenario-360 & REQ-046 & Scenario-370 & REQ-084, REQ-085 \\
 Scenario-400 & REQ-044 & Scenario-410 & REQ-043 & Scenario-420 & REQ-045 \\
 Scenario-425 & REQ-002, REQ-050 & Scenario-430 & REQ-014, REQ-040 & Scenario-440 & REQ-015 \\
-Scenario-450 & REQ-013 & Scenario-460 & REQ-008, REQ-018 & Scenario-470 & REQ-051 \\
+Scenario-450 & REQ-013 & Scenario-460 & REQ-008, REQ-018, REQ-117 & Scenario-470 & REQ-051 \\
 Scenario-480 & REQ-054, REQ-060 & Scenario-500 & REQ-080, REQ-081 & Scenario-505 & REQ-082 \\
 Scenario-510 & REQ-025, REQ-081, REQ-083 & Scenario-520 & REQ-061 & Scenario-530 & REQ-062 \\
 Scenario-535 & REQ-024, REQ-063, REQ-077 & Scenario-600 & REQ-007 & Scenario-605 & REQ-016 \\
@@ -443,7 +444,7 @@ Item & Requirements & Item & Requirements & Item & Requirements \\
 Capability-1 & REQ-037, REQ-074 & Capability-2 & REQ-033, REQ-036, REQ-068, REQ-097, REQ-115 & Capability-3 & REQ-038 \\
 Capability-4 & REQ-011, REQ-021, REQ-097, REQ-114 & Capability-5 & OUTSIDE & O-1 & REQ-097 \\
 O-2 & REQ-043, REQ-064, REQ-088 & O-3 & REQ-080 & O-4 & REQ-038 \\
-O-5 & REQ-037, REQ-076, REQ-092 & O-6 & REQ-005, REQ-007, REQ-054 & Mode table & REQ-001, REQ-002, REQ-003, REQ-010, REQ-050 \\
+O-5 & REQ-037, REQ-076, REQ-092 & O-6 & REQ-005, REQ-007, REQ-054 & Mode table & REQ-001, REQ-002, REQ-003, REQ-010, REQ-050, REQ-117 \\
 \bottomrule
 \end{longtable}}
 

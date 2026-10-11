@@ -134,7 +134,7 @@ Version~D, Topic 8.05 ``SW Failure Modes and Effects Analysis''.
 Version~1.1, August 2002.
 
 \noindent [5] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
-Controller --- Concept of Operations}, Issue~1, Revision~0, Draft.
+Controller --- Concept of Operations}, Issue~1, Revision~1, Draft.
 
 \noindent [6] \emph{Fail-Safe In-Orbit Reprogramming of a Spacecraft
 Controller --- Software Classification}, Issue~1, Revision~0, Draft.
@@ -418,7 +418,8 @@ Meets rule: YES when Fewest is at least Needed.
 \item H-2 and H-5: the means of proving origin is disclosed.
 \item H-3: a defect in the onboard computer's update path, which cannot be
   corrected.
-\item H-4: one software defect that cuts both data-link connections.
+\item H-4: one software defect that cuts both data-link connections, or the
+  onboard computer failing for good.
 \item H-6: a wrong onboard clock, or a bit error in a held command after its
   check.
 \item H-8: the same defect in every image.
@@ -447,6 +448,7 @@ Prepare and check commands on the ground & H-6 & H-6 & H-6 & H-6 \\
 Check commands onboard & H-5, H-6 & H-6, H-11, H-17 & NONE & H-4, H-6, H-11 \\
 Hold armed and scheduled commands & H-11 & H-6 & H-6 & H-6 \\
 Run commands & H-11 & H-6 & H-5, H-6 & H-6 \\
+Replace the means of proving origin & H-2, H-5 & H-4 & H-4, H-5 & H-4 \\
 Answer and log commands & H-11 & H-9, H-17 & H-9 & H-16 \\
 \multicolumn{5}{@{}l}{\itshape Fault handling (Capability-3)} \\
 Detect faults & H-8, H-10 & H-10, H-13 & H-13 & H-8 \\
@@ -496,6 +498,9 @@ H-1, H-6, H-7, H-8, H-9, H-10.\par
 H-1, H-7, H-12.\par
 \noindent\textbf{Fixed onboard computer software:} it is not updated during
 the mission [5,~Sec.~5.0], so its defects stay. H-1, H-3, H-4.\par
+\noindent\textbf{One onboard computer:} it is the only path for commands,
+reports and restores; if it fails for good, all three stop (R-4). H-1, H-4,
+H-8, H-10.\par
 
 % ===========================================================================
 \section{Hazard Reports}
@@ -507,7 +512,7 @@ causes, proposed controls, how the controls fail, and their common causes
 
 % ---------------------------------------------------------------- H-1
 \hazard{H-1}{The controller is left with no firmware it can run, and cannot be restored.}{CATASTROPHIC}{CAUSE, CONTROL}
-\field{When} An update, any restart, or a needed restore.
+\field{When} An update, a trial, any restart, or a needed restore.
 \fieldin{Effect} The controller is lost for the rest of the mission (A-1).
 \field{Causes} (a)~power lost while firmware is written (Scenario-600)
 [1,~p.~63]; (b)~a bit error in stored firmware (Scenario-610) [1,~p.~63];
@@ -523,9 +528,12 @@ firmware (Scenario-600)\ver{TEST}; (2)~every image is checked before it runs
 (Scenario-610)\ver{TEST}; (3)~after a set number of failed starts, the
 controller returns to its previous firmware (Scenario-440)\ver{TEST}; (4)~a
 last-resort firmware that updates never replace (Scenario-460)\ver{TEST};
-(5)~a restore through the reprogramming link, independent of the controller's
-software (Scenario-480)\ver{TEST}; (6)~stored firmware and the reprogramming
-link are checked between uses\ver{TEST}.
+(5)~a restore of the last-resort firmware through the reprogramming link,
+independent of the controller's software (Scenario-480)\ver{TEST}; (6)~stored
+firmware and the reprogramming link are checked between uses\ver{TEST};
+(7)~a power loss during the trial counts as a failed start
+(Scenario-605)\ver{TEST}; (8)~failed firmware is not started again unless the
+operator orders it (Scenario-430 to Scenario-460)\ver{TEST}.
 \field{Fails if} The image check passes damaged firmware; the failed-start
 count is lost at a restart; the last-resort firmware, or the image the restore
 puts back, shares the defect.
@@ -544,9 +552,10 @@ a stored copy someone else replaced.
 \field{Controls} (1)~the onboard computer refuses firmware not released by the
 operator (Scenario-410)\ver{TEST}; (2)~the controller checks the origin again
 before it runs the firmware\ver{TEST}; (3)~the operator can order a restore
-while firmware runs\ver{DEMONSTRATION}.
+while firmware runs\ver{DEMONSTRATION}; (4)~a disclosed means of proving
+origin is replaced in flight (Scenario-370)\ver{TEST}.
 \field{Fails if} The check accepts what it should refuse; the means of proof
-is disclosed.
+is disclosed without the operator knowing, so it is never replaced.
 \fieldin{Common causes} One proof of origin.
 
 % ---------------------------------------------------------------- H-3
@@ -579,16 +588,18 @@ software defect cuts both (R-1) [1,~p.~66]; (c)~a controller that never stops
 sending blocks the data link [1,~p.~63]; (d)~a wrong onboard clock makes every
 command expire, including the clock correction [1,~p.~65]; (e)~the ground
 loses the means of proving origin; (f)~a false fault response marks both
-connections failed (H-13).
+connections failed (H-13); (g)~a replacement of the means of proving origin
+goes wrong, so no command is accepted (Scenario-370); (h)~the onboard computer
+fails for good (R-4).
 \field{Controls} (1)~two separate data-link connections, one enough (O-3,
 Scenario-500)\ver{TEST}; (2)~a lost connection is reported
 (Scenario-510)\ver{TEST}; (3)~the reprogramming link stays usable
 (Scenario-510)\ver{TEST}; (4)~the clock correction does not depend on the
 onboard clock\ver{TEST}.
 \field{Fails if} One cause cuts both connections. No control yet covers a
-lost means of proving origin.
+lost means of proving origin, or the loss of the only onboard computer.
 \fieldin{Common causes} Same data-link software; wrong onboard clock; fixed
-onboard computer software.
+onboard computer software; one onboard computer.
 
 % ---------------------------------------------------------------- H-5
 \hazard{H-5}{Someone other than the operator commands the System.}{CATASTROPHIC}{CONTROL}
@@ -601,8 +612,10 @@ the operator interface, and no second person checks a command (A-4); (d)~a
 command arrives from an unexpected system on the spacecraft [1,~p.~62].
 \field{Controls} (1)~every command is proven to come from the operator; any
 other is refused and logged (O-2, Scenario-300)\ver{TEST}; (2)~only the
-operator can use the operator interface\ver{DEMONSTRATION}.
-\field{Fails if} The means of proof is disclosed.
+operator can use the operator interface\ver{DEMONSTRATION}; (3)~a disclosed
+means of proving origin is replaced in flight (Scenario-370)\ver{TEST}.
+\field{Fails if} The means of proof is disclosed without the operator
+knowing, so it is never replaced.
 \fieldin{Common causes} One proof of origin.
 
 % ---------------------------------------------------------------- H-6
@@ -619,15 +632,15 @@ a valid arm (Scenario-330, Scenario-335) [1,~p.~63]; (g)~past its expiry
 a restart [1,~p.~64]; (i)~held, or the arm state, changed by a bit error
 [1,~p.~63]; (j)~built wrongly by the ground software or entered wrongly by the
 operator (A-4) [1,~p.~63].
-\field{Controls} (1)~the onboard computer checks that every command is new,
-allowed in the mode, has possible values and has not expired
-(Scenario-120)\ver{TEST}; (2)~a dangerous command needs an arm, which expires
+\field{Controls} (1)~the onboard computer checks that every command comes from
+the operator, is new and has not expired, and the controller checks that it is
+allowed in the current mode and has possible values (Scenario-120)\ver{TEST}; (2)~a dangerous command needs an arm, which expires
 (Scenario-330, Scenario-335)\ver{TEST}; (3)~a repeated command is answered
 ``already done'' (Scenario-350)\ver{TEST}; (4)~the ground software checks every
 command before it is sent (Scenario-120)\ver{TEST}; (5)~every command and
 answer is logged (Scenario-120)\ver{INSPECTION}.
 \field{Fails if} The checks use a wrong clock; a held command or the arm
-state changes after its check.
+state changes after its check; new firmware checks commands wrongly (H-7).
 \fieldin{Common causes} Wrong onboard clock; radiation; data kept over
 restarts.
 
@@ -671,11 +684,12 @@ watching program has crashed (Scenario-520, Scenario-530).
 to bring the controller back and records it (Scenario-520)\ver{TEST}; (3)~a
 crashed onboard computer program restarts and resumes
 (Scenario-530)\ver{TEST}; (4)~new firmware that hangs is given up
-(Scenario-430)\ver{TEST}.
+(Scenario-430)\ver{TEST}; (5)~the controller keeps working while the whole
+onboard computer restarts (Scenario-535)\ver{TEST}.
 \field{Fails if} The controller's restart and the onboard computer's watch
 fail from one fault.
 \fieldin{Common causes} Radiation; data kept over restarts; one power supply;
-shared image code.
+shared image code; one onboard computer.
 
 % ---------------------------------------------------------------- H-9
 \hazard{H-9}{The ground is shown a false state of the System.}{CRITICAL}{CAUSE, CONTROL}
@@ -686,11 +700,13 @@ shared image code.
 current [1,~p.~63]; (c)~a report changed in storage or in transfer
 [1,~p.~62]; (d)~``done'' or ``already done'' answered for a command that did
 not run; (e)~the ground software stores or shows a report wrongly
-[1,~p.~62].
+[1,~p.~62]; (f)~after a fall-back, the ground does not know which firmware
+runs.
 \field{Controls} (1)~the onboard computer time-tags every report
 (Scenario-110)\ver{TEST}; (2)~every report is checked for damage on
 arrival\ver{TEST}; (3)~the ground software keeps every report received
-[5,~Sec.~3.2]\ver{INSPECTION}.
+[5,~Sec.~3.2]\ver{INSPECTION}; (4)~after a fall-back, the next reports tell the
+ground which firmware runs (Scenario-430 to Scenario-460)\ver{TEST}.
 \field{Fails if} The onboard clock is wrong; a report is damaged before its
 check.
 \fieldin{Common causes} Wrong onboard clock; radiation.
@@ -702,13 +718,14 @@ check.
 such as a damaged last-resort firmware (H-1).
 \field{Causes} (a)~the fault is not detected [1,~p.~66]; (b)~no event report
 is made [1,~p.~65]; (c)~the report is lost to full storage, a crash or a power
-loss (Scenario-210, Scenario-530); (d)~the ground loses it.
+loss (Scenario-210, Scenario-530, Scenario-535); (d)~the ground loses it.
 \field{Controls} (1)~event reports are kept when storage is full
 (Scenario-210)\ver{TEST}; (2)~no report is lost without the ground being told
 (O-5)\ver{TEST}; (3)~stored reports survive a power loss and a
-restart\ver{TEST}.
+restart, including a restart of the whole onboard computer
+(Scenario-535)\ver{TEST}.
 \field{Fails if} Fault detection depends on the part that has failed.
-\fieldin{Common causes} One power supply; radiation.
+\fieldin{Common causes} One power supply; radiation; one onboard computer.
 
 % ---------------------------------------------------------------- H-11
 \hazard{H-11}{A valid command is not acted on, and the ground is not told.}{CRITICAL}{CAUSE, CONTROL}
@@ -749,14 +766,16 @@ fails (H-1); restore through the reprogramming link (H-1, H-2); check every
 image before it runs (H-1, H-2, H-7); refuse commands and firmware not from the
 operator (H-2, H-5); accept the clock correction (H-4); detect and report
 faults between contacts (H-8, H-10); keep and send down every event report
-(H-10); answer every command (H-11).
+(H-10); answer every command (H-11); replace a disclosed means of proving origin
+(H-2, H-5).
 
 \medskip
 \noindent\textbf{Must not work:} write over the previous or last-resort
 firmware (H-1); run firmware not from the operator (H-2); run a command
 not from the operator (H-5); run a dangerous command without a valid arm, or
 any command twice (H-6); confirm firmware not judged good (H-7); inject faults
-(H-12).
+(H-12); accept a new means of proving origin not proven with the current one
+(H-4, H-5).
 
 % ===========================================================================
 \section{Safety-Critical Software}

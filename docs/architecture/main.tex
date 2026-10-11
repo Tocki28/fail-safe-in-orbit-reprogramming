@@ -58,7 +58,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 11 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD, \total{tbr} TBR (App.~B) \\
+Open items & \total{tbd} TBD, \total{tbr} TBR (App.~A) \\
 \end{tabular}
 \end{center}
 
@@ -80,18 +80,20 @@ requirements [6,~Sec.~3.1].
 
 The architecture concentrates on ``the most pressing risks'' [3,~Sec.~4]: the
 eight catastrophic and critical hazards that do not yet meet the fault
-tolerance rule [5,~Sec.~5.0].
+tolerance rule [5,~Sec.~5.0]. The software qualities it is built for are the
+two a high-risk project emphasises, fault tolerance and security
+[3,~Sec.~4], and the testability the requirements demand.
 
 It names no hardware. It says what each component does, not which device does
 it, and ends with what the hardware must provide. The detailed design of each
 component, with its algorithms and data, is recorded before that component is
 coded [1,~Sec.~4.3.2, p.~34].
 
-\noindent\textbf{How to read it.} Section~3.0 shows every component on one
-figure. Section~6.0 holds the design decisions, each with the options weighed
-and the hazards it targets. Section~7.0 describes the components, and
-Appendix~A shows which component meets each requirement. Section~9.0 lists
-what the hardware must provide.
+\noindent\textbf{How to read it.} Section~\ref{sec:overview} shows every
+component on one figure. Section~\ref{sec:decisions} holds the design
+decisions, each with the options weighed and the hazards it targets.
+Section~\ref{sec:components} gives each component's role and the requirements
+it meets. Section~\ref{sec:hardware} lists what the hardware must provide.
 
 % ===========================================================================
 \section{Documents}
@@ -121,13 +123,17 @@ Controller --- Software Classification}, Issue~1, Revision~1, Draft.
 
 % ===========================================================================
 \section{System Overview}
+\label{sec:overview}
 The System has three software items [6,~Sec.~3.1], each made of components
-(Figure~\ref{fig:overview}). The ground software prepares and signs what the
-operator decides, and keeps what comes back. The onboard computer software
-checks everything that arrives, holds it, passes it on, and watches and
-restores the controller. The controller firmware runs the controller: a
-start-up selector chooses which firmware copy runs, the main firmware does the
-work, and the last-resort firmware takes over when the main firmware cannot.
+(Figure~\ref{fig:overview}). The ground software turns the operator's
+decisions into signed commands and firmware, and keeps every report that comes
+back. The onboard computer software checks everything that arrives and passes
+it on; between contacts it stores the controller's reports, watches the
+controller, and restores it when no firmware can run. The controller firmware
+acts on commands, reports its state and handles its own faults. It tries new
+firmware before keeping it and returns to working firmware on its own when the
+new firmware fails: a start-up selector chooses which copy runs, and the
+last-resort firmware takes over when the main firmware cannot.
 
 \begin{figure}[H]
 \centering
@@ -186,19 +192,10 @@ the controller whatever its memory holds.}
 
 % ===========================================================================
 \section{Constraints}
-The architecture works within the constraints and assumptions of the ConOps
-[4,~Sec.~1.1.2] and its accepted risks [4,~Sec.~8.0]. Those below shape it.
+Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
 \begin{description}
-\item[C-1] Every command, report and firmware image passes through the onboard
-  computer, so the onboard computer is on every path between the ground and the
-  controller.
 \item[C-3] One engineer builds the System. Independence between components
   comes from separate code, not from separate teams.
-\item[A-2] Power can be lost at any moment, including while memory is being
-  written.
-\item[A-5] Bit errors can change stored data and held commands.
-\item[A-6] The onboard computer's own software, including its operating system,
-  is corrected by a system outside this project.
 \item[R-4] There is one onboard computer. Its permanent loss stops commands,
   reports and restores. The risk is accepted, so H-4 cannot meet the fault
   tolerance rule [5,~Sec.~5.2].
@@ -207,21 +204,8 @@ The architecture works within the constraints and assumptions of the ConOps
 \end{description}
 
 % ===========================================================================
-\section{Software Qualities}
-The software qualities [1,~Sec.~4.2.3, p.~33] that drive this design are the
-two a high-risk project emphasises, fault tolerance and security
-[3,~Sec.~4], and the testability the requirements demand.
-\begin{description}[leftmargin=3.4cm]
-\item[Fault tolerance] Every catastrophic hazard needs at least three failures
-  together to occur, and every critical hazard two [5,~Sec.~3.3].
-\item[Security] Only the operator's commands and firmware are acted on (O-2).
-\item[Testability] Each safety-critical component can be tested on its own on
-  the bench, including under injected faults, to full modified
-  condition/decision coverage [6,~REQ-108].
-\end{description}
-
-% ===========================================================================
 \section{Design Decisions}
+\label{sec:decisions}
 Each decision targets hazards that do not yet meet the fault tolerance rule
 [5,~Sec.~5.2]. It states the problem, weighs the options, and lists the
 requirements the choice adds; these enter the requirements at their next
@@ -235,6 +219,7 @@ NO.
 
 % ---------------------------------------------------------------- 6.1
 \subsection{Start-Up and Fall-Back}
+\label{sec:startup}
 \field{Problem} Every firmware copy, including the one the restore puts back,
 shares the start-up code and the data kept over restarts. One defect there
 stops them all, and the restore brings it back [5,~Sec.~5.2]. Targets H-1 and
@@ -268,6 +253,7 @@ place.
 
 % ---------------------------------------------------------------- 6.2
 \subsection{The Way Back In}
+\label{sec:wayback}
 \field{Problem} A restore that goes through any controller software fails
 whenever that software fails, which the requirements forbid [6,~REQ-056].
 Targets H-1, H-3 and H-4.
@@ -297,6 +283,7 @@ rule does not ask for.
 
 % ---------------------------------------------------------------- 6.3
 \subsection{Restore Apart From Update}
+\label{sec:apart}
 \field{Problem} The update path and the restore share onboard computer
 software and stored firmware. One fault there stops both until the outside
 system corrects it (A-6) [5,~Sec.~5.2]. Targets H-3.
@@ -323,6 +310,7 @@ controller through the restore program, which loads firmware from the ground
 
 % ---------------------------------------------------------------- 6.4
 \subsection{Proof of Origin}
+\label{sec:origin}
 \field{Problem} One means proves that both commands and firmware come from the
 operator. If it is disclosed, another party can command the controller and
 load firmware [5,~Sec.~5.2]. Targets H-2 and H-5.
@@ -357,6 +345,7 @@ through both checks [8,~Sec.~7.4.2, p.~141].
 
 % ---------------------------------------------------------------- 6.5
 \subsection{Two Clocks}
+\label{sec:clocks}
 \field{Problem} Expiry, arm time-outs, scheduled commands, time-tags and the
 trial time limit all depend on the onboard clock. A wrong clock alone runs a
 scheduled command at the wrong time and gives reports wrong times
@@ -391,6 +380,7 @@ one wrong value cannot reach both.
 
 % ---------------------------------------------------------------- 6.6
 \subsection{Held Data}
+\label{sec:held}
 \field{Problem} A bit error can change a held command, the arm state or the
 kept data after its check and before its use (A-5) [5,~Sec.~5.2]. Targets H-6.
 
@@ -418,6 +408,7 @@ option c can be added where the hardware has it.
 
 % ---------------------------------------------------------------- 6.7
 \subsection{Two Kinds of Connection}
+\label{sec:links}
 \field{Problem} The two data-link connections share software at both ends, so
 one defect cuts both (R-1) [5,~Sec.~5.2]. Targets H-4.
 
@@ -443,82 +434,63 @@ falls to the loss of the onboard computer (R-4).
 
 % ===========================================================================
 \section{Components}
-For each component: its role, whether it is new or reused, and whether it is
-safety-critical [2,~Sec.~3.3]. Origin: NEW, written for this System; MIXED, new
-code around a published library. Safety-critical: YES or NO, following the
-designation of its software item [7,~Sec.~4.0].
+\label{sec:components}
+Each component, its role, and the requirements it meets [2,~Sec.~3.3].
+Every requirement [6,~Secs.~4.0--7.0] is met by at least one component;
+requirements that the decisions add are allocated when they enter the
+requirements.
 
-\subsection{Controller Firmware}
-{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
-\toprule
-Component & Role & Origin & Safety-critical \\
-\midrule
-Start-up selector & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & MIXED & YES \\
-Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & NEW & YES \\
-Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & NEW & YES \\
-Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & NEW & YES \\
-Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & NEW & YES \\
-Controller clock & Keeps the controller's own time, set only from ground time. & NEW & YES \\
-Data-link drivers & One driver for each data-link connection, sharing no code. & NEW & YES \\
-Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & NEW & YES \\
-\bottomrule
-\end{tabularx}}
-
-\medskip
-\noindent The components from the mode manager to the data-link drivers form
-the main firmware, of which the controller keeps two copies: new and previous.
-The table below shows what runs in each controller mode [4,~Sec.~3.4]; the
-start-up selector runs at every start, before any of them.
-
-\smallskip
-{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
-\toprule
-Mode & What runs \\
-\midrule
-OPERATE & The main firmware, confirmed copy \\
-TRIAL & The main firmware, new copy \\
-FALLBACK & The main firmware, previous copy; or the last-resort firmware \\
-RECOVERY & Nothing on the controller; the restore program works through the reprogramming link \\
-\bottomrule
-\end{tabularx}}
-
-\subsection{Onboard Computer Software}
-{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
-\toprule
-Component & Role & Origin & Safety-critical \\
-\midrule
-Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & NEW & YES \\
-Origin checker & Checks the signatures on commands and firmware, and replaces the means of checking them on command. & MIXED & YES \\
-Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & NEW & YES \\
-Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & NEW & YES \\
-Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & NEW & YES \\
-Clock keeper & Compares the onboard clock with ground time and applies corrections. & NEW & YES \\
-Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & NEW & YES \\
-Data-link drivers & One driver for each data-link connection, sharing no code. & NEW & YES \\
-Restore program & A separate program with its own firmware store. Restores the controller through the reprogramming link, loads firmware from the ground through it, and checks its store and the link between uses. & NEW & YES \\
-Supervisor & Restarts any program of the onboard computer software that crashes. & NEW & YES \\
-\bottomrule
-\end{tabularx}}
-
-\subsection{Ground Software}
-{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xcc@{}}
-\toprule
-Component & Role & Origin & Safety-critical \\
-\midrule
-Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & NEW & YES \\
-Command builder & Builds every command from the shared command list and checks it before it is sent. & NEW & YES \\
-Signing & Signs every command and firmware image with keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & MIXED & YES \\
-Release checker & Checks every firmware release before it is sent. & NEW & YES \\
-Report archive & Keeps every report received and checks it for damage. & NEW & YES \\
-Contact planner & Plans commands, uploads and report retrieval for coming contacts. & NEW & NO \\
-\bottomrule
-\end{tabularx}}
-
-\medskip
-\noindent The contact planner is the only component that is not
-safety-critical \tbr{planner}. It passes plans to the command builder, which
+All components are new code and safety-critical [7,~Sec.~4.0], with four
+exceptions. The start-up selector, the origin checker and signing are built
+around a published signature library. The contact planner is not
+safety-critical \tbr{planner}: it passes plans to the command builder, which
 checks every command it builds.
 
+The components from the mode manager to the data-link drivers form the main
+firmware; the controller keeps two copies of it, new and previous. The
+start-up selector runs at every start. Then, in OPERATE the confirmed copy
+runs, in TRIAL the new copy, and in FALLBACK the previous copy or the
+last-resort firmware; in RECOVERY nothing runs on the controller, and the
+restore program works through the reprogramming link [4,~Sec.~3.4].
+
+\needspace{12\baselineskip}
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.6cm}@{}}
+\toprule
+Component & Role & Requirements \\
+\midrule
+\endhead
+\multicolumn{3}{@{}l}{\textit{Controller firmware}} \\
+Start-up selector & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113 \\
+Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113 \\
+Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & REQ-027~to~036, REQ-100 \\
+Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & REQ-007, REQ-008 \\
+Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & REQ-022, REQ-037~to~041 \\
+Controller clock & Keeps the controller's own time, set only from ground time. & REQ-030 \\
+Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-042, REQ-099 \\
+Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & REQ-004, REQ-009, REQ-010 \\
+\multicolumn{3}{@{}l}{\textit{Onboard computer software}} \\
+Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & REQ-064~to~067, REQ-087, REQ-100, REQ-112 \\
+Origin checker & Checks the signatures on commands and firmware, and replaces the means of checking them on command. & REQ-043, REQ-064, REQ-084~to~086 \\
+Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & REQ-068, REQ-069 \\
+Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & REQ-043~to~053, REQ-063 \\
+Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & REQ-070, REQ-071, REQ-074~to~079 \\
+Clock keeper & Compares the onboard clock with ground time and applies corrections. & REQ-072, REQ-073 \\
+Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & REQ-061 \\
+Supervisor & Restarts any program of the onboard computer software that crashes. & REQ-062 \\
+Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099 \\
+Restore program & A separate program with its own firmware store. Restores the controller through the reprogramming link, loads firmware from the ground through it, and checks its store and the link between uses. & REQ-054~to~060, REQ-083 \\
+\multicolumn{3}{@{}l}{\textit{Ground software}} \\
+Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
+Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
+Signing & Signs every command and firmware image with keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
+Release checker & Checks every firmware release before it is sent. & REQ-090 \\
+Report archive & Keeps every report received and checks it for damage. & REQ-092, REQ-093 \\
+Contact planner & Plans commands, uploads and report retrieval for coming contacts. & REQ-097 \\
+\multicolumn{3}{@{}l}{\textit{All software items}} \\
+Every component & Rules that apply to all software. & REQ-098, REQ-101~to~111 \\
+\bottomrule
+\end{xltabular}}
 % ===========================================================================
 \needspace{12\baselineskip}
 \section{Interfaces}
@@ -541,6 +513,7 @@ Reprogramming link & Restore program and controller & The controller's restart, 
 
 % ===========================================================================
 \section{Hardware Needs}
+\label{sec:hardware}
 The hardware must provide what the decisions above assume. Each need is
 checked against the two boards before this document is released \tbd{boards}.
 
@@ -549,16 +522,16 @@ checked against the two boards before this document is released \tbd{boards}.
 \toprule
 Need & Needed by \\
 \midrule
-A loading path into the controller that works whatever its memory holds, driven by the onboard computer & Section~6.2 \\
-A way for the onboard computer to restart the controller & Section~6.2 \\
-No way for controller firmware to disable that loading path & Section~6.2 \\
-A way for the restore to make the last-resort firmware run first & Section~6.1 \\
-Room in the controller for the start-up selector, two main firmware copies, the last-resort firmware and the kept data & Section~6.1 \\
+A loading path into the controller that works whatever its memory holds, driven by the onboard computer & Section~\ref{sec:wayback} \\
+A way for the onboard computer to restart the controller & Section~\ref{sec:wayback} \\
+No way for controller firmware to disable that loading path & Section~\ref{sec:wayback} \\
+A way for the restore to make the last-resort firmware run first & Section~\ref{sec:startup} \\
+Room in the controller for the start-up selector, two main firmware copies, the last-resort firmware and the kept data & Section~\ref{sec:startup} \\
 Kept data in the controller that survives a restart and a power loss & REQ-017 \\
-Room on the onboard computer for two separate firmware stores & Section~6.3 \\
-Processing in the controller to check three signatures within the restart time & Section~6.4; REQ-023 \\
-A time source in the controller separate from the onboard computer's & Section~6.5 \\
-Two different kinds of connection between the onboard computer and the controller & Section~6.7 \\
+Room on the onboard computer for two separate firmware stores & Section~\ref{sec:apart} \\
+Processing in the controller to check three signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\
+A time source in the controller separate from the onboard computer's & Section~\ref{sec:clocks} \\
+Two different kinds of connection between the onboard computer and the controller & Section~\ref{sec:links} \\
 \bottomrule
 \end{tabularx}}
 
@@ -566,48 +539,6 @@ Two different kinds of connection between the onboard computer and the controlle
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 \renewcommand{\thesubsection}{\Alph{section}.\arabic{subsection}}
-
-\section{Requirement Allocation}
-Every requirement [6,~Secs.~4.0--7.0] and the component that meets it. Requirements that the
-decisions in Section~6.0 add are allocated when they enter the requirements.
-
-{\footnotesize
-\begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}X@{}}
-\toprule
-Component & Requirements \\
-\midrule
-\endhead
-\multicolumn{2}{@{}l}{\textit{Controller firmware}} \\
-Start-up selector & REQ-004, REQ-005, REQ-006, REQ-013, REQ-014, REQ-015, REQ-016, REQ-017, REQ-018, REQ-019, REQ-023, REQ-113 \\
-Mode manager & REQ-001, REQ-002, REQ-003, REQ-011, REQ-012, REQ-013, REQ-020, REQ-021, REQ-024, REQ-025, REQ-026, REQ-113 \\
-Command checker & REQ-027, REQ-028, REQ-029, REQ-030, REQ-031, REQ-032, REQ-033, REQ-034, REQ-035, REQ-036, REQ-100 \\
-Update receiver & REQ-007, REQ-008 \\
-Health monitor & REQ-022, REQ-037, REQ-038, REQ-039, REQ-040, REQ-041 \\
-Controller clock & REQ-030 \\
-Data-link drivers & REQ-042, REQ-099 \\
-Last-resort firmware & REQ-004, REQ-009, REQ-010 \\
-\multicolumn{2}{@{}l}{\textit{Onboard computer software}} \\
-Command gate & REQ-064, REQ-065, REQ-066, REQ-067, REQ-087, REQ-100, REQ-112 \\
-Origin checker & REQ-043, REQ-064, REQ-084, REQ-085, REQ-086 \\
-Scheduler & REQ-068, REQ-069 \\
-Update manager & REQ-043, REQ-044, REQ-045, REQ-046, REQ-047, REQ-048, REQ-049, REQ-050, REQ-051, REQ-052, REQ-053, REQ-063 \\
-Report store & REQ-070, REQ-071, REQ-074, REQ-075, REQ-076, REQ-077, REQ-078, REQ-079 \\
-Clock keeper & REQ-072, REQ-073 \\
-Controller watch & REQ-061 \\
-Supervisor & REQ-062 \\
-Data-link drivers & REQ-080, REQ-081, REQ-082, REQ-099 \\
-Restore program & REQ-054, REQ-055, REQ-056, REQ-057, REQ-058, REQ-059, REQ-060, REQ-083 \\
-\multicolumn{2}{@{}l}{\textit{Ground software}} \\
-Operator console & REQ-091, REQ-094, REQ-095 \\
-Command builder & REQ-089, REQ-100 \\
-Signing & REQ-088, REQ-096 \\
-Release checker & REQ-090 \\
-Report archive & REQ-092, REQ-093 \\
-Contact planner & REQ-097 \\
-\multicolumn{2}{@{}l}{\textit{All software items}} \\
-Every component & REQ-098, REQ-101, REQ-102, REQ-103, REQ-104, REQ-105, REQ-106, REQ-107, REQ-108, REQ-109, REQ-110, REQ-111 \\
-\bottomrule
-\end{xltabular}}
 
 \section{Open Items}
 The values below are not yet known.
@@ -621,14 +552,14 @@ The values below are not yet known.
 \medskip
 \noindent The proposals below await the author's acceptance.
 \begin{description}
-\tbritem{startup}{Start-up and fall-back: option c (Section~6.1).}
-\tbritem{wayback}{The way back in: option b (Section~6.2).}
-\tbritem{apart}{Restore apart from update: option b (Section~6.3).}
-\tbritem{origin}{Proof of origin: option d (Section~6.4).}
-\tbritem{clocks}{Two clocks: option c (Section~6.5).}
-\tbritem{held}{Held data: option b (Section~6.6).}
-\tbritem{links}{Two kinds of connection: option c (Section~6.7).}
-\tbritem{planner}{The contact planner is not safety-critical (Section~7.3).}
+\tbritem{startup}{Start-up and fall-back: option c (Section~\ref{sec:startup}).}
+\tbritem{wayback}{The way back in: option b (Section~\ref{sec:wayback}).}
+\tbritem{apart}{Restore apart from update: option b (Section~\ref{sec:apart}).}
+\tbritem{origin}{Proof of origin: option d (Section~\ref{sec:origin}).}
+\tbritem{clocks}{Two clocks: option c (Section~\ref{sec:clocks}).}
+\tbritem{held}{Held data: option b (Section~\ref{sec:held}).}
+\tbritem{links}{Two kinds of connection: option c (Section~\ref{sec:links}).}
+\tbritem{planner}{The contact planner is not safety-critical (Section~\ref{sec:components}).}
 \end{description}
 
 \end{document}

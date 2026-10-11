@@ -39,6 +39,10 @@
 \newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
 \newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
 
+% A component box in Figure 1: name, then its role in small type.
+\newcommand{\nohyph}{\hyphenpenalty=10000\exhyphenpenalty=10000\relax}
+\newcommand{\cmp}[2]{#1\\[-1pt]{\scriptsize\color{black!70}#2}}
+
 % Run-in label for the parts of a design decision.
 \newcommand{\field}[1]{\par\needspace{4\baselineskip}\smallskip\noindent\textbf{#1.}~}
 
@@ -138,9 +142,10 @@ Draft~2, 2 April 2012. A draft, not a released standard.
 \section{System Overview}
 \label{sec:overview}
 The System has three software items [6,~Sec.~3.1], each made of components
-(Figure~\ref{fig:overview}). The ground software turns the operator's
-decisions into signed commands and firmware, and keeps every report that comes
-back. The onboard computer software checks everything that arrives and passes
+(Figure~\ref{fig:overview}). The ground software builds and checks
+the operator's commands, singly or as a planned sequence. It checks each
+firmware release the operator approves, encrypts and signs it, and checks the
+signed result before sending it. It keeps every report that comes back. The onboard computer software checks everything that arrives and passes
 it on; between contacts it stores the controller's reports, watches the
 controller, and restores it when no firmware can run. The controller firmware
 acts on commands, reports its state and handles its own faults. It tries new
@@ -153,40 +158,59 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,
-  comp/.style={draw, fill=black!5, minimum width=3.3cm, minimum height=0.5cm, inner sep=1pt, align=center},
+  comp/.style={draw, fill=black!5, text width=3.6cm, minimum height=1.05cm, inner sep=2pt, align=center,
+    execute at begin node=\nohyph},
   title/.style={font=\footnotesize\bfseries, align=center},
   item/.style={draw, rounded corners=3pt, inner sep=4pt},
   link/.style={{Latex[length=1.8mm]}-{Latex[length=1.8mm]}, thick},
   lab/.style={font=\scriptsize, align=center},
 ]
 % Ground software
-\node[title] (gt) at (0,0.75) {Ground\\software};
-\foreach \n/\t [count=\i from 0] in {g1/Operator console, g2/Command builder, g3/Signing,
-  g4/Release checker, g5/Report archive, g6/Contact planner}
-  \node[comp] (\n) at (0,{-0.7*\i}) {\t};
+\node[title] (gt) at (0,1.25) {Ground\\software};
+\foreach \n/\a/\b [count=\i from 0] in {
+  g1/Operator console/lets only the operator in; shows the System's state,
+  g2/Command builder/builds and checks every command,
+  g3/Signing/encrypts and signs commands and firmware,
+  g4/Release checker/checks firmware before and after signing,
+  g5/Report archive/keeps and checks every report,
+  g6/Contact planner/plans contacts; runs command sequences}
+  \node[comp] (\n) at (0,{-1.4*\i}) {\cmp{\a}{\b}};
 \node[item, fit=(gt)(g1)(g6)] (gbox) {};
 
 % Onboard computer software
-\node[title] (ot) at (5.9,0.75) {Onboard computer\\software};
-\foreach \n/\t [count=\i from 0] in {o1/Command gate, o2/Origin checker, o3/Scheduler,
-  o4/Update manager, o5/Report store, o6/Clock keeper, o7/Controller watch,
-  o8/Data-link drivers, o9/Restore program, o10/Supervisor}
-  \node[comp] (\n) at (5.9,{-0.7*\i}) {\t};
+\node[title] (ot) at (5.65,1.25) {Onboard computer\\software};
+\foreach \n/\a/\b [count=\i from 0] in {
+  o1/Command gate/checks origin{,} newness{,} expiry and arming,
+  o2/Origin checker/decrypts and checks signatures,
+  o3/Scheduler/holds timed commands until their time,
+  o4/Update manager/checks{,} stores and delivers firmware,
+  o5/Report store/keeps reports between contacts,
+  o6/Clock keeper/keeps the onboard clock right,
+  o7/Controller watch/notices a silent controller,
+  o8/Data-link drivers/one per connection{,} no shared code,
+  o9/Restore program/restores through the reprogramming link,
+  o10/Supervisor/restarts crashed programs}
+  \node[comp] (\n) at (5.65,{-1.4*\i}) {\cmp{\a}{\b}};
 \node[item, fit=(ot)(o1)(o10)] (obox) {};
 
 % Controller firmware
-\node[title] (ct) at (11.8,0.75) {Controller\\firmware};
-\node[comp] (c0) at (11.8,0.1) {Start-up selector};
-\foreach \n/\t [count=\i from 0] in {m1/Mode manager, m2/Command checker, m3/Update receiver,
-  m4/Health monitor, m5/Controller clock, m6/Data-link drivers}
-  \node[comp] (\n) at (11.8,{-1.4-0.7*\i}) {\t};
+\node[title] (ct) at (11.7,1.25) {Controller\\firmware};
+\node[comp] (c0) at (11.7,0) {\cmp{Start-up selector}{chooses which copy runs}};
+\foreach \n/\a/\b [count=\i from 0] in {
+  m1/Mode manager/holds the mode; runs the trial,
+  m2/Command checker/checks and answers every command,
+  m3/Update receiver/writes new firmware to the free copy,
+  m4/Health monitor/tests{,} detects faults{,} reports,
+  m5/Controller clock/the controller's own time,
+  m6/Data-link drivers/one per connection{,} no shared code}
+  \node[comp] (\n) at (11.7,{-2.8-1.4*\i}) {\cmp{\a}{\b}};
 \node[font=\scriptsize\itshape, align=center, above=1pt of m1] (mt) {Main firmware:\\new and previous copies};
 \node[draw, dashed, rounded corners=2pt, inner sep=2pt, fit=(mt)(m1)(m6)] (main) {};
-\node[comp] (c9) at (11.8,-6.1) {Last-resort firmware};
+\node[comp] (c9) at (11.7,-11.2) {\cmp{Last-resort firmware}{the safe mode; shares no code}};
 \node[item, fit=(ct)(c0)(main)(c9)] (cbox) {};
 
 % Operator
-\node[draw, rounded corners=2pt, minimum width=2.2cm, minimum height=0.5cm] (op) at (0,2.9) {Operator};
+\node[draw, rounded corners=2pt, minimum width=2.2cm, minimum height=0.5cm] (op) at (0,3.5) {Operator};
 \draw[link] (op.south) -- (gbox.north) node[midway, right, lab] {operator interface};
 
 % Links
@@ -214,7 +238,7 @@ the controller whatever its memory holds.}
 \node[head] at (6,0) {Onboard computer\\software};
 \node[head] at (12,0) {Controller firmware};
 \foreach \x in {0,6,12} \draw[dashed, black!40] (\x,-0.5) -- (\x,-9.0);
-\node[act] at (0,-1.1) {1. Release checked, encrypted and signed twice};
+\node[act] at (0,-1.1) {1. Release checked; encrypted and signed twice; signed result checked};
 \draw[msg] (0,-2.0) -- node[above]{2. Upload over the radio link, across contacts} (6,-2.0);
 \node[act] at (6,-2.9) {3. Decrypted; signatures, damage, version and target checked; stored};
 \draw[msg] (6,-4.1) -- node[above]{4. Delivered over the data link} (12,-4.1);
@@ -603,11 +627,9 @@ Every requirement [6,~Secs.~4.0--7.0] is met by at least one component;
 requirements that the decisions add are allocated when they enter the
 requirements.
 
-All components are new code and safety-critical [7,~Sec.~4.0], with four
-exceptions. The start-up selector, the origin checker and signing are built
-around a published cryptographic library. The contact planner is not
-safety-critical \tbr{planner}: it passes plans to the command builder, which
-checks every command it builds.
+All components are safety-critical [7,~Sec.~4.0] and new code, except the
+start-up selector, the origin checker and signing, which are built around a
+published cryptographic library.
 
 The components from the mode manager to the data-link drivers form the main
 firmware; the controller keeps two copies of it. Figure~\ref{fig:startup}
@@ -644,9 +666,9 @@ Restore program & A separate program with its own firmware store. Restores the c
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\
 Command builder & Builds every command from the shared command list and checks it before it is sent. & REQ-089, REQ-100 \\
 Signing & Encrypts and signs every command and firmware image with three keys kept in separate places, and keeps a recoverable copy of the means of proving origin. & REQ-088, REQ-096 \\
-Release checker & Checks every firmware release before it is sent. & REQ-090 \\
+Release checker & Checks every firmware release before signing, and the signed image before it is sent, with the checks the onboard computer makes. & REQ-090, REQ-114 \\
 Report archive & Keeps every report received and checks it for damage. & REQ-092, REQ-093 \\
-Contact planner & Plans commands, uploads and report retrieval for coming contacts. & REQ-097 \\
+Contact planner & Plans commands, uploads and report retrieval for coming contacts, and sends a planned command sequence, stopping at the first command refused or not answered. & REQ-097, REQ-115, REQ-116 \\
 \multicolumn{3}{@{}l}{\textit{All software items}} \\
 Every component & Rules that apply to all software. & REQ-098, REQ-101~to~111 \\
 \bottomrule
@@ -719,7 +741,6 @@ The values below are not yet known.
 \tbritem{clocks}{Two clocks: option c (Section~\ref{sec:clocks}).}
 \tbritem{held}{Held data: option b (Section~\ref{sec:held}).}
 \tbritem{links}{Two kinds of connection: option c (Section~\ref{sec:links}).}
-\tbritem{planner}{The contact planner is not safety-critical (Section~\ref{sec:components}).}
 \end{description}
 
 \end{document}

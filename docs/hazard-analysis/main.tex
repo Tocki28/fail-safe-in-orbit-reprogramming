@@ -580,6 +580,7 @@ g & A command arrives past its expiry & Scenario-340; [1,~p.~63] & 1 \\
 h & A scheduled command runs at the wrong time, or again after a restart & [1,~p.~64] & \textbf{NONE} \\
 i & A bit error changes a held command or the arm state & [1,~p.~63] & \textbf{NONE} \\
 j & The ground software builds a wrong command, or the operator enters one & A-4; [1,~p.~63] & 4, 5 \\
+k & A command of a sequence runs after an earlier one was refused or not answered & NEW & 7 \\
 \bottomrule
 \end{tabularx}}
 \par\smallskip\needspace{4\baselineskip}
@@ -593,6 +594,7 @@ j & The ground software builds a wrong command, or the operator enters one & A-4
 4 & The ground software checks every command before it is sent & Scenario-120 & TEST \\
 5 & Every command and answer is logged & Scenario-120 & INSPECTION \\
 6 & The onboard computer passes a dangerous command on only after an arm, which expires & Scenarios 330, 335 & TEST \\
+7 & The ground software sends each command of a sequence only after the previous one is answered done, and stops at the first refusal & NEW & TEST \\
 \bottomrule
 \end{tabularx}}
 \par\smallskip

@@ -279,6 +279,9 @@ REQ-094 & The ground software shall show the operator any command whose answers 
 REQ-095 & The ground software shall show the operator which firmware runs on the controller. & H-9 control 4 & TEST \\
 REQ-096 & The ground software shall keep a recoverable copy of the means of proving origin. & H-4 cause e & INSPECTION \\
 REQ-097 & The ground software shall let the operator plan commands, uploads and report retrieval for coming contacts \tbd{window}. & Capability-2; Capability-4; O-1; H-16 & DEMONSTRATION \\
+REQ-114 & The ground software shall check every signed firmware image with the checks the onboard computer software makes, before it is sent. & H-14; Capability-4 & TEST \\
+REQ-115 & The ground software shall let the operator send a planned sequence of commands with one action. & Capability-2 & TEST \\
+REQ-116 & In a sequence, the ground software shall send each command only after the previous one is answered done, and stop at the first command refused or not answered. & H-6 control 7 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -337,14 +340,14 @@ H-4 control 2 & REQ-081 & H-4 control 3 & REQ-083 & H-4 control 4 & REQ-073 \\
 H-4 control 5 & REQ-082 & H-5 control 1 & REQ-064, REQ-067 & H-5 control 2 & REQ-091 \\
 H-5 control 3 & REQ-085 & H-6 control 1 & REQ-027, REQ-028, REQ-065, REQ-066 & H-6 control 2 & REQ-029, REQ-030 \\
 H-6 control 3 & REQ-031 & H-6 control 4 & REQ-089 & H-6 control 5 & REQ-036 \\
-H-6 control 6 & REQ-112 & H-7 control 1 & REQ-013 & H-7 control 2 & REQ-044, REQ-045, REQ-046, REQ-047 \\
-H-7 control 3 & REQ-005 & H-7 control 4 & REQ-090 & H-7 control 5 & REQ-113 \\
-H-8 control 1 & REQ-022 & H-8 control 2 & REQ-061 & H-8 control 3 & REQ-062 \\
-H-8 control 4 & REQ-014 & H-8 control 5 & REQ-024 & H-9 control 1 & REQ-070 \\
-H-9 control 2 & REQ-079, REQ-093 & H-9 control 3 & REQ-092 & H-9 control 4 & REQ-040, REQ-095 \\
-H-10 control 1 & REQ-075 & H-10 control 2 & REQ-076 & H-10 control 3 & REQ-077 \\
-H-10 control 4 & REQ-092 & H-11 control 1 & REQ-033, REQ-094 & H-11 control 2 & REQ-035 \\
-H-11 control 3 & REQ-069 & H-12 control 1 & REQ-101 &  &  \\
+H-6 control 6 & REQ-112 & H-6 control 7 & REQ-116 & H-7 control 1 & REQ-013 \\
+H-7 control 2 & REQ-044, REQ-045, REQ-046, REQ-047 & H-7 control 3 & REQ-005 & H-7 control 4 & REQ-090 \\
+H-7 control 5 & REQ-113 & H-8 control 1 & REQ-022 & H-8 control 2 & REQ-061 \\
+H-8 control 3 & REQ-062 & H-8 control 4 & REQ-014 & H-8 control 5 & REQ-024 \\
+H-9 control 1 & REQ-070 & H-9 control 2 & REQ-079, REQ-093 & H-9 control 3 & REQ-092 \\
+H-9 control 4 & REQ-040, REQ-095 & H-10 control 1 & REQ-075 & H-10 control 2 & REQ-076 \\
+H-10 control 3 & REQ-077 & H-10 control 4 & REQ-092 & H-11 control 1 & REQ-033, REQ-094 \\
+H-11 control 2 & REQ-035 & H-11 control 3 & REQ-069 & H-12 control 1 & REQ-101 \\
 \bottomrule
 \end{longtable}}
 
@@ -437,8 +440,8 @@ Scenario-610 & REQ-005 & Scenario-620 & REQ-022 &  &  \\
 Item & Requirements & Item & Requirements & Item & Requirements \\
 \midrule
 \endhead
-Capability-1 & REQ-037, REQ-074 & Capability-2 & REQ-033, REQ-036, REQ-068, REQ-097 & Capability-3 & REQ-038 \\
-Capability-4 & REQ-011, REQ-021, REQ-097 & Capability-5 & OUTSIDE & O-1 & REQ-097 \\
+Capability-1 & REQ-037, REQ-074 & Capability-2 & REQ-033, REQ-036, REQ-068, REQ-097, REQ-115 & Capability-3 & REQ-038 \\
+Capability-4 & REQ-011, REQ-021, REQ-097, REQ-114 & Capability-5 & OUTSIDE & O-1 & REQ-097 \\
 O-2 & REQ-043, REQ-064, REQ-088 & O-3 & REQ-080 & O-4 & REQ-038 \\
 O-5 & REQ-037, REQ-076, REQ-092 & O-6 & REQ-005, REQ-007, REQ-054 & Mode table & REQ-001, REQ-002, REQ-003, REQ-010, REQ-050 \\
 \bottomrule
@@ -489,7 +492,7 @@ Item & Requirements \\
 \midrule
 \endhead
 H-13 & REQ-038, REQ-082 \\
-H-14 & REQ-049, REQ-052, REQ-062, REQ-063 \\
+H-14 & REQ-049, REQ-052, REQ-062, REQ-063, REQ-114 \\
 H-15 & REQ-075, REQ-076, REQ-077 \\
 H-16 & REQ-078, REQ-097 \\
 H-17 & REQ-100 \\

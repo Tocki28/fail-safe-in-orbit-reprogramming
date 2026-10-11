@@ -321,7 +321,7 @@ c & Option b, plus a last-resort firmware sharing no code with the bootloader or
 \end{tabularx}}
 
 
-\field{Choice} Option c \tbr{startup}, shown in Figures~\ref{fig:startup} and
+\field{Choice} Option c, shown in Figures~\ref{fig:startup} and
 \ref{fig:memory}. It keeps MCUboot's test and revert, which exists to keep bad
 firmware from leaving a device unusable [9,~Sec.~Boot Swap Types], and adds a
 last-resort firmware sharing no code with the rest [6,~REQ-009]. The
@@ -767,7 +767,6 @@ The values below are not yet known.
 \medskip
 \noindent The proposals below await the author's acceptance.
 \begin{description}
-\tbritem{startup}{Start-up and fall-back: option c (Section~\ref{sec:startup}).}
 \tbritem{wayback}{The way back in: option c (Section~\ref{sec:wayback}).}
 \tbritem{apart}{Restore apart from update: option b (Section~\ref{sec:apart}).}
 \tbritem{origin}{Proof of origin: option d (Section~\ref{sec:origin}).}
@@ -777,7 +776,8 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent The author accepted the risk of a wrong ground time that passes the
-ground software's check (Section~\ref{sec:clocks}) on 11 October 2026.
+\noindent The author accepted, on 11 October 2026, option c of
+Section~\ref{sec:startup} and the risk of a wrong ground time that passes the
+ground software's check (Section~\ref{sec:clocks}).
 
 \end{document}

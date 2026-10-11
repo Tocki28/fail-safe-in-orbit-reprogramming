@@ -138,8 +138,9 @@ this document assigns one:
 \item \textbf{ID:} REQ-001 onward, in one sequence. An ID is never reused.
 \item \textbf{Requirement:} one claim, in one sentence.
 \item \textbf{Source:} where the requirement comes from. ``H-1 control 3'' is
-  control 3 of hazard report H-1, and ``H-4 cause e'' a cause the hazard
-  analysis left without a control [5,~Sec.~6.0]. Scenarios, capabilities and
+  control 3 of hazard report H-1, and ``H-4 cause e'' a cause of that report
+  [5,~Sec.~6.0]. A hazard named alone, such as ``H-14'', is a moderate or
+  negligible hazard, which has no report [5,~Sec.~4.0]. Scenarios, capabilities and
   objectives (O) are those of the ConOps [3,~Secs.~3.1, 3.5 and 6.0]. SWE-$n$ is
   rule $n$ of NPR 7150.2D [1,~App.~C, pp.~56--78]. A shared cause is a finding
   of the hazard analysis [5,~Sec.~5.2].
@@ -182,7 +183,7 @@ REQ-022 & The controller firmware shall restart on its own when it stops respond
 REQ-023 & A restart of the controller shall complete within \tbd{restart}, shorter than the time to the next failure. & H-8 cause d; SWE-134 j & TEST \\
 REQ-024 & The controller firmware shall keep working while the whole onboard computer restarts. & H-8 control 5; Scenario-535 & TEST \\
 REQ-025 & The controller firmware shall keep working on its current firmware when both data-link connections fail. & Scenario-510 & TEST \\
-REQ-026 & The controller firmware shall keep working correctly however long no command arrives. & H-8 control 2 & TEST \\
+REQ-026 & The controller firmware shall keep working correctly however long no command arrives. & H-8 cause e & TEST \\
 REQ-027 & The controller firmware shall check that every command is allowed in the current mode, and refuse it with the reason if not. & H-6 control 1; Scenario-310; SWE-134 e & TEST \\
 REQ-028 & The controller firmware shall check that every command has possible values, and refuse it with the reason if not. & H-6 control 1; Scenario-320; SWE-134 g & TEST \\
 REQ-029 & The controller firmware shall run a dangerous command only after a valid arming command, and refuse it with the reason otherwise. & H-6 control 2; Scenario-330; SWE-134 d; SWE-134 h & TEST \\
@@ -194,11 +195,12 @@ REQ-034 & The controller firmware shall answer ``done'' only after the command h
 REQ-035 & The controller firmware shall answer every refused command with the reason. & H-11 control 2; Scenario-340 & TEST \\
 REQ-036 & The controller firmware shall log every command it receives and every answer it sends. & H-6 control 5; Capability-2 & INSPECTION \\
 REQ-037 & The controller firmware shall send regular health reports at \tbd{rate} and an event report as soon as an event happens. & Scenario-110; Capability-1; O-5 & TEST \\
-REQ-038 & The controller firmware shall detect faults between contacts, respond without the ground, and report each fault in an event report. & Capability-3; O-4; H-10 cause b & TEST \\
+REQ-038 & The controller firmware shall detect faults between contacts, respond without the ground, and report each fault in an event report. & Capability-3; O-4; H-10 cause b; H-13 & TEST \\
 REQ-039 & The controller firmware shall test itself at every start and at \tbd{selftest}, and report a failed test. & H-10 cause a & TEST \\
 REQ-040 & After a fall-back, the next reports shall state which firmware runs. & H-9 control 4; Scenario-430 & TEST \\
 REQ-041 & The controller firmware shall detect a change in its own memory and return to a known safe state. & SWE-134 f & TEST \\
-REQ-042 & The controller firmware shall never send on the data link in a way that stops the onboard computer reaching it. & H-4 control 3 & TEST \\
+REQ-042 & The controller firmware shall never send on the data link in a way that stops the onboard computer reaching it. & H-4 cause c & TEST \\
+REQ-113 & The controller shall return to its previous firmware when the operator orders it. & H-7 control 5 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -216,21 +218,21 @@ REQ-045 & The onboard computer software shall refuse firmware older than the min
 REQ-046 & The onboard computer software shall refuse firmware built for a different controller. & H-7 control 2; Scenario-360 & TEST \\
 REQ-047 & The onboard computer software shall check firmware after its last transfer, just before delivering it. & H-7 control 2 & TEST \\
 REQ-048 & The onboard computer software shall deliver firmware to the controller while the controller keeps working. & Scenario-100 & TEST \\
-REQ-049 & The onboard computer software shall resume an interrupted upload at the next contact, from where it stopped. & Scenario-200 & TEST \\
+REQ-049 & The onboard computer software shall resume an interrupted upload at the next contact, from where it stopped. & Scenario-200; H-14 & TEST \\
 REQ-050 & The onboard computer software shall not deliver new firmware during a trial, and shall tell the ground why. & Scenario-425; Mode table & TEST \\
 REQ-051 & The onboard computer software shall stop an update when the operator cancels it, leaving working firmware running. & Scenario-470 & TEST \\
-REQ-052 & The onboard computer software shall free its firmware storage when an update ends or is cancelled. & H-3 control 5 & TEST \\
-REQ-053 & The onboard computer software shall let the operator correct the stored minimum version and controller identity. & H-3 control 5 & TEST \\
+REQ-052 & The onboard computer software shall free its firmware storage when an update ends or is cancelled. & H-3 cause d; H-14 & TEST \\
+REQ-053 & The onboard computer software shall let the operator correct the stored minimum version and controller identity. & H-3 cause c & TEST \\
 REQ-054 & The onboard computer software shall restore the last-resort firmware through the reprogramming link when no firmware can run. & H-1 control 5; Scenario-480; O-6 & TEST \\
-REQ-055 & The onboard computer software shall restore the last-resort firmware when the operator orders it, also while firmware runs. & H-2 control 3; H-3 control 4; H-7 control 5 & DEMONSTRATION \\
+REQ-055 & The onboard computer software shall restore the last-resort firmware when the operator orders it, also while firmware runs. & H-2 control 3; H-3 control 4 & DEMONSTRATION \\
 REQ-056 & The restore shall not depend on any software of the controller. & H-1 control 5; Shared cause: image code and data & ANALYSIS \\
 REQ-057 & The restore shall clear the data the controller keeps over restarts. & Shared cause: image code and data & TEST \\
 REQ-058 & The onboard computer software shall be able to load new firmware from the ground through the reprogramming link. & Shared cause: image code and data; H-8 cause g & TEST \\
 REQ-059 & The onboard computer software shall check its copy of the last-resort firmware and the reprogramming link between uses, and report any fault. & H-1 control 6 & TEST \\
 REQ-060 & The onboard computer software shall tell the ground at the next contact that a restore took place, and its result. & Scenario-480 & TEST \\
 REQ-061 & The onboard computer software shall notice when the controller goes silent, try to bring it back, and record what it did. & H-8 control 2; Scenario-520 & TEST \\
-REQ-062 & The onboard computer software shall restart a crashed program and resume any update in progress. & H-8 control 3; Scenario-530 & TEST \\
-REQ-063 & After a restart of the whole onboard computer, its software shall resume any update in progress. & Scenario-535 & TEST \\
+REQ-062 & The onboard computer software shall restart a crashed program and resume any update in progress. & H-8 control 3; Scenario-530; H-14 & TEST \\
+REQ-063 & After a restart of the whole onboard computer, its software shall resume any update in progress. & Scenario-535; H-14 & TEST \\
 REQ-064 & The onboard computer software shall check that every command comes from the operator, and refuse and log any other. & H-5 control 1; Scenario-300; O-2 & TEST \\
 REQ-065 & The onboard computer software shall refuse an old command sent again. & H-6 control 1; Scenario-300 & TEST \\
 REQ-066 & The onboard computer software shall refuse a command past its expiry, with the reason. & H-6 control 1; Scenario-340 & TEST \\
@@ -242,14 +244,14 @@ REQ-071 & The onboard computer software shall number every report, so that its o
 REQ-072 & The onboard computer software shall compare the onboard clock with ground time at every contact, and report a difference above \tbd{clock}. & H-6 cause h; H-9 cause a; Shared cause: wrong onboard clock & TEST \\
 REQ-073 & The onboard computer software shall accept a correction of the onboard clock that does not depend on the onboard clock. & H-4 control 4 & TEST \\
 REQ-074 & The onboard computer software shall store every report between contacts and send all of them at the next contact. & Scenario-110; Capability-1 & TEST \\
-REQ-075 & When report storage is full, the onboard computer software shall drop the oldest health reports first and keep every event report. & H-10 control 1; Scenario-210 & TEST \\
-REQ-076 & The onboard computer software shall tell the ground how many health reports were dropped, and the time span they covered. & H-10 control 2; Scenario-210; O-5 & TEST \\
-REQ-077 & Stored reports shall survive a power loss and a restart, including a restart of the whole onboard computer. & H-10 control 3; Scenario-535 & TEST \\
-REQ-078 & At a contact, the onboard computer software shall send event reports before health reports. & Scenario-210 & TEST \\
+REQ-075 & When report storage is full, the onboard computer software shall drop the oldest health reports first and keep every event report. & H-10 control 1; Scenario-210; H-15 & TEST \\
+REQ-076 & The onboard computer software shall tell the ground how many health reports were dropped, and the time span they covered. & H-10 control 2; Scenario-210; O-5; H-15 & TEST \\
+REQ-077 & Stored reports shall survive a power loss and a restart, including a restart of the whole onboard computer. & H-10 control 3; Scenario-535; H-15 & TEST \\
+REQ-078 & At a contact, the onboard computer software shall send event reports before health reports. & Scenario-210; H-16 & TEST \\
 REQ-079 & The onboard computer software shall check every report from the controller for damage when it arrives. & H-9 control 2 & TEST \\
 REQ-080 & The onboard computer software shall reach the controller over two separate data-link connections, either one being enough. & H-4 control 1; Scenario-500; O-3 & TEST \\
 REQ-081 & The onboard computer software shall report the loss of a data-link connection. & H-4 control 2; Scenario-500; Scenario-510 & TEST \\
-REQ-082 & The onboard computer software shall use a failed connection again once it works, and report it. & H-4 control 5; Scenario-505 & TEST \\
+REQ-082 & The onboard computer software shall use a failed connection again once it works, and report it. & H-4 control 5; Scenario-505; H-13 & TEST \\
 REQ-083 & The onboard computer software shall keep the reprogramming link usable when both data-link connections fail. & H-4 control 3; Scenario-510 & TEST \\
 REQ-084 & The onboard computer software shall accept a new means of proving origin only in a command proven with the current one. & Scenario-370 & TEST \\
 REQ-085 & After a replacement of the means of proving origin, only the new means shall be accepted. & H-2 control 4; H-5 control 3; Scenario-370 & TEST \\
@@ -276,7 +278,7 @@ REQ-093 & The ground software shall check every report for damage when it arrive
 REQ-094 & The ground software shall show the operator any command whose answers have not arrived. & H-11 control 1 & TEST \\
 REQ-095 & The ground software shall show the operator which firmware runs on the controller. & H-9 control 4 & TEST \\
 REQ-096 & The ground software shall keep a recoverable copy of the means of proving origin. & H-4 cause e & INSPECTION \\
-REQ-097 & The ground software shall let the operator plan commands, uploads and report retrieval for coming contacts \tbd{window}. & Capability-2; Capability-4; O-1 & DEMONSTRATION \\
+REQ-097 & The ground software shall let the operator plan commands, uploads and report retrieval for coming contacts \tbd{window}. & Capability-2; Capability-4; O-1; H-16 & DEMONSTRATION \\
 \bottomrule
 \end{xltabular}}
 
@@ -331,13 +333,13 @@ H-1 control 7 & REQ-016 & H-1 control 8 & REQ-019 & H-2 control 1 & REQ-043 \\
 H-2 control 2 & REQ-006 & H-2 control 3 & REQ-055 & H-2 control 4 & REQ-085 \\
 H-3 control 1 & REQ-011 & H-3 control 2 & REQ-012 & H-3 control 3 & REQ-010 \\
 H-3 control 4 & REQ-055 & H-3 control 5 & OUTSIDE & H-4 control 1 & REQ-080 \\
-H-4 control 2 & REQ-081 & H-4 control 3 & REQ-042, REQ-083 & H-4 control 4 & REQ-073 \\
+H-4 control 2 & REQ-081 & H-4 control 3 & REQ-083 & H-4 control 4 & REQ-073 \\
 H-4 control 5 & REQ-082 & H-5 control 1 & REQ-064, REQ-067 & H-5 control 2 & REQ-091 \\
 H-5 control 3 & REQ-085 & H-6 control 1 & REQ-027, REQ-028, REQ-065, REQ-066 & H-6 control 2 & REQ-029, REQ-030 \\
 H-6 control 3 & REQ-031 & H-6 control 4 & REQ-089 & H-6 control 5 & REQ-036 \\
 H-6 control 6 & REQ-112 & H-7 control 1 & REQ-013 & H-7 control 2 & REQ-044, REQ-045, REQ-046, REQ-047 \\
-H-7 control 3 & REQ-005 & H-7 control 4 & REQ-090 & H-7 control 5 & REQ-055 \\
-H-8 control 1 & REQ-022 & H-8 control 2 & REQ-026, REQ-061 & H-8 control 3 & REQ-062 \\
+H-7 control 3 & REQ-005 & H-7 control 4 & REQ-090 & H-7 control 5 & REQ-113 \\
+H-8 control 1 & REQ-022 & H-8 control 2 & REQ-061 & H-8 control 3 & REQ-062 \\
 H-8 control 4 & REQ-014 & H-8 control 5 & REQ-024 & H-9 control 1 & REQ-070 \\
 H-9 control 2 & REQ-079, REQ-093 & H-9 control 3 & REQ-092 & H-9 control 4 & REQ-040, REQ-095 \\
 H-10 control 1 & REQ-075 & H-10 control 2 & REQ-076 & H-10 control 3 & REQ-077 \\
@@ -346,7 +348,10 @@ H-11 control 3 & REQ-069 & H-12 control 1 & REQ-101 &  &  \\
 \bottomrule
 \end{longtable}}
 
-\subsection{Hazard Causes Without a Control}
+\subsection{Hazard Causes}
+Causes the hazard analysis left without a control, and causes a requirement
+answers directly.
+
 {\footnotesize
 \begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{6.2cm}@{}}
 \toprule
@@ -354,13 +359,17 @@ Item & Requirements \\
 \midrule
 \endhead
 H-1 cause g & REQ-009 \\
+H-3 cause c & REQ-053 \\
+H-3 cause d & REQ-052 \\
 H-4 cause b & REQ-099 \\
+H-4 cause c & REQ-042 \\
 H-4 cause e & REQ-096 \\
 H-4 cause g & REQ-086 \\
 H-4 cause h & ACCEPTED \\
 H-6 cause h & REQ-069, REQ-072 \\
 H-6 cause i & REQ-032 \\
 H-8 cause d & REQ-023 \\
+H-8 cause e & REQ-026 \\
 H-8 cause g & REQ-009, REQ-058 \\
 H-9 cause a & REQ-071, REQ-072 \\
 H-9 cause d & REQ-034 \\
@@ -466,6 +475,23 @@ Shared cause: same data-link software & REQ-099 \\
 Shared cause: wrong onboard clock & REQ-071, REQ-072 \\
 Shared cause: radiation & REQ-032 \\
 Fault tolerance rule & REQ-098 \\
+\bottomrule
+\end{xltabular}}
+
+\subsection{Moderate and Negligible Hazards}
+These hazards have no hazard report [5,~Sec.~6.0]; each is listed with the
+requirements that address it.
+
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{6.2cm}@{}}
+\toprule
+Item & Requirements \\
+\midrule
+\endhead
+H-13 & REQ-038, REQ-082 \\
+H-14 & REQ-049, REQ-052, REQ-062, REQ-063 \\
+H-15 & REQ-075, REQ-076, REQ-077 \\
+H-16 & REQ-078, REQ-097 \\
 H-17 & REQ-100 \\
 \bottomrule
 \end{xltabular}}

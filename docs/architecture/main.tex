@@ -216,7 +216,8 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 \draw[link] (op.south) -- (gbox.north) node[midway, right, lab] {operator interface};
 
 % Links
-\draw[link] (g4.east -| gbox.east) -- (g4.east -| obox.west) node[midway, above, lab] {radio link};
+\draw[-{Latex[length=1.8mm]}, thick] (g4.east -| gbox.east) -- (g4.east -| obox.west) node[midway, above, lab] {radio link\\up};
+\draw[-{Latex[length=1.8mm]}, thick] (g5.east -| obox.west) -- (g5.east -| gbox.east) node[midway, above, lab] {radio link\\down};
 \draw[link] ($(o8.east -| obox.east)+(0,0.1)$) -- ($(m6.west -| cbox.west)+(0,0.1)$)
   node[midway, above, lab] {data link A};
 \draw[link] ($(o8.east -| obox.east)+(0,-0.1)$) -- ($(m6.west -| cbox.west)+(0,-0.1)$)
@@ -824,7 +825,7 @@ design.
 Interface & Between & Carries \\
 \midrule
 Operator interface & Operator and ground software & The operator's decisions; reports and the System's state \\
-Radio link & Link encryptor and onboard computer software & Encrypted, signed commands and firmware; answers and reports \\
+Radio link & Ground software and onboard computer software & Up: encrypted, signed commands and firmware, sent by the link encryptor. Down: answers and reports, received by the report archive \\
 Data link A & Onboard computer and controller & Commands, answers, reports and firmware \\
 Data link B & Onboard computer and controller & The same as data link A, over a different kind of connection \\
 Reprogramming link A & Reprogramming drivers and controller & The controller's debug port: its restart, and memory writes with the processor stopped \\

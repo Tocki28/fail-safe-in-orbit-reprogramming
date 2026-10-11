@@ -252,8 +252,7 @@ baseline assumptions governing the formal hazard and fault tree analyses
   identifier is ever reused.
 \item \textbf{ConOps numbers:} objectives (O), assumptions (A), constraints
   (C), risks (R), capabilities and scenarios refer to the ConOps
-  [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0]. A control with a scenario number
-  comes from the ConOps; one without is new.
+  [5,~Secs.~1.1.2, 3.1, 3.5, 6.0 and 8.0].
 \item \textbf{Software role} [2,~Sec.~3.2.2]: CAUSE, a software fault can lead
   to the hazard; CONTROL, software prevents it; MITIGATION, software limits its
   effect; MONITOR, software detects and reports it.
@@ -390,237 +389,390 @@ These defeat several controls at once, but no hazard falls to them alone.
 \section{Hazard Reports}
 Reports cover the catastrophic and critical hazards, the two categories of
 the hazard report form [7,~Fig.~F-1, p.~351]; the others stay in the
-preliminary hazard list. Each report gives the conditions, worst effect,
-causes, proposed controls with their verification method, and how the
-controls fail [2,~Sec.~4]. The shared causes behind them are in Section~5.0.
+preliminary hazard list. Each report gives when the hazard can occur, its
+worst effect, its causes, the proposed controls and how they fail
+[2,~Sec.~4].
+
+In each report, the first table lists the causes. Source is the ConOps item or
+software cause it comes from, or NEW when this analysis found it. Controls
+gives the numbers of the controls that cover it; NONE marks a cause with no
+control yet, against the rule of at least one control for each cause
+[7,~App.~F.3, p.~348]. The second table lists the controls, each with its
+source and its verification method (Section~3.4). The shared causes behind the
+reports are in Section~5.0.
 
 % ---------------------------------------------------------------- H-1
 \hazard{H-1}{The controller is left with no firmware it can run, and cannot be restored.}{CATASTROPHIC}{CAUSE, CONTROL}
 \field{When} An update, a trial, any restart, or a needed restore.
-\fieldin{Effect} The controller is lost for the rest of the mission (A-1).
-\field{Causes} (a)~power lost while firmware is written (Scenario-600)
-[1,~p.~63]; (b)~a bit error in stored firmware (Scenario-610) [1,~p.~63];
-(c)~an update writes over the previous or last-resort firmware [1,~p.~65];
-(d)~new and previous firmware both fail (Scenario-460); (e)~the last-resort
-firmware has changed unnoticed [1,~p.~63]; (f)~a restart loop never reaches
-the fall-back [1,~p.~64]; (g)~the start-up code fails or is damaged
-[1,~p.~63]; (h)~the reprogramming link fails, or the onboard computer misses
-the need to restore (Scenario-520); (i)~the onboard computer's known-good copy
-is damaged [1,~p.~63].
-\field{Controls} (1)~an update never writes over the previous or last-resort
-firmware (Scenario-600)\ver{TEST}; (2)~every image is checked before it runs
-(Scenario-610)\ver{TEST}; (3)~after a set number of failed starts, the
-controller returns to its previous firmware (Scenario-440)\ver{TEST}; (4)~a
-last-resort firmware that updates never replace (Scenario-460)\ver{TEST};
-(5)~a restore of the last-resort firmware through the reprogramming link,
-independent of the controller's software (Scenario-480)\ver{TEST}; (6)~stored
-firmware and the reprogramming link are checked between uses\ver{TEST};
-(7)~a power loss during the trial counts as a failed start
-(Scenario-605)\ver{TEST}; (8)~failed firmware is not started again unless the
-operator orders it (Scenario-430 to Scenario-460)\ver{TEST}.
-\field{Fails if} The image check passes damaged firmware; the failed-start
-count is lost at a restart; the last-resort firmware, or the image the restore
-puts back, shares the defect.
+\field{Effect} The controller is lost for the rest of the mission (A-1).
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & Power lost while firmware is written & Scenario-600; [1,~p.~63] & 1 \\
+b & A bit error in stored firmware & Scenario-610; [1,~p.~63] & 2 \\
+c & An update writes over the previous or last-resort firmware & [1,~p.~65] & 1 \\
+d & New and previous firmware both fail & Scenario-460 & 4, 5 \\
+e & The last-resort firmware has changed unnoticed & [1,~p.~63] & 6 \\
+f & A restart loop never reaches the fall-back & [1,~p.~64] & 3, 7, 8 \\
+g & The start-up code fails or is damaged & [1,~p.~63] & \textbf{NONE} \\
+h & The reprogramming link fails, or the onboard computer misses the need to restore & Scenario-520 & 6 \\
+i & The onboard computer's known-good copy is damaged & [1,~p.~63] & 6 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & An update never writes over the previous or last-resort firmware & Scenario-600 & TEST \\
+2 & Every image is checked before it runs & Scenario-610 & TEST \\
+3 & After a set number of failed starts, the controller returns to its previous firmware & Scenario-440 & TEST \\
+4 & A last-resort firmware that updates never replace & Scenario-460 & TEST \\
+5 & A restore of the last-resort firmware through the reprogramming link, independent of the controller's software & Scenario-480 & TEST \\
+6 & Stored firmware and the reprogramming link are checked between uses & NEW & TEST \\
+7 & A power loss during the trial counts as a failed start & Scenario-605 & TEST \\
+8 & Failed firmware is not started again unless the operator orders it & Scenarios 430--460 & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The image check passes damaged firmware; the failed-start count is lost at a restart; the last-resort firmware, or the image the restore puts back, shares the defect.
 
 % ---------------------------------------------------------------- H-2
 \hazard{H-2}{Firmware from someone other than the operator runs on the controller.}{CATASTROPHIC}{CONTROL}
 \field{When} An update or a restore.
-\fieldin{Effect} Hostile firmware runs the controller and can refuse updates
-and report a false state. The restore starts only when no firmware can run
-(Scenario-480), so this firmware is never removed.
-\field{Causes} (a)~firmware not from the operator arrives (Scenario-410)
-[1,~p.~67]; (b)~the means of proving origin is disclosed; (c)~a restore starts
-a stored copy someone else replaced.
-\field{Controls} (1)~the onboard computer refuses firmware not released by the
-operator (Scenario-410)\ver{TEST}; (2)~the controller checks the origin again
-before it runs the firmware\ver{TEST}; (3)~the operator can order a restore
-while firmware runs\ver{DEMONSTRATION}; (4)~a disclosed means of proving
-origin is replaced in flight (Scenario-370)\ver{TEST}.
-\field{Fails if} The check accepts what it should refuse; the means of proof
-is disclosed without the operator knowing, so it is never replaced.
+\field{Effect} Hostile firmware runs the controller and can refuse updates and report a false state. The restore starts only when no firmware can run (Scenario-480), so this firmware is never removed.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & Firmware not from the operator arrives & Scenario-410; [1,~p.~67] & 1, 2, 3 \\
+b & The means of proving origin is disclosed & NEW & 3, 4 \\
+c & A restore starts a stored copy someone else replaced & NEW & 2, 3 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & The onboard computer refuses firmware not released by the operator & Scenario-410 & TEST \\
+2 & The controller checks the origin again before it runs the firmware & NEW & TEST \\
+3 & The operator can order a restore while firmware runs & NEW & DEMONSTRATION \\
+4 & A disclosed means of proving origin is replaced in flight & Scenario-370 & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The check accepts what it should refuse; the means of proof is disclosed without the operator knowing, so it is never replaced.
 
 % ---------------------------------------------------------------- H-3
 \hazard{H-3}{New firmware can no longer reach the controller.}{CATASTROPHIC}{CAUSE, CONTROL}
-\field{When} After an update is confirmed, or after a fault in the onboard
-computer.
-\fieldin{Effect} The controller can no longer be corrected for the rest of
-the mission.
-\field{Causes} (a)~confirmed firmware runs, but cannot receive firmware;
-(b)~a defect in the onboard computer's update path; (c)~a wrong stored minimum
-version or controller identity refuses all firmware [1,~p.~67]; (d)~firmware
-storage on the onboard computer stays full [1,~p.~66].
-\field{Controls} (1)~new firmware runs a trial before it is confirmed
-(Scenario-430 to Scenario-450)\ver{TEST}; (2)~it is judged good only after it
-has received firmware itself\ver{TEST}; (3)~the last-resort firmware can
-always receive firmware\ver{TEST}; (4)~the operator can order a return to the
-last-resort firmware\ver{DEMONSTRATION}.
-\field{Fails if} The trial skips the update path; the defect is in the
-onboard computer, out of every control's reach.
+\field{When} After an update is confirmed, or after a fault in the onboard computer.
+\field{Effect} The controller can no longer be corrected for the rest of the mission.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & Confirmed firmware runs, but cannot receive firmware & NEW & 1, 2, 3, 4 \\
+b & A defect in the onboard computer's update path & NEW & \textbf{NONE} \\
+c & A wrong stored minimum version or controller identity refuses all firmware & [1,~p.~67] & \textbf{NONE} \\
+d & Firmware storage on the onboard computer stays full & [1,~p.~66] & \textbf{NONE} \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & New firmware runs a trial before it is confirmed & Scenarios 430--450 & TEST \\
+2 & It is judged good only after it has received firmware itself & NEW & TEST \\
+3 & The last-resort firmware can always receive firmware & NEW & TEST \\
+4 & The operator can order a return to the last-resort firmware & NEW & DEMONSTRATION \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The trial skips the update path; the defect is in the onboard computer, out of every control's reach.
 
 % ---------------------------------------------------------------- H-4
 \hazard{H-4}{The controller can no longer be commanded or observed.}{CATASTROPHIC}{CAUSE, CONTROL}
 \field{When} At any time.
-\fieldin{Effect} The controller runs on its current firmware, but nobody can
-command or observe it for the rest of the mission.
-\field{Causes} (a)~both data-link connections fail (Scenario-510); (b)~one
-software defect cuts both (R-1) [1,~p.~66]; (c)~a controller that never stops
-sending blocks the data link [1,~p.~63]; (d)~a wrong onboard clock makes every
-command expire, including the clock correction [1,~p.~65]; (e)~the ground
-loses the means of proving origin; (f)~a false fault response marks both
-connections failed (H-13); (g)~a replacement of the means of proving origin
-goes wrong, so no command is accepted (Scenario-370); (h)~the onboard computer
-fails for good (R-4).
-\field{Controls} (1)~two separate data-link connections, one enough (O-3,
-Scenario-500)\ver{TEST}; (2)~a lost connection is reported
-(Scenario-510)\ver{TEST}; (3)~the reprogramming link stays usable
-(Scenario-510)\ver{TEST}; (4)~the clock correction does not depend on the
-onboard clock\ver{TEST}.
-\field{Fails if} One cause cuts both connections. No control yet covers a
-lost means of proving origin, or the loss of the only onboard computer.
+\field{Effect} The controller runs on its current firmware, but nobody can command or observe it for the rest of the mission.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & Both data-link connections fail & Scenario-510 & 1, 2 \\
+b & One software defect cuts both connections & R-1; [1,~p.~66] & \textbf{NONE} \\
+c & A controller that never stops sending blocks the data link & [1,~p.~63] & 3 \\
+d & A wrong onboard clock makes every command expire, including the clock correction & [1,~p.~65] & 4 \\
+e & The ground loses the means of proving origin & NEW & \textbf{NONE} \\
+f & A false fault response marks both connections failed & H-13 & 2, 5 \\
+g & A replacement of the means of proving origin goes wrong, so no command is accepted & Scenario-370 & \textbf{NONE} \\
+h & The onboard computer fails for good & R-4 & \textbf{NONE} \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & Two separate data-link connections; one is enough & O-3; Scenario-500 & TEST \\
+2 & A lost connection is reported & Scenario-510 & TEST \\
+3 & The reprogramming link stays usable & Scenario-510 & TEST \\
+4 & The clock correction does not depend on the onboard clock & NEW & TEST \\
+5 & A connection that works again is used again & Scenario-505 & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} One cause cuts both connections.
 
 % ---------------------------------------------------------------- H-5
 \hazard{H-5}{Someone other than the operator commands the System.}{CATASTROPHIC}{CONTROL}
 \field{When} During a contact, or at any time for a source on the spacecraft.
-\fieldin{Effect} Another party can do anything the operator can, and hide it,
-for the rest of the mission.
-\field{Causes} (a)~a command not from the operator arrives (Scenario-300)
-[1,~p.~67]; (b)~the means of proving origin is disclosed; (c)~someone else uses
-the operator interface, and no second person checks a command (A-4); (d)~a
-command arrives from an unexpected system on the spacecraft [1,~p.~62].
-\field{Controls} (1)~every command is proven to come from the operator; any
-other is refused and logged (O-2, Scenario-300)\ver{TEST}; (2)~only the
-operator can use the operator interface\ver{DEMONSTRATION}; (3)~a disclosed
-means of proving origin is replaced in flight (Scenario-370)\ver{TEST}.
-\field{Fails if} The means of proof is disclosed without the operator
-knowing, so it is never replaced.
+\field{Effect} Another party can do anything the operator can, and hide it, for the rest of the mission.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & A command not from the operator arrives & Scenario-300; [1,~p.~67] & 1 \\
+b & The means of proving origin is disclosed & NEW & 3 \\
+c & Someone else uses the operator interface, and no second person checks a command & A-4 & 2 \\
+d & A command arrives from an unexpected system on the spacecraft & [1,~p.~62] & 1 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & Every command is proven to come from the operator; any other is refused and logged & O-2; Scenario-300 & TEST \\
+2 & Only the operator can use the operator interface & NEW & DEMONSTRATION \\
+3 & A disclosed means of proving origin is replaced in flight & Scenario-370 & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The means of proof is disclosed without the operator knowing, so it is never replaced.
 
 % ---------------------------------------------------------------- H-6
 \hazard{H-6}{A command is acted on in a form or at a time the operator did not intend.}{CRITICAL}{CAUSE, CONTROL}
 \field{When} While a command is checked, held or run.
-\fieldin{Effect} The controller does what the operator did not intend; the
-ground learns of it at the next contact.
-\field{Causes} A command (a)~changed in transfer [1,~p.~62]; (b)~sent again
-from an old copy (Scenario-300); (c)~run twice after a lost answer
-(Scenario-350); (d)~not allowed in the current mode (Scenario-310) [1,~p.~63];
-(e)~with impossible values (Scenario-320) [1,~p.~62]; (f)~dangerous, without
-a valid arm (Scenario-330, Scenario-335) [1,~p.~63]; (g)~past its expiry
-(Scenario-340) [1,~p.~63]; (h)~scheduled, run at the wrong time or again after
-a restart [1,~p.~64]; (i)~held, or the arm state, changed by a bit error
-[1,~p.~63]; (j)~built wrongly by the ground software or entered wrongly by the
-operator (A-4) [1,~p.~63].
-\field{Controls} (1)~the onboard computer checks that every command comes from
-the operator, is new and has not expired, and the controller checks that it is
-allowed in the current mode and has possible values (Scenario-120)\ver{TEST}; (2)~a dangerous command needs an arm, which expires
-(Scenario-330, Scenario-335)\ver{TEST}; (3)~a repeated command is answered
-``already done'' (Scenario-350)\ver{TEST}; (4)~the ground software checks every
-command before it is sent (Scenario-120)\ver{TEST}; (5)~every command and
-answer is logged (Scenario-120)\ver{INSPECTION}.
-\field{Fails if} The checks use a wrong clock; a held command or the arm
-state changes after its check; new firmware checks commands wrongly (H-7).
+\field{Effect} The controller does what the operator did not intend; the ground learns of it at the next contact.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & A command is changed in transfer & [1,~p.~62] & 1 \\
+b & An old command is sent again & Scenario-300 & 1 \\
+c & A command is run twice after a lost answer & Scenario-350 & 3 \\
+d & A command not allowed in the current mode arrives & Scenario-310; [1,~p.~63] & 1 \\
+e & A command with impossible values arrives & Scenario-320; [1,~p.~62] & 1 \\
+f & A dangerous command arrives without a valid arm & Scenarios 330, 335; [1,~p.~63] & 2 \\
+g & A command arrives past its expiry & Scenario-340; [1,~p.~63] & 1 \\
+h & A scheduled command runs at the wrong time, or again after a restart & [1,~p.~64] & \textbf{NONE} \\
+i & A bit error changes a held command or the arm state & [1,~p.~63] & \textbf{NONE} \\
+j & The ground software builds a wrong command, or the operator enters one & A-4; [1,~p.~63] & 4, 5 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & The onboard computer checks that every command comes from the operator, is new and has not expired; the controller checks that it is allowed in the current mode and has possible values & Scenario-120 & TEST \\
+2 & A dangerous command needs an arm, which expires & Scenarios 330, 335 & TEST \\
+3 & A repeated command is answered ``already done'' & Scenario-350 & TEST \\
+4 & The ground software checks every command before it is sent & Scenario-120 & TEST \\
+5 & Every command and answer is logged & Scenario-120 & INSPECTION \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The checks use a wrong clock; a held command or the arm state changes after its check; new firmware checks commands wrongly (H-7).
 
 % ---------------------------------------------------------------- H-7
 \hazard{H-7}{Wrong firmware runs on the controller: damaged, out of date, or with a hidden defect.}{CRITICAL}{CAUSE, CONTROL}
 \field{When} During and after an update, a fall-back or a restore.
-\fieldin{Effect} The controller misbehaves until a further update. If the
-firmware passes its trial, it becomes the known-good firmware the controller
-falls back to. If it stops updates, H-3 follows.
-\field{Causes} (a)~a hidden defect the trial does not exercise; (b)~firmware
-changed after its check, in transfer or in storage [1,~p.~63]; (c)~firmware
-older than the minimum version sent again (Scenario-420); (d)~the wrong build,
-or wrong configuration values, released [1,~p.~67]; (e)~firmware built for
-another controller (Scenario-360); (f)~a defect added by the build tools;
-(g)~code released without full testing [1,~p.~67].
-\field{Controls} (1)~firmware not judged good within the trial time is given
-up (Scenario-430 to Scenario-450)\ver{TEST}; (2)~the onboard computer refuses
-firmware that is damaged (Scenario-400), older than the minimum version
-(Scenario-420) or built for another controller (Scenario-360)\ver{TEST};
-(3)~the controller checks firmware again before it runs it
-(Scenario-610)\ver{TEST}; (4)~the ground software checks every release before
-it is sent (Scenario-100)\ver{TEST}; (5)~the operator can order a return to
-the previous firmware\ver{DEMONSTRATION}.
-\field{Fails if} The judgement checks too little, or the trial ends before the
-defect shows; a check is made before the last transfer.
+\field{Effect} The controller misbehaves until a further update. If the firmware passes its trial, it becomes the known-good firmware the controller falls back to. If it stops updates, H-3 follows.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & A hidden defect the trial does not exercise & NEW & 1, 5 \\
+b & Firmware changed after its check, in transfer or in storage & [1,~p.~63] & 2, 3 \\
+c & Firmware older than the minimum version is sent again & Scenario-420 & 2 \\
+d & The wrong build, or wrong configuration values, released & [1,~p.~67] & 1, 4 \\
+e & Firmware built for another controller & Scenario-360 & 2, 4 \\
+f & A defect added by the build tools & NEW & 1 \\
+g & Code released without full testing & [1,~p.~67] & 1, 4 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & Firmware not judged good within the trial time is given up & Scenarios 430--450 & TEST \\
+2 & The onboard computer refuses firmware that is damaged, older than the minimum version or built for another controller & Scenarios 360, 400, 420 & TEST \\
+3 & The controller checks firmware again before it runs it & Scenario-610 & TEST \\
+4 & The ground software checks every release before it is sent & Scenario-100 & TEST \\
+5 & The operator can order a return to the previous firmware & NEW & DEMONSTRATION \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The judgement checks too little, or the trial ends before the defect shows; a check is made before the last transfer.
 
 % ---------------------------------------------------------------- H-8
 \hazard{H-8}{The controller stops working between contacts and is not brought back.}{CRITICAL}{CAUSE, CONTROL, MONITOR}
 \field{When} In any controller mode.
-\fieldin{Effect} The controller's work stops until the ground acts at the next
-contact.
-\field{Causes} (a)~a bit error in running memory (Scenario-620) [1,~p.~63];
-(b)~the firmware hangs, deadlocks or overloads [1,~p.~63]; (c)~a restart does
-not resume [1,~p.~63]; (d)~the restart takes longer than the time to the next
-failure [1,~p.~64]; (e)~the controller misbehaves when no command arrives for a
-long time [1,~p.~65]; (f)~the onboard computer misses the silence, or its
-watching program has crashed (Scenario-520, Scenario-530).
-\field{Controls} (1)~the controller restarts on its own and resumes
-(Scenario-620)\ver{TEST}; (2)~the onboard computer notices the silence, tries
-to bring the controller back and records it (Scenario-520)\ver{TEST}; (3)~a
-crashed onboard computer program restarts and resumes
-(Scenario-530)\ver{TEST}; (4)~new firmware that hangs is given up
-(Scenario-430)\ver{TEST}; (5)~the controller keeps working while the whole
-onboard computer restarts (Scenario-535)\ver{TEST}.
-\field{Fails if} The controller's restart and the onboard computer's watch
-fail from one fault.
+\field{Effect} The controller's work stops until the ground acts at the next contact.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & A bit error in running memory & Scenario-620; [1,~p.~63] & 1 \\
+b & The firmware hangs, deadlocks or overloads & [1,~p.~63] & 1, 4 \\
+c & A restart does not resume & [1,~p.~63] & 2 \\
+d & The restart takes longer than the time to the next failure & [1,~p.~64] & \textbf{NONE} \\
+e & The controller misbehaves when no command arrives for a long time & [1,~p.~65] & 2 \\
+f & The onboard computer misses the silence, or its watching program has crashed & Scenarios 520, 530 & 3, 5 \\
+g & The same defect is in every firmware copy, so every restart and the restore bring it back & NEW & \textbf{NONE} \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & The controller restarts on its own and resumes & Scenario-620 & TEST \\
+2 & The onboard computer notices the silence, tries to bring the controller back and records it & Scenario-520 & TEST \\
+3 & A crashed onboard computer program restarts and resumes & Scenario-530 & TEST \\
+4 & New firmware that hangs is given up & Scenario-430 & TEST \\
+5 & The controller keeps working while the whole onboard computer restarts & Scenario-535 & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The controller's restart and the onboard computer's watch fail from one fault.
 
 % ---------------------------------------------------------------- H-9
 \hazard{H-9}{The ground is shown a false state of the System.}{CRITICAL}{CAUSE, CONTROL}
 \field{When} At every contact.
-\fieldin{Effect} The operator decides on false information; a harmful command
-(H-6) or a missed fault (H-10) follows.
-\field{Causes} (a)~wrong time-tags [1,~p.~64]; (b)~old reports shown as
-current [1,~p.~63]; (c)~a report changed in storage or in transfer
-[1,~p.~62]; (d)~``done'' or ``already done'' answered for a command that did
-not run; (e)~the ground software stores or shows a report wrongly
-[1,~p.~62]; (f)~after a fall-back, the ground does not know which firmware
-runs.
-\field{Controls} (1)~the onboard computer time-tags every report
-(Scenario-110)\ver{TEST}; (2)~every report is checked for damage on
-arrival\ver{TEST}; (3)~the ground software keeps every report received
-[5,~Sec.~3.2]\ver{INSPECTION}; (4)~after a fall-back, the next reports tell the
-ground which firmware runs (Scenario-430 to Scenario-460)\ver{TEST}.
-\field{Fails if} The onboard clock is wrong; a report is damaged before its
-check.
+\field{Effect} The operator decides on false information; a harmful command (H-6) or a missed fault (H-10) follows.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & Wrong time-tags & [1,~p.~64] & \textbf{NONE} \\
+b & Old reports shown as current & [1,~p.~63] & 1 \\
+c & A report changed in storage or in transfer & [1,~p.~62] & 2 \\
+d & ``Done'' or ``already done'' answered for a command that did not run & NEW & \textbf{NONE} \\
+e & The ground software stores or shows a report wrongly & [1,~p.~62] & 3 \\
+f & After a fall-back, the ground does not know which firmware runs & NEW & 4 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & The onboard computer time-tags every report & Scenario-110 & TEST \\
+2 & Every report is checked for damage on arrival & NEW & TEST \\
+3 & The ground software keeps every report received & [5,~Sec.~3.2] & INSPECTION \\
+4 & After a fall-back, the next reports tell the ground which firmware runs & Scenarios 430--460 & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The onboard clock is wrong; a report is damaged before its check.
 
 % ---------------------------------------------------------------- H-10
 \hazard{H-10}{A fault between contacts never reaches the ground.}{CRITICAL}{CAUSE, MONITOR}
 \field{When} Between contacts.
-\fieldin{Effect} The ground does not know of the fault; hidden faults pile up,
-such as a damaged last-resort firmware (H-1).
-\field{Causes} (a)~the fault is not detected [1,~p.~66]; (b)~no event report
-is made [1,~p.~65]; (c)~the report is lost to full storage, a crash or a power
-loss (Scenario-210, Scenario-530, Scenario-535); (d)~the ground loses it.
-\field{Controls} (1)~event reports are kept when storage is full
-(Scenario-210)\ver{TEST}; (2)~no report is lost without the ground being told
-(O-5)\ver{TEST}; (3)~stored reports survive a power loss and a
-restart, including a restart of the whole onboard computer
-(Scenario-535)\ver{TEST}.
-\field{Fails if} Fault detection depends on the part that has failed.
+\field{Effect} The ground does not know of the fault; hidden faults pile up, such as a damaged last-resort firmware (H-1).
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & The fault is not detected & [1,~p.~66] & \textbf{NONE} \\
+b & No event report is made & [1,~p.~65] & \textbf{NONE} \\
+c & The report is lost to full storage, a crash or a power loss & Scenarios 210, 530, 535 & 1, 2, 3 \\
+d & The ground loses it & NEW & 4 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & Event reports are kept when storage is full & Scenario-210 & TEST \\
+2 & No report is lost without the ground being told & O-5 & TEST \\
+3 & Stored reports survive a power loss and a restart, including a restart of the whole onboard computer & Scenario-535 & TEST \\
+4 & The ground software keeps every report received & [5,~Sec.~3.2] & INSPECTION \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} Fault detection depends on the part that has failed.
 
 % ---------------------------------------------------------------- H-11
 \hazard{H-11}{A valid command is not acted on, and the ground is not told.}{CRITICAL}{CAUSE, CONTROL}
 \field{When} While a command is checked, held or run.
-\fieldin{Effect} The operator believes an action was taken that was not, for
-example a cancelled update (Scenario-470).
-\field{Causes} (a)~a full buffer drops the command [1,~p.~63]; (b)~a wrong
-onboard clock expires it (Scenario-340); (c)~a scheduled command is lost at a
-restart (Scenario-130); (d)~data-link traffic blocks it [1,~p.~63]; (e)~its
-answer is lost (Scenario-350).
-\field{Controls} (1)~every command gets two answers, received and then done
-with the result (Scenario-120)\ver{TEST}; (2)~a refusal carries its reason
-(Scenario-310 to Scenario-340)\ver{TEST}; (3)~scheduled commands survive a
-restart\ver{TEST}.
-\field{Fails if} The answers are lost with the command.
+\field{Effect} The operator believes an action was taken that was not, for example a cancelled update (Scenario-470).
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & A full buffer drops the command & [1,~p.~63] & 1 \\
+b & A wrong onboard clock expires it & Scenario-340 & 2 \\
+c & A scheduled command is lost at a restart & Scenario-130 & 3 \\
+d & Data-link traffic blocks it & [1,~p.~63] & 1 \\
+e & Its answer is lost & Scenario-350 & 1 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & Every command gets two answers, received and then done with the result & Scenario-120 & TEST \\
+2 & A refusal carries its reason & Scenarios 310--340 & TEST \\
+3 & Scheduled commands survive a restart & NEW & TEST \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} The answers are lost with the command.
 
 % ---------------------------------------------------------------- H-12
 \hazard{H-12}{A test function acts outside a test.}{CRITICAL}{CAUSE}
 \field{When} In operation.
-\fieldin{Effect} Power is cut, a data-link connection is broken or the radio
-link is degraded in operation; each is a cause of H-1 or H-4.
-\field{Causes} (a)~fault-injection functions stay in the operating software
-[1,~p.~64]; (b)~a wrong command, or one not from the operator, starts them.
-\field{Controls} (1)~test functions serve verification only and are not part
-of the operating software (Capability-5)\ver{INSPECTION}.
-\field{Fails if} A bench build is released for operation [1,~p.~67].
+\field{Effect} Power is cut, a data-link connection is broken or the radio link is degraded in operation; each is a cause of H-1 or H-4.
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{1.5cm}@{}}
+\toprule
+ & Cause & Source & Controls \\
+\midrule
+a & Fault-injection functions stay in the operating software & [1,~p.~64] & 1 \\
+b & A wrong command, or one not from the operator, starts them & NEW & 1 \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip\needspace{4\baselineskip}
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.35cm}@{}}
+\toprule
+ & Control & Source & Verified by \\
+\midrule
+1 & Test functions serve verification only and are not part of the operating software & Capability-5 & INSPECTION \\
+\bottomrule
+\end{tabularx}}
+\par\smallskip
+\field{Controls fail if} A bench build is released for operation [1,~p.~67].
+
 
 % ===========================================================================
 \section{Must-Work and Must-Not-Work Functions}

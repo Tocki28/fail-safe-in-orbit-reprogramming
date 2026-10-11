@@ -184,7 +184,7 @@ Figure~\ref{fig:update} follows one update from release to confirmed firmware.
 % Onboard computer software
 \node[title] (ot) at (5.7,1.5) {Onboard computer\\software};
 \node[comp] (o1) at (5.7,0) {\cmp{Command gate}{enforces telecommand authentication, replay protection, expiry and arming}};
-\node[comp, below=0.2cm of o1] (o2) {\cmp{Origin checker}{decrypts incoming packets and verifies cryptographic signatures}};
+\node[comp, below=0.2cm of o1] (o2) {\cmp{Command and image checker}{decrypts and checks every command and image, for the update and the restore}};
 \node[comp, below=0.2cm of o2] (o3) {\cmp{Scheduler}{buffers time-tagged commands and dispatches them at their execution times}};
 \node[comp, below=0.2cm of o3] (o4) {\cmp{Update manager}{verifies, stages and transfers firmware images to the controller}};
 \node[comp, below=0.2cm of o4] (o5) {\cmp{Report store}{buffers telemetry reports between contacts for downlink}};
@@ -505,14 +505,18 @@ controller.
  & Option & \sev{H-3}{CATASTROPHIC} & Chosen \\
 \midrule
 a & One program does both the update and the restore, and both read the same stored copy of the firmware. One defect in that program, or damage to that copy, blocks both ways; the only barrier left is the outside system correcting the onboard computer (A-6). & 2 & NO \\
-b & Two separate programs, the update manager and the restore program, each with its own code and its own stored copy of the firmware. Blocking both ways takes a defect in each program, and the outside correction failing as well. & 3 & YES \\
+b & Two separate programs, the update manager and the restore program, each with its own code and its own stored copy of the firmware. Blocking both ways takes a defect in each program, and the outside correction failing as well. Both still rely on the same onboard computer software for the checks on every image [6,~REQ-118]: a defect there that refuses every image blocks both ways, with the outside correction failing. & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
 
-\field{Choice} Option b \tbr{apart}. The two programs share nothing that one defect
-could reach: when the update fails, the restore still works, and the other way
-round.
+\field{Choice} Option b. Apart from the checks, the two programs share nothing
+that one defect could reach: when the update fails, the restore still works,
+and the other way round. Every cause then takes three failures except a defect
+in the checks both programs rely on, which takes two. Both programs use the
+same checks so that the debug port gives an attacker nothing the onboard
+computer has not checked (Section~\ref{sec:wayback}); that remaining cause is
+an accepted risk.
 
 \field{Adds}
 \begin{itemize}
@@ -563,7 +567,7 @@ both checks [8,~Sec.~7.4.2, p.~141].
 \node[key] (k2) at (0,0) {Signing key A\\place 2};
 \node[key] (k3) at (0,-1.0) {Signing key B\\place 3};
 \node[box] (sg) at (3.6,0) {Signing\\(ground software)};
-\node[box] (oc) at (8.3,0) {Origin checker (onboard computer): decrypts and checks both signatures};
+\node[box] (oc) at (8.3,0) {Command and image checker (onboard computer): decrypts and checks both signatures};
 \node[box] (ss) at (12.9,0) {Bootloader (controller): checks the signatures again, with different code};
 \foreach \k in {k1,k2,k3} \draw[ar] (\k.east) -- (sg.west);
 \draw[ar] (sg) -- node[above]{encrypted,} node[below]{signed twice} (oc);
@@ -726,7 +730,7 @@ requirements that the decisions add are allocated when they enter the
 requirements.
 
 All components are safety-critical [7,~Sec.~4.0] and new code, except the
-bootloader, the origin checker and signing, which are built around a
+bootloader, the command and image checker and signing, which are built around a
 published cryptographic library.
 
 The components from the mode manager to the data-link drivers form the main
@@ -735,7 +739,7 @@ shows which copy runs in each controller mode [4,~Sec.~3.4].
 
 \needspace{12\baselineskip}
 {\footnotesize
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.6cm}@{}}
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{3.6cm}@{}}
 \toprule
 Component & Role & Requirements \\
 \midrule
@@ -751,7 +755,7 @@ Data-link drivers & One driver for each data-link connection, sharing no code. &
 Last-resort firmware & A separate program sharing no code or kept data with the others. Sets a safe state, answers commands, sends reports, and receives new firmware. & REQ-004, REQ-009, REQ-010 \\
 \multicolumn{3}{@{}l}{\textit{Onboard computer software}} \\
 Command gate & Checks every command for origin, newness, expiry and arming, passes it on, and logs it. & REQ-064~to~067, REQ-087, REQ-100, REQ-112 \\
-Origin checker & Decrypts commands and firmware, checks their two signatures, and replaces the means of checking them on command. & REQ-043, REQ-064, REQ-084~to~086, REQ-118 \\
+Command and image checker & Decrypts every command and image and checks its signatures; also checks every image for damage, minimum version and target controller, for both the update and the restore; replaces the means of checking on command. & REQ-043~to~046, REQ-064, REQ-084~to~086, REQ-118 \\
 Scheduler & Holds scheduled commands and passes each on once, at its run time, across restarts. & REQ-068, REQ-069 \\
 Update manager & Checks new firmware, stores it, and delivers it over the data link, resuming after any interruption. & REQ-043~to~053, REQ-063 \\
 Report store & Checks, numbers and time-tags every report, stores reports between contacts, and sends them at the next one. & REQ-070, REQ-071, REQ-074~to~079 \\
@@ -835,7 +839,6 @@ The values below are not yet known.
 \medskip
 \noindent The proposals below await the author's acceptance.
 \begin{description}
-\tbritem{apart}{Restore apart from update: option b (Section~\ref{sec:apart}).}
 \tbritem{origin}{Proof of origin: option d (Section~\ref{sec:origin}).}
 \tbritem{clocks}{Two clocks: option c (Section~\ref{sec:clocks}).}
 \tbritem{held}{Held data: option b (Section~\ref{sec:held}).}
@@ -844,7 +847,9 @@ The values below are not yet known.
 
 \medskip
 \noindent The author accepted, on 11 October 2026, option c of
-Section~\ref{sec:startup}, option c of Section~\ref{sec:wayback}, and the risk of a wrong ground time that passes the
+Section~\ref{sec:startup}, option c of Section~\ref{sec:wayback}, option b of
+Section~\ref{sec:apart} with the risk of a defect in the checks both its programs
+rely on, and the risk of a wrong ground time that passes the
 ground software's check (Section~\ref{sec:clocks}).
 
 \end{document}

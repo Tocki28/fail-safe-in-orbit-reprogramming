@@ -834,7 +834,7 @@ Controller & Count & For \\
 Core clock and RAM sufficient to verify two signatures at boot within the restart time & 1 & Section~\ref{sec:origin}; REQ-023 \\
 Internal flash: bootloader, two application slots, last-resort image, persistent-data region; in-application programming while executing & 1 & Section~\ref{sec:startup}; REQ-048 \\
 UART & 1 & data link A (Section~\ref{sec:links}) \\
-SPI, slave & 1 & data link B (Section~\ref{sec:links}) \\
+SPI & 1 & data link B (Section~\ref{sec:links}) \\
 SWD, with full memory access under reset & 1 & reprogramming link A (Section~\ref{sec:wayback}) \\
 Factory loader in ROM, entered by the BOOT pin, on a dedicated UART & 1 & reprogramming link B (Section~\ref{sec:wayback}) \\
 NRST and BOOT pins, accessible & 2 & Section~\ref{sec:wayback} \\
@@ -844,7 +844,7 @@ RTC with an independent clock source & 1 & Section~\ref{sec:clocks} \\
 Onboard computer & & \\
 \midrule
 UART & 1 & data link A \\
-SPI, master & 1 & data link B \\
+SPI & 1 & data link B \\
 UART to the controller's factory loader & 1 & reprogramming link B \\
 GPIO: SWDIO, SWCLK (software-driven SWD), NRST, BOOT & 4 & reprogramming links A and B \\
 Non-volatile storage, two independent firmware stores & 1 & Section~\ref{sec:apart} \\

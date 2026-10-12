@@ -78,9 +78,11 @@ This plan states how each of the 138 software requirements
 [3,~Secs.~4.0--7.0] is verified:
 by which method, in which activity, and against which success criterion. It
 also runs every ConOps scenario from start to end, to show that the System
-behaves as the ConOps describes [4,~Sec.~6.0]. It follows the outline of a
-verification and validation plan [1,~App.~I, pp.~216--222] and is the
-software test plan [2,~SWE-065, Sec.~4.5.2, p.~35].
+behaves as the ConOps describes [4,~Sec.~6.0], and checks that the chosen
+hardware provides what the System needs. It is the verification plan for the
+software and for the hardware it needs, following the outline of a
+verification and validation plan [1,~App.~I, pp.~216--222]; for the software,
+it is the test plan [2,~SWE-065, Sec.~4.5.2, p.~35].
 
 % ===========================================================================
 \section{Documents}
@@ -408,6 +410,24 @@ Activity & Success criterion & Requirements \\
 \end{xltabular}}
 \addtocounter{table}{-1}
 % END GENERATED ins
+
+\subsection{Hardware}
+These two activities check the hardware itself, against the hardware needs of
+the architecture [5,~Sec.~8.0] and of Section~5.0. They run once the hardware
+is chosen.
+% BEGIN GENERATED hw
+{\footnotesize
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{2.4cm}@{}}
+\toprule
+Activity & Success criterion & Needs \\
+\midrule
+\endhead
+\textbf{Inspection-8}\newline Hardware documents & Every hardware need of the architecture, and every need of Section~5.0, is shown met by the chosen hardware's datasheets and manuals, each with its page. & Architecture Section~8.0; Section~5.0 \\
+\textbf{Test-29}\newline Hardware measurements & The needs that documents cannot settle are measured on the test articles: two signatures are checked at start-up within the restart time of REQ-023; software cannot stop the watchdog; the clock runs from its own source, at a measured rate; the debug port and the factory loader reach all of memory with the controller held in reset. & Architecture Section~8.0 \\
+\bottomrule
+\end{xltabular}}
+\addtocounter{table}{-1}
+% END GENERATED hw
 
 % ===========================================================================
 \section{Limits of Bench Verification}

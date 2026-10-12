@@ -445,7 +445,9 @@ REQ-041 & A bit changed on purpose is detected & Real radiation: its rate, sever
 REQ-026 & Correct operation through the run of Test-8 & Operation for longer than that run \\
 REQ-064, REQ-129 & Forged and changed frames are refused & Resistance to every possible forgery, which rests on Ed25519 and AES-256 in Galois/Counter Mode \\
 REQ-098, REQ-103 & Nothing; Analysis-1 shows it & That the analysis found every combination of failures \\
-REQ-080 & Both data links work over bench cables & The length and electrical noise of a spacecraft harness \\
+REQ-080, REQ-138 & Failover between two data links over bench wires; the second is a UART & The CAN link; two links of different kinds; the length and electrical noise of a spacecraft harness \\
+REQ-016, REQ-077 & A reset at a chosen moment, in place of a power cut & A true loss of power \\
+REQ-123 & A restore through SWD driven by the ST-LINK & SWD driven by the onboard computer's own driver and pins \\
 REQ-067 & Contact windows and losses made by the radio simulator & The real radio equipment, which lies outside the System \\
 All & Behaviour at room temperature and pressure & Temperature, vacuum, vibration and launch \\
 \bottomrule

@@ -130,6 +130,9 @@ UM2505 Rev~4 (distributor copy; Rev~7 not obtained).
 on ARM Cortex-M4'', \emph{IEEE Trans.\ Circuits and Systems~I}, vol.~71,
 no.~6, June 2024.
 
+\noindent [18] Linux kernel, \texttt{Documentation/networking/can.rst},
+mainline, read 12 October 2026.
+
 % ===========================================================================
 \section{Criteria}
 Each need of the architecture and of the verification plan is a criterion.
@@ -237,11 +240,41 @@ It does not show data link B, the RS-422 and CAN electrical links, the restore
 through the factory loader, SWD driven from the onboard computer's own pins, or
 power cuts made by a script.
 
-\subsection{Full Bench}
-The full bench adds the parts of Section~6.0, and USB adapters on the onboard
-computer for the factory loader's UART and for data link B \tbr{full}. The
-controller stays the \mbox{NUCLEO-G431KB}, with BOOT0 and SWD wired out from the
-board [6,~pp.~16, 22--23].
+\subsection{Owned-Hardware Bench}
+The bench then grows with jumper wires and one soldered wire, buying nothing
+(Table~\ref{tab:wires}) \tbr{owned}. The onboard computer's second UART stands
+in for data link B and also reaches the factory loader. Its NRST line resets
+the controller at a chosen moment, in place of a power cut. A bench-only
+program on the onboard computer drops, cuts or changes bytes on a link, in
+place of a link tool. The CAN FD software is tested on each end alone: the
+controller's with its CAN controller in loop-back test mode [5,~Sec.~44.2,
+p.~1953], the onboard computer's on a virtual CAN interface, which sends and
+receives CAN frames ``without real CAN controller hardware''
+[18,~Sec.~The Virtual CAN Driver (vcan)]. Before wiring, the high level of a
+header pin of the onboard computer is measured \tbd{level}.
+
+\begin{table}[H]
+\centering
+{\small\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{3.6cm}>{\raggedright\arraybackslash}X@{}}
+\toprule
+STM32MP257F-DK & NUCLEO-G431KB & Use \\
+\midrule
+USB Type-A port & USB port & Data link A (ST-LINK serial port); SWD for the restore and the debug probe \\
+USART6 TX, CN5 pin 8 & PA10, CN4 pin 2 & Data link B and the factory loader's UART \\
+USART6 RX, CN5 pin 10 & PA9, CN4 pin 1 & Data link B and the factory loader's UART \\
+GND, CN5 pin 6 & GND, CN3 pin 2 & Common ground \\
+PZ0, CN5 pin 15 & NRST, CN3 pin 3 & Reset, pulled low only \\
+PZ1, CN5 pin 16 & PB8 (BOOT0), soldered wire & Boot pin for the factory loader \\
+PZ9, CN5 pin 13 & PB0, CN4 pin 6 & Event line, time-stamped by the onboard computer \\
+\bottomrule
+\end{tabularx}}
+\caption{Wiring of the owned-hardware bench [8,~Table~24, p.~35; 6,~Table~11, p.~22; 6,~p.~16].}
+\label{tab:wires}
+\end{table}
+
+\noindent It runs every verification activity except those on the RS-422 and
+CAN electrical links, on a true power cut, and on SWD driven from the onboard
+computer's own pins. The parts of Section~6.0 add those later.
 
 % ===========================================================================
 \appendix
@@ -270,14 +303,16 @@ The values below are not yet known.
   on the header; settled by its datasheet.}
 \tbditem{hub}{The USB hub model.}
 \tbditem{analyzer}{The logic analyzer model.}
+\tbditem{level}{The logic level of the onboard computer's header pins; 3.3\,V
+  expected, measured before wiring.}
 \tbditem{linktool}{The board placed in the middle of a data link.}
 \end{description}
 
 \medskip
 \noindent Accepted by the author on 12 October 2026: the first bench
-(Section~7.1); the NUCLEO-G431KB as the controller (Section~7.2). The proposal below awaits the author's acceptance.
+(Section~7.1); the NUCLEO-G431KB as the controller. The proposal below awaits the author's acceptance.
 \begin{description}
-\tbritem{full}{The parts of the full bench (Section~7.2).}
+\tbritem{owned}{The owned-hardware bench and its wiring (Section~7.2).}
 \end{description}
 
 \end{document}

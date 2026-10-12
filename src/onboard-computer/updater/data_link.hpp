@@ -9,11 +9,14 @@
  * Sequence numbers: one counter for every frame the onboard computer sends on this link,
  * whoever asked for it (the ground, a delivery, the beat), from 1 at every start. The frame
  * has no source field, so two senders with separate counters on one link could not be told
- * apart; the controller sees only the onboard computer as its sender. Open design question
- * for the owner: an ARM names its dangerous command by sequence number (Interfaces Sec. 5.1),
- * but the controller sees the onboard computer's number, not the ground's.
- * Open (as for the controller, REQ-065): keeping the counter over restarts, and what follows
- * 2^32 - 1; here it goes back to 1.
+ * apart; the controller sees only the onboard computer as its sender. An ARM names its
+ * dangerous command by sequence number (Interfaces Sec. 5.2), but the controller sees the
+ * onboard computer's number, not the ground's. Decision (owner): the onboard computer holds
+ * the ground's ARM, checks it against the ground's command, and sends the controller a pair,
+ * an ARM naming the number the command will carry on this link (nextSequence() + 1 when the ARM
+ * goes out), then the command, with no frame between them (updater.hpp, ARM AND DANGEROUS
+ * COMMANDS). Open (as for the controller, REQ-065): keeping the counter over restarts, and
+ * what follows 2^32 - 1; here it goes back to 1.
  */
 #ifndef FSIR_UPDATER_DATA_LINK_HPP
 #define FSIR_UPDATER_DATA_LINK_HPP
@@ -55,6 +58,9 @@ public:
   // outstanding.
   bool sendCommand(const uint8_t * payload, uint16_t length, uint32_t expiry,
     uint32_t timeout_ms, uint64_t now_ms, uint32_t & sequence);
+
+  // The sequence number the next command sent will carry (Interfaces Sec. 4.0; 1 after 2^32 - 1).
+  uint32_t nextSequence() const;
 
   // A command is outstanding: no other may be sent.
   bool busy() const;

@@ -60,5 +60,6 @@ private:
 
 const char * modeName(uint8_t mode);
 const char * slotName(uint8_t slot);
+const char * eventName(uint16_t code);   // Sec. 5.4 event table, for the log
 
 #endif  // FSIR_UPDATER_REPORT_STORE_HPP

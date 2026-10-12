@@ -8,6 +8,17 @@
 namespace frame
 {
 
+/**
+ * @brief Writes f as bytes, check value included.
+ *
+ * Layout of Interfaces Sec. 4.0, Figure 2 (frame.hpp). Returns 0 if the payload is longer than
+ * 1024 bytes or out is too small.
+ *
+ * @param[in] f  the frame to write; f.payload must point at f.length bytes
+ * @param[out] out  receives the frame, little-endian fields, CRC-32 last
+ * @param[in] room  size of out, bytes
+ * @return size of the frame written, bytes; 0 if it does not fit
+ */
 size_t encode(const Frame & f, uint8_t * out, size_t room)
 {
   size_t covered = kHeaderBytes + f.length;
@@ -30,6 +41,17 @@ size_t encode(const Frame & f, uint8_t * out, size_t room)
   return covered + kCheckBytes;
 }
 
+/**
+ * @brief Reads one whole frame, e.g. one UDP datagram.
+ *
+ * Checks Sync, Version, Length equal to what follows the header, and the check value. f.payload
+ * then points into b.
+ *
+ * @param[in] b  the bytes of the frame
+ * @param[in] size  number of bytes in b
+ * @param[out] f  the frame's fields; unchanged when false is returned
+ * @return true: b is one valid frame and f describes it; false: size, Sync, Version, Length or check value is wrong
+ */
 bool decode(const uint8_t * b, size_t size, Frame & f)
 {
   if (size < kMinBytes || size > kMaxBytes) {
@@ -56,6 +78,15 @@ bool decode(const uint8_t * b, size_t size, Frame & f)
   return true;
 }
 
+/**
+ * @brief Writes the 6-byte answer payload.
+ *
+ * Sequence number answered (4 bytes), kind (1), code (1) (Interfaces Sec. 4.2).
+ *
+ * @param[in] a  the answer to write
+ * @param[out] out  receives kAnswerBytes (6) bytes
+ * @return nothing
+ */
 void encodeAnswer(const Answer & a, uint8_t * out)
 {
   bytes::writeU32(&out[0], a.answered);
@@ -63,6 +94,13 @@ void encodeAnswer(const Answer & a, uint8_t * out)
   out[5] = a.code;
 }
 
+/**
+ * @brief Reads the 6-byte answer payload of a frame.
+ *
+ * @param[in] f  a decoded frame
+ * @param[out] a  the answer; unchanged when false is returned
+ * @return true: f is an answer frame with a 6-byte payload and a holds it; false: f is no answer of 6 bytes
+ */
 bool decodeAnswer(const Frame & f, Answer & a)
 {
   if (f.type != kTypeAnswer || f.length != kAnswerBytes) {
@@ -74,22 +112,45 @@ bool decodeAnswer(const Frame & f, Answer & a)
   return true;
 }
 
+/**
+ * @brief Tells whether an answer kind ends a command.
+ *
+ * DONE, REFUSED and ALREADY DONE end a command; RECEIVED does not.
+ *
+ * @param[in] kind  answer kind (protocol.hpp)
+ * @return true: DONE, REFUSED or ALREADY DONE; false: any other kind
+ */
 bool isFinal(uint8_t kind)
 {
   return kind == answer::kDone || kind == answer::kRefused || kind == answer::kAlreadyDone;
 }
 
+/**
+ * @brief Builds a parser that holds no bytes.
+ * @return nothing (constructor)
+ */
 Parser::Parser()
 : bytes_{}, count_(0), total_(0), last_ms_(0)
 {
 }
 
+/**
+ * @brief Drops the bytes held, so that the next byte starts a frame.
+ * @return nothing
+ */
 void Parser::reset()
 {
   count_ = 0;
   total_ = 0;
 }
 
+/**
+ * @brief Checks the header field whose last byte has just arrived.
+ *
+ * Each header field is checked when its last byte arrives: Sync 0, Sync 1, Version, and Length
+ * against the largest payload.
+ * @return true: the bytes held so far are consistent with a frame; false: the header is broken
+ */
 bool Parser::headerSoFarOk() const
 {
   switch (count_) {
@@ -106,7 +167,14 @@ bool Parser::headerSoFarOk() const
   }
 }
 
-// Drop what is held; keep the byte that broke the header if it can start a new frame.
+/**
+ * @brief Drops what is held and keeps the byte that broke the header if it can start a new frame.
+ *
+ * Drop what is held; keep the byte that broke the header if it can start a new frame.
+ *
+ * @param[in] byte  the byte that broke the header
+ * @return nothing
+ */
 void Parser::startOver(uint8_t byte)
 {
   reset();
@@ -116,6 +184,20 @@ void Parser::startOver(uint8_t byte)
   }
 }
 
+/**
+ * @brief Takes one received byte.
+ *
+ * True when this byte completes a frame that passed every check; f then describes it, and its
+ * payload points into the parser, valid until the next feed().
+ * Rules, as in frame.c on the controller: a frame whose check value does not match is dropped
+ * whole (REQ-107); a gap of more than 10 ms inside a frame drops what was held (Interfaces
+ * Sec. 6.2).
+ *
+ * @param[in] byte  the received byte
+ * @param[in] now_ms  arrival time of the byte, ms; used to measure the gap
+ * @param[out] f  the completed frame; set only when true is returned
+ * @return true: this byte completed a valid frame; false: no frame complete yet, or the frame was dropped
+ */
 bool Parser::feed(uint8_t byte, uint64_t now_ms, Frame & f)
 {
   if (count_ > 0 && now_ms - last_ms_ > config::kFrameGapMaxMs) {

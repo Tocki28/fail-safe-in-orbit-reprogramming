@@ -76,6 +76,7 @@ struct ForwardedCommand
   uint32_t ground_sequence;
   uint32_t expiry;
   uint16_t length;
+  bool armed;   // a dangerous command whose held ARM was checked and used up on arrival
   std::array<uint8_t, frame::kPayloadMax> payload;
 };
 
@@ -86,8 +87,8 @@ public:
   ForwardQueue();
   bool empty() const;
   bool full() const;
-  // False if full.
-  bool push(const frame::Frame & command);
+  // False if full. armed: the command is dangerous and its ARM was used up (updater.hpp).
+  bool push(const frame::Frame & command, bool armed);
   // The oldest; only when !empty().
   const ForwardedCommand & front() const;
   void pop();

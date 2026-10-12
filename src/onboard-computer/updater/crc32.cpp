@@ -16,8 +16,17 @@ constexpr unsigned kBitsPerByte = 8;
 namespace crc
 {
 
-// Bit by bit, no table: about 8 passes per byte, ~330 000 for the largest image (40 KB). The
-// two signature checks that follow cost far more, so a table would save nothing that matters.
+/**
+ * @brief Computes the CRC-32 of a byte block.
+ *
+ * Bit by bit, no table: about 8 passes per byte, ~330 000 for the largest image (40 KB). The
+ * two signature checks that follow cost far more, so a table would save nothing that matters.
+ * Start value, bit order and final inversion as in Interfaces Sec. 4.0.
+ *
+ * @param[in]    data  bytes to check
+ * @param[in]    size  number of bytes
+ * @return CRC-32 value
+ */
 uint32_t crc32(const uint8_t * data, size_t size)
 {
   uint32_t value = kInitial;

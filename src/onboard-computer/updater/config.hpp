@@ -53,6 +53,12 @@ constexpr uint32_t kBeginTimeoutMs = 3000;
 constexpr uint32_t kDefaultBeatS = 0;
 constexpr uint32_t kMaxBeatS = 3600;
 
+// ---- Arming ----------------------------------------------------------------------------------
+// How long the onboard computer holds a ground ARM before a dangerous command must use it
+// (Interfaces Sec. 5.2, REQ-030). Proposal (TBR), awaiting the owner's acceptance: 30 s,
+// standing for TBD-arm; the controller uses the same 30 s. A bench value.
+constexpr uint64_t kArmExpiryMs = 30000;
+
 // ---- Controller watch ----------------------------------------------------------------------
 // REQ-061: notice a silent controller. Bench value 5 s from the build brief; the requirements
 // document has no value yet (TBD).

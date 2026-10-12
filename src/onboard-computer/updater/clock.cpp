@@ -13,6 +13,13 @@ constexpr uint64_t kNsPerMs = 1000000;
 namespace clocks
 {
 
+/**
+ * @brief Reads the monotonic clock in milliseconds.
+ *
+ * CLOCK_MONOTONIC cannot fail with a valid pointer (clock_gettime(2)); on failure the time
+ * reads 0 and timeouts run late, never early.
+ * @return milliseconds since an arbitrary start; 0 if the clock could not be read
+ */
 uint64_t nowMs()
 {
   timespec now{};
@@ -25,6 +32,12 @@ uint64_t nowMs()
          static_cast<uint64_t>(now.tv_nsec) / kNsPerMs;
 }
 
+/**
+ * @brief Reads the onboard real-time clock in whole seconds.
+ *
+ * Uses CLOCK_REALTIME; the fractional second is dropped.
+ * @return seconds of the real-time clock, truncated to 32 bits; 0 if the clock could not be read
+ */
 uint32_t onboardTimeS()
 {
   timespec now{};

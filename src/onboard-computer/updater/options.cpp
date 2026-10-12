@@ -7,6 +7,14 @@
 
 #include "config.hpp"
 
+/**
+ * @brief Prints the command-line usage to stderr.
+ *
+ * Lists every option with its default from config.hpp.
+ *
+ * @param[in] program  program name, shown in the first line
+ * @return nothing
+ */
 void printUsage(const char * program)
 {
   (void)std::fprintf(stderr,
@@ -24,6 +32,18 @@ void printUsage(const char * program)
     config::kMaxBeatS, config::kDefaultBeatS);
 }
 
+/**
+ * @brief Reads text as a whole number between min and max.
+ *
+ * Text to a whole number between min and max. False if not a number, extra characters, or
+ * out of range; value is then unchanged. A sign is rejected.
+ *
+ * @param[in] text  decimal digits only; may be nullptr
+ * @param[in] min  smallest accepted value
+ * @param[in] max  largest accepted value
+ * @param[out] value  the number; set only when true is returned
+ * @return true: text is a number in [min, max] and value holds it; false: otherwise
+ */
 bool parseNumber(const char * text, unsigned long min, unsigned long max, unsigned long & value)
 {
   if (text == nullptr || min > max) {
@@ -41,6 +61,17 @@ bool parseNumber(const char * text, unsigned long min, unsigned long max, unsign
   return true;
 }
 
+/**
+ * @brief Sets the defaults, then reads every word.
+ *
+ * Sets the defaults, then reads every word. False if a word is not understood. The UDP port is
+ * accepted from 1 to 65535 and the beat from 0 to config::kMaxBeatS.
+ *
+ * @param[in] argc  number of words in argv
+ * @param[in] argv  the words; argv[0] is the program name and is skipped
+ * @param[out] options  the options read, defaults for those not given
+ * @return true: every word was understood; false: an unknown word, a missing value or a bad one
+ */
 bool parseOptions(int argc, const char * const * argv, Options & options)
 {
   options.device = config::kDefaultDevice;
@@ -80,6 +111,15 @@ bool parseOptions(int argc, const char * const * argv, Options & options)
   return true;
 }
 
+/**
+ * @brief Reads a public key file.
+ *
+ * Reads a public key file: exactly 32 bytes, the raw Ed25519 public key [RFC 8032, Sec. 5.1.5].
+ *
+ * @param[in] path  file to read
+ * @param[out] key  receives config::kPublicKeyBytes bytes; written only when true is returned
+ * @return true: the file holds exactly one key and key holds it; false: the file cannot be opened or its size is not a key's
+ */
 bool readKeyFile(const char * path, uint8_t * key)
 {
   std::FILE * file = std::fopen(path, "rb");

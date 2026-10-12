@@ -17,16 +17,37 @@ constexpr int kMaxSendAttempts = 8;
 
 }  // namespace
 
+/**
+ * @brief Builds a port for a device path.
+ *
+ * Does not open the device: call open().
+ *
+ * @param[in] path  device path, e.g. /dev/ttyACM0; held by pointer, it must outlive this object
+ * @return nothing (constructor)
+ */
 SerialPort::SerialPort(const char * path)
 : path_(path), fd_(-1)
 {
 }
 
+/**
+ * @brief Closes the device.
+ * @return nothing (destructor)
+ */
 SerialPort::~SerialPort()
 {
   close();
 }
 
+/**
+ * @brief Opens the device and sets it to raw 115200 8N1.
+ *
+ * False if that failed; errno tells why. Any earlier open is closed first. O_NONBLOCK: reads
+ * return at once with what has arrived; the main loop waits in poll(). O_NOCTTY: the device does
+ * not become this program's controlling terminal. If the setup fails the device is closed again
+ * and errno keeps the cause.
+ * @return true: the device is open and configured; false: opening or configuring failed
+ */
 bool SerialPort::open()
 {
   close();
@@ -45,6 +66,12 @@ bool SerialPort::open()
   return true;
 }
 
+/**
+ * @brief Closes the device if it is open.
+ *
+ * Safe to call when already closed.
+ * @return nothing
+ */
 void SerialPort::close()
 {
   if (fd_ >= 0) {
@@ -53,21 +80,44 @@ void SerialPort::close()
   }
 }
 
+/**
+ * @brief Tells whether the device is open.
+ * @return true: a device is open; false: closed
+ */
 bool SerialPort::isOpen() const
 {
   return fd_ >= 0;
 }
 
+/**
+ * @brief Gives the device path.
+ * @return the path given at construction
+ */
 const char * SerialPort::path() const
 {
   return path_;
 }
 
+/**
+ * @brief Gives the file descriptor for poll().
+ *
+ * The file descriptor for poll(), or -1 while the channel is closed.
+ * @return the file descriptor; -1 while closed
+ */
 int SerialPort::pollFd() const
 {
   return fd_;
 }
 
+/**
+ * @brief Sets the open device to raw mode, 115200 baud, 8N1, and drops anything already received.
+ *
+ * Raw: no echo, no line editing, no translation of CR or LF, 8 data bits. No parity, 1 stop bit,
+ * no hardware flow control (the ST-LINK port has no RTS/CTS wired to the controller). VMIN 1,
+ * VTIME 0 with O_NONBLOCK, so that read() returning 0 means only end of file (see the comments
+ * in the body). Baud rate 115200 (Interfaces Sec. 6.2, as serial_port.hpp).
+ * @return true: every setting was applied and the buffers flushed; false: a termios call failed
+ */
 bool SerialPort::configureRaw()
 {
   termios settings{};
@@ -97,6 +147,16 @@ bool SerialPort::configureRaw()
   return tcflush(fd_, TCIOFLUSH) == 0;
 }
 
+/**
+ * @brief Sends all size bytes.
+ *
+ * Sends all size bytes. False if the channel is closed or failed. When the send buffer is full it
+ * waits up to kSendWaitMs for room, for at most kMaxSendAttempts tries.
+ *
+ * @param[in] data  bytes to send
+ * @param[in] size  number of bytes in data
+ * @return true: all bytes were written; false: the device is closed, a write failed, or the tries ran out
+ */
 bool SerialPort::sendBytes(const uint8_t * data, size_t size)
 {
   if (fd_ < 0) {
@@ -121,6 +181,16 @@ bool SerialPort::sendBytes(const uint8_t * data, size_t size)
   return sent == size;
 }
 
+/**
+ * @brief Copies what has arrived into buffer, without waiting.
+ *
+ * Returns the count (0: nothing yet), or -1 if the channel failed or is closed. End of file or
+ * any other read error means the device went away, e.g. its USB cable was pulled.
+ *
+ * @param[out] buffer  receives the bytes
+ * @param[in] capacity  size of buffer, bytes
+ * @return number of bytes read, 0 if none have arrived; -1 if the channel failed or is closed
+ */
 long SerialPort::receiveBytes(uint8_t * buffer, size_t capacity)
 {
   if (fd_ < 0) {

@@ -23,8 +23,20 @@ constexpr uint8_t kUploadEnd = 0x03;      // image number (2)
 constexpr uint8_t kUploadCancel = 0x04;   // image number (2)
 constexpr uint8_t kDeliver = 0x05;        // image number (2)
 constexpr uint8_t kArm = 0x0D;            // command identifier (1), its sequence number (4)
-constexpr uint8_t kSwitch = 0x20;         // none
+constexpr uint8_t kSwitch = 0x20;         // none; dangerous
+constexpr uint8_t kReturnToPrevious = 0x21;   // none; dangerous
+constexpr uint8_t kStartFailed = 0x22;    // which copy (1); dangerous
+constexpr uint8_t kSetControllerTime = 0x24;   // ground time (4); dangerous
 constexpr uint8_t kGetStatus = 0x25;      // none
+// CONFIRM (TRIAL only, dangerous, REQ-012, REQ-020) is a ground command for the controller:
+// the onboard computer passes it on unchanged in meaning, like SWITCH, and never sends it
+// itself. The operator sends it, after ARM, once the trial tests have passed (Sec. 5.5).
+constexpr uint8_t kConfirm = 0x26;        // none; dangerous
+
+// The test image of the controller's trial tests (Interfaces Sec. 5.1): UPLOAD BEGIN to
+// UPLOAD END with this image number is accepted by the controller during a trial, for the test
+// image only. The controller keeps it in working memory and writes nothing into a slot.
+constexpr uint16_t kTestImageNumber = 0xFFFF;
 
 // Payload sizes: the identifier byte, then the fields above.
 constexpr size_t kIdBytes = 1;
@@ -32,6 +44,7 @@ constexpr size_t kUploadBeginBytes = kIdBytes + 2 + 4;
 constexpr size_t kUploadChunkHeadBytes = kIdBytes + 2 + 4;
 constexpr size_t kImageNumberOnlyBytes = kIdBytes + 2;   // UPLOAD END, UPLOAD CANCEL, DELIVER
 constexpr size_t kGetStatusBytes = kIdBytes;
+constexpr size_t kArmBytes = kIdBytes + 1 + 4;   // ARM: command identifier (1), sequence (4)
 
 }  // namespace command
 
@@ -51,12 +64,15 @@ constexpr uint8_t kSuccess = 0x00;
 constexpr uint8_t kReceivedCode = 0x00;
 
 // Refusal reasons used here (Sec. 4.2 table).
+constexpr uint8_t kNotArmed = 0x01;           // dangerous command without a valid ARM; REQ-029, REQ-112
+constexpr uint8_t kArmExpired = 0x02;         // REQ-030
 constexpr uint8_t kNotInThisMode = 0x05;      // REQ-027
 constexpr uint8_t kImpossible = 0x06;         // impossible values, or an unknown command; REQ-028
 constexpr uint8_t kTrialRunning = 0x07;       // no new firmware during a trial; REQ-050
 constexpr uint8_t kImageDamaged = 0x08;       // REQ-005, REQ-044
 constexpr uint8_t kNotFromOperator = 0x09;    // REQ-006, REQ-043
 constexpr uint8_t kOtherController = 0x0B;    // REQ-046
+constexpr uint8_t kTrialTestsNotPassed = 0x0F;   // "Trial tests not passed"; REQ-012
 
 // BENCH ONLY, not in the Interfaces table: the controller did not answer a command of a
 // delivery within its timeout. Sec. 4.2 has no reason for "no answer", yet DELIVER must end
@@ -109,6 +125,15 @@ constexpr size_t kOffsetSlot = 19;
 constexpr size_t kOffsetFailedStarts = 20;
 constexpr size_t kOffsetTrialLeft = 21;
 constexpr size_t kOffsetSelfTest = 23;
+// Event codes (Sec. 5.4 table), the ones the updater acts on or names in its log. The
+// controller sends the first group; the onboard computer's own events (0x0101 to 0x0105) are
+// not sent on the bench.
+constexpr uint16_t kEventTrialStarted = 0x0006;
+constexpr uint16_t kEventFirmwareConfirmed = 0x0007;
+constexpr uint16_t kEventFirmwareGivenUp = 0x0008;
+constexpr uint16_t kEventTrialTestsPassed = 0x000A;   // REQ-139
+constexpr uint16_t kEventTrialTestsFailed = 0x000B;   // REQ-139, REQ-140; detail (1): which test
+constexpr size_t kEventDetailOffset = 15;
 constexpr size_t kEventMinBytes = 15;
 constexpr size_t kEventMaxBytes = 15 + 32;
 

@@ -15,6 +15,12 @@ bool g_verbose = false;
 constexpr size_t kLineBytes = 512;
 constexpr uint64_t kMsPerSecond = 1000;
 
+/**
+ * @brief Prints the elapsed-time prefix of a log line to stderr.
+ *
+ * Elapsed time is counted from the start time given to logging::start(), as seconds.milliseconds.
+ * @return nothing
+ */
 void stamp()
 {
   uint64_t elapsed = clocks::nowMs() - g_start_ms;
@@ -28,17 +34,42 @@ void stamp()
 namespace logging
 {
 
+/**
+ * @brief Sets the log start time and the frame-printing switch.
+ *
+ * Later log lines show their time relative to now_ms.
+ *
+ * @param[in]    now_ms  monotonic time of the start, milliseconds
+ * @param[in]    print_frames  true: print every frame as hex bytes
+ * @return nothing
+ */
 void start(uint64_t now_ms, bool print_frames)
 {
   g_start_ms = now_ms;
   g_verbose = print_frames;
 }
 
+/**
+ * @brief Tells whether frames are printed.
+ *
+ * Reflects the print_frames value given to logging::start().
+ * @return true: frames are printed; false: they are not
+ */
 bool verbose()
 {
   return g_verbose;
 }
 
+/**
+ * @brief Prints one time-stamped line to stderr.
+ *
+ * Format into one buffer first, so the line reaches stderr in one write and cannot be
+ * split by another program writing to the same terminal. Longer lines are cut at the buffer size.
+ *
+ * @param[in]    format  printf-style format string
+ * @param[in]    ...  values for the format
+ * @return nothing
+ */
 void line(const char * format, ...)
 {
   // Format into one buffer first, so the line reaches stderr in one write and cannot be
@@ -52,6 +83,16 @@ void line(const char * format, ...)
   (void)std::fprintf(stderr, "%s\n", text.data());
 }
 
+/**
+ * @brief Prints the bytes of one frame as hex when frame printing is on.
+ *
+ * Prints nothing unless logging::start() was called with print_frames set.
+ *
+ * @param[in]    what  label printed before the byte count
+ * @param[in]    bytes  frame bytes
+ * @param[in]    size  number of bytes
+ * @return nothing
+ */
 void frame(const char * what, const uint8_t * bytes, size_t size)
 {
   if (!g_verbose) {

@@ -51,7 +51,12 @@ extern "C" void onSignal(int)
   g_stop = 1;
 }
 
-// No SA_RESTART: poll() returns early with EINTR, and the loop sees g_stop at once.
+/**
+ * @brief Installs the handler that stops the loop on SIGINT and SIGTERM.
+ *
+ * No SA_RESTART: poll() returns early with EINTR, and the loop sees g_stop at once.
+ * @return nothing
+ */
 void catchSignals()
 {
   struct sigaction action{};
@@ -62,6 +67,17 @@ void catchSignals()
   (void)sigaction(SIGTERM, &action, nullptr);
 }
 
+/**
+ * @brief Fills a public key from a file or from the built-in key.
+ *
+ * Uses the built-in key when no file is named; otherwise reads the file, which must hold exactly 32 bytes.
+ *
+ * @param[in]    file  path of the key file, or null for the built-in key
+ * @param[in]    built_in  built-in 32-byte public key
+ * @param[out]   key  the 32-byte public key
+ * @param[in]    name  key name used in the error message
+ * @return true: key filled; false: the file could not be read as 32 bytes
+ */
 bool loadKey(const char * file, const uint8_t * built_in, std::array<uint8_t, 32> & key,
   const char * name)
 {
@@ -78,6 +94,15 @@ bool loadKey(const char * file, const uint8_t * built_in, std::array<uint8_t, 32
 
 }  // namespace
 
+/**
+ * @brief Runs fsir-updater: sets up the keys, storage and links, then loops until stopped.
+ *
+ * One poll() loop over the UDP socket and the serial device; exit code values are the kExit constants.
+ *
+ * @param[in]    argc  number of command-line arguments
+ * @param[in]    argv  command-line arguments
+ * @return 0: stopped by SIGINT or SIGTERM; 2: bad command line; 3: keys, data directory or socket not usable; 4: poll() failed
+ */
 int main(int argc, char ** argv)
 {
   Options options{};

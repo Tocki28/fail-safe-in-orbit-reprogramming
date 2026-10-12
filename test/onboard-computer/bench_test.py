@@ -23,8 +23,9 @@ Checks (PASS or FAIL each; exit status 1 if any fails):
   with a wrong key refused 0x09;
   DELIVER: RECEIVED, DONE; the fake controller got exactly the image bytes; stop-and-wait
   held; the data-link sequence numbers go up by one;
-  SWITCH passed on: the controller sees the onboard computer's number, the ground gets its
-  own number back; three commands back to back: answers in order;
+  SWITCH (dangerous): the ground's ARM held; the controller sees ARM then SWITCH back to back
+  with the onboard computer's numbers, the ground gets its own number back; SWITCH again
+  REFUSED 0x01; three commands back to back: answers in order;
   HEALTH reports reach the ground numbered 1, 2, 3, ... with the onboard time filled in;
   every frame to the ground: Destination 0x03, Expiry 0, sequence numbers up by one;
   DELIVER refused 0x07 while the controller reports TRIAL (REQ-050);
@@ -62,7 +63,7 @@ FINAL = (DONE, REFUSED, ALREADY_DONE)
 KIND = {RECEIVED: "RECEIVED", DONE: "DONE", REFUSED: "REFUSED", ALREADY_DONE: "ALREADY DONE"}
 
 UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END, UPLOAD_CANCEL, DELIVER = 0x01, 0x02, 0x03, 0x04, 0x05
-REPLACE_KEY, SWITCH, GET_STATUS = 0x0C, 0x20, 0x25
+REPLACE_KEY, ARM, SWITCH, GET_STATUS = 0x0C, 0x0D, 0x20, 0x25
 CHUNK = 256
 EXPIRY = 0xFFFFFFFF
 
@@ -491,14 +492,26 @@ def main():
                       f"stop-and-wait held during the delivery {fake.violations[:2]} {fake.errors[:2]}")
 
         # ---- Commands passed on to the controller --------------------------------------------
+        # SWITCH is dangerous: the ground's ARM is held by the onboard computer and not passed
+        # on; the SWITCH then goes out as a pair, an ARM naming the data-link sequence number
+        # the SWITCH carries, then the SWITCH (Interfaces Sec. 5.2).
         before = len(fake.frames)
+        arm_seq, a = ground.command(CONTROLLER, bytes([ARM, SWITCH]) + struct.pack("<I", ground.seq + 2))
+        checks.report(a == ok_rr and len(fake.frames) == before,
+                      f"ARM for SWITCH held, not passed on, answers to ground sequence {arm_seq}: {show(a)}")
         seq, a = ground.command(CONTROLLER, bytes([SWITCH]))
-        sw = fake.frames[before] if len(fake.frames) > before else None
+        pair = fake.frames[before:before + 2]
+        arm_f, sw = (pair + [None, None])[:2]
         checks.report(a == ok_rr, f"SWITCH passed on, answers to ground sequence {seq}: {show(a)}")
-        checks.report(sw is not None and sw["payload"] == bytes([SWITCH]) and sw["seq"] != seq
-                      and sw["seq"] == fake.frames[before - 1]["seq"] + 1,
-                      f"the controller saw SWITCH as data-link sequence "
-                      f"{sw['seq'] if sw else None}, the onboard computer's own, not {seq}")
+        checks.report(len(pair) == 2 and arm_f["payload"] == bytes([ARM, SWITCH]) + struct.pack("<I", sw["seq"])
+                      and sw["payload"] == bytes([SWITCH]) and sw["seq"] == arm_f["seq"] + 1
+                      and sw["seq"] != seq and arm_f["seq"] == fake.frames[before - 1]["seq"] + 1,
+                      f"the controller saw ARM then SWITCH, back to back, as data-link sequence "
+                      f"{arm_f['seq'] if arm_f else None} and {sw['seq'] if sw else None}, the onboard "
+                      f"computer's own, not {seq}; the ARM names the SWITCH's number")
+        _, a = ground.command(CONTROLLER, bytes([SWITCH]))
+        checks.report(a == [(REFUSED, 0x01)] and len(fake.frames) == before + 2,
+                      f"SWITCH again, ARM used up: REFUSED 0x01, nothing sent: {show(a)}")
 
         seqs = [ground.send(CONTROLLER, bytes([GET_STATUS])) for _ in range(3)]
         for s in seqs:

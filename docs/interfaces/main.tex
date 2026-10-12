@@ -261,8 +261,7 @@ checks on arrival, then DONE with its result or REFUSED with a reason
 (Figure~\ref{fig:answers}). A command sent again with a sequence number
 already run is answered ALREADY DONE and is not run twice [3,~REQ-031]. An
 envelope that fails any of its checks is dropped and logged without an
-answer, so that a sender without the keys learns nothing [3,~REQ-064]
-\tbr{silent}.
+answer, so that a sender without the keys learns nothing [3,~REQ-064].
 
 \begin{figure}[H]
 \centering
@@ -357,7 +356,7 @@ first [3,~REQ-029, REQ-112]; NO, it does not.}
 
 \subsection{Arming}
 An ARM command names the one dangerous command it allows, by identifier and
-sequence number \tbr{armone}. It allows no other command, and it expires after
+sequence number. It allows no other command, and it expires after
 \tbd{arm} [3,~REQ-030]. The onboard computer and the controller each check it
 [3,~REQ-029, REQ-112].
 
@@ -733,13 +732,12 @@ The values below are not yet known.
 \medskip
 \noindent Accepted by the author on 12 October 2026: the interface priorities
 (Section~3.0); the frame (Section~4.0); the Ed25519 signatures and AES-256 in
-Galois/Counter Mode (Section~4.1); which commands are dangerous
-(Section~5.1); no scheduling of dangerous commands (Section~5.3). The
+Galois/Counter Mode (Section~4.1); no answer to a failed envelope
+(Section~4.2); which commands are dangerous (Section~5.1); an arming command
+for one named command only (Section~5.2); no scheduling of dangerous commands
+(Section~5.3). The
 proposals below await the author's acceptance.
 \begin{description}
-\tbritem{silent}{A failed envelope gets no answer (Section~4.2).}
-\tbritem{armone}{An arming command allows one named command only
-  (Section~5.2).}
 \tbritem{uart}{The UART settings of data link A (Section~6.2).}
 \tbritem{canfd}{CAN FD frames on data link B (Section~6.3).}
 \tbritem{canseg}{The splitting of a frame into CAN frames, and one CAN

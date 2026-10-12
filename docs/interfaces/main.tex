@@ -193,7 +193,7 @@ $x^{32}+x^{26}+x^{23}+x^{22}+x^{16}+x^{12}+x^{11}+x^{10}+x^{8}+x^{7}+x^{5}+x^{4}
 $x^{32}$ is left out of the hexadecimal. The calculation starts from
 0xFFFFFFFF, takes each byte least significant bit first, and inverts the
 result. A receiver drops a frame whose check value or version it does not
-accept \tbr{frame}.
+accept.
 
 \begin{figure}[H]
 \centering
@@ -735,11 +735,11 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent The proposals below await the author's acceptance.
+\noindent Section~4.0 was accepted by the author on 12 October 2026. The
+proposals below await the author's acceptance.
 \begin{description}
 \tbritem{priority}{Data link A and reprogramming link A used first; the B
   links used when the A links are lost (Section~3.0).}
-\tbritem{frame}{The frame layout, byte order and check value (Section~4.0).}
 \tbritem{crypto}{Ed25519 signatures and AES-256 in Galois/Counter Mode
   (Section~4.1).}
 \tbritem{silent}{A failed envelope gets no answer (Section~4.2).}

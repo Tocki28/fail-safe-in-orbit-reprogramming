@@ -1,51 +1,37 @@
-# src/ — operating software
+# src — operating software
 
-One folder per component of the architecture (Architecture Sec. 6.0). `src/` holds operating
-software only: it contains no fault-injection function (REQ-101). Bench-only test tools are in
-`test/`; development tools are in `tools/`.
+One folder per component of the architecture. Bench-only test tools are in `test/`,
+development tools in `tools/`. Each component's requirements are in the Architecture
+(Section 6.0); how each requirement is verified is in the Verification Plan (Appendix A).
 
-## Controller
+## Status
 
-| Folder | Component (Architecture Sec. 6.0) | Requirements | Verified by (Verification Plan) | Build step | Status |
-|---|---|---|---|---|---|
-| `controller/bootloader` | Bootloader | REQ-004 to 006, REQ-013 to 019, REQ-023, REQ-113, REQ-119, REQ-125, REQ-130, REQ-136 | Test-3 to Test-7 | 1 | BUILT; bench scenarios 1-7 PASS on 12 Oct (`test/controller/results/2026-10-12`) |
-| `controller/firmware` | Main firmware: start-up, core clock, watchdog reload, main loop (`main.c`, `core_clock.c`); answers GET STATUS until the command checker exists | REQ-022 | — | 2a | BUILT; hardware test pending |
-| `controller/firmware/data-link` | Data-link drivers: data link A (`uart_link.c`, USART2) and the frame layer (`frame.c`) | REQ-042, REQ-099, REQ-138 | Test-26, Inspection-1, Inspection-7 | 2a | BUILT; unit tests PASS; hardware test pending |
-| `controller/firmware/command-checker` | Command checker | REQ-027 to 036, REQ-100, REQ-133, REQ-134, REQ-136, REQ-137 | Test-9, Test-10 | 2b | LATER |
-| `controller/firmware/update-receiver` | Update receiver | REQ-007, REQ-008 | Test-6 | 2c | LATER |
-| `controller/firmware/mode-manager` | Mode manager | REQ-001 to 003, REQ-011 to 013, REQ-020, REQ-021, REQ-024 to 026, REQ-113, REQ-117, REQ-125, REQ-136 | Test-1, Test-4, Test-8 | 2d | LATER |
-| `controller/firmware/health-monitor` | Health monitor | REQ-022, REQ-037 to 041, REQ-135 | Test-7, Test-11 | 2e | LATER |
-| `controller/firmware/clock` | Controller clock | REQ-030, REQ-131, REQ-132 | Test-12 | after 2e | LATER |
-| `controller/last-resort` | Last-resort firmware | REQ-004, REQ-009, REQ-010, REQ-125 | Test-6 | after 2e | LATER |
-| `controller/common` | Shared by the bootloader and the firmware: layout, image format, boot state, flash, CRC-32. Bench limit: REQ-119 asks the bootloader to share no code | — | — | 1 | BUILT |
-
-## Onboard computer and ground
-
-| Folder | Software item | Build step | Status |
+| Step | Folder | What it does | Status |
 |---|---|---|---|
-| `onboard-computer` | Onboard computer software (Architecture Sec. 6.0) | 3 | LATER |
-| `ground` | Ground software (Architecture Sec. 6.0) | 4 | LATER |
+| 1 | `controller/bootloader` | Picks, checks and starts the firmware | Done, bench-tested |
+| 2a | `controller/firmware/data-link` | UART and frames | Done, bench-tested |
+| 2c | `controller/firmware/update-receiver` | Receives a new image | Building |
+| 2d | `controller/firmware/mode-manager` | Trial and confirmation | Waiting for the trial judge |
+| 2e | `controller/firmware/health-monitor` | Reports, watchdog, self-test | Building (reports) |
+| 2b | `controller/firmware/command-checker` | Sequence, mode and arming checks | Later |
+| — | `controller/common` | Code shared by bootloader and firmware | Done |
+| 3 | `onboard-computer/updater` | Checks images and delivers them | Building |
+| 3r | `onboard-computer/restore` | Rewrites a bricked controller | Building |
+| 4 | `ground` | Operator console | Done, host-tested |
 
-## Outside `src/`
+Bench limit: the bootloader and the firmware share `controller/common`, against REQ-119.
 
-| Folder | What | Status |
-|---|---|---|
-| `test/controller/test-firmware` | Test tool "Test firmware": built to fail on purpose; bench only (REQ-101) | BUILT |
-| `test/controller/Makefile` | Bench scenarios 1 to 7 and the host checks | BUILT |
-| `test/controller/unit` | Host unit tests of the frame layer (`make -C test/controller unit`) | BUILT |
-| `test/controller/link_probe.py` | Test tool: sends frames over data link A and checks the answers | BUILT |
-| `tools/` | Development tools: dev keys, bench image signing, host checks | BUILT |
-| `third_party/monocypher` | Ed25519 verification, Monocypher 4.0.2 | VENDORED |
+Evidence: `test/controller/results/`.
 
-## How to build and test
+## Build and test
 
-STM32CubeIDE's `arm-none-eabi-gcc` must be on `PATH` (see `src/controller/common/build.mk`).
+STM32CubeIDE's `arm-none-eabi-gcc` must be on `PATH` (see `controller/common/build.mk`).
 
-    make -C src/controller               # build the operating programs, sign the firmware images
-    make -C src/controller check         # host checks (same as: make -C test/controller check)
-    make -C test/controller              # test firmware + signed test images
-    make -C test/controller scenario-N   # write bench test N (1-7) to the board
-    make -C src/controller flash         # bootloader only;  reset / monitor also there
-    make -C src/controller flash-firmware  # bootloader + firmware in slot A, confirmed
-    make -C test/controller link-probe   # GET STATUS and bad frames over data link A
-    make -C src/controller clean && make -C test/controller clean
+| Command | Does |
+|---|---|
+| `make -C src/controller` | Build the controller programs and sign the firmware images |
+| `make -C src/controller check` | Host checks: CRC-32, images, frames |
+| `make -C src/controller flash-firmware` | Write bootloader and firmware (slot A, confirmed) to the board |
+| `make -C test/controller scenario-N` | Write bench test N (1 to 7) to the board |
+| `make -C test/controller link-probe` | Talk to the controller over data link A |
+| `make -C test/ground check` | Ground console tests |

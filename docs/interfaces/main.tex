@@ -32,7 +32,7 @@
 \rfoot{\small Page \thepage\ of \pageref{LastPage}}
 
 % Open items. TBD = not known. TBR = proposal awaiting the author's
-% acceptance. Listed in App. B; totals counted, not typed.
+% acceptance. Listed in App. C; totals counted, not typed.
 \newtotcounter{tbd}
 \newtotcounter{tbr}
 \newcommand{\tbditem}[2]{\refstepcounter{tbd}\label{tbd:#1}\item[TBD-\thetbd] #2}
@@ -56,7 +56,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 12 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD, \total{tbr} TBR (App.~B) \\
+Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -115,19 +115,6 @@ Mode on STM32 MCUs}, AN2606 Rev~70.
 
 \noindent [12] STMicroelectronics, \emph{Discovery Kit with STM32MP257F MPU},
 UM3385 Rev~2.
-
-\subsection*{Acronyms}
-{\small\begin{tabular}{@{}ll@{\qquad}ll@{}}
-ACK & acknowledge & NRST & reset pin \\
-AES & Advanced Encryption Standard & NSS & SPI select line \\
-CRC & cyclic redundancy check & SCK & SPI clock line \\
-GCM & Galois/Counter Mode & SPI & Serial Peripheral Interface \\
-GPIO & general-purpose input/output & SWCLK & SWD clock line \\
-MISO & SPI line, controller to computer & SWD & Serial Wire Debug \\
-MOSI & SPI line, computer to controller & SWDIO & SWD data line \\
-NACK & not acknowledge & UART & serial port (universal asynchronous \\
-UDP & User Datagram Protocol & & receiver-transmitter) \\
-\end{tabular}}
 
 % ===========================================================================
 \section{Overview}
@@ -635,6 +622,29 @@ No protection command sent to the loader & reprogramming link B & H-1 & REQ-125 
 \appendix
 \renewcommand{\thesection}{\Alph{section}}
 \renewcommand{\thesubsection}{\Alph{section}.\arabic{subsection}}
+
+\section{Acronyms}
+\begin{description}[leftmargin=2.2cm]
+\item[ACK] Acknowledge
+\item[AES] Advanced Encryption Standard
+\item[CRC] Cyclic redundancy check
+\item[GCM] Galois/Counter Mode
+\item[GPIO] General-purpose input/output
+\item[MISO] SPI line from the controller to the onboard computer
+\item[MOSI] SPI line from the onboard computer to the controller
+\item[NACK] Not acknowledge
+\item[NRST] Reset pin
+\item[NSS] SPI select line
+\item[SCK] SPI clock line
+\item[SPI] Serial Peripheral Interface
+\item[SWCLK] SWD clock line
+\item[SWD] Serial Wire Debug
+\item[SWDIO] SWD data line
+\item[TBD] To Be Determined
+\item[TBR] To Be Resolved
+\item[UART] Universal asynchronous receiver-transmitter
+\item[UDP] User Datagram Protocol
+\end{description}
 
 \section{Traceability}
 Each requirement on an interface, and the section that meets it.

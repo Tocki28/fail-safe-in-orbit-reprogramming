@@ -116,13 +116,10 @@ Mode on STM32 MCUs}, AN2606 Rev~70.
 \noindent [12] Texas Instruments, \emph{RS-422 and RS-485 Standards Overview
 and System Configurations}, SLLA070D, May 2010.
 
-\noindent [13] NASA, \emph{State-of-the-Art Small Spacecraft Technology},
-NASA/TP-20260003140, May 2026, Chapter~8 ``Small Spacecraft Avionics''.
-
-\noindent [14] Texas Instruments, \emph{Introduction to the Controller Area
+\noindent [13] Texas Instruments, \emph{Introduction to the Controller Area
 Network (CAN)}, SLOA101B, May 2016.
 
-\noindent [15] MCUboot project, \emph{Bootloader} design document,
+\noindent [14] MCUboot project, \emph{Bootloader} design document,
 \texttt{docs/design.md}, commit 1d2643c, 11 September 2026.
 
 % ===========================================================================
@@ -432,7 +429,7 @@ Every firmware image, of every kind, has the same layout
 bootloader and the last-resort firmware with the same checks as an update
 \mbox{[3,~REQ-118]}. Both signatures cover the header as well as the body, so that
 the version and target in the header cannot be changed without breaking them;
-MCUboot's signature covers the same two parts [15,~Sec.~Image format]. The
+MCUboot's signature covers the same two parts [14,~Sec.~Image format]. The
 controller checks both before it runs the image [3,~REQ-005, REQ-006]. Images
 move in chunks of 256 bytes, the most the factory loader writes at once
 [10,~p.~7], so the onboard computer can write a chunk through the loader as it
@@ -469,7 +466,7 @@ received it.
 \caption{The image header. Proprietary string: four fixed bytes, 0x46 0x53
 0x49 0x52, that mark the start of an image; the checker rejects any other
 value at once. MCUboot's image header also starts with a fixed 4-byte value
-[15,~Sec.~Image format]. Kind: 0x01 bootloader, 0x02 main firmware, 0x03
+[14,~Sec.~Image format]. Kind: 0x01 bootloader, 0x02 main firmware, 0x03
 last-resort firmware. Target: the controller identity [3,~REQ-046]. Body
 check value: CRC-32 of the body, computed as for the frame. Build identifier: names the build that was
 tested [3,~REQ-090].}
@@ -541,14 +538,10 @@ and is used again once it answers [3,~REQ-082].
 
 \subsection{Data Link B: CAN}
 \label{sec:linkb}
-CAN is one of the interfaces that link units placed apart in a spacecraft
-[13,~Sec.~8.2.2, p.~222]. Either end can start a transfer: a node sends once
-the bus has been idle for a set time [14,~Sec.~3, p.~3], so the controller
-sends its answers and reports without being asked. Each CAN frame carries its
-own check value, and a frame received with an error is sent again
-[14,~Sec.~3.1, p.~3]. Data link B uses CAN FD frames, which carry up to 64
-data bytes [9,~Sec.~44.2, p.~1953], at a bit rate of \tbd{canrate}
-\tbr{canfd}. A longer frame is split into segments
+Data link B uses CAN FD frames, which carry up to 64 data bytes
+[9,~Sec.~44.2, p.~1953], at a bit rate of \tbd{canrate} \tbr{canfd}. Either
+end sends whenever it has a frame [13,~Sec.~3, p.~3]. A CAN frame received
+with an error is sent again [13,~Sec.~3.1, p.~3]. A longer frame is split into segments
 (Figure~\ref{fig:can}): each CAN frame carries a segment number in its first
 byte, then up to 63 bytes of the frame. Segment 0 starts a frame; the receiver
 joins the segments in order and checks the whole frame with its check value.

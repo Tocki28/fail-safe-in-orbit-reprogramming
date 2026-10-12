@@ -242,7 +242,7 @@ power cuts made by a script.
 
 \subsection{Owned-Hardware Bench}
 The bench then grows with jumper wires and one soldered wire, buying nothing
-(Table~\ref{tab:wires}) \tbr{owned}. The onboard computer's second UART stands
+(Table~\ref{tab:wires}). The onboard computer's second UART stands
 in for data link B and also reaches the factory loader. Its NRST line resets
 the controller at a chosen moment, in place of a power cut. A bench-only
 program on the onboard computer drops, cuts or changes bytes on a link, in
@@ -268,7 +268,8 @@ PZ1, CN5 pin 16 & PB8 (BOOT0), soldered wire & Boot pin for the factory loader \
 PZ9, CN5 pin 13 & PB0, CN4 pin 6 & Event line, time-stamped by the onboard computer \\
 \bottomrule
 \end{tabularx}}
-\caption{Wiring of the owned-hardware bench [8,~Table~24, p.~35; 6,~Table~11, p.~22; 6,~p.~16].}
+\caption{Wiring of the owned-hardware bench [8,~Table~24, p.~35; 6,~Table~11, p.~22; 6,~p.~16]
+\tbr{owned}.}
 \label{tab:wires}
 \end{table}
 
@@ -310,9 +311,10 @@ The values below are not yet known.
 
 \medskip
 \noindent Accepted by the author on 12 October 2026: the first bench
-(Section~7.1); the NUCLEO-G431KB as the controller. The proposal below awaits the author's acceptance.
+(Section~7.1); the NUCLEO-G431KB as the controller; the owned-hardware bench
+(Section~7.2). The proposal below awaits the author's acceptance.
 \begin{description}
-\tbritem{owned}{The owned-hardware bench and its wiring (Section~7.2).}
+\tbritem{owned}{The pin choices of Table~\ref{tab:wires}.}
 \end{description}
 
 \end{document}

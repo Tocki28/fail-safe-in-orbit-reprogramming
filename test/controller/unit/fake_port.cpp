@@ -1,127 +1,130 @@
 /*
- * fake_port.c — see fake_port.h. Chip rules copied from RM0440 Rev 9:
+ * fake_port.cpp — see fake_port.hpp. Chip rules copied from RM0440 Rev 9:
  *   erase: a 2 KB page at a page boundary, to 0xFF (Sec. 5.3.6, p. 195);
  *   program: 8 bytes at an 8-byte aligned address, only over erased bytes (Sec. 5.3.7, p. 196).
  */
-#include "fake_port.h"
+#include "fake_port.hpp"
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 
-#include "update_port.h"
+#include "update_port.hpp"
 
-#define ERASED        0xFFU
-#define WORD_BYTES    8U
+Fake fake;
+
+namespace {
+
+constexpr uint8_t kErased = 0xFFU;
+constexpr uint32_t kWordBytes = 8U;
 /* Region patterns, so a stray write is visible. */
-#define FILL_BOOTLOADER   0xB0U
-#define FILL_SLOT_A       0xAAU
-#define FILL_SLOT_B       0xBBU
-#define FILL_LAST_RESORT  0x1EU
-#define FILL_BOOT_STATE   0x5EU
+constexpr uint8_t kFillBootloader = 0xB0U;
+constexpr uint8_t kFillSlotA = 0xAAU;
+constexpr uint8_t kFillSlotB = 0xBBU;
+constexpr uint8_t kFillLastResort = 0x1EU;
+constexpr uint8_t kFillBootState = 0x5EU;
 
-fake_t fake;
-
-static void fill(uint32_t start, uint32_t bytes, uint8_t value)
+void fill(uint32_t start, uint32_t bytes, uint8_t value)
 {
-    memset(&fake.flash[start - (uint32_t)FLASH_START], value, bytes);
+    std::memset(&fake.flash[start - kFlashStart], value, bytes);
 }
 
-void fake_reset(void)
+/* True if [address, address + bytes) is inside the slot the test allows. */
+bool inAllowedSlot(uint32_t address, uint32_t bytes)
 {
-    memset(&fake, 0, sizeof fake);
-    fill(BOOTLOADER_START, BOOTLOADER_BYTES, FILL_BOOTLOADER);
-    fill(SLOT_A_START, SLOT_BYTES, FILL_SLOT_A);
-    fill(SLOT_B_START, SLOT_BYTES, FILL_SLOT_B);
-    fill(LAST_RESORT_START, LAST_RESORT_BYTES, FILL_LAST_RESORT);
-    fill(BOOT_STATE_START, 2U * BOOT_STATE_COPY_BYTES, FILL_BOOT_STATE);
+    uint32_t start = (fake.allowed_slot == Slot::kA) ? kSlotAStart : kSlotBStart;
+
+    return (address >= start) && (bytes <= kSlotBytes) && ((address - start) <= (kSlotBytes - bytes));
+}
+
+bool inFlash(uint32_t address, uint32_t bytes)
+{
+    return (address >= kFlashStart) && (bytes <= kFakeFlashBytes) &&
+           ((address - kFlashStart) <= (kFakeFlashBytes - bytes));
+}
+
+}  // namespace
+
+void fakeReset()
+{
+    fake = Fake{};   /* every field 0 (C: memset) */
+    fill(BOOTLOADER_START, BOOTLOADER_BYTES, kFillBootloader);
+    fill(SLOT_A_START, SLOT_BYTES, kFillSlotA);
+    fill(SLOT_B_START, SLOT_BYTES, kFillSlotB);
+    fill(LAST_RESORT_START, LAST_RESORT_BYTES, kFillLastResort);
+    fill(BOOT_STATE_START, 2U * BOOT_STATE_COPY_BYTES, kFillBootState);
     fake.state_valid = true;
     fake.state.confirmed = BOOT_SLOT_A;
     fake.state.trial = BOOT_SLOT_NONE;
-    fake.allowed_slot = BOOT_SLOT_B;
+    fake.allowed_slot = Slot::kB;
 }
 
-uint32_t fake_count_not(uint32_t start, uint32_t bytes, uint8_t value)
+uint32_t fakeCountNot(uint32_t start, uint32_t bytes, uint8_t value)
 {
     uint32_t count = 0U;
 
     for (uint32_t i = 0U; i < bytes; i++) {
-        count += (fake.flash[start - (uint32_t)FLASH_START + i] != value) ? 1U : 0U;
+        count += (fake.flash[start - kFlashStart + i] != value) ? 1U : 0U;
     }
     return count;
 }
 
-/* True if [address, address + bytes) is inside the slot the test allows. */
-static bool in_allowed_slot(uint32_t address, uint32_t bytes)
+bool UpdatePort::bootState(boot_state_t &state)
 {
-    uint32_t start = (fake.allowed_slot == BOOT_SLOT_A) ? (uint32_t)SLOT_A_START
-                                                        : (uint32_t)SLOT_B_START;
-    return (address >= start) && (bytes <= (uint32_t)SLOT_BYTES) &&
-           ((address - start) <= ((uint32_t)SLOT_BYTES - bytes));
-}
-
-static bool in_flash(uint32_t address, uint32_t bytes)
-{
-    return (address >= (uint32_t)FLASH_START) && (bytes <= FAKE_FLASH_BYTES) &&
-           ((address - (uint32_t)FLASH_START) <= (FAKE_FLASH_BYTES - bytes));
-}
-
-bool update_port_boot_state(boot_state_t *state)
-{
-    *state = fake.state;
+    state = fake.state;
     return fake.state_valid;
 }
 
-bool update_port_erase_page(uint32_t page_start)
+bool UpdatePort::erasePage(uint32_t page_start)
 {
-    if (!in_allowed_slot(page_start, FLASH_PAGE_BYTES)) {
+    if (!inAllowedSlot(page_start, kFlashPageBytes)) {
         fake.outside++;
         return false;
     }
-    if (fake.fail_erase || (((page_start - (uint32_t)FLASH_START) % FLASH_PAGE_BYTES) != 0U)) {
+    if (fake.fail_erase || (((page_start - kFlashStart) % kFlashPageBytes) != 0U)) {
         return false;
     }
-    fill(page_start, FLASH_PAGE_BYTES, ERASED);
+    fill(page_start, kFlashPageBytes, kErased);
     fake.erases++;
     return true;
 }
 
-bool update_port_program(uint32_t start, const uint32_t *words, uint32_t pairs)
+bool UpdatePort::program(uint32_t start, const uint32_t *words, uint32_t pairs)
 {
-    uint32_t bytes = pairs * WORD_BYTES;
+    uint32_t bytes = pairs * kWordBytes;
 
-    if (!in_allowed_slot(start, bytes)) {
+    if (!inAllowedSlot(start, bytes)) {
         fake.outside++;
         return false;
     }
-    if (fake.fail_program || ((start % WORD_BYTES) != 0U) ||
-        (fake_count_not(start, bytes, ERASED) != 0U)) {
+    if (fake.fail_program || ((start % kWordBytes) != 0U) ||
+        (fakeCountNot(start, bytes, kErased) != 0U)) {
         return false;   /* PGAERR, or PROGERR: written over bytes that were not erased */
     }
-    memcpy(&fake.flash[start - (uint32_t)FLASH_START], words, bytes);
+    std::memcpy(&fake.flash[start - kFlashStart], words, bytes);
     fake.programs++;
     return true;
 }
 
-const uint8_t *update_port_flash(uint32_t address)
+const uint8_t *UpdatePort::flash(uint32_t address)
 {
-    if (!in_flash(address, 1U)) {
+    if (!inFlash(address, 1U)) {
         fake.bad_reads++;
-        printf("fake_port: read of 0x%08x, outside the flash\n", address);
-        return fake.flash;
+        std::printf("fake_port: read of 0x%08x, outside the flash\n", address);
+        return fake.flash.data();
     }
-    return &fake.flash[address - (uint32_t)FLASH_START];
+    return &fake.flash[address - kFlashStart];
 }
 
-void update_port_ecc_clear(void)
+void UpdatePort::eccClear()
 {
 }
 
-bool update_port_ecc_error_seen(void)
+bool UpdatePort::eccErrorSeen()
 {
     return fake.ecc_error;
 }
 
-void update_port_watchdog_reload(void)
+void UpdatePort::watchdogReload()
 {
     fake.reloads++;
 }

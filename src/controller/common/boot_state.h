@@ -13,6 +13,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* C linkage when a C++ file includes this (the main firmware): the functions are compiled as C,
+ * so their names carry no C++ mangling. Nothing changes for the C compiler. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Slot codes as stored in flash. 0 means "none" for the trial field. */
 #define BOOT_SLOT_NONE 0U
 #define BOOT_SLOT_A    1U
@@ -40,5 +46,9 @@ bool boot_state_write(boot_state_t *state);
 
 /* The other slot of the pair: A for B, B for A. */
 uint8_t boot_state_other_slot(uint8_t slot);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* BOOT_STATE_H */

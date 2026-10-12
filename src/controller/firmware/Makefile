@@ -1,8 +1,9 @@
-# Makefile — the controller's main firmware, linked for slot A or slot B.
+# Makefile — the controller's main firmware (C++17), linked for slot A or slot B.
 #   make SLOT=A   -> build/A/firmware.bin
 #   make SLOT=B   -> build/B/firmware.bin
 #   make clean
 # The .bin becomes a signed image in ../Makefile (tools/make_image.py).
+# The C version of these files is in the git history (before the C++ port, commit 6fabb28).
 
 SLOT ?= A
 
@@ -11,13 +12,15 @@ BUILD = build/$(SLOT)
 TOP  := $(abspath ../../..)
 MONO  = $(TOP)/third_party/monocypher
 
-# common/: the image checks the bootloader also runs (UPLOAD END), boot state, flash, CRC-32.
-SRCS  = main.c core_clock.c data-link/uart_link.c data-link/frame.c \
-        update-receiver/update_receiver.c update-receiver/update_port.c \
-        health-monitor/health_monitor.c \
-        ../common/image_check.c ../common/boot_state.c ../common/flash.c ../common/crc32.c
+# Our C++: one class per component (common/build.mk has the C++ flags).
+SRCS_CXX = main.cpp core_clock.cpp data-link/uart_link.cpp data-link/frame.cpp \
+           update-receiver/update_receiver.cpp update-receiver/update_port.cpp \
+           health-monitor/health_monitor.cpp
+# common/ stays C, shared with the bootloader: the image checks the bootloader also runs
+# (UPLOAD END), boot state, flash, CRC-32. Its headers declare extern "C" for C++ callers.
+SRCS     = ../common/image_check.c ../common/boot_state.c ../common/flash.c ../common/crc32.c
 SRCS_EXT = $(MONO)/monocypher.c $(MONO)/monocypher-ed25519.c
-HEADERS  = $(wildcard *.h data-link/*.h update-receiver/*.h health-monitor/*.h)
+HEADERS  = $(wildcard *.hpp data-link/*.hpp update-receiver/*.hpp health-monitor/*.hpp)
 INCLUDES = -I. -Idata-link -Iupdate-receiver -Ihealth-monitor -I$(MONO)
 
 ifeq ($(SLOT),A)

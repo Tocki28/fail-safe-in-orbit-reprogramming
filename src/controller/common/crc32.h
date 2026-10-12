@@ -8,6 +8,15 @@
 
 #include <stdint.h>
 
+/* C linkage when a C++ file includes this (boot_state.h says why). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 uint32_t crc32_compute(const uint8_t *data, uint32_t size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CRC32_H */

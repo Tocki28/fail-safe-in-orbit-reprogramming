@@ -1,6 +1,6 @@
 /*
- * health_monitor.h — the HEALTH report (Interfaces Sec. 5.4, report table), minimal version of
- * build step 2c: built from the boot state and the running image's header. The rest of the
+ * health_monitor.hpp — the HEALTH report (Interfaces Sec. 5.4, report table), minimal version
+ * of build step 2c: built from the boot state and the running image's header. The rest of the
  * health monitor (events, self-test, FALLBACK) comes in step 2e.
  *
  * Payload, in the table's row order (multi-byte fields little-endian, Interfaces Sec. 4.0):
@@ -18,44 +18,66 @@
  *       23      1  last self-test: 0x00 PASSED, 0x01 FAILED
  * Sent in a frame of Type 0x03 (report) to Destination 0x01 (onboard computer).
  *
- * No hardware here: main.c reads the boot state and the header and passes them in, so the
+ * No hardware here: main.cpp reads the boot state and the header and passes them in, so the
  * same file compiles for the unit tests (test/controller/unit).
+ *
+ * C++: class HealthMonitor (C: health_monitor.c, plus the report timing that was in main.c's
+ * send_health_when_due, whose last-report time is now a member).
  */
-#ifndef HEALTH_MONITOR_H
-#define HEALTH_MONITOR_H
+#ifndef HEALTH_MONITOR_HPP
+#define HEALTH_MONITOR_HPP
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <array>
+#include <cstdint>
 
+#include "boot_slot.hpp"
 #include "boot_state.h"
 
-#define HEALTH_REPORT_BYTES   24U
+constexpr uint32_t kHealthReportBytes = 24U;
 /* One HEALTH report per second. Bench value: REQ-037's rate is TBD-rate in the SRS
  * (Interfaces Sec. 5.4, open item "rate"). */
-#define HEALTH_PERIOD_MS      1000U
+constexpr uint32_t kHealthPeriodMs = 1000U;
 
-#define REPORT_KIND_HEALTH    0x01U
-#define HEALTH_MODE_OPERATE   0x01U
-#define HEALTH_MODE_TRIAL     0x02U
-#define HEALTH_MODE_FALLBACK  0x03U
-#define HEALTH_SLOT_A         0x01U
-#define HEALTH_SLOT_B         0x02U
-#define HEALTH_SLOT_LAST_RESORT 0x03U
-/* Not in the table: this build runs only in slot A or B, so it cannot occur. */
-#define HEALTH_SLOT_UNKNOWN   0x00U
+constexpr uint8_t kReportKindHealth = 0x01U;
 
-typedef struct {
-    uint32_t now_ms;                /* milliseconds since start (core_clock.h, tick_ms) */
+enum class HealthMode : uint8_t {
+    kOperate = 0x01U,
+    kTrial = 0x02U,
+    kFallback = 0x03U,
+};
+
+/* The running-slot field's codes (report table). Not the boot state's codes (boot_slot.hpp),
+ * even where the numbers agree: each table owns its own. */
+enum class ReportSlot : uint8_t {
+    /* Not in the table: this build runs only in slot A or B, so it cannot occur. */
+    kUnknown = 0x00U,
+    kA = 0x01U,
+    kB = 0x02U,
+    kLastResort = 0x03U,
+};
+
+struct HealthInputs {
+    uint32_t now_ms;                /* milliseconds since start (core_clock.hpp, tickMs) */
     bool state_valid;               /* the boot state could be read */
     boot_state_t state;
-    uint8_t running_slot;           /* BOOT_SLOT_A or _B (update_slot_of); BOOT_SLOT_NONE if not known */
-    const uint8_t *running_header;  /* the running image's 64-byte header; NULL if not known */
-} health_inputs_t;
+    Slot running_slot;              /* kA or kB (UpdateReceiver::slotOf); kNone if not known */
+    const uint8_t *running_header;  /* the running image's 64-byte header; nullptr if not known */
+};
 
-/* The mode for the report: TRIAL if the boot state names the running slot as the trial. */
-uint8_t health_mode(const health_inputs_t *in);
+class HealthMonitor {
+public:
+    /* True once every kHealthPeriodMs, and remembers now_ms as the time of this report
+     * (C: the first lines of main.c's send_health_when_due). */
+    [[nodiscard]] bool reportDue(uint32_t now_ms);
 
-/* Write the 24-byte HEALTH payload. */
-void health_report(const health_inputs_t *in, uint8_t out[HEALTH_REPORT_BYTES]);
+    /* The mode for the report: TRIAL if the boot state names the running slot as the trial. */
+    static HealthMode mode(const HealthInputs &in);
 
-#endif /* HEALTH_MONITOR_H */
+    /* Write the 24-byte HEALTH payload. */
+    static void report(const HealthInputs &in, std::array<uint8_t, kHealthReportBytes> &out);
+
+private:
+    uint32_t last_report_ms_ = 0U;
+};
+
+#endif /* HEALTH_MONITOR_HPP */

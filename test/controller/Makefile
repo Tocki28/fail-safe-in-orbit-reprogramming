@@ -5,9 +5,10 @@
 #   make              build the bootloader and the test firmware, sign the test images
 #   make check        host checks: CRC-32 against zlib; every image through the bootloader's
 #                     own check code (tools/check_images.py); the unit tests
-#   make unit         unit tests, built with the Mac's cc: frame layer (unit/test_frame.c),
-#                     HEALTH payload (unit/test_health.c), update receiver with a fake flash
-#                     and the build's signed images (unit/test_update.c)
+#   make unit         unit tests, built with the Mac's clang++ (C++17, as the firmware): frame
+#                     layer (unit/test_frame.cpp), HEALTH payload (unit/test_health.cpp), update
+#                     receiver with a fake flash and the build's signed images
+#                     (unit/test_update.cpp)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
@@ -70,35 +71,51 @@ check: images unit
 	$(PY) $(TOOLS)/check_images.py $(OUT) build/host
 
 # Firmware parts compiled for this computer. The undefined-behaviour sanitizer stops the run
-# on any array index out of bounds (the address sanitizer does not run on this Mac).
+# on any index outside a plain C array (the address sanitizer does not run on this Mac).
 # Monocypher is compiled apart, as shipped: no -Werror, no sanitizer.
+# The shared C files (common/) are compiled as C, with HOST_CC; the firmware's C++ files and
+# the tests with HOST_CXX: the firmware's language and its flags (C++17, no exceptions, no
+# RTTI, the same warnings), the same sanitizer. That sanitizer does not see an index into a
+# std::array; libc++'s debug hardening checks those, and stops the run with the failed bound
+# printed.
 HOST_CC    = cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined
+HOST_CXX   = clang++ -std=c++17 -O1 -g -fno-exceptions -fno-rtti \
+             -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow -Wold-style-cast \
+             -Wcast-align -Wnull-dereference -Wformat=2 -Werror \
+             -fsanitize=undefined -fno-sanitize-recover=undefined \
+             -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 MONO       = $(REPO)/third_party/monocypher
 COMMON     = $(SRC)/common
-LINK_SRC   = $(SRC)/firmware/data-link
-UPD_SRC    = $(SRC)/firmware/update-receiver
-HEALTH_SRC = $(SRC)/firmware/health-monitor
-UNIT_SRCS  = unit/test_frame.c $(LINK_SRC)/frame.c $(COMMON)/crc32.c
-UPDATE_SRCS = unit/test_update.c unit/fake_port.c $(UPD_SRC)/update_receiver.c \
-              $(COMMON)/image_check.c $(COMMON)/crc32.c
-HEALTH_SRCS = unit/test_health.c $(HEALTH_SRC)/health_monitor.c $(COMMON)/image_check.c \
-              $(COMMON)/crc32.c
-MONO_OBJS  = build/host/monocypher.o build/host/monocypher-ed25519.o
-
-build/host/test_frame: $(UNIT_SRCS) $(LINK_SRC)/frame.h $(COMMON)/crc32.h
-	mkdir -p build/host
-	$(HOST_CC) -I$(LINK_SRC) -I$(COMMON) $(UNIT_SRCS) -o $@
+FW_SRC     = $(SRC)/firmware
+LINK_SRC   = $(FW_SRC)/data-link
+UPD_SRC    = $(FW_SRC)/update-receiver
+HEALTH_SRC = $(FW_SRC)/health-monitor
+CXX_INCLUDES = -Iunit -I$(FW_SRC) -I$(LINK_SRC) -I$(UPD_SRC) -I$(HEALTH_SRC) -I$(COMMON)
+# Every firmware and common header: a test is rebuilt when any of them changes.
+FW_HEADERS = $(wildcard $(FW_SRC)/*.hpp $(LINK_SRC)/*.hpp $(UPD_SRC)/*.hpp $(HEALTH_SRC)/*.hpp \
+                        $(COMMON)/*.h unit/*.hpp)
+FRAME_SRCS  = unit/test_frame.cpp $(LINK_SRC)/frame.cpp
+UPDATE_SRCS = unit/test_update.cpp unit/fake_port.cpp $(UPD_SRC)/update_receiver.cpp
+HEALTH_SRCS = unit/test_health.cpp $(HEALTH_SRC)/health_monitor.cpp
+COMMON_OBJS = build/host/crc32.o build/host/image_check.o
+MONO_OBJS   = build/host/monocypher.o build/host/monocypher-ed25519.o
 
 build/host/%.o: $(MONO)/%.c $(MONO)/%.h
 	mkdir -p build/host
 	cc -std=c11 -O2 -c $< -o $@
 
-build/host/test_update: $(UPDATE_SRCS) $(MONO_OBJS) unit/fake_port.h $(wildcard $(UPD_SRC)/*.h) \
-                        $(wildcard $(COMMON)/*.h) $(LINK_SRC)/frame.h
-	$(HOST_CC) -Iunit -I$(UPD_SRC) -I$(LINK_SRC) -I$(COMMON) -I$(MONO) $(UPDATE_SRCS) $(MONO_OBJS) -o $@
+$(COMMON_OBJS): build/host/%.o: $(COMMON)/%.c $(wildcard $(COMMON)/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -I$(COMMON) -I$(MONO) -c $< -o $@
 
-build/host/test_health: $(HEALTH_SRCS) $(MONO_OBJS) $(wildcard $(HEALTH_SRC)/*.h) $(wildcard $(COMMON)/*.h)
-	$(HOST_CC) -I$(HEALTH_SRC) -I$(COMMON) -I$(MONO) $(HEALTH_SRCS) $(MONO_OBJS) -o $@
+build/host/test_frame: $(FRAME_SRCS) build/host/crc32.o $(FW_HEADERS)
+	$(HOST_CXX) $(CXX_INCLUDES) $(FRAME_SRCS) build/host/crc32.o -o $@
+
+build/host/test_update: $(UPDATE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
+	$(HOST_CXX) $(CXX_INCLUDES) $(UPDATE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
+
+build/host/test_health: $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
+	$(HOST_CXX) $(CXX_INCLUDES) $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
 
 # The operating firmware's signed images (firmware-A.img, firmware-B.img).
 src-images:

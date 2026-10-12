@@ -1,5 +1,5 @@
 /*
- * frame.c — frame parser and builder (Interfaces Sec. 4.0, Figure 2), answer payload (Sec. 4.2).
+ * frame.cpp — frame parser and builder (Interfaces Sec. 4.0, Figure 2), answer payload (Sec. 4.2).
  *
  * The parser checks each header field as soon as its last byte arrives, so a broken header is
  * dropped at once, not after waiting for its Length bytes. Rules:
@@ -10,154 +10,154 @@
  * Limit: after a false start inside noise, a real frame that follows without a 10 ms gap can
  * be taken as payload of the false one and is lost with it; its sender gets no answer.
  */
-#include "frame.h"
+#include "frame.hpp"
 
 #include "crc32.h"
 
-static uint16_t read_u16(const uint8_t *bytes)
+namespace {
+
+uint16_t readU16(const uint8_t *bytes)
 {
-    return (uint16_t)((uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8));
+    return static_cast<uint16_t>(static_cast<uint32_t>(bytes[0]) |
+                                 (static_cast<uint32_t>(bytes[1]) << 8));
 }
 
-static uint32_t read_u32(const uint8_t *bytes)
+uint32_t readU32(const uint8_t *bytes)
 {
-    return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) | ((uint32_t)bytes[2] << 16) |
-           ((uint32_t)bytes[3] << 24);
+    return static_cast<uint32_t>(bytes[0]) | (static_cast<uint32_t>(bytes[1]) << 8) |
+           (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24);
 }
 
-static void write_u16(uint8_t *bytes, uint16_t value)
+void writeU16(uint8_t *bytes, uint16_t value)
 {
-    bytes[0] = (uint8_t)value;
-    bytes[1] = (uint8_t)(value >> 8);
+    bytes[0] = static_cast<uint8_t>(value);
+    bytes[1] = static_cast<uint8_t>(value >> 8);
 }
 
-static void write_u32(uint8_t *bytes, uint32_t value)
+void writeU32(uint8_t *bytes, uint32_t value)
 {
-    bytes[0] = (uint8_t)value;
-    bytes[1] = (uint8_t)(value >> 8);
-    bytes[2] = (uint8_t)(value >> 16);
-    bytes[3] = (uint8_t)(value >> 24);
+    bytes[0] = static_cast<uint8_t>(value);
+    bytes[1] = static_cast<uint8_t>(value >> 8);
+    bytes[2] = static_cast<uint8_t>(value >> 16);
+    bytes[3] = static_cast<uint8_t>(value >> 24);
 }
 
-void frame_parser_init(frame_parser_t *parser)
+}  // namespace
+
+void FrameParser::reset()
 {
-    parser->count = 0U;
-    parser->total = 0U;
-    parser->last_ms = 0U;
+    count_ = 0U;
+    total_ = 0U;
+    last_ms_ = 0U;
 }
 
-static void drop_held(frame_parser_t *parser)
+void FrameParser::dropHeld()
 {
-    parser->count = 0U;
-    parser->total = 0U;
+    count_ = 0U;
+    total_ = 0U;
 }
 
 /* Drop what is held; keep the byte that broke the header if it can start a new frame. */
-static void start_over(frame_parser_t *parser, uint8_t byte)
+void FrameParser::startOver(uint8_t byte)
 {
-    drop_held(parser);
-    if (byte == FRAME_SYNC_0) {
-        parser->bytes[0] = byte;
-        parser->count = 1U;
+    dropHeld();
+    if (byte == kFrameSync0) {
+        bytes_[0] = byte;
+        count_ = 1U;
     }
 }
 
 /* Checks the header field that the byte just stored completes, if any. */
-static bool header_so_far_ok(const frame_parser_t *parser)
+bool FrameParser::headerSoFarOk() const
 {
-    const uint8_t *b = parser->bytes;
-
-    switch (parser->count) {
+    switch (count_) {
     case 1U:
-        return b[0] == FRAME_SYNC_0;
+        return bytes_[0] == kFrameSync0;
     case 2U:
-        return b[1] == FRAME_SYNC_1;
-    case FRAME_OFFSET_VERSION + 1U:
-        return b[FRAME_OFFSET_VERSION] == FRAME_VERSION;
-    case FRAME_OFFSET_LENGTH + 2U:
-        return read_u16(&b[FRAME_OFFSET_LENGTH]) <= FRAME_PAYLOAD_MAX;
+        return bytes_[1] == kFrameSync1;
+    case kFrameOffsetVersion + 1U:
+        return bytes_[kFrameOffsetVersion] == kFrameVersion;
+    case kFrameOffsetLength + 2U:
+        return readU16(&bytes_[kFrameOffsetLength]) <= kFramePayloadMax;
     default:
         return true;
     }
 }
 
-static bool check_value_ok(const frame_parser_t *parser)
+bool FrameParser::checkValueOk() const
 {
-    uint32_t covered = parser->total - FRAME_CHECK_BYTES;
+    uint32_t covered = total_ - kFrameCheckBytes;
 
-    return crc32_compute(parser->bytes, covered) == read_u32(&parser->bytes[covered]);
+    return crc32_compute(bytes_.data(), covered) == readU32(&bytes_[covered]);
 }
 
-static void decode(const frame_parser_t *parser, frame_t *frame)
+void FrameParser::decode(Frame &frame) const
 {
-    const uint8_t *b = parser->bytes;
-
-    frame->type = b[FRAME_OFFSET_TYPE];
-    frame->destination = b[FRAME_OFFSET_DESTINATION];
-    frame->flags = b[FRAME_OFFSET_FLAGS];
-    frame->length = read_u16(&b[FRAME_OFFSET_LENGTH]);
-    frame->sequence = read_u32(&b[FRAME_OFFSET_SEQUENCE]);
-    frame->expiry = read_u32(&b[FRAME_OFFSET_EXPIRY]);
-    frame->payload = &b[FRAME_HEADER_BYTES];
+    frame.type = static_cast<FrameType>(bytes_[kFrameOffsetType]);
+    frame.destination = static_cast<Destination>(bytes_[kFrameOffsetDestination]);
+    frame.flags = bytes_[kFrameOffsetFlags];
+    frame.length = readU16(&bytes_[kFrameOffsetLength]);
+    frame.sequence = readU32(&bytes_[kFrameOffsetSequence]);
+    frame.expiry = readU32(&bytes_[kFrameOffsetExpiry]);
+    frame.payload = &bytes_[kFrameHeaderBytes];
 }
 
-bool frame_parser_feed(frame_parser_t *parser, uint8_t byte, uint32_t now_ms, frame_t *frame)
+bool FrameParser::feed(uint8_t byte, uint32_t now_ms, Frame &frame)
 {
     /* Unsigned subtraction stays right when the millisecond count wraps. */
-    if ((parser->count > 0U) && ((now_ms - parser->last_ms) > FRAME_GAP_MAX_MS)) {
-        drop_held(parser);
+    if ((count_ > 0U) && ((now_ms - last_ms_) > kFrameGapMaxMs)) {
+        dropHeld();
     }
-    parser->last_ms = now_ms;
-    parser->bytes[parser->count] = byte;
-    parser->count++;
+    last_ms_ = now_ms;
+    bytes_[count_] = byte;
+    count_++;
 
-    if (!header_so_far_ok(parser)) {
-        start_over(parser, byte);
+    if (!headerSoFarOk()) {
+        startOver(byte);
         return false;
     }
-    if (parser->count == (FRAME_OFFSET_LENGTH + 2U)) {
-        parser->total = FRAME_HEADER_BYTES + read_u16(&parser->bytes[FRAME_OFFSET_LENGTH]) +
-                        FRAME_CHECK_BYTES;
+    if (count_ == (kFrameOffsetLength + 2U)) {
+        total_ = kFrameHeaderBytes + readU16(&bytes_[kFrameOffsetLength]) + kFrameCheckBytes;
     }
-    if ((parser->total == 0U) || (parser->count < parser->total)) {
+    if ((total_ == 0U) || (count_ < total_)) {
         return false;   /* not complete yet */
     }
 
-    bool good = check_value_ok(parser);
+    bool good = checkValueOk();
     if (good) {
-        decode(parser, frame);
+        decode(frame);
     }
-    drop_held(parser);   /* the bytes stay in place until the next frame overwrites them */
+    dropHeld();   /* the bytes stay in place until the next frame overwrites them */
     return good;
 }
 
-uint32_t frame_build(const frame_t *frame, uint8_t *out, uint32_t room)
+uint32_t buildFrame(const Frame &frame, uint8_t *out, uint32_t room)
 {
-    uint32_t covered = FRAME_HEADER_BYTES + (uint32_t)frame->length;
+    uint32_t covered = kFrameHeaderBytes + static_cast<uint32_t>(frame.length);
 
-    if ((frame->length > FRAME_PAYLOAD_MAX) || ((covered + FRAME_CHECK_BYTES) > room)) {
+    if ((frame.length > kFramePayloadMax) || ((covered + kFrameCheckBytes) > room)) {
         return 0U;
     }
-    out[0] = FRAME_SYNC_0;
-    out[1] = FRAME_SYNC_1;
-    out[FRAME_OFFSET_VERSION] = FRAME_VERSION;
-    out[FRAME_OFFSET_TYPE] = frame->type;
-    out[FRAME_OFFSET_DESTINATION] = frame->destination;
-    out[FRAME_OFFSET_FLAGS] = frame->flags;
-    write_u16(&out[FRAME_OFFSET_LENGTH], frame->length);
-    write_u32(&out[FRAME_OFFSET_SEQUENCE], frame->sequence);
-    write_u32(&out[FRAME_OFFSET_EXPIRY], frame->expiry);
-    for (uint32_t i = 0U; i < frame->length; i++) {
-        out[FRAME_HEADER_BYTES + i] = frame->payload[i];
+    out[0] = kFrameSync0;
+    out[1] = kFrameSync1;
+    out[kFrameOffsetVersion] = kFrameVersion;
+    out[kFrameOffsetType] = static_cast<uint8_t>(frame.type);
+    out[kFrameOffsetDestination] = static_cast<uint8_t>(frame.destination);
+    out[kFrameOffsetFlags] = frame.flags;
+    writeU16(&out[kFrameOffsetLength], frame.length);
+    writeU32(&out[kFrameOffsetSequence], frame.sequence);
+    writeU32(&out[kFrameOffsetExpiry], frame.expiry);
+    for (uint32_t i = 0U; i < frame.length; i++) {
+        out[kFrameHeaderBytes + i] = frame.payload[i];
     }
-    write_u32(&out[covered], crc32_compute(out, covered));
-    return covered + FRAME_CHECK_BYTES;
+    writeU32(&out[covered], crc32_compute(out, covered));
+    return covered + kFrameCheckBytes;
 }
 
-void answer_payload(uint32_t answered, uint8_t kind, uint8_t code,
-                    uint8_t out[ANSWER_PAYLOAD_BYTES])
+void answerPayload(uint32_t answered, AnswerKind kind, AnswerCode code,
+                   std::array<uint8_t, kAnswerPayloadBytes> &out)
 {
-    write_u32(&out[ANSWER_OFFSET_SEQUENCE], answered);
-    out[ANSWER_OFFSET_KIND] = kind;
-    out[ANSWER_OFFSET_CODE] = code;
+    writeU32(&out[kAnswerOffsetSequence], answered);
+    out[kAnswerOffsetKind] = static_cast<uint8_t>(kind);
+    out[kAnswerOffsetCode] = static_cast<uint8_t>(code);
 }

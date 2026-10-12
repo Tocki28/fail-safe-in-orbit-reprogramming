@@ -4,6 +4,8 @@
 #   NAME        output name, e.g. bootloader
 #   BUILD       output directory
 #   SRCS        our C files (held to -Werror)
+#   SRCS_CXX    our C++ files (held to -Werror); only the main firmware has any. A program
+#               with C++ files is linked by g++, one without by gcc, exactly as before.
 #   SRCS_EXT    third-party C files (compiled as shipped, warnings shown but not fatal)
 #   CODE_START  CODE_BYTES   names from layout.h: where the program is linked
 #   OPT         optimisation flag
@@ -16,6 +18,7 @@ COMMON := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 # Toolchain bundled with STM32CubeIDE (not on PATH).
 TOOLCHAIN ?= /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.macos64_1.0.0.202411102158/tools/bin
 CC      = $(TOOLCHAIN)/arm-none-eabi-gcc
+CXX     = $(TOOLCHAIN)/arm-none-eabi-g++
 OBJCOPY = $(TOOLCHAIN)/arm-none-eabi-objcopy
 SIZE    = $(TOOLCHAIN)/arm-none-eabi-size
 
@@ -33,6 +36,24 @@ CPU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 CFLAGS = $(CPU) $(OPT) -g3 -std=c11 -DSTM32G431xx $(DEFS) \
          -I$(DEV)/Include -I$(CUBE)/Drivers/CMSIS/Include -I$(COMMON) $(INCLUDES) \
          -ffunction-sections -fdata-sections -fstack-usage -Wall -Wextra
+# C++17 for the main firmware, with what a small controller cannot afford switched off:
+#   -fno-exceptions         no throw, no unwinding code; failures are return values, as in C
+#   -fno-rtti               no type information tables (no dynamic_cast, no typeid)
+#   -fno-threadsafe-statics no lock around the first use of a function-local static: one core,
+#                           no threads (and there are no such statics today)
+#   -fno-use-cxa-atexit     no registering of static destructors to run at exit: main never
+#                           returns, and the objects have none
+# ST's and Arm's headers come in through -isystem: their C-style casts and macros are theirs,
+# so the stricter C++ warnings below apply to our code only.
+CXXWARNINGS = -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow \
+              -Wold-style-cast -Wcast-align -Wnull-dereference -Wformat=2
+CXXFLAGS = $(CPU) $(OPT) -g3 -std=c++17 -DSTM32G431xx $(DEFS) \
+           -isystem $(DEV)/Include -isystem $(CUBE)/Drivers/CMSIS/Include -I$(COMMON) $(INCLUDES) \
+           -ffunction-sections -fdata-sections -fstack-usage \
+           -fno-exceptions -fno-rtti -fno-threadsafe-statics -fno-use-cxa-atexit $(CXXWARNINGS)
+# g++ links a program with C++ files: it offers the C++ support library, and the linker takes
+# from it only what the program calls (nothing today: nm shows no __cxa_, _Znw or malloc).
+LD = $(if $(SRCS_CXX),$(CXX),$(CC))
 # Linking as STM32CubeIDE projects do (nano C library, no OS). Expect "_close/_lseek/_read/
 # _write is not implemented" messages: they come from the C library's unused start file, and
 # --gc-sections drops that code (no malloc or stdio in the image: check with nm).
@@ -41,8 +62,9 @@ CFLAGS = $(CPU) $(OPT) -g3 -std=c11 -DSTM32G431xx $(DEFS) \
 LDFLAGS = $(CPU) --specs=nano.specs --specs=nosys.specs -Wl,--gc-sections \
           -Wl,--no-warn-rwx-segments -Wl,-Map=$(BUILD)/$(NAME).map -T$(BUILD)/program.ld
 
-OBJS = $(addprefix $(BUILD)/,$(notdir $(SRCS:.c=.o) $(SRCS_EXT:.c=.o) $(SRCS_ST:.c=.o) $(ASM_ST:.s=.o)))
+OBJS = $(addprefix $(BUILD)/,$(notdir $(SRCS_CXX:.cpp=.o) $(SRCS:.c=.o) $(SRCS_EXT:.c=.o) $(SRCS_ST:.c=.o) $(ASM_ST:.s=.o)))
 vpath %.c $(sort $(dir $(SRCS) $(SRCS_EXT) $(SRCS_ST)))
+vpath %.cpp $(sort $(dir $(SRCS_CXX)))
 vpath %.s $(dir $(ASM_ST))
 
 all: $(BUILD)/$(NAME).bin
@@ -57,6 +79,11 @@ $(BUILD)/program.ld: $(COMMON)/program.ld $(COMMON)/layout.h | $(BUILD)
 $(addprefix $(BUILD)/,$(notdir $(SRCS:.c=.o))): $(BUILD)/%.o: %.c $(wildcard $(COMMON)/*.h) $(HEADERS) $(MAKEFILE_LIST) | $(BUILD)
 	$(CC) $(CFLAGS) -Werror -c $< -o $@
 
+ifneq ($(SRCS_CXX),)
+$(addprefix $(BUILD)/,$(notdir $(SRCS_CXX:.cpp=.o))): $(BUILD)/%.o: %.cpp $(wildcard $(COMMON)/*.h) $(HEADERS) $(MAKEFILE_LIST) | $(BUILD)
+	$(CXX) $(CXXFLAGS) -Werror -c $< -o $@
+endif
+
 $(addprefix $(BUILD)/,$(notdir $(SRCS_EXT:.c=.o) $(SRCS_ST:.c=.o))): $(BUILD)/%.o: %.c $(MAKEFILE_LIST) | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -64,7 +91,7 @@ $(BUILD)/%.o: %.s | $(BUILD)
 	$(CC) $(CPU) -c $< -o $@
 
 $(BUILD)/$(NAME).elf: $(OBJS) $(BUILD)/program.ld
-	$(CC) $(OBJS) $(LDFLAGS) -o $@
+	$(LD) $(OBJS) $(LDFLAGS) -o $@
 	$(SIZE) $@
 
 $(BUILD)/$(NAME).bin: $(BUILD)/$(NAME).elf

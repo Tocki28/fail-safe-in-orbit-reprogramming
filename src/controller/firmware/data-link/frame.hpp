@@ -1,5 +1,5 @@
 /*
- * frame.h — the frame of the Interfaces document (Sec. 4.0, Figure 2) and the answer payload
+ * frame.hpp — the frame of the Interfaces document (Sec. 4.0, Figure 2) and the answer payload
  * (Sec. 4.2): a parser that takes one received byte at a time, and a builder.
  *
  *   offset  bytes  field
@@ -15,102 +15,135 @@
  *     16+L      4  Check value = CRC-32 of every byte before it (common/crc32.c)
  * Multi-byte fields are little-endian (Interfaces Sec. 4.0).
  *
- * No hardware here: the same file compiles for the board and, with the Mac's cc, for the
+ * No hardware here: the same file compiles for the board and, with the Mac's clang++, for the
  * unit tests (test/controller/unit).
  *
- * Used by data link A (uart_link.c). REQ-099 asks the two data links to share no software.
+ * Used by data link A (uart_link.cpp). REQ-099 asks the two data links to share no software.
  * Whether data link B (CAN, not on this bench) may use this file or needs its own frame code
  * is not decided yet.
+ *
+ * C++: class FrameParser (C: frame_parser_t and the frame_parser_ functions); constexpr
+ * constants instead of #define, each named after its C macro (FRAME_HEADER_BYTES becomes
+ * kFrameHeaderBytes); enum class for Type, Destination and the answer kinds and codes, so a
+ * code cannot be passed where a kind is expected.
  */
-#ifndef FRAME_H
-#define FRAME_H
+#ifndef FRAME_HPP
+#define FRAME_HPP
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <array>
+#include <cstdint>
+
+/* C++: constexpr instead of #define. A constexpr has a type and obeys scope; the compiler
+ * computes it, so it costs no RAM and no code, as the macro did. */
 
 /* Field values (Interfaces Sec. 4.0, frame table). */
-#define FRAME_SYNC_0              0xA5U
-#define FRAME_SYNC_1              0x5AU
-#define FRAME_VERSION             0x01U
-#define FRAME_TYPE_COMMAND        0x01U
-#define FRAME_TYPE_ANSWER         0x02U
-#define FRAME_TYPE_REPORT         0x03U
-#define FRAME_DEST_ONBOARD        0x01U
-#define FRAME_DEST_CONTROLLER     0x02U
-#define FRAME_DEST_GROUND         0x03U
-#define FRAME_FLAG_RELEASED       0x01U
+constexpr uint8_t kFrameSync0 = 0xA5U;
+constexpr uint8_t kFrameSync1 = 0x5AU;
+constexpr uint8_t kFrameVersion = 0x01U;
+constexpr uint8_t kFrameFlagReleased = 0x01U;
 
 /* Sizes (Interfaces Sec. 4.0, Figure 2): 16-byte header, 0-1024 payload bytes, 4-byte check. */
-#define FRAME_HEADER_BYTES        16U
-#define FRAME_PAYLOAD_MAX         1024U
-#define FRAME_CHECK_BYTES         4U
-#define FRAME_MAX_BYTES           (FRAME_HEADER_BYTES + FRAME_PAYLOAD_MAX + FRAME_CHECK_BYTES)
+constexpr uint32_t kFrameHeaderBytes = 16U;
+constexpr uint32_t kFramePayloadMax = 1024U;
+constexpr uint32_t kFrameCheckBytes = 4U;
+constexpr uint32_t kFrameMaxBytes = kFrameHeaderBytes + kFramePayloadMax + kFrameCheckBytes;
 
 /* Byte offsets in the header (Interfaces Sec. 4.0, Figure 2). */
-#define FRAME_OFFSET_VERSION      2U
-#define FRAME_OFFSET_TYPE         3U
-#define FRAME_OFFSET_DESTINATION  4U
-#define FRAME_OFFSET_FLAGS        5U
-#define FRAME_OFFSET_LENGTH       6U
-#define FRAME_OFFSET_SEQUENCE     8U
-#define FRAME_OFFSET_EXPIRY       12U
+constexpr uint32_t kFrameOffsetVersion = 2U;
+constexpr uint32_t kFrameOffsetType = 3U;
+constexpr uint32_t kFrameOffsetDestination = 4U;
+constexpr uint32_t kFrameOffsetFlags = 5U;
+constexpr uint32_t kFrameOffsetLength = 6U;
+constexpr uint32_t kFrameOffsetSequence = 8U;
+constexpr uint32_t kFrameOffsetExpiry = 12U;
 
 /* A frame with a gap of more than 10 ms inside it is dropped (Interfaces Sec. 6.2). */
-#define FRAME_GAP_MAX_MS          10U
+constexpr uint32_t kFrameGapMaxMs = 10U;
+
+/* Type and Destination field values (Interfaces Sec. 4.0, frame table). The underlying type is
+ * fixed (uint8_t), so a received byte with any other value is still a valid FrameType or
+ * Destination: it matches none of the names and is ignored, as in the C version. */
+enum class FrameType : uint8_t {
+    kCommand = 0x01U,
+    kAnswer = 0x02U,
+    kReport = 0x03U,
+};
+
+enum class Destination : uint8_t {
+    kOnboard = 0x01U,
+    kController = 0x02U,
+    kGround = 0x03U,
+};
 
 /* Answer payload (Interfaces Sec. 4.2): sequence number answered (4), kind (1), code (1). */
-#define ANSWER_PAYLOAD_BYTES      6U
-#define ANSWER_OFFSET_SEQUENCE    0U
-#define ANSWER_OFFSET_KIND        4U
-#define ANSWER_OFFSET_CODE        5U
-#define ANSWER_RECEIVED           0x01U
-#define ANSWER_DONE               0x02U
-#define ANSWER_REFUSED            0x03U
-#define ANSWER_ALREADY_DONE       0x04U
-/* Code in a DONE answer on success (Interfaces Sec. 4.2). */
-#define ANSWER_CODE_SUCCESS       0x00U
-/* Refusal reasons (Interfaces Sec. 4.2 table). Only the codes used so far; the rest come with
- * the command checker (step 2b). */
-#define REFUSED_IMPOSSIBLE        0x06U   /* impossible values, or an unknown command (REQ-028) */
-#define REFUSED_TRIAL             0x07U   /* no new firmware during a trial (REQ-050) */
-#define REFUSED_DAMAGED           0x08U   /* image damaged (REQ-005, REQ-044) */
-#define REFUSED_NOT_OPERATOR      0x09U   /* image not from the operator (REQ-006, REQ-043) */
-#define REFUSED_OTHER_CONTROLLER  0x0BU   /* image built for another controller (REQ-046) */
-#define REFUSED_OTHER_SLOT        0x0EU   /* image built for the other slot (REQ-005) */
+constexpr uint32_t kAnswerPayloadBytes = 6U;
+constexpr uint32_t kAnswerOffsetSequence = 0U;
+constexpr uint32_t kAnswerOffsetKind = 4U;
+constexpr uint32_t kAnswerOffsetCode = 5U;
+
+enum class AnswerKind : uint8_t {
+    kReceived = 0x01U,
+    kDone = 0x02U,
+    kRefused = 0x03U,
+    kAlreadyDone = 0x04U,
+};
+
+/* The code byte of an answer: 0x00 in a DONE on success, or a refusal reason (Interfaces
+ * Sec. 4.2 table). Only the codes used so far; the rest come with the command checker (step
+ * 2b). [[nodiscard]] on the type: the compiler warns wherever a returned code is ignored. */
+enum class [[nodiscard]] AnswerCode : uint8_t {
+    kSuccess = 0x00U,
+    kImpossible = 0x06U,        /* impossible values, or an unknown command (REQ-028) */
+    kTrial = 0x07U,             /* no new firmware during a trial (REQ-050) */
+    kDamaged = 0x08U,           /* image damaged (REQ-005, REQ-044) */
+    kNotOperator = 0x09U,       /* image not from the operator (REQ-006, REQ-043) */
+    kOtherController = 0x0BU,   /* image built for another controller (REQ-046) */
+    kOtherSlot = 0x0EU,         /* image built for the other slot (REQ-005) */
+};
 
 /* One frame's fields. payload points at length bytes. */
-typedef struct {
-    uint8_t type;
-    uint8_t destination;
+struct Frame {
+    FrameType type;
+    Destination destination;
     uint8_t flags;
     uint16_t length;
     uint32_t sequence;
     uint32_t expiry;
     const uint8_t *payload;
-} frame_t;
+};
 
-/* The parser's memory: one frame's bytes as they arrive. count never exceeds
- * FRAME_MAX_BYTES: Length is checked against 1024 before more bytes are taken. */
-typedef struct {
-    uint8_t bytes[FRAME_MAX_BYTES];
-    uint32_t count;     /* bytes held so far */
-    uint32_t total;     /* the whole frame's size once Length has arrived; 0 before */
-    uint32_t last_ms;   /* arrival time of the last byte held */
-} frame_parser_t;
+class FrameParser {
+public:
+    /* Forget any partial frame (C: frame_parser_init). A new parser starts empty. */
+    void reset();
 
-void frame_parser_init(frame_parser_t *parser);
+    /* Take one byte that arrived at now_ms (a millisecond count that may wrap). True when this
+     * byte completes a frame that passed every check; `frame` then describes it, and its
+     * payload points into the parser, valid until the next call. */
+    [[nodiscard]] bool feed(uint8_t byte, uint32_t now_ms, Frame &frame);
 
-/* Take one byte that arrived at now_ms (a millisecond count that may wrap). True when this
- * byte completes a frame that passed every check; *frame then describes it, and its payload
- * points into the parser, valid until the next call. */
-bool frame_parser_feed(frame_parser_t *parser, uint8_t byte, uint32_t now_ms, frame_t *frame);
+private:
+    void dropHeld();
+    void startOver(uint8_t byte);
+    bool headerSoFarOk() const;
+    bool checkValueOk() const;
+    void decode(Frame &frame) const;
 
-/* Write *frame as bytes into out (room bytes available), check value included. Returns the
+    /* The parser's memory: one frame's bytes as they arrive. count_ never exceeds
+     * kFrameMaxBytes: Length is checked against 1024 before more bytes are taken. */
+    std::array<uint8_t, kFrameMaxBytes> bytes_{};
+    uint32_t count_ = 0U;     /* bytes held so far */
+    uint32_t total_ = 0U;     /* the whole frame's size once Length has arrived; 0 before */
+    uint32_t last_ms_ = 0U;   /* arrival time of the last byte held */
+};
+
+/* Write `frame` as bytes into out (room bytes available), check value included. Returns the
  * frame's size, or 0 if the payload is longer than 1024 bytes or out is too small. */
-uint32_t frame_build(const frame_t *frame, uint8_t *out, uint32_t room);
+[[nodiscard]] uint32_t buildFrame(const Frame &frame, uint8_t *out, uint32_t room);
 
-/* The 6-byte answer payload (Interfaces Sec. 4.2). */
-void answer_payload(uint32_t answered, uint8_t kind, uint8_t code,
-                    uint8_t out[ANSWER_PAYLOAD_BYTES]);
+/* The 6-byte answer payload (Interfaces Sec. 4.2). C++: std::array of the exact size, so the
+ * compiler checks that the caller's buffer is 6 bytes (C: a pointer, size unchecked). */
+void answerPayload(uint32_t answered, AnswerKind kind, AnswerCode code,
+                   std::array<uint8_t, kAnswerPayloadBytes> &out);
 
-#endif /* FRAME_H */
+#endif /* FRAME_HPP */

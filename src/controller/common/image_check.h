@@ -14,6 +14,11 @@
 
 #include <stdint.h>
 
+/* C linkage when a C++ file includes this (boot_state.h says why). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum {
     IMAGE_OK = 0,
     IMAGE_EMPTY,            /* first word erased: nothing was written here */
@@ -44,5 +49,9 @@ const char *image_result_text(image_result_t result);
 
 /* Little-endian field reads; also used for the log lines. */
 uint32_t image_read_u32(const uint8_t *bytes);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* IMAGE_CHECK_H */

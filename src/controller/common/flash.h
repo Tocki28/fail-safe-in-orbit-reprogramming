@@ -13,6 +13,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+/* C linkage when a C++ file includes this (boot_state.h says why). */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Erase the 2 KB page that starts at page_start. True if the chip reported no error. */
 bool flash_erase_page(uint32_t page_start);
 
@@ -25,5 +30,9 @@ void flash_ecc_clear(void);
 
 /* True if a read since flash_ecc_clear() hit a word with two wrong bits. */
 bool flash_ecc_error_seen(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* FLASH_H */

@@ -219,17 +219,17 @@ hardware needs of the architecture, and is named here \tbd{hardware}.
 Each component, then each software item, is tested alone. A test passes when
 its success criterion holds in every run. Each activity is broken into test
 procedures, one per condition, once the test articles are chosen
-[2,~SWE-065, Sec.~4.5.2, p.~35].
+[2,~SWE-065, Sec.~4.5.2, p.~35]. The activities of the three software items run
+at the ITEM level.
 
 \subsection{Components}
 Every component of the architecture is tested alone, at the COMPONENT level
 [2,~SWE-062, Sec.~4.4.5, p.~34]. Its tests are written with its code, and its
-results are repeatable [2,~SWE-186, Sec.~4.4.6, p.~35]. The safety-critical
+results are repeatable \mbox{[2,~SWE-186, Sec.~4.4.6, p.~35]}. The safety-critical
 components reach 100\,\% modified condition/decision coverage [3,~REQ-108].
 The test cases are kept with the code, not listed in this plan.
 
 \subsection{Controller Firmware}
-The tests below run at the ITEM level.
 
 \subsection{Controller Firmware}
 % BEGIN GENERATED ctl

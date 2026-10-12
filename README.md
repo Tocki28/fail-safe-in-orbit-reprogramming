@@ -41,6 +41,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 7. **Verification Plan:** Test, analysis, inspection, and demonstration
    methods.
    **Draft:** [Issue 1, Rev 0](docs/verification-plan/Verification-Plan_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
+   **Hardware Trade Study:** [Issue 1, Rev 0](docs/hardware-trade-study/Hardware-Trade-Study_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 8. **Implementation:** Strict compilation rules, zero warnings, mandatory
    static analysis. *Not started.*
 9. **Verification:** Unit tests, integration, hardware-in-the-loop, and

@@ -1,4 +1,4 @@
-# Makefile — TEST application for the bootloader bench tests (not the real firmware).
+# Makefile — TEST firmware for the bootloader bench tests (not the operating firmware; REQ-101).
 #   make SLOT=A  VERSION=1 BEHAVIOUR=confirm   -> build/A-v1-confirm/app.bin
 #   make SLOT=B  VERSION=2 BEHAVIOUR=hang      -> build/B-v2-hang/app.bin
 #   make SLOT=LR VERSION=1                     -> build/LR-v1-confirm/app.bin (never confirms)
@@ -10,7 +10,8 @@ BEHAVIOUR ?= confirm
 
 NAME  = app
 BUILD = build/$(SLOT)-v$(VERSION)-$(BEHAVIOUR)
-SRCS  = main.c ../common/boot_state.c ../common/flash.c ../common/crc32.c
+CTRL  = ../../../src/controller
+SRCS  = main.c $(CTRL)/common/boot_state.c $(CTRL)/common/flash.c $(CTRL)/common/crc32.c
 
 ifeq ($(SLOT),A)
   CODE_START = SLOT_A_CODE_START
@@ -40,4 +41,4 @@ DEFS = -DAPP_SLOT=$(APP_SLOT) -DAPP_NAME='"$(SLOT)"' -DAPP_VERSION=$(VERSION)U \
        -DAPP_HANG=$(APP_HANG) -DCODE_START=$(CODE_START)
 OPT  = -Os
 
-include ../common/build.mk
+include $(CTRL)/common/build.mk

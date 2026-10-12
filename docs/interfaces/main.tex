@@ -353,7 +353,7 @@ ID & Command & Fields (bytes) & Modes & Dangerous & Requirement \\
 \noindent{\small\textbf{Legend.} Modes: the controller modes in which the
 command is accepted, within those that accept commands [5,~Sec.~3.4]; ANY,
 every mode, RECOVERY included. Dangerous: YES, it needs an arming command
-first [3,~REQ-029, REQ-112]; NO, it does not \tbr{dangerous}.}
+first [3,~REQ-029, REQ-112]; NO, it does not.}
 
 \subsection{Arming}
 An ARM command names the one dangerous command it allows, by identifier and
@@ -733,12 +733,11 @@ The values below are not yet known.
 \medskip
 \noindent Accepted by the author on 12 October 2026: the interface priorities
 (Section~3.0); the frame (Section~4.0); the Ed25519 signatures and AES-256 in
-Galois/Counter Mode (Section~4.1); no scheduling of dangerous commands
-(Section~5.3). The
+Galois/Counter Mode (Section~4.1); which commands are dangerous
+(Section~5.1); no scheduling of dangerous commands (Section~5.3). The
 proposals below await the author's acceptance.
 \begin{description}
 \tbritem{silent}{A failed envelope gets no answer (Section~4.2).}
-\tbritem{dangerous}{Which commands are dangerous (Section~5.1).}
 \tbritem{armone}{An arming command allows one named command only
   (Section~5.2).}
 \tbritem{uart}{The UART settings of data link A (Section~6.2).}

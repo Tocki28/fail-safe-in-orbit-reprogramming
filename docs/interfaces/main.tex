@@ -116,6 +116,12 @@ Mode on STM32 MCUs}, AN2606 Rev~70.
 \noindent [12] STMicroelectronics, \emph{Discovery Kit with STM32MP257F MPU},
 UM3385 Rev~2.
 
+\noindent [13] Texas Instruments, \emph{RS-422 and RS-485 Standards Overview
+and System Configurations}, SLLA070D, May 2010.
+
+\noindent [14] NASA, \emph{State-of-the-Art Small Spacecraft Technology},
+NASA/TP-20260003140, May 2026, Chapter~8 ``Small Spacecraft Avionics''.
+
 % ===========================================================================
 \section{Overview}
 Figure~\ref{fig:context} shows every interface and the signals it uses.
@@ -522,6 +528,20 @@ to the hardware needs [2,~Sec.~8.0].
 \label{fig:spi}
 \end{figure}
 
+\subsection{Data Links Between Separate Units}
+On the bench, data links A and B use the processors' own pins: one wire per
+signal, each measured against a ground the two boards share. A spacecraft
+that puts the controller in a separate unit, reached through a cable
+harness, uses balanced line drivers instead, made for long distances and
+noisy environments [13,~Sec.~1, p.~3]. Data link A keeps its UART and adds
+RS-422 line drivers. The RS-422 standard sets no maximum cable length
+[13,~Sec.~2.1, p.~3], and the frame (Section~\ref{sec:frame}) is unchanged.
+Reprogramming link B, also a UART, changes in the same way. Data link B
+changes from SPI to CAN, one of the interfaces that let units sit apart in a
+spacecraft [14,~Sec.~8.2.2, p.~222]. A CAN frame carries at most 64 data
+bytes [9,~Sec.~44.2, p.~1953], so a longer frame is split across several. The
+two data links remain of different kinds [3,~REQ-138].
+
 \subsection{Reprogramming Link A: SWD}
 \label{sec:swd}
 The onboard computer drives SWD from two general-purpose pins, with the
@@ -627,6 +647,7 @@ No protection command sent to the loader & reprogramming link B & H-1 & REQ-125 
 \begin{description}[leftmargin=2.2cm]
 \item[ACK] Acknowledge
 \item[AES] Advanced Encryption Standard
+\item[CAN] Controller Area Network
 \item[CRC] Cyclic redundancy check
 \item[GCM] Galois/Counter Mode
 \item[GPIO] General-purpose input/output
@@ -664,8 +685,8 @@ REQ-068, REQ-069, REQ-134, REQ-136 & 5.3 Scheduled Commands \\
 REQ-037 to 041, REQ-060, REQ-070 to 072, REQ-076, REQ-135 & 5.4 Reports \\
 REQ-005, REQ-006, REQ-043 to 051, REQ-090 & 5.5 Firmware Images \\
 REQ-080 to 082, REQ-138 & 6.2, 6.3 Data Links \\
-REQ-083, REQ-118, REQ-122, REQ-125 & 6.4, 6.5 Reprogramming Links \\
-REQ-094, REQ-095, REQ-115 & 6.6 Operator Interface \\
+REQ-083, REQ-118, REQ-122, REQ-125 & 6.5, 6.6 Reprogramming Links \\
+REQ-094, REQ-095, REQ-115 & 6.7 Operator Interface \\
 \bottomrule
 \end{xltabular}}
 

@@ -307,7 +307,7 @@ Code & Reason & Requirement \\
 0x0A & Image older than the minimum version & REQ-045 \\
 0x0B & Image built for another controller & REQ-046 \\
 0x0C & The controller's clock disagrees with the scheduled time & REQ-134 \\
-0x0D & A dangerous command cannot be scheduled & \tbr{sched} \\
+0x0D & A dangerous command cannot be scheduled & REQ-029, REQ-112 \\
 \bottomrule
 \end{tabularx}}
 
@@ -368,7 +368,7 @@ SCHEDULE holds a complete frame on the onboard computer until its run time
 against its check value [3,~REQ-136] and passes it to the controller with
 Flags bit~0 set. The controller runs it only if its own clock agrees with the
 run time within \tbd{agree} [3,~REQ-134]. A dangerous command cannot be
-scheduled, because no operator is present at run time to arm it \tbr{sched}.
+scheduled, because no operator is present at run time to arm it.
 
 \subsection{Reports}
 The controller sends a HEALTH report at \tbd{rate} and an EVENT report as
@@ -731,16 +731,16 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent The interface priorities of Section~3.0, Section~4.0, and the Ed25519
-signatures and AES-256 in Galois/Counter Mode of Section~4.1 were accepted by
-the author on 12 October 2026. The
+\noindent Accepted by the author on 12 October 2026: the interface priorities
+(Section~3.0); the frame (Section~4.0); the Ed25519 signatures and AES-256 in
+Galois/Counter Mode (Section~4.1); no scheduling of dangerous commands
+(Section~5.3). The
 proposals below await the author's acceptance.
 \begin{description}
 \tbritem{silent}{A failed envelope gets no answer (Section~4.2).}
 \tbritem{dangerous}{Which commands are dangerous (Section~5.1).}
 \tbritem{armone}{An arming command allows one named command only
   (Section~5.2).}
-\tbritem{sched}{A dangerous command cannot be scheduled (Section~5.3).}
 \tbritem{uart}{The UART settings of data link A (Section~6.2).}
 \tbritem{canfd}{CAN FD frames on data link B (Section~6.3).}
 \tbritem{canseg}{The splitting of a frame into CAN frames, and one CAN

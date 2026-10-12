@@ -8,7 +8,7 @@ software only: it contains no fault-injection function (REQ-101). Bench-only tes
 
 | Folder | Component (Architecture Sec. 6.0) | Requirements | Verified by (Verification Plan) | Build step | Status |
 |---|---|---|---|---|---|
-| `controller/bootloader` | Bootloader | REQ-004 to 006, REQ-013 to 019, REQ-023, REQ-113, REQ-119, REQ-125, REQ-130, REQ-136 | Test-3 to Test-7 | 1 | BUILT; hardware tests pending |
+| `controller/bootloader` | Bootloader | REQ-004 to 006, REQ-013 to 019, REQ-023, REQ-113, REQ-119, REQ-125, REQ-130, REQ-136 | Test-3 to Test-7 | 1 | BUILT; bench scenarios 1-7 PASS on 12 Oct (`test/controller/results/2026-10-12`) |
 | `controller/firmware/data-link` | Data-link drivers | REQ-042, REQ-099, REQ-138 | Test-26, Inspection-1, Inspection-7 | 2a | NEXT |
 | `controller/firmware/command-checker` | Command checker | REQ-027 to 036, REQ-100, REQ-133, REQ-134, REQ-136, REQ-137 | Test-9, Test-10 | 2b | LATER |
 | `controller/firmware/update-receiver` | Update receiver | REQ-007, REQ-008 | Test-6 | 2c | LATER |

@@ -73,8 +73,8 @@ Issue & Rev. & Date & Change \\
 \section{Purpose and Scope}
 This document defines each interface identified in the architecture
 [2,~Sec.~7.0]: the format and content of every data element that crosses it,
-its communication method and protocol, and the physical connections between
-the two boards. It covers the minimum content of an interface design
+its communication method and protocol, and the signals between the two
+units. It covers the minimum content of an interface design
 description [1,~Sec.~1].
 
 % ===========================================================================
@@ -113,14 +113,14 @@ Bootloader on STM32 MCUs}, AN3155 Rev~22.
 \noindent [11] STMicroelectronics, \emph{Introduction to System Memory Boot
 Mode on STM32 MCUs}, AN2606 Rev~70.
 
-\noindent [12] STMicroelectronics, \emph{Discovery Kit with STM32MP257F MPU},
-UM3385 Rev~2.
-
-\noindent [13] Texas Instruments, \emph{RS-422 and RS-485 Standards Overview
+\noindent [12] Texas Instruments, \emph{RS-422 and RS-485 Standards Overview
 and System Configurations}, SLLA070D, May 2010.
 
-\noindent [14] NASA, \emph{State-of-the-Art Small Spacecraft Technology},
+\noindent [13] NASA, \emph{State-of-the-Art Small Spacecraft Technology},
 NASA/TP-20260003140, May 2026, Chapter~8 ``Small Spacecraft Avionics''.
+
+\noindent [14] Texas Instruments, \emph{Introduction to the Controller Area
+Network (CAN)}, SLOA101B, May 2016.
 
 % ===========================================================================
 \section{Overview}
@@ -142,11 +142,10 @@ whether it is safety-critical [1,~Sec.~1].
 \draw[ar2] (op) -- node[right, lab]{operator interface} (g);
 \draw[ar] ($(g.east)+(0,0.4)$) -- node[above, lab]{radio link, up} ($(o.west)+(0,0.6)$);
 \draw[ar] ($(o.west)+(0,-0.2)$) -- node[below, lab]{radio link, down} ($(g.east)+(0,-0.4)$);
-\draw[ar2] ($(o.east)+(0,2.4)$) -- node[above, lab]{data link A: UART (TX, RX)} ($(c.west)+(0,2.4)$);
-\draw[ar2] ($(o.east)+(0,1.4)$) -- node[above, lab]{data link B: SPI (SCK, MOSI, MISO, NSS)} ($(c.west)+(0,1.4)$);
-\draw[ar] ($(c.west)+(0,0.4)$) -- node[above, lab]{data link B: data-ready line} ($(o.east)+(0,0.4)$);
-\draw[ar, dashed] ($(o.east)+(0,-0.6)$) -- node[above, lab]{reprogramming link A:\\SWD (SWDIO, SWCLK)} ($(c.west)+(0,-0.6)$);
-\draw[ar, dashed] ($(o.east)+(0,-1.6)$) -- node[above, lab]{reprogramming link B:\\UART to the factory loader} ($(c.west)+(0,-1.6)$);
+\draw[ar2] ($(o.east)+(0,2.3)$) -- node[above, lab]{data link A:\\UART over RS-422} ($(c.west)+(0,2.3)$);
+\draw[ar2] ($(o.east)+(0,1.0)$) -- node[above, lab]{data link B:\\CAN (CANH, CANL)} ($(c.west)+(0,1.0)$);
+\draw[ar, dashed] ($(o.east)+(0,-0.3)$) -- node[above, lab]{reprogramming link A:\\SWD (SWDIO, SWCLK)} ($(c.west)+(0,-0.3)$);
+\draw[ar, dashed] ($(o.east)+(0,-1.5)$) -- node[above, lab]{reprogramming link B:\\UART over RS-422 to the factory loader} ($(c.west)+(0,-1.5)$);
 \draw[ar, dashed] ($(o.east)+(0,-2.6)$) -- node[above, lab]{both reprogramming links: NRST, BOOT} ($(c.west)+(0,-2.6)$);
 \end{tikzpicture}
 \caption{The interfaces and their signals. Solid: used in operation. Dashed:
@@ -490,57 +489,57 @@ tested [3,~REQ-090].}
 
 % ===========================================================================
 \section{Links}
+The controller sits in a separate unit from the onboard computer, reached
+through a cable harness. The links between the two units use balanced line
+drivers, made for long distances and noisy environments [12,~Sec.~1, p.~3].
 
 \subsection{Radio Link}
-On the bench, UDP over Ethernet between the ground computer and the onboard
-computer board [12,~p.~2] stands in for the radio, one envelope per datagram
-\tbr{radio}.
+The radio equipment lies outside the System and is used as given
+[5,~Sec.~1.2.2]. The ground software and the onboard computer software
+exchange envelopes (Section~4.1) through it.
 
-\subsection{Data Link A: UART}
+\subsection{Data Link A: UART over RS-422}
 \label{sec:linka}
-115\,200 baud, 8 data bits, no parity, 1 stop bit; a frame with a gap of more
-than 10\,ms inside it is dropped \tbr{uart}. On each data link the onboard
-computer sends GET STATUS every \tbd{beat}. A link that misses \tbd{misses}
-answers in a row is reported lost [3,~REQ-081] and is used again once it
-answers [3,~REQ-082].
+The UART runs at 115\,200 baud, 8 data bits, no parity, 1 stop bit; a frame
+with a gap of more than 10\,ms inside it is dropped \tbr{uart}. Each direction
+has its own RS-422 line, because an RS-422 line has one driver
+[12,~Sec.~2, p.~3]. RS-422 sets no maximum cable length [12,~Sec.~2.1, p.~3].
+On each data link the onboard computer sends GET STATUS every \tbd{beat}. A
+link that misses \tbd{misses} answers in a row is reported lost [3,~REQ-081]
+and is used again once it answers [3,~REQ-082].
 
-\subsection{Data Link B: SPI}
+\subsection{Data Link B: CAN}
 \label{sec:linkb}
-The onboard computer drives the clock: SPI mode~0, 1\,MHz \tbr{spi}. It sends
-a frame by clocking it out with NSS low. The controller cannot start a
-transfer, so when it has a frame to send it raises the data-ready line; the
-onboard computer then clocks the 16 header bytes, reads Length, and clocks the
-rest (Figure~\ref{fig:spi}). The data-ready line adds one pin on each board
-to the hardware needs [2,~Sec.~8.0].
+CAN is one of the interfaces that link units placed apart in a spacecraft
+[13,~Sec.~8.2.2, p.~222]. Either end can start a transfer: a node sends once
+the bus has been idle for a set time [14,~Sec.~3, p.~3], so the controller
+sends its answers and reports without being asked. Each CAN frame carries its
+own check value, and a frame received with an error is sent again
+[14,~Sec.~3.1, p.~3]. Data link B uses CAN FD frames, which carry up to 64
+data bytes [9,~Sec.~44.2, p.~1953], at a bit rate of \tbd{canrate}
+\tbr{canfd}. A longer frame is split into segments
+(Figure~\ref{fig:can}): each CAN frame carries a segment number in its first
+byte, then up to 63 bytes of the frame. Segment 0 starts a frame; the receiver
+joins the segments in order and checks the whole frame with its check value.
+Each direction uses its own CAN identifier \tbr{canseg}.
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\scriptsize]
-\draw (0,0) node[left]{data ready} -- (1.5,0) -- (1.5,0.5) -- (5.0,0.5) -- (5.0,0) -- (10,0);
-\draw (0,-1.0) node[left]{NSS} -- (2.5,-1.0) -- (2.5,-1.5) -- (9.0,-1.5) -- (9.0,-1.0) -- (10,-1.0);
-\draw[fill=black!8] (2.7,-2.6) rectangle (5.0,-2.1) node[midway]{16 header bytes};
-\draw[fill=black!8] (5.2,-2.6) rectangle (8.8,-2.1) node[midway]{Length + 4 bytes};
-\node[left] at (0,-2.35) {MISO};
-\node at (1.5,0.85) {controller has a frame};
-\node at (5.0,0.85) {lowered after the header};
+\begin{tikzpicture}[font=\scriptsize,
+  seg/.style={draw, minimum height=0.6cm, align=center, inner sep=1pt}]
+\node[seg, minimum width=11.6cm, fill=black!5] (f) at (0,0) {Frame (Figure~\ref{fig:frame}): header, payload, check value};
+\node[seg, minimum width=0.9cm, anchor=north west] (n0) at ($(f.south west)+(0,-0.6)$) {0};
+\node[seg, minimum width=3.0cm, right=0pt of n0] (d0) {63 bytes};
+\node[seg, minimum width=0.9cm, right=0.25cm of d0] (n1) {1};
+\node[seg, minimum width=3.0cm, right=0pt of n1] (d1) {63 bytes};
+\node[right=0.15cm of d1] (dots) {\dots};
+\node[seg, minimum width=0.9cm, right=0.15cm of dots] (nk) {$k$};
+\node[seg, minimum width=1.7cm, right=0pt of nk] (dk) {the rest};
+\draw[decorate, decoration={brace, amplitude=4pt, mirror}] (n0.south west) -- node[below=5pt, align=center]{one CAN FD frame:\\segment number, then up to 63 bytes} (d0.south east);
 \end{tikzpicture}
-\caption{The controller sending a frame over SPI.}
-\label{fig:spi}
+\caption{A frame split into CAN FD frames.}
+\label{fig:can}
 \end{figure}
-
-\subsection{Data Links Between Separate Units}
-On the bench, data links A and B use the processors' own pins: one wire per
-signal, each measured against a ground the two boards share. A spacecraft
-that puts the controller in a separate unit, reached through a cable
-harness, uses balanced line drivers instead, made for long distances and
-noisy environments [13,~Sec.~1, p.~3]. Data link A keeps its UART and adds
-RS-422 line drivers. The RS-422 standard sets no maximum cable length
-[13,~Sec.~2.1, p.~3], and the frame (Section~\ref{sec:frame}) is unchanged.
-Reprogramming link B, also a UART, changes in the same way. Data link B
-changes from SPI to CAN, one of the interfaces that let units sit apart in a
-spacecraft [14,~Sec.~8.2.2, p.~222]. A CAN frame carries at most 64 data
-bytes [9,~Sec.~44.2, p.~1953], so a longer frame is split across several. The
-two data links remain of different kinds [3,~REQ-138].
 
 \subsection{Reprogramming Link A: SWD}
 \label{sec:swd}
@@ -567,6 +566,7 @@ controller held stopped, so that no controller software runs
 
 \subsection{Reprogramming Link B: Factory Loader}
 \label{sec:loader}
+The factory loader's UART runs over its own RS-422 lines, as data link A does.
 With the option bits as shipped (BOOT\_LOCK = 0, nBOOT1 = 1, nSWBOOT0 = 1), the
 controller starts its factory loader when BOOT is high at reset
 [11,~Table~2, p.~36]. The loader's protocol is fixed by its maker
@@ -610,9 +610,30 @@ releases. Signing with key~B needs the operator's hardware security key
 [2,~Sec.~5.4].
 
 % ===========================================================================
-\section{Wiring}
-The pin-to-pin wiring between the two boards is set in this section
-\tbd{wiring}.
+\section{Signals Between the Units}
+The signals that cross the cable harness between the onboard computer and the
+controller.
+
+\smallskip
+{\small\noindent\begin{tabularx}{\textwidth}{@{}l>{\raggedright\arraybackslash}Xll@{}}
+\toprule
+Signal & Interface & Direction & Electrical form \\
+\midrule
+UART line & data link A & TO CONTROLLER & RS-422 \\
+UART line & data link A & TO ONBOARD COMPUTER & RS-422 \\
+CANH, CANL & data link B & BOTH & CAN \\
+SWDIO & reprogramming link A & BOTH & TBD \\
+SWCLK & reprogramming link A & TO CONTROLLER & TBD \\
+UART line & reprogramming link B & TO CONTROLLER & RS-422 \\
+UART line & reprogramming link B & TO ONBOARD COMPUTER & RS-422 \\
+NRST & reprogramming links A and B & TO CONTROLLER & TBD \\
+BOOT & reprogramming link B & TO CONTROLLER & TBD \\
+\bottomrule
+\end{tabularx}}
+
+\noindent{\small\textbf{Legend.} Direction: TO CONTROLLER, TO ONBOARD
+COMPUTER, or BOTH. Electrical form: RS-422, one balanced line; CAN, the CAN
+bus pair; TBD, not yet known \tbd{lines}.}
 
 % ===========================================================================
 \needspace{14\baselineskip}
@@ -633,6 +654,7 @@ Arming before a dangerous command & radio link, data links & H-6 & REQ-029, REQ-
 Two answers to every command & radio link, data links & H-11 & REQ-033 \\
 Failed envelopes dropped and logged & radio link & H-5 & REQ-064 \\
 Link check on each data link & data links & H-4 & REQ-081 \\
+CAN check value, and resend of a damaged CAN frame & data link B & H-7, H-9 & REQ-107 \\
 Only checked images written & reprogramming links & H-2, H-7 & REQ-118 \\
 No protection command sent to the loader & reprogramming link B & H-1 & REQ-125 \\
 \bottomrule
@@ -648,23 +670,18 @@ No protection command sent to the loader & reprogramming link B & H-1 & REQ-125 
 \item[ACK] Acknowledge
 \item[AES] Advanced Encryption Standard
 \item[CAN] Controller Area Network
+\item[CANH] CAN high line
+\item[CANL] CAN low line
 \item[CRC] Cyclic redundancy check
 \item[GCM] Galois/Counter Mode
-\item[GPIO] General-purpose input/output
-\item[MISO] SPI line from the controller to the onboard computer
-\item[MOSI] SPI line from the onboard computer to the controller
 \item[NACK] Not acknowledge
 \item[NRST] Reset pin
-\item[NSS] SPI select line
-\item[SCK] SPI clock line
-\item[SPI] Serial Peripheral Interface
 \item[SWCLK] SWD clock line
 \item[SWD] Serial Wire Debug
 \item[SWDIO] SWD data line
 \item[TBD] To Be Determined
 \item[TBR] To Be Resolved
 \item[UART] Universal asynchronous receiver-transmitter
-\item[UDP] User Datagram Protocol
 \end{description}
 
 \section{Traceability}
@@ -685,8 +702,8 @@ REQ-068, REQ-069, REQ-134, REQ-136 & 5.3 Scheduled Commands \\
 REQ-037 to 041, REQ-060, REQ-070 to 072, REQ-076, REQ-135 & 5.4 Reports \\
 REQ-005, REQ-006, REQ-043 to 051, REQ-090 & 5.5 Firmware Images \\
 REQ-080 to 082, REQ-138 & 6.2, 6.3 Data Links \\
-REQ-083, REQ-118, REQ-122, REQ-125 & 6.5, 6.6 Reprogramming Links \\
-REQ-094, REQ-095, REQ-115 & 6.7 Operator Interface \\
+REQ-083, REQ-118, REQ-122, REQ-125 & 6.4, 6.5 Reprogramming Links \\
+REQ-094, REQ-095, REQ-115 & 6.6 Operator Interface \\
 \bottomrule
 \end{xltabular}}
 
@@ -703,7 +720,9 @@ The values below are not yet known.
 \tbditem{beat}{Interval of the link check on each data link.}
 \tbditem{misses}{Number of missed answers in a row after which a data link is
   reported lost.}
-\tbditem{wiring}{Pin-to-pin wiring between the two boards.}
+\tbditem{canrate}{CAN bit rate of data link B.}
+\tbditem{lines}{Electrical form of the SWD, NRST and BOOT lines between the
+  units.}
 \end{description}
 
 \medskip
@@ -719,11 +738,10 @@ The values below are not yet known.
 \tbritem{armone}{An arming command allows one named command only
   (Section~5.2).}
 \tbritem{sched}{A dangerous command cannot be scheduled (Section~5.3).}
-\tbritem{radio}{UDP over Ethernet as the bench stand-in for the radio
-  (Section~6.1).}
 \tbritem{uart}{The UART settings of data link A (Section~6.2).}
-\tbritem{spi}{The SPI settings of data link B, and its data-ready line
-  (Section~6.3).}
+\tbritem{canfd}{CAN FD frames on data link B (Section~6.3).}
+\tbritem{canseg}{The splitting of a frame into CAN frames, and one CAN
+  identifier per direction (Section~6.3).}
 \end{description}
 
 \end{document}

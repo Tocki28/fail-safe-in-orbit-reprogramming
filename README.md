@@ -37,7 +37,7 @@ changes it: NASA applies these processes "iteratively and recursively"
 5. **Architecture:** System-level design.
    **Draft:** [Issue 1, Rev 0](docs/architecture/Software-Architecture_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 6. **Interfaces:** Byte-level communication specs (fixed before coding).
-   *Not started.*
+   **Draft:** [Issue 1, Rev 0](docs/interfaces/Interface-Design_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 7. **Verification Plan:** Test, analysis, inspection, and demonstration
    methods. *Not started.*
 8. **Implementation:** Strict compilation rules, zero warnings, mandatory

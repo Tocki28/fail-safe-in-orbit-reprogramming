@@ -122,6 +122,9 @@ NASA/TP-20260003140, May 2026, Chapter~8 ``Small Spacecraft Avionics''.
 \noindent [14] Texas Instruments, \emph{Introduction to the Controller Area
 Network (CAN)}, SLOA101B, May 2016.
 
+\noindent [15] MCUboot project, \emph{Bootloader} design document,
+\texttt{docs/design.md}, commit 1d2643c, 11 September 2026.
+
 % ===========================================================================
 \section{Overview}
 Figure~\ref{fig:context} shows every interface and the signals it uses.
@@ -425,10 +428,15 @@ Code & Event & Sent by & Requirement \\
 
 \subsection{Firmware Images}
 Every firmware image, of every kind, has the same layout
-(Figures~\ref{fig:image} and~\ref{fig:header}). Both signatures cover the
-header and the body; the controller checks them before it runs the image
-[3,~REQ-005, REQ-006]. Images move in chunks of 256 bytes, the most the
-factory loader writes at once [10,~p.~7], so one chunk size serves every path.
+(Figures~\ref{fig:image} and~\ref{fig:header}), so that the restore checks the
+bootloader and the last-resort firmware with the same checks as an update
+\mbox{[3,~REQ-118]}. Both signatures cover the header as well as the body, so that
+the version and target in the header cannot be changed without breaking them;
+MCUboot's signature covers the same two parts [15,~Sec.~Image format]. The
+controller checks both before it runs the image [3,~REQ-005, REQ-006]. Images
+move in chunks of 256 bytes, the most the factory loader writes at once
+[10,~p.~7], so the onboard computer can write a chunk through the loader as it
+received it.
 
 \begin{figure}[H]
 \centering
@@ -735,7 +743,9 @@ The values below are not yet known.
 Galois/Counter Mode (Section~4.1); no answer to a failed envelope
 (Section~4.2); which commands are dangerous (Section~5.1); an arming command
 for one named command only (Section~5.2); no scheduling of dangerous commands
-(Section~5.3); the reports and event codes (Section~5.4). The
+(Section~5.3); the reports and event codes (Section~5.4); one layout for every
+firmware image, signatures over its header and body, and 256-byte chunks
+(Section~5.5). The
 proposals below await the author's acceptance.
 \begin{description}
 \tbritem{uart}{The UART settings of data link A (Section~6.2).}

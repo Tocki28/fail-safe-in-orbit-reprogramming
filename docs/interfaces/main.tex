@@ -326,8 +326,9 @@ commands to the controller. UPLOAD BEGIN to UPLOAD CANCEL also go to the
 controller, with Destination 0x02: it writes the image into its slot that is
 not confirmed, so it can never write over the firmware it runs
 \mbox{[3,~REQ-007]}. During a trial, the controller accepts them only for the
-test image of its trial tests, image number 0xFFFF \tbr{testimage}: it keeps
-the image in working memory, checks its check value, and writes nothing into
+test image of its trial tests, image number 0xFFFF. The test image's last four
+bytes are the CRC-32 of the bytes before them. The controller keeps the test
+image in working memory, checks its check value, and writes nothing into
 either slot \mbox{[3,~REQ-139]}.
 
 {\footnotesize
@@ -820,16 +821,9 @@ The values below are not yet known.
   units.}
 \end{description}
 
-\noindent The proposal below awaits the author's acceptance.
-\begin{description}
-\tbritem{testimage}{The test image travels as an upload with image number
-  0xFFFF. Its last four bytes are the CRC-32 of the bytes before them. The
-  controller accepts it only during a trial, keeps it in working memory, and
-  writes it into neither slot.}
-\end{description}
 
 \medskip
-\noindent All statements in this document, except the one marked TBR, were
-stated or accepted by the author on 12 October 2026.
+\noindent All statements in this document were stated or accepted by the
+author on 12 October 2026.
 
 \end{document}

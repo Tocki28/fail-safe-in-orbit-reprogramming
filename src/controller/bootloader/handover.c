@@ -22,11 +22,15 @@
  * the slowest 29.5 kHz. 2 ms of cycles at 170 MHz is about six times that (21 ms at 16 MHz). */
 #define IWDG_UPDATE_CYCLES (2U * (CORE_CLOCK_HZ / 1000U))
 
-/* Starts the independent watchdog with a time-out of about 2 s.
+/**
+ * @brief Starts the independent watchdog with a time-out of about 2 s.
+ *
  * Waits for the register update to finish, at most IWDG_UPDATE_CYCLES, then reloads the counter.
- * Window option unused [RM0440 Rev 9, Sec. 35.3.2, p. 1557, steps 1-6]. Once started, the
- * IWDG cannot be stopped except by a reset (p. 1557), so a program that hangs is restarted
- * (REQ-022) and the bootloader counts the failed start. */
+ *
+ * Window option unused [RM0440 Rev 9, Sec. 35.3.2, p. 1557, steps 1-6]. Once started, the IWDG
+ * cannot be stopped except by a reset (p. 1557), so a program that hangs is restarted (REQ-022)
+ * and the bootloader counts the failed start.
+ */
 static void watchdog_start(void)
 {
     IWDG->KR = IWDG_KEY_START;
@@ -41,9 +45,15 @@ static void watchdog_start(void)
     IWDG->KR = IWDG_KEY_RELOAD;
 }
 
-/* Starts the program whose vector table is at vector_table. Does not return.
+/**
+ * @brief Starts the program whose vector table is at vector_table.
+ *
  * Starts the watchdog, turns the UART off, puts the clock back to its reset state, sets VTOR,
- * loads the program's stack pointer and jumps to its reset handler. */
+ * loads the program's stack pointer and jumps to its reset handler.
+ *
+ * @param[in]     vector_table  address of the program's vector table
+ * @note Does not return.
+ */
 void handover_start(uint32_t vector_table)
 {
     const volatile uint32_t *vectors = (const volatile uint32_t *)vector_table;

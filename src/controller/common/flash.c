@@ -21,14 +21,20 @@
 /* Set by the NMI handler; volatile because it changes outside the normal flow of code. */
 static volatile bool s_ecc_error = false;
 
-/* Waits until the flash is not busy. The wait has no time limit. */
+/**
+ * @brief Waits until the flash is not busy.
+ *
+ * @note The wait has no time limit.
+ */
 static void wait_not_busy(void)
 {
     while ((FLASH->SR & FLASH_SR_BSY) != 0U) {
     }
 }
 
-/* Start of every operation: idle, old errors cleared, FLASH_CR unlocked (p. 195-196). */
+/**
+ * @brief Start of every operation: idle, old errors cleared, FLASH_CR unlocked (p. 195-196).
+ */
 static void begin(void)
 {
     wait_not_busy();
@@ -39,22 +45,33 @@ static void begin(void)
     }
 }
 
-/* Wait for the end and report it. EOP is not used: it is only set when its interrupt is
- * enabled [RM0440 Rev 9, Sec. 5.7.5, p. 218], so the error flags are the result. */
+/**
+ * @brief Wait for the end and report it.
+ *
+ * EOP is not used: it is only set when its interrupt is enabled [RM0440 Rev 9, Sec. 5.7.5, p.
+ * 218], so the error flags are the result.
+ *
+ * @return true if no error flag is set, false otherwise
+ */
 static bool end_ok(void)
 {
     wait_not_busy();
     return (FLASH->SR & FLASH_OP_ERRORS) == 0U;
 }
 
-/* Lock again, so a stray write cannot start an operation [RM0440 Rev 9, Sec. 5.3.5, p. 195]. */
+/**
+ * @brief Lock again, so a stray write cannot start an operation [RM0440 Rev 9, Sec. 5.3.5, p.
+ * 195].
+ */
 static void lock(void)
 {
     FLASH->CR |= FLASH_CR_LOCK;
 }
 
-/* After an erase the data cache may still hold the old bytes; flush it, with the cache off
- * while it is flushed [RM0440 Rev 9, Sec. 5.3.7 "Programming and caches", p. 199]. */
+/**
+ * @brief After an erase the data cache may still hold the old bytes; flush it, with the cache off
+ * while it is flushed [RM0440 Rev 9, Sec. 5.3.7 "Programming and caches", p. 199].
+ */
 static void flush_data_cache(void)
 {
     FLASH->ACR &= ~FLASH_ACR_DCEN;
@@ -63,8 +80,12 @@ static void flush_data_cache(void)
     FLASH->ACR |= FLASH_ACR_DCEN;
 }
 
-/* Erases the 2 KB page that starts at page_start, then flushes the data cache.
- * Returns true if the chip reported no error. */
+/**
+ * @brief Erases the 2 KB page that starts at page_start, then flushes the data cache.
+ *
+ * @param[in]     page_start  address of the first byte of the page
+ * @return true if the chip reported no error, false otherwise
+ */
 bool flash_erase_page(uint32_t page_start)
 {
     uint32_t page = (page_start - (uint32_t)FLASH_START) / (uint32_t)FLASH_PAGE_BYTES;
@@ -80,8 +101,16 @@ bool flash_erase_page(uint32_t page_start)
     return ok;
 }
 
-/* Programs pairs of 32-bit words from words to start, one 64-bit flash word per pair.
- * The target must be erased. Returns true if the chip reported no error. */
+/**
+ * @brief Programs pairs of 32-bit words from words to start, one 64-bit flash word per pair.
+ *
+ * The target must be erased.
+ *
+ * @param[in]     start  address of the first flash word, 8-byte aligned
+ * @param[in]     words  32-bit words to program
+ * @param[in]     pairs  number of word pairs
+ * @return true if the chip reported no error, false otherwise
+ */
 bool flash_program(uint32_t start, const uint32_t *words, uint32_t pairs)
 {
     bool ok = true;
@@ -103,29 +132,45 @@ bool flash_program(uint32_t start, const uint32_t *words, uint32_t pairs)
     return ok;
 }
 
-/* ECCD and ECCC are cleared by writing 1; ECCIE is kept as it is. ECCD is only set again if
- * both flags were cleared before [RM0440 Rev 9, Sec. 5.7.7, p. 220]. */
+/**
+ * @brief ECCD and ECCC are cleared by writing 1; ECCIE is kept as it is.
+ *
+ * ECCD is only set again if both flags were cleared before [RM0440 Rev 9, Sec. 5.7.7, p. 220].
+ */
 static void clear_ecc_flags(void)
 {
     FLASH->ECCR = (FLASH->ECCR & FLASH_ECCR_ECCIE) | FLASH_ECCR_ECCD | FLASH_ECCR_ECCC;
 }
 
-/* Clears the ECC flags and the error recorded by the NMI handler. */
+/**
+ * @brief Clears the ECC flags and the error recorded by the NMI handler.
+ */
 void flash_ecc_clear(void)
 {
     clear_ecc_flags();
     s_ecc_error = false;
 }
 
-/* Returns true if the NMI handler recorded an ECC error since flash_ecc_clear(). */
+/**
+ * @brief Returns true if the NMI handler recorded an ECC error since flash_ecc_clear().
+ *
+ * @return true if an ECC error was recorded, false otherwise
+ */
 bool flash_ecc_error_seen(void)
 {
     return s_ecc_error;
 }
 
-/* Handles the NMI. If the ECC detection flag is set, clears it, records an error and returns.
+/**
+ * @brief Handles the NMI. If the ECC detection flag is set, clears it, records an error and
+ * returns.
+ *
  * For any other cause it loops for ever.
- * Replaces ST's default NMI handler (a weak symbol in startup_stm32g431xx.s). */
+ *
+ * Replaces ST's default NMI handler (a weak symbol in startup_stm32g431xx.s).
+ *
+ * @note Does not return for any cause other than an ECC error.
+ */
 void NMI_Handler(void)
 {
     if ((FLASH->ECCR & FLASH_ECCR_ECCD) != 0U) {

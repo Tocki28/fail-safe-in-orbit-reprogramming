@@ -27,15 +27,26 @@ _Static_assert(sizeof(boot_state_t) == 16U, "boot state must be two 64-bit flash
 
 static const uint32_t COPY_START[2] = {BOOT_STATE_COPY_0, BOOT_STATE_COPY_1};
 
-/* Returns the check value of a record: the CRC-32 of the bytes before the check field. */
+/**
+ * @brief Returns the check value of a record: the CRC-32 of the bytes before the check field.
+ *
+ * @param[in]     state  record to check
+ * @return CRC-32 of the record
+ */
 static uint32_t record_check(const boot_state_t *state)
 {
     return crc32_compute((const uint8_t *)state, CHECKED_BYTES);
 }
 
-/* Returns true if the confirmed and the trial slot of a record have allowed values.
- * A record with a good check value must still name a real slot, and the trial slot can only
- * be the slot that is not confirmed. */
+/**
+ * @brief Returns true if the confirmed and the trial slot of a record have allowed values.
+ *
+ * A record with a good check value must still name a real slot, and the trial slot can only be the
+ * slot that is not confirmed.
+ *
+ * @param[in]     state  record to check
+ * @return true if both slots are allowed, false otherwise
+ */
 static bool fields_valid(const boot_state_t *state)
 {
     bool confirmed_ok = (state->confirmed == BOOT_SLOT_A) || (state->confirmed == BOOT_SLOT_B);
@@ -44,8 +55,15 @@ static bool fields_valid(const boot_state_t *state)
     return confirmed_ok && trial_ok;
 }
 
-/* Copy one stored record to RAM and check it there, just before use (REQ-136). False if the
- * copy is blank, damaged, or was cut short by a power loss (two-bit flash error). */
+/**
+ * @brief Copy one stored record to RAM and check it there, just before use (REQ-136).
+ *
+ * False if the copy is blank, damaged, or was cut short by a power loss (two-bit flash error).
+ *
+ * @param[in]     copy  number of the stored copy, 0 or 1
+ * @param[out]    out   record read from flash
+ * @return true if the copy is valid, false otherwise
+ */
 static bool read_copy(uint32_t copy, boot_state_t *out)
 {
     flash_ecc_clear();
@@ -56,8 +74,14 @@ static bool read_copy(uint32_t copy, boot_state_t *out)
     return (out->check == record_check(out)) && fields_valid(out);
 }
 
-/* The copy to trust: the valid one with the higher sequence number.
- * Fills *out with it and returns its number, 0 or 1. Returns NO_VALID_COPY if neither is valid. */
+/**
+ * @brief The copy to trust: the valid one with the higher sequence number.
+ *
+ * Fills *out with it.
+ *
+ * @param[out]    out  record of the newest valid copy
+ * @return number of that copy, 0 or 1; NO_VALID_COPY if neither is valid
+ */
 static uint32_t newest_copy(boot_state_t *out)
 {
     boot_state_t copy0;
@@ -76,15 +100,26 @@ static uint32_t newest_copy(boot_state_t *out)
     return NO_VALID_COPY;
 }
 
-/* Reads the boot state into *state from the newest valid copy. Returns false if none is valid. */
+/**
+ * @brief Reads the boot state into *state from the newest valid copy.
+ *
+ * @param[out]    state  boot state read from flash
+ * @return true if a valid copy was read, false if none is valid
+ */
 bool boot_state_read(boot_state_t *state)
 {
     return newest_copy(state) != NO_VALID_COPY;
 }
 
-/* Writes the boot state to the copy that is not current, then reads it back and compares.
- * Sets the sequence number and the check value in *state. Returns false if the state is not
- * valid, or if the erase, the programming or the read-back fails. */
+/**
+ * @brief Writes the boot state to the copy that is not current, then reads it back and compares.
+ *
+ * Sets the sequence number and the check value in *state.
+ *
+ * @param[in,out] state  boot state to write; sequence, unused, reserved and check are set
+ * @return true if the state was written and read back equal; false if the state is not valid, or
+ * the erase, the programming or the read-back failed
+ */
 bool boot_state_write(boot_state_t *state)
 {
     boot_state_t current;
@@ -110,7 +145,12 @@ bool boot_state_write(boot_state_t *state)
     return ok && read_copy(target, &back) && (memcmp(&back, state, sizeof(back)) == 0);
 }
 
-/* Returns slot B for slot A, and slot A for any other value. */
+/**
+ * @brief Returns slot B for slot A, and slot A for any other value.
+ *
+ * @param[in]     slot  BOOT_SLOT_A or BOOT_SLOT_B
+ * @return the other slot code
+ */
 uint8_t boot_state_other_slot(uint8_t slot)
 {
     return (slot == BOOT_SLOT_A) ? BOOT_SLOT_B : BOOT_SLOT_A;

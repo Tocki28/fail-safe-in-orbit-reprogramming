@@ -25,20 +25,35 @@
 /* Header and two signatures take this much of every region. */
 #define FRAME_BYTES           ((uint32_t)(IMAGE_HEADER_BYTES + IMAGE_SIGNATURES_BYTES))
 
-/* Returns the 32-bit little-endian value at bytes. */
+/**
+ * @brief Returns the 32-bit little-endian value at bytes.
+ *
+ * @param[in]     bytes  first of the 4 bytes
+ * @return the value
+ */
 uint32_t image_read_u32(const uint8_t *bytes)
 {
     return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8) | ((uint32_t)bytes[2] << 16) |
            ((uint32_t)bytes[3] << 24);
 }
 
-/* Returns the 16-bit little-endian value at bytes. */
+/**
+ * @brief Returns the 16-bit little-endian value at bytes.
+ *
+ * @param[in]     bytes  first of the 2 bytes
+ * @return the value
+ */
 static uint32_t read_u16(const uint8_t *bytes)
 {
     return (uint32_t)bytes[0] | ((uint32_t)bytes[1] << 8);
 }
 
-/* Returns true if the first four bytes of the image are the proprietary string. */
+/**
+ * @brief Returns true if the first four bytes of the image are the proprietary string.
+ *
+ * @param[in]     image  first byte of the image
+ * @return true if they match, false otherwise
+ */
 static bool magic_ok(const uint8_t *image)
 {
     return (image[IMAGE_OFFSET_MAGIC] == IMAGE_MAGIC_0) &&
@@ -47,9 +62,18 @@ static bool magic_ok(const uint8_t *image)
            (image[IMAGE_OFFSET_MAGIC + 3U] == IMAGE_MAGIC_3);
 }
 
-/* Checks the header and the body of an image, not the signatures.
- * Returns the first check that fails, or IMAGE_OK. On IMAGE_OK, sets *signed_bytes to the
- * length of header plus body. Details: image_check.h. */
+/**
+ * @brief Checks the header and the body of an image, not the signatures.
+ *
+ * Returns the first check that fails, or IMAGE_OK. Details: image_check.h.
+ *
+ * @param[in]     image         first byte of the region
+ * @param[in]     region_start  address the region has on the chip
+ * @param[in]     region_bytes  size of the region in bytes
+ * @param[in]     kind          the only image kind this region may run
+ * @param[out]    signed_bytes  length of header plus body; set only on IMAGE_OK
+ * @return IMAGE_OK, or the first check that failed
+ */
 image_result_t image_check_contents(const uint8_t *image, uint32_t region_start,
                                     uint32_t region_bytes, uint8_t kind,
                                     uint32_t *signed_bytes)
@@ -95,8 +119,14 @@ image_result_t image_check_contents(const uint8_t *image, uint32_t region_start,
     return IMAGE_OK;
 }
 
-/* Checks signature A with key A, then signature B with key B, over the first signed_bytes.
- * Returns the first check that fails, or IMAGE_OK. */
+/**
+ * @brief Checks signature A with key A, then signature B with key B, over the first signed_bytes.
+ *
+ * @param[in]     image         first byte of the region
+ * @param[in]     signed_bytes  length of header plus body
+ * @return IMAGE_OK, or IMAGE_BAD_SIGNATURE_A or IMAGE_BAD_SIGNATURE_B for the first signature that
+ * fails
+ */
 image_result_t image_check_signatures(const uint8_t *image, uint32_t signed_bytes)
 {
     /* The signatures follow the body directly (Interfaces Sec. 5.5, Figure 5). */
@@ -113,7 +143,12 @@ image_result_t image_check_signatures(const uint8_t *image, uint32_t signed_byte
     return IMAGE_OK;
 }
 
-/* Returns the short text for a check result, for the log. Returns "unknown" for other values. */
+/**
+ * @brief Returns the short text for a check result, for the log.
+ *
+ * @param[in]     result  result of a check
+ * @return text for the result; "unknown" for other values
+ */
 const char *image_result_text(image_result_t result)
 {
     switch (result) {

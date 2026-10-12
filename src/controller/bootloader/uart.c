@@ -25,14 +25,25 @@
 
 static bool stalled = false;
 
-/* Sets and then clears one bit of a peripheral reset register, which resets that peripheral. */
+/**
+ * @brief Sets and then clears one bit of a peripheral reset register, which resets that
+ * peripheral.
+ *
+ * @param[in,out] reset_register  peripheral reset register
+ * @param[in]     bit             mask of the peripheral's reset bit
+ */
 static void pulse_reset(volatile uint32_t *reset_register, uint32_t bit)
 {
     *reset_register |= bit;
     *reset_register &= ~bit;
 }
 
-/* Wait for a USART2_ISR flag, at most BYTE_TIMEOUT_CYCLES. */
+/**
+ * @brief Wait for a USART2_ISR flag, at most BYTE_TIMEOUT_CYCLES.
+ *
+ * @param[in]     flag  USART2_ISR flag mask
+ * @return true if the flag is set, false on time-out
+ */
 static bool wait_flag(uint32_t flag)
 {
     uint32_t start = cycles_now();
@@ -45,8 +56,11 @@ static bool wait_flag(uint32_t flag)
     return true;
 }
 
-/* Starts USART2 transmit on PA2 at 115200 baud.
- * The baud rate divider comes from the clock in use. */
+/**
+ * @brief Starts USART2 transmit on PA2 at 115200 baud.
+ *
+ * The baud rate divider comes from the clock in use.
+ */
 void uart_init(void)
 {
     /* Oversampling by 16: BRR = kernel clock / baud [RM0440 Rev 9, Sec. 40.5.7, p. 1707-1708].
@@ -68,8 +82,13 @@ void uart_init(void)
     USART2->CR1 = USART_CR1_TE | USART_CR1_UE;
 }
 
-/* Sends one character on USART2.
- * After a wait has timed out, this and every later character is dropped. */
+/**
+ * @brief Sends one character on USART2.
+ *
+ * After a wait has timed out, this and every later character is dropped.
+ *
+ * @param[in]     c  character to send
+ */
 static void put_char(char c)
 {
     if (stalled) {
@@ -84,7 +103,11 @@ static void put_char(char c)
     USART2->TDR = (uint8_t)c;
 }
 
-/* Sends a zero-terminated string on USART2. */
+/**
+ * @brief Sends a zero-terminated string on USART2.
+ *
+ * @param[in]     text  string to send
+ */
 void uart_put(const char *text)
 {
     while (*text != '\0') {
@@ -93,7 +116,11 @@ void uart_put(const char *text)
     }
 }
 
-/* Sends a number on USART2 as decimal digits without leading zeros. */
+/**
+ * @brief Sends a number on USART2 as decimal digits without leading zeros.
+ *
+ * @param[in]     value  number to send
+ */
 void uart_put_decimal(uint32_t value)
 {
     char digits[DECIMAL_DIGITS];
@@ -110,8 +137,11 @@ void uart_put_decimal(uint32_t value)
     }
 }
 
-/* Waits for the last bit to leave, then resets USART2 and GPIOA and turns their clocks off.
- * Leaves the SWD pins connected. */
+/**
+ * @brief Waits for the last bit to leave, then resets USART2 and GPIOA and turns their clocks off.
+ *
+ * Leaves the SWD pins connected.
+ */
 void uart_off(void)
 {
     /* TC: the shift register is empty, the last stop bit is out [RM0440 Rev 9, Sec. 40.5.5,

@@ -13,7 +13,13 @@
 #define CRC32_POLY_REVERSED 0xEDB88320U
 #define BITS_PER_BYTE      8U
 
-/* Returns the CRC-32 of the size bytes at data. */
+/**
+ * @brief Returns the CRC-32 of the size bytes at data.
+ *
+ * @param[in]     data  first byte
+ * @param[in]     size  number of bytes
+ * @return CRC-32 of the bytes
+ */
 uint32_t crc32_compute(const uint8_t *data, uint32_t size)
 {
     uint32_t crc = CRC32_INITIAL;

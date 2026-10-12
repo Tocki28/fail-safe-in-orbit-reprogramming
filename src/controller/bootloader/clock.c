@@ -32,7 +32,9 @@
  * clock source did not finish. */
 static uint32_t core_hz = HSI16_HZ;
 
-/* Starts the core cycle counter at 0. */
+/**
+ * @brief Starts the core cycle counter at 0.
+ */
 void cycles_start(void)
 {
     /* The DWT cycle counter runs only with TRCENA set in DEMCR [RM0440 Rev 9, Sec. 47.10,
@@ -42,19 +44,34 @@ void cycles_start(void)
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
-/* Returns the value of the core cycle counter. */
+/**
+ * @brief Returns the value of the core cycle counter.
+ *
+ * @return cycle counter value
+ */
 uint32_t cycles_now(void)
 {
     return DWT->CYCCNT;
 }
 
-/* Returns the core clock in use in Hz, or 0 if it is not known. */
+/**
+ * @brief Returns the core clock in use in Hz, or 0 if it is not known.
+ *
+ * @return core clock in Hz; 0 if not known
+ */
 uint32_t clock_hz(void)
 {
     return core_hz;
 }
 
-/* Wait until (*reg & mask) == want, at most WAIT_CYCLES. */
+/**
+ * @brief Wait until (*reg & mask) == want, at most WAIT_CYCLES.
+ *
+ * @param[in]     reg   register to read
+ * @param[in]     mask  bits of the register to look at
+ * @param[in]     want  value the masked bits must reach
+ * @return true if the value was reached, false on time-out
+ */
 static bool wait_bits(const volatile uint32_t *reg, uint32_t mask, uint32_t want)
 {
     uint32_t start = cycles_now();
@@ -68,7 +85,11 @@ static bool wait_bits(const volatile uint32_t *reg, uint32_t mask, uint32_t want
     return true;
 }
 
-/* Waits for the given number of cycles. */
+/**
+ * @brief Waits for the given number of cycles.
+ *
+ * @param[in]     cycles  core cycles to wait
+ */
 static void wait_cycles(uint32_t cycles)
 {
     uint32_t start = cycles_now();
@@ -77,8 +98,12 @@ static void wait_cycles(uint32_t cycles)
     }
 }
 
-/* Sets the number of flash wait states and waits until the new value reads back.
- * Returns false if the wait times out. */
+/**
+ * @brief Sets the number of flash wait states and waits until the new value reads back.
+ *
+ * @param[in]     latency  value for the LATENCY field of FLASH_ACR
+ * @return true if the new value reads back, false on time-out
+ */
 static bool set_flash_latency(uint32_t latency)
 {
     FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | latency;
@@ -86,20 +111,28 @@ static bool set_flash_latency(uint32_t latency)
     return wait_bits(&FLASH->ACR, FLASH_ACR_LATENCY_Msk, latency);
 }
 
-/* Selects the system clock source and waits until it is in use.
- * sw is the value to select, sws the value the status field must show.
- * Returns false on time-out. */
+/**
+ * @brief Selects the system clock source and waits until it is in use.
+ *
+ * @param[in]     sw   value to select in RCC_CFGR SW
+ * @param[in]     sws  value RCC_CFGR SWS must show
+ * @return true if the source is in use, false on time-out
+ */
 static bool select_system_clock(uint32_t sw, uint32_t sws)
 {
     RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW_Msk) | sw;
     return wait_bits(&RCC->CFGR, RCC_CFGR_SWS_Msk, sws);
 }
 
-/* Falls back to HSI16 as the system clock after a step towards 170 MHz failed.
+/**
+ * @brief Falls back to HSI16 as the system clock after a step towards 170 MHz failed.
+ *
  * Sets the clock in use to 16 MHz, or to not known if the switch to HSI16 did not finish.
- * A step towards 170 MHz did not finish: HSI16 as the system clock, PLL off, AHB / 1. The
- * 4 wait states and boost mode may stay: both are allowed at 16 MHz [RM0440 Rev 9, Table 29,
- * p. 190], and clock_back_to_reset() restores them before the handover. */
+ *
+ * A step towards 170 MHz did not finish: HSI16 as the system clock, PLL off, AHB / 1. The 4 wait
+ * states and boost mode may stay: both are allowed at 16 MHz [RM0440 Rev 9, Table 29, p. 190], and
+ * clock_back_to_reset() restores them before the handover.
+ */
 static void stay_on_hsi16(void)
 {
     if (!select_system_clock(RCC_CFGR_SW_HSI, RCC_CFGR_SWS_HSI)) {
@@ -111,8 +144,12 @@ static void stay_on_hsi16(void)
     core_hz = HSI16_HZ;
 }
 
-/* Switches the core clock from HSI16 to 170 MHz through the PLL.
- * Returns true when done. Returns false after a time-out; the core is then left on HSI16. */
+/**
+ * @brief Switches the core clock from HSI16 to 170 MHz through the PLL.
+ *
+ * @return true if the core runs at 170 MHz, false after a time-out (the core is then left on
+ * HSI16)
+ */
 bool clock_to_170mhz(void)
 {
     /* PWR registers ignore writes until their bus clock is on. */
@@ -148,8 +185,12 @@ bool clock_to_170mhz(void)
     return true;
 }
 
-/* Puts the clock and power settings back to their state after reset and stops the cycle counter.
- * Returns early, leaving the PLL clock in use, if the switch to HSI16 does not finish. */
+/**
+ * @brief Puts the clock and power settings back to their state after reset and stops the cycle
+ * counter.
+ *
+ * @note Returns early, leaving the PLL clock in use, if the switch to HSI16 does not finish.
+ */
 void clock_back_to_reset(void)
 {
     /* Lowering the clock: source first, wait states after [RM0440 Rev 9, Sec. 5.3.3, p. 191].

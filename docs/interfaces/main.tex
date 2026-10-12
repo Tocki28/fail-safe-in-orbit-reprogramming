@@ -236,7 +236,7 @@ On the radio link each frame travels inside an envelope
 elliptic-curve digital signature scheme, each signature 64 bytes
 [6,~Sec.~1]. The frame and both signatures are then
 encrypted with AES-256 in Galois/Counter Mode, with a 12-byte nonce and a
-16-byte tag [7,~Secs.~5.2.1.1--5.2.1.2, pp.~8--9] \tbr{crypto}. The link
+16-byte tag [7,~Secs.~5.2.1.1--5.2.1.2, pp.~8--9]. The link
 encryptor builds the envelope. The onboard computer opens it, checks both
 signatures, and acts only when all three checks pass [3,~REQ-127 to
 REQ-129].
@@ -736,13 +736,12 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent Section~4.0 was accepted by the author on 12 October 2026. The
+\noindent Section~4.0, and the Ed25519 signatures and AES-256 in Galois/Counter
+Mode of Section~4.1, were accepted by the author on 12 October 2026. The
 proposals below await the author's acceptance.
 \begin{description}
 \tbritem{priority}{Data link A and reprogramming link A used first; the B
   links used when the A links are lost (Section~3.0).}
-\tbritem{crypto}{Ed25519 signatures and AES-256 in Galois/Counter Mode
-  (Section~4.1).}
 \tbritem{silent}{A failed envelope gets no answer (Section~4.2).}
 \tbritem{dangerous}{Which commands are dangerous (Section~5.1).}
 \tbritem{armone}{An arming command allows one named command only

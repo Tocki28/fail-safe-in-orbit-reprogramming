@@ -117,6 +117,19 @@ read 12 October 2026.
 
 \noindent [13] \texttt{uhubctl} project, \emph{README}, read 12 October 2026.
 
+\noindent [14] STMicroelectronics, \emph{STM32G474xB/xC/xE Datasheet}, DS12288
+Rev~3 (distributor copy; later revisions not obtained).
+
+\noindent [15] STMicroelectronics, \emph{STM32G491xC/xE Datasheet}, DS13122
+Rev~4 (distributor copy).
+
+\noindent [16] STMicroelectronics, \emph{STM32G4 Nucleo-64 Boards (MB1367)},
+UM2505 Rev~4 (distributor copy; Rev~7 not obtained).
+
+\noindent [17] D.~Owens et al., ``Efficient and Side-Channel Resistant Ed25519
+on ARM Cortex-M4'', \emph{IEEE Trans.\ Circuits and Systems~I}, vol.~71,
+no.~6, June 2024.
+
 % ===========================================================================
 \section{Criteria}
 Each need of the architecture and of the verification plan is a criterion.
@@ -130,23 +143,27 @@ TO MEASURE: settled only by a measurement on the bench [3,~Sec.~7.6].}
 
 % ===========================================================================
 \section{Controller}
-The only candidate assessed so far is the NUCLEO-G431KB, which the author owns.
-Boards with more pins on their headers are assessed next \tbd{boards}.
+Three boards are assessed: the NUCLEO-G431KB, which the author owns, and two
+Nucleo-64 boards built on the same board design, the NUCLEO-G474RE and the
+NUCLEO-G491RE [16,~p.~1]. A published Ed25519 verification on a Cortex-M4
+takes 720\,000 cycles [17,~p.~2674]; two take about 8.5\,ms at 170\,MHz, a
+figure measured on the bench for each board [3,~Sec.~7.6].
 
 \smallskip
-{\small\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{4.2cm}l>{\raggedright\arraybackslash}X@{}}
+{\footnotesize\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
 \toprule
-Need [2,~Sec.~8.0] & Answer & NUCLEO-G431KB \\
+Need [2,~Sec.~8.0] & NUCLEO-G431KB & NUCLEO-G474RE & NUCLEO-G491RE \\
 \midrule
-Clock and RAM for two signature checks within the restart time & TO MEASURE & Cortex-M4 at 170\,MHz, 32\,KB SRAM, no cryptographic accelerator [4,~pp.~1, 14] \\
-Flash for bootloader, two slots, last-resort image and state; writing while running & PARTLY & 128\,KB in one bank; erasing a 2\,KB page stalls code running from flash for up to 24.47\,ms [5,~p.~195; 4,~p.~107] \\
-UART for data link A & PARTLY & USART2 is wired to the on-board ST-LINK's serial port by default [6,~p.~16]; reaching a header needs solder-bridge changes \\
-CAN FD controller & MET & FDCAN1 on PA11/PA12 [4,~Table~13, p.~61], header CN4 pins 13 and 5; a jumper to ground on pin 5 must come off [6,~p.~6] \\
-SWD with full memory access under reset & PARTLY & PA13/PA14 reach only the on-board ST-LINK, not the headers [6,~pp.~22--23] \\
-Factory loader on its own UART & MET & USART1 on PA9/PA10 [7,~Table~115, p.~274], header CN4 pins 1 and 2 [6,~Table~11, p.~22] \\
-NRST and BOOT pins accessible & PARTLY & NRST on CN3/CN4 pin 3 [6,~p.~22]; BOOT0 is PB8, not on a header, and drives the user LED [6,~p.~16] \\
-Independent watchdog that software cannot stop & MET & Once started, the independent watchdog cannot be stopped [5,~p.~1557] \\
-RTC with an independent clock source & PARTLY & No 32.768\,kHz crystal pins on this package; the internal oscillator runs at 29.5 to 34\,kHz [4,~pp.~51, 105] \\
+Clock and RAM for two signature checks & TO MEASURE: 170\,MHz, 32\,KB SRAM [4,~pp.~1, 14] & TO MEASURE: 170\,MHz, 128\,KB SRAM [14,~Sec.~3.5, p.~20] & TO MEASURE: 170\,MHz, 112\,KB SRAM [15,~Sec.~3.5, pp.~18--19] \\
+Flash; writing while running & PARTLY: 128\,KB, one bank; a page erase stalls code for up to 24.47\,ms [5,~p.~195; 4,~p.~107] & MET: 512\,KB in two banks, read-while-write with the DBANK option bit set [14,~Sec.~3.4, p.~19; 5,~Sec.~3.3.8, p.~108] & PARTLY: 512\,KB, one bank; erase stalls code [5,~p.~156] \\
+UART for data link A & PARTLY: USART2 wired to the ST-LINK by default [6,~p.~16] & MET: UART5, apart from the factory loader's UARTs [14,~p.~75] & MET: UART5 [15,~Table~13, p.~65] \\
+CAN FD controller & MET: one [4,~Table~13, p.~61] & MET: three [14,~Table~2, p.~15] & MET: two [15,~p.~14] \\
+SWD with full memory access & PARTLY: reaches only the on-board ST-LINK [6,~pp.~22--23] & MET: PA13/PA14 on header CN7 pins 13 and 15 [16,~Table~16, p.~31] & MET: same board as the G474RE [16,~Table~16, p.~31] \\
+Factory loader on its own UART & MET: USART1 [7,~Table~115, p.~274] & MET: USART1 to 3 [7,~Table~117, p.~279] & MET: USART1 to 3 [7,~Table~119, p.~285] \\
+NRST and BOOT pins accessible & PARTLY: BOOT0 not on a header [6,~p.~16] & PARTLY: NRST on CN7 pin 14; BOOT0 on CN7 pin 7 but not connected by default [16,~Table~16, pp.~31--32] \tbd{boot0} & PARTLY: same board as the G474RE \\
+Independent watchdog & MET [5,~p.~1557] & MET [5,~p.~1557] & MET [5,~p.~1557] \\
+RTC with an independent clock source & PARTLY: internal oscillator only, 29.5 to 34\,kHz [4,~pp.~51, 105] & MET: 32.768\,kHz crystal fitted [16,~Sec.~6.5.2, p.~22] & MET: same board as the G474RE \\
+Owned & YES & NO & NO \\
 \bottomrule
 \end{tabularx}}
 
@@ -225,8 +242,10 @@ The full bench adds the parts of Section~6.0: four THVD1451, two TCAN332G, one
 TMUX1574, their adapter boards, a switching USB hub and a logic analyzer. On
 the onboard computer, a USB-to-RS-422 adapter carries the factory loader's UART
 and a USB CAN FD adapter carries data link B, unless the STM32MP257 datasheet
-shows both on header pins \tbr{full}. The controller board is chosen once the
-boards of Section~4.0 are assessed.
+shows both on header pins. The controller is a NUCLEO-G474RE: the only board
+of Section~4.0 that writes its flash while it runs from it, reaches SWD and
+NRST from its headers without soldering, and carries a crystal for its clock
+\tbr{full}.
 
 % ===========================================================================
 \appendix
@@ -249,8 +268,8 @@ boards of Section~4.0 are assessed.
 The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
-\tbditem{boards}{Controller boards with more pins on their headers, assessed
-  against Section~4.0.}
+\tbditem{boot0}{The board change that connects BOOT0 to header CN7 on the
+  Nucleo-64 boards; settled by the board schematic.}
 \tbditem{uart2}{Whether the STM32MP257's pins can put a second UART and CAN FD
   on the header; settled by its datasheet.}
 \tbditem{hub}{The USB hub model.}
@@ -262,7 +281,8 @@ The values below are not yet known.
 \noindent Accepted by the author on 12 October 2026: the first bench
 (Section~7.1). The proposal below awaits the author's acceptance.
 \begin{description}
-\tbritem{full}{The parts of the full bench (Section~7.2).}
+\tbritem{full}{The parts of the full bench, the NUCLEO-G474RE included
+  (Section~7.2).}
 \end{description}
 
 \end{document}

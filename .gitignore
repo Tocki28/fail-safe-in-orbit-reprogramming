@@ -17,3 +17,13 @@ docs/hardware-trade-study/main.pdf
 
 # macOS
 .DS_Store
+
+# Firmware build output (objects, ELF, BIN, maps, signed test images, host check libraries)
+build/
+
+# Signing keys: private keys never enter the repository
+keys*/
+*.pem
+
+# Python
+__pycache__/

@@ -1,0 +1,23 @@
+BL: start, reset by reset pin
+BL: boot state: confirmed A, trial B, failed starts 1
+BL: trial slot B, start 2 of 3
+BL: slot B signature check: 60837 us (10342370 cycles at 170 MHz)
+BL: slot B accepted: version 1, build 50a392d-dirty firmware B
+BL: starting slot B (trial)
+uBL: start, reset by reset pin
+BL: boot state: confirmed A, trial B, failed starts 2
+BL: trial slot B, start 3 of 3
+BL: slot B signature check: 60837 us (10342370 cycles at 170 MHz)
+BL: slot B accepted: version 1, build 50a392d-dirty firmware B
+BL: starting slot B (trial)
+BL: start, reset by reset pin
+BL: boot state: confirmed A, trial B, failed starts 3
+BL: trial slot B given up: started too often without confirming itself
+BL: slot A signature check: 60958 us (10362965 cycles at 170 MHz)
+BL: slot A accepted: version 1, build 50a392d-dirty firmware A
+BL: starting slot A (confirmed)
+5BL: start, reset by reset pin
+BL: boot state: confirmed A, trial none, failed starts 0
+BL: slot A signature check: 60958 us (10362966 cycles at 170 MHz)
+BL: slot A accepted: version 1, build 50a392d-dirty firmware A
+BL: starting slot A (confirmed)

@@ -1,0 +1,24 @@
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+BL: start, reset by reset pin
+BL: boot state: confirmed B, trial none, failed starts 0
+BL: slot B signature check: 39585 us (6729468 cycles at 170 MHz)
+BL: slot B accepted: version 2, build 4389c88 test B
+BL: starting slot B (confirmed)
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 not on trial; nothing to confirm
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running

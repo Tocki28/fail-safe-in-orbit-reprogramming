@@ -1,0 +1,28 @@
+listening 4.0 s
+text  BL: start, reset by reset pin
+text  BL: boot state: confirmed A, trial none, failed starts 0
+text  BL: slot A signature check: 39303 us (6681539 cycles at 170 MHz)
+text  BL: slot A accepted: version 1, build 1452557-dirty firmware A
+text  BL: starting slot A (confirmed)
+sent  GET STATUS seq 1: a5 5a 01 01 02 00 01 00 01 00 00 00 ff ff ff ff 25 98 0e 00 75
+recv  answer seq 1 to 0x01: RECEIVED for seq 1, code 0x00   [a5 5a 01 02 01 00 06 00 01 00 00 00 00 00 00 00 01 00 00 00 01 00 1a 23 b9 b8]
+recv  answer seq 2 to 0x01: DONE for seq 1, code 0x00   [a5 5a 01 02 01 00 06 00 02 00 00 00 00 00 00 00 01 00 00 00 02 00 02 55 f5 ef]
+PASS  GET STATUS seq 1: RECEIVED, then DONE 0x00
+sent  GET STATUS seq 2: a5 5a 01 01 02 00 01 00 02 00 00 00 ff ff ff ff 25 5d 32 8d 4c
+recv  answer seq 3 to 0x01: RECEIVED for seq 2, code 0x00   [a5 5a 01 02 01 00 06 00 03 00 00 00 00 00 00 00 02 00 00 00 01 00 19 95 43 df]
+recv  answer seq 4 to 0x01: DONE for seq 2, code 0x00   [a5 5a 01 02 01 00 06 00 04 00 00 00 00 00 00 00 02 00 00 00 02 00 1a 6c a3 91]
+PASS  GET STATUS seq 2: RECEIVED, then DONE 0x00
+sent  GET STATUS seq 3: a5 5a 01 01 02 00 01 00 03 00 00 00 ff ff ff ff 25 1e 26 f6 5b
+recv  answer seq 5 to 0x01: RECEIVED for seq 3, code 0x00   [a5 5a 01 02 01 00 06 00 05 00 00 00 00 00 00 00 03 00 00 00 01 00 0a 0d dd ec]
+recv  answer seq 6 to 0x01: DONE for seq 3, code 0x00   [a5 5a 01 02 01 00 06 00 06 00 00 00 00 00 00 00 03 00 00 00 02 00 12 7b 91 bb]
+PASS  GET STATUS seq 3: RECEIVED, then DONE 0x00
+sent  GET STATUS seq 4, check value bit flipped: a5 5a 01 01 02 00 01 00 04 00 00 00 ff ff ff ff 25 d7 4b 97 3e
+PASS  seq 4 with a bad check value: no answer (dropped)
+sent  unknown command 0x3f seq 5: a5 5a 01 01 02 00 01 00 05 00 00 00 ff ff ff ff 3f ee a6 8e d5
+recv  answer seq 7 to 0x01: REFUSED for seq 5, code 0x06   [a5 5a 01 02 01 00 06 00 07 00 00 00 00 00 00 00 05 00 00 00 03 06 0d ed bf 00]
+PASS  unknown command seq 5: REFUSED 0x06 only
+sent  GET STATUS seq 6 to Destination 0x01: a5 5a 01 01 01 00 01 00 06 00 00 00 ff ff ff ff 25 9f 0f ab ac
+PASS  seq 6 not addressed to the controller: no answer
+PASS  controller's sequence numbers go up by one: [1, 2, 3, 4, 5, 6, 7]
+PASS  answers go to Destination 0x01 with Expiry 0
+link probe: all passed

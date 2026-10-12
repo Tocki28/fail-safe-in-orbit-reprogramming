@@ -1,0 +1,31 @@
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+BL: start, reset by reset pin
+BL: boot state: confirmed A, trial B, failed starts 0
+BL: trial slot B, start 1 of 3
+BL: slot B signature check: 38853 us (6605085 cycles at 170 MHz)
+BL: slot B refused: signature B
+BL: trial slot B given up: its image was refused
+BL: slot A signature check: 19565 us (3326168 cycles at 170 MHz)
+BL: slot A refused: signature A
+BL: last-resort signature check: 37769 us (6420885 cycles at 170 MHz)
+BL: last-resort accepted: version 1, build 4389c88 test LR
+BL: starting last-resort (last resort)
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running

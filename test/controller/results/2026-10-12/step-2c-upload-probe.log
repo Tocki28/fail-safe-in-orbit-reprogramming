@@ -1,0 +1,34 @@
+/Users/mingw/lodestar-prep/.venv/bin/python upload_probe.py /dev/cu.usbmodem143203 --images /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller/build/images --test-images build/images 
+PASS  a HEALTH report arrived
+      HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 95 s
+PASS  HEALTH: report number and onboard computer time sent as 0
+PASS  HEALTH: mode OPERATE or TRIAL, running slot A or B, firmware kind 0x02
+PASS  HEALTH: trial time left 0 and self-test 0x00 (placeholders until 2d/2e)
+running slot A; uploading into slot B
+---- CHUNK with a wrong offset
+PASS  CHUNK at offset 512 where 256 is next: REFUSED 0x06 only (got REFUSED 0x06)
+PASS  UPLOAD CANCEL: RECEIVED, then DONE 0x00 (got RECEIVED 0x00, DONE 0x00)
+---- firmware-B.img, byte 0x600 inverted
+      4096 of 15436 bytes
+      8192 of 15436 bytes
+      12288 of 15436 bytes
+PASS  firmware-B.img, byte 0x600 inverted: END RECEIVED, then REFUSED 0x08 (got at END: RECEIVED 0x00, REFUSED 0x08)
+---- firmware-B signed with an unknown key A
+      4096 of 15436 bytes
+      8192 of 15436 bytes
+      12288 of 15436 bytes
+PASS  firmware-B signed with an unknown key A: END RECEIVED, then REFUSED 0x09 (got at END: RECEIVED 0x00, REFUSED 0x09)
+---- firmware-A.img (linked for slot A)
+      4096 of 15436 bytes
+      8192 of 15436 bytes
+      12288 of 15436 bytes
+PASS  firmware-A.img (linked for slot A): END RECEIVED, then REFUSED 0x0e (got at END: RECEIVED 0x00, REFUSED 0x0e)
+---- firmware-B.img
+      4096 of 15436 bytes
+      8192 of 15436 bytes
+      12288 of 15436 bytes
+PASS  firmware-B.img: 15436 bytes in 61 chunks, every command RECEIVED then DONE 0x00 (stopped at END: RECEIVED 0x00, DONE 0x00)
+      total 2.49 s; BEGIN (erase) 0.447 s; END (checks) 0.081 s
+PASS  HEALTH reports 1000 ms apart: 997 ms, 997 ms
+PASS  controller's sequence numbers go up by one (523 frames, 1124 to 1646)
+upload probe: all passed

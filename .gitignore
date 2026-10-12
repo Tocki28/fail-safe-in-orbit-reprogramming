@@ -1,6 +1,8 @@
 # LaTeX build files (the issue-stamped PDF is the tracked one)
 *.aux
 *.log
+# ...except bench evidence: test results are kept
+!test/**/results/**/*.log
 *.out
 *.toc
 *.fls

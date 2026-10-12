@@ -1,0 +1,57 @@
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+BL: start, reset by reset pin
+BL: boot state: confirmed A, trial B, failed starts 0
+BL: trial slot B, start 1 of 3
+BL: slot B signature check: 37938 us (6449515 cycles at 170 MHz)
+BL: slot B accepted: version 2, build 4389c88 test B hang
+BL: starting slot B (trial)
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 hanging: watchdog no longer reloaded
+BL: start, reset by watchdog
+BL: boot state: confirmed A, trial B, failed starts 1
+BL: trial slot B, start 2 of 3
+BL: slot B signature check: 37938 us (6449515 cycles at 170 MHz)
+BL: slot B accepted: version 2, build 4389c88 test B hang
+BL: starting slot B (trial)
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 hanging: watchdog no longer reloaded
+BL: start, reset by watchdog
+BL: boot state: confirmed A, trial B, failed starts 2
+BL: trial slot B, start 3 of 3
+BL: slot B signature check: 37938 us (6449515 cycles at 170 MHz)
+BL: slot B accepted: version 2, build 4389c88 test B hang
+BL: starting slot B (trial)
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 hanging: watchdog no longer reloaded
+BL: start, reset by watchdog
+BL: boot state: confirmed A, trial B, failed starts 3
+BL: trial slot B given up: started too often without confirming itself
+BL: slot A signature check: 39469 us (6709866 cycles at 170 MHz)
+BL: slot A accepted: version 1, build 4389c88 test A
+BL: starting slot A (confirmed)
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 not on trial; nothing to confirm
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running
+APP A v1 running

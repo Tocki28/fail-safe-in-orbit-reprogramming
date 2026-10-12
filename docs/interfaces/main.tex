@@ -373,6 +373,13 @@ sequence number. It allows no other command, and it expires after
 \tbd{arm} [3,~REQ-030]. The onboard computer and the controller each check it
 [3,~REQ-029, REQ-112].
 
+The onboard computer is the only sender on a data link, so a command it passes
+on carries the onboard computer's sequence number there, not the ground's
+(Section~4.0). For a dangerous command to the controller, the onboard computer
+holds the ground's ARM and checks it. When the named command arrives, it sends
+the two as a pair: an ARM naming the sequence number the command will carry on
+the data link, then the command, with no frame between them.
+
 \subsection{Scheduled Commands}
 \label{sec:sched}
 SCHEDULE holds a complete frame on the onboard computer until its run time

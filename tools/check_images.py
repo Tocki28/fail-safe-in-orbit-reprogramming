@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host check: run the bootloader's own image checks (src/controller/bootloader/image_check.c,
+"""Host check: run the bootloader's own image checks (src/controller/common/image_check.c,
 with the Monocypher it links and the public keys in keys.h) on the images the build made, and
 compare each result with the expected one.
 
@@ -28,9 +28,8 @@ def build(out_dir: Path) -> ctypes.CDLL:
     out_dir.mkdir(parents=True, exist_ok=True)
     lib = out_dir / "libimagecheck.so"
     mono = fl.REPO / "third_party" / "monocypher"
-    boot = fl.REPO / "src" / "controller" / "bootloader"
-    subprocess.run(["cc", "-O2", "-shared", "-fPIC", f"-I{fl.COMMON}", f"-I{boot}", f"-I{mono}",
-                    str(boot / "image_check.c"), str(fl.COMMON / "crc32.c"),
+    subprocess.run(["cc", "-O2", "-shared", "-fPIC", f"-I{fl.COMMON}", f"-I{mono}",
+                    str(fl.COMMON / "image_check.c"), str(fl.COMMON / "crc32.c"),
                     str(mono / "monocypher.c"), str(mono / "monocypher-ed25519.c"),
                     "-o", str(lib)], check=True)
     dll = ctypes.CDLL(str(lib))

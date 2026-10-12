@@ -113,15 +113,26 @@ static void log_accepted(const region_t *region, const uint8_t *image)
     uart_put("\r\n");
 }
 
+/* Microseconds from the clock actually in use (170 MHz, or 16 MHz after a clock fault); cycles
+ * only when the clock is not known. */
 static void log_signature_time(const region_t *region, uint32_t cycles)
 {
+    uint32_t mhz = clock_hz() / HZ_PER_MHZ;
+
     uart_put("BL: ");
     uart_put(region->name);
     uart_put(" signature check: ");
-    uart_put_decimal(cycles / CYCLES_PER_US);
+    if (mhz == 0U) {
+        uart_put_decimal(cycles);
+        uart_put(" cycles only (clock not known)\r\n");
+        return;
+    }
+    uart_put_decimal(cycles / mhz);
     uart_put(" us (");
     uart_put_decimal(cycles);
-    uart_put(" cycles at 170 MHz)\r\n");
+    uart_put(" cycles at ");
+    uart_put_decimal(mhz);
+    uart_put(" MHz)\r\n");
 }
 
 /* ---- Boot state ------------------------------------------------------------------- */
@@ -251,9 +262,13 @@ static bool image_passes(const region_t *region)
 int main(void)
 {
     cycles_start();
-    clock_to_170mhz();
+    bool clock_ok = clock_to_170mhz();
     uart_init();
     log_reset_cause();
+    if (!clock_ok) {
+        /* Slower, not unsafe: the checks below are the same at 16 MHz. */
+        log_text("clock fault, ", (clock_hz() == HSI16_HZ) ? "running at 16 MHz" : "clock not known", "");
+    }
 
     boot_state_t state = load_state();
     count_trial_start(&state);

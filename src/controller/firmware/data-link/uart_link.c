@@ -5,8 +5,8 @@
  * The main loop takes bytes out and feeds the frame parser (frame.c), which measures the
  * 10 ms gap rule on those arrival times, so a busy main loop can neither make a gap nor hide
  * one. Reception never waits for the main loop or for a send (REQ-042).
- * Send: whole frames, byte by byte from the main loop; the firmware sends only answers (and,
- * from step 2e, reports), so it never talks over the link on its own (REQ-042).
+ * Send: whole frames, byte by byte from the main loop; the firmware sends only answers and
+ * reports (HEALTH, from step 2c), so it never talks over the link on its own (REQ-042).
  * Never drives PB8: on this board PB8 is BOOT0 and drives the LED [UM2397 Rev 2, p. 16-17].
  */
 #include "uart_link.h"
@@ -23,11 +23,13 @@
  * p. 61]; on this board both reach the ST-LINK (SB1, SB12 ON) [UM2397 Rev 2, Table 9, p. 17]. */
 #define AF7_USART2        7U
 #define GPIO_MODE_AF      2U
-/* Ring size. The main loop's longest pause in taking bytes out is a send. The largest frame
+/* Ring size. The main loop's longest pause in taking bytes out was a send. The largest frame
  * is 1044 bytes (frame.h), 90.6 ms on the line at 10 bits per byte; at most 1044 bytes arrive
  * meanwhile. 2048, the next power of two, holds that, and divides 2^32, so the free-running
- * counters below index it with a mask. (This step's longest send: two 26-byte answers, 4.5 ms.)
- * RAM: 2048 x (1 + 4) bytes = 10 KB of the 32 KB. */
+ * counters below index it with a mask. RAM: 2048 x (1 + 4) bytes = 10 KB of the 32 KB.
+ * Step 2c: the longest pause is now UPLOAD END's image check (tens of ms; 2048 bytes last
+ * 178 ms on the line). During a flash erase or write this interrupt cannot run at all; the
+ * upload's stop-and-wait rule keeps the sender quiet then (update-receiver/update_receiver.h). */
 #define RING_BYTES        2048U
 #define RING_MASK         (RING_BYTES - 1U)
 /* One byte needs 86.8 us on the line; 1 ms without the transmit register emptying means the

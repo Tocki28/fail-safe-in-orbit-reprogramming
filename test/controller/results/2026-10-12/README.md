@@ -25,3 +25,20 @@ PASS — GET STATUS answered RECEIVED then DONE (3 times); bad check value dropp
 unknown command refused 0x06 only; frame for another destination ignored; the controller's sequence
 numbers go up by one; the bootloader's lines appear once (the watchdog is reloaded).
 Log: `step-2a-link-probe.log`. Host: frame unit tests 16/16.
+
+## Build step 2c — update receiver and HEALTH report
+
+Board: bootloader + operating firmware A (confirmed); the firmware receives an image over data
+link A into its free slot. Host: update-receiver unit tests 38/38, HEALTH 3/3, frame 16/16,
+CRC 6/6, images 14/14.
+
+| Test | Result | Log |
+|---|---|---|
+| Link probe with the 2c firmware | PASS; HEALTH reports every 1000 ms | `step-2c-link-probe.log` |
+| Upload of firmware-B (15,436 bytes, 61 chunks) | PASS: 2.49 s total; erase 0.447 s; END checks 0.081 s | `step-2c-upload-probe.log` |
+| Wrong offset; flipped byte; unknown key A; slot-A build into slot B | PASS: REFUSED 0x06; 0x08; 0x09; 0x0E | `step-2c-upload-probe.log` |
+| Slot B (written by the receiver) set on trial | PASS: bootloader accepts slot B and starts it on trial | `step-2c-trial-rollback.log` |
+| Uploads during the trial | PASS: all four commands REFUSED 0x07 | `step-2c-upload-probe-in-trial.log` |
+| Three unconfirmed trial starts | PASS: trial given up; slot A started (the firmware cannot confirm itself until step 2d) | `step-2c-trial-rollback.log` |
+
+Measured: two signature checks of the 15,436-byte firmware image take 60.8 to 61.0 ms at 170 MHz.

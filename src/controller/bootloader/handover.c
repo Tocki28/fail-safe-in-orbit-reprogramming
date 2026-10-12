@@ -17,6 +17,10 @@
  * Bench value: REQ-022 asks for the restart but sets no time. */
 #define IWDG_PR_DIV32      3U
 #define IWDG_RELOAD_TICKS  1999U
+/* The LSI clocks the new values in: it starts within 130 us [DS12589 Rev 6, Table 44, p. 105],
+ * then each update takes up to five LSI cycles [RM0440 Rev 9, Sec. 35.4.4, p. 1562], 170 us at
+ * the slowest 29.5 kHz. 2 ms of cycles at 170 MHz is about six times that (21 ms at 16 MHz). */
+#define IWDG_UPDATE_CYCLES (2U * (CORE_CLOCK_HZ / 1000U))
 
 /* Window option unused [RM0440 Rev 9, Sec. 35.3.2, p. 1557, steps 1-6]. Once started, the
  * IWDG cannot be stopped except by a reset (p. 1557), so a program that hangs is restarted
@@ -27,8 +31,10 @@ static void watchdog_start(void)
     IWDG->KR = IWDG_KEY_UNLOCK;
     IWDG->PR = IWDG_PR_DIV32;
     IWDG->RLR = IWDG_RELOAD_TICKS;
-    while (IWDG->SR != 0U) {
-        /* The LSI clocks the update in; it starts by itself with the watchdog. */
+    /* Bounded: if the update never ends the LSI is not running, and the watchdog with it;
+     * waiting longer would only stop the start-up. */
+    uint32_t start = cycles_now();
+    while ((IWDG->SR != 0U) && ((cycles_now() - start) <= IWDG_UPDATE_CYCLES)) {
     }
     IWDG->KR = IWDG_KEY_RELOAD;
 }

@@ -3,6 +3,11 @@
  *
  * Plain C with no chip registers, so tools/check_images.py can run the same code on the host
  * against the images the build makes.
+ *
+ * Shared code: the bootloader runs it before it starts an image, and the main firmware's update
+ * receiver runs the same checks after UPLOAD END (firmware/update-receiver). REQ-119 asks the
+ * bootloader to share no code with the firmware; sharing this file is a bench limit the author
+ * accepted (moved here from bootloader/ in build step 2c).
  */
 #ifndef IMAGE_CHECK_H
 #define IMAGE_CHECK_H

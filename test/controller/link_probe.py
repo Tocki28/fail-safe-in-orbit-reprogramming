@@ -11,8 +11,9 @@ Sends, to Destination 0x02 (controller), with sequence numbers 1, 2, 3, ...:
   3. an unknown command id (0x3F)       expect REFUSED code 0x06 only
   4. GET STATUS to Destination 0x01     expect nothing (not addressed to the controller)
 Prints every frame received, decoded, and any other bytes as text (the bootloader's "BL:"
-lines, when the board is reset while the tool listens). Prints PASS or FAIL per check; exit
-status 1 if any check fails.
+lines, when the board is reset while the tool listens). From build step 2c the firmware also
+sends a HEALTH report every second (Sec. 5.4); reports are printed and left out of the "no
+answer" checks. Prints PASS or FAIL per check; exit status 1 if any check fails.
 
 Usage: link_probe.py PORT [--count N] [--listen SECONDS]
 """
@@ -35,6 +36,16 @@ PAYLOAD_MAX = 1024
 ANSWER = struct.Struct("<IBB")          # sequence answered, kind, code
 KINDS = {0x01: "RECEIVED", 0x02: "DONE", 0x03: "REFUSED", 0x04: "ALREADY DONE"}
 RECEIVED, DONE, REFUSED = 0x01, 0x02, 0x03
+
+# HEALTH report payload, fields in the order of the Interfaces Sec. 5.4 table: report number,
+# onboard computer clock time, controller clock time, report kind, mode, firmware kind,
+# firmware version, running slot, failed starts, trial time left, last self-test.
+HEALTH = struct.Struct("<IIIBBBIBBHB")
+REPORT_HEALTH = 0x01
+MODES = {0x01: "OPERATE", 0x02: "TRIAL", 0x03: "FALLBACK"}
+SLOTS = {0x01: "A", 0x02: "B", 0x03: "last-resort"}
+HEALTH_FIELDS = ("number", "onboard_time", "time", "kind", "mode", "fw_kind", "fw_version",
+                 "slot", "failed_starts", "trial_left", "self_test")
 
 GET_STATUS = 0x25
 UNKNOWN_COMMAND = 0x3F       # inside the controller's range 0x20-0x3F (Sec. 5.1), not assigned
@@ -69,13 +80,15 @@ def build(ftype: int, dest: int, sequence: int, payload: bytes, expiry: int = 0)
 class Link:
     """Reads the port, splits frames from other bytes, prints both."""
 
-    def __init__(self, fd: int):
+    def __init__(self, fd: int, verbose: bool = True):
         self.fd = fd
+        self.verbose = verbose   # False: frames are not printed (text lines still are)
         self.buf = bytearray()
         self.text = bytearray()
 
     def send(self, frame: bytes, what: str) -> None:
-        print(f"sent  {what}: {frame.hex(' ')}")
+        if self.verbose:
+            print(f"sent  {what}: {frame.hex(' ')}")
         os.write(self.fd, frame)
 
     def collect(self, seconds: float, stop=None) -> list:
@@ -118,8 +131,10 @@ class Link:
                 print(f"recv  frame with a bad check value, dropped: {raw.hex(' ')}")
                 continue
             frame = dict(type=ftype, dest=dest, flags=flags, seq=seq, expiry=expiry,
-                         payload=raw[HEADER.size:total - CHECK_BYTES], raw=raw)
-            print_frame(frame)
+                         payload=raw[HEADER.size:total - CHECK_BYTES], raw=raw,
+                         t=time.monotonic())
+            if self.verbose:
+                print_frame(frame)
             frames.append(frame)
 
     def _text(self, data: bytes) -> None:
@@ -141,7 +156,26 @@ def decode_answer(frame: dict):
     return ANSWER.unpack(frame["payload"])
 
 
+def decode_health(frame: dict):
+    """The HEALTH report's fields as a dict, or None for any other frame."""
+    p = frame["payload"]
+    if frame["type"] != TYPE_REPORT or len(p) != HEALTH.size or p[12] != REPORT_HEALTH:
+        return None
+    return dict(zip(HEALTH_FIELDS, HEALTH.unpack(p)))
+
+
+def health_text(h: dict) -> str:
+    return (f"HEALTH: mode {MODES.get(h['mode'], hex(h['mode']))}, running slot "
+            f"{SLOTS.get(h['slot'], hex(h['slot']))}, firmware kind 0x{h['fw_kind']:02x} "
+            f"v{h['fw_version']}, failed starts {h['failed_starts']}, trial time left "
+            f"{h['trial_left']} s, self-test 0x{h['self_test']:02x}, controller time {h['time']} s")
+
+
 def print_frame(frame: dict) -> None:
+    health = decode_health(frame)
+    if health is not None:
+        print(f"recv  report seq {frame['seq']} to 0x{frame['dest']:02x}: {health_text(health)}")
+        return
     answer = decode_answer(frame)
     if answer is None:
         print(f"recv  type 0x{frame['type']:02x} to 0x{frame['dest']:02x}, seq {frame['seq']}, "
@@ -151,6 +185,11 @@ def print_frame(frame: dict) -> None:
     print(f"recv  answer seq {frame['seq']} to 0x{frame['dest']:02x}: "
           f"{KINDS.get(kind, f'kind 0x{kind:02x}')} for seq {answered}, code 0x{code:02x}"
           f"   [{frame['raw'].hex(' ')}]")
+
+
+def answer_frames(frames: list) -> list:
+    """Answers only: the HEALTH reports that arrive every second are left out."""
+    return [f for f in frames if f["type"] == TYPE_ANSWER]
 
 
 def answers_for(frames: list, seq: int) -> list:
@@ -190,7 +229,7 @@ def run(link: Link, count: int, checks: Checks) -> list:
     link.send(bytes(bad), f"GET STATUS seq {seq}, check value bit flipped")
     frames = link.collect(WAIT_S)
     all_frames += frames
-    checks.report(frames == [], f"seq {seq} with a bad check value: no answer (dropped)")
+    checks.report(answer_frames(frames) == [], f"seq {seq} with a bad check value: no answer (dropped)")
 
     seq += 1
     link.send(build(TYPE_COMMAND, DEST_CONTROLLER, seq, bytes([UNKNOWN_COMMAND]), EXPIRY),
@@ -205,7 +244,7 @@ def run(link: Link, count: int, checks: Checks) -> list:
               f"GET STATUS seq {seq} to Destination 0x01")
     frames = link.collect(WAIT_S)
     all_frames += frames
-    checks.report(frames == [], f"seq {seq} not addressed to the controller: no answer")
+    checks.report(answer_frames(frames) == [], f"seq {seq} not addressed to the controller: no answer")
     return all_frames
 
 
@@ -230,7 +269,7 @@ def main() -> int:
         checks.report(bool(seqs) and seqs == list(range(seqs[0], seqs[0] + len(seqs))),
                       f"controller's sequence numbers go up by one: {seqs}")
         checks.report(all(f["dest"] == DEST_ONBOARD and f["expiry"] == 0 for f in frames),
-                      "answers go to Destination 0x01 with Expiry 0")
+                      "answers and reports go to Destination 0x01 with Expiry 0")
     finally:
         os.close(fd)
     print("link probe:", "all passed" if checks.failed == 0 else f"{checks.failed} FAILED")

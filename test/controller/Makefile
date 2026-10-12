@@ -4,9 +4,16 @@
 #
 #   make              build the bootloader and the test firmware, sign the test images
 #   make check        host checks: CRC-32 against zlib; every image through the bootloader's
-#                     own check code (tools/check_images.py); the frame unit tests
-#   make unit         frame unit tests only (unit/test_frame.c, built with the Mac's cc)
+#                     own check code (tools/check_images.py); the unit tests
+#   make unit         unit tests, built with the Mac's cc: frame layer (unit/test_frame.c),
+#                     HEALTH payload (unit/test_health.c), update receiver with a fake flash
+#                     and the build's signed images (unit/test_update.c)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
+#   make upload-probe upload firmware into the slot that is not running, plus refused
+#                     uploads (upload_probe.py)
+#   make set-trial    boot state "confirmed $(CONFIRMED), trial $(TRIAL)" (default A, B), only
+#                     the boot-state pages rewritten, then restart: the bootloader checks and
+#                     starts the slot upload-probe wrote
 #   make flash        same as scenario-1
 #   make scenario-N   write the flash contents of bench test N (1-7), then restart the chip
 #
@@ -54,22 +61,53 @@ images: programs
 	$(SIGN_BAD_B) --bin $(APPS)/B-v2-confirm/app.bin --kind main --slot B --version 2 --build-id "$(COMMIT) bad key B" --out $(OUT)/slotB-v2-wrong-key-b.img
 	$(PY) $(TOOLS)/flip_byte.py $(OUT)/slotA-v1.img $(FLIP_OFFSET) $(OUT)/slotA-v1-flipped.img
 	$(PY) $(TOOLS)/make_boot_state.py --confirmed A --trial B --out $(OUT)/state-trial-B.bin
+	# The operating firmware signed with an unknown key A: UPLOAD END must refuse it 0x09.
+	$(SIGN_BAD_A) --bin $(SRC)/firmware/build/A/firmware.bin --kind main --slot A --version 1 --build-id "$(COMMIT) fw A bad key" --out $(OUT)/firmware-A-wrong-key-a.img
+	$(SIGN_BAD_A) --bin $(SRC)/firmware/build/B/firmware.bin --kind main --slot B --version 1 --build-id "$(COMMIT) fw B bad key" --out $(OUT)/firmware-B-wrong-key-a.img
 
 check: images unit
 	$(PY) $(TOOLS)/check_crc32.py build/host
 	$(PY) $(TOOLS)/check_images.py $(OUT) build/host
 
-# The frame layer compiled for this computer. The undefined-behaviour sanitizer stops the run
+# Firmware parts compiled for this computer. The undefined-behaviour sanitizer stops the run
 # on any array index out of bounds (the address sanitizer does not run on this Mac).
-LINK_SRC  = $(SRC)/firmware/data-link
-UNIT_SRCS = unit/test_frame.c $(LINK_SRC)/frame.c $(SRC)/common/crc32.c
-build/host/test_frame: $(UNIT_SRCS) $(LINK_SRC)/frame.h $(SRC)/common/crc32.h
-	mkdir -p build/host
-	cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined \
-	   -I$(LINK_SRC) -I$(SRC)/common $(UNIT_SRCS) -o $@
+# Monocypher is compiled apart, as shipped: no -Werror, no sanitizer.
+HOST_CC    = cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined
+MONO       = $(REPO)/third_party/monocypher
+COMMON     = $(SRC)/common
+LINK_SRC   = $(SRC)/firmware/data-link
+UPD_SRC    = $(SRC)/firmware/update-receiver
+HEALTH_SRC = $(SRC)/firmware/health-monitor
+UNIT_SRCS  = unit/test_frame.c $(LINK_SRC)/frame.c $(COMMON)/crc32.c
+UPDATE_SRCS = unit/test_update.c unit/fake_port.c $(UPD_SRC)/update_receiver.c \
+              $(COMMON)/image_check.c $(COMMON)/crc32.c
+HEALTH_SRCS = unit/test_health.c $(HEALTH_SRC)/health_monitor.c $(COMMON)/image_check.c \
+              $(COMMON)/crc32.c
+MONO_OBJS  = build/host/monocypher.o build/host/monocypher-ed25519.o
 
-unit: build/host/test_frame
+build/host/test_frame: $(UNIT_SRCS) $(LINK_SRC)/frame.h $(COMMON)/crc32.h
+	mkdir -p build/host
+	$(HOST_CC) -I$(LINK_SRC) -I$(COMMON) $(UNIT_SRCS) -o $@
+
+build/host/%.o: $(MONO)/%.c $(MONO)/%.h
+	mkdir -p build/host
+	cc -std=c11 -O2 -c $< -o $@
+
+build/host/test_update: $(UPDATE_SRCS) $(MONO_OBJS) unit/fake_port.h $(wildcard $(UPD_SRC)/*.h) \
+                        $(wildcard $(COMMON)/*.h) $(LINK_SRC)/frame.h
+	$(HOST_CC) -Iunit -I$(UPD_SRC) -I$(LINK_SRC) -I$(COMMON) -I$(MONO) $(UPDATE_SRCS) $(MONO_OBJS) -o $@
+
+build/host/test_health: $(HEALTH_SRCS) $(MONO_OBJS) $(wildcard $(HEALTH_SRC)/*.h) $(wildcard $(COMMON)/*.h)
+	$(HOST_CC) -I$(HEALTH_SRC) -I$(COMMON) -I$(MONO) $(HEALTH_SRCS) $(MONO_OBJS) -o $@
+
+# The operating firmware's signed images (firmware-A.img, firmware-B.img).
+src-images:
+	$(MAKE) -C $(SRC) images
+
+unit: build/host/test_frame build/host/test_health build/host/test_update images src-images
 	build/host/test_frame
+	build/host/test_health
+	build/host/test_update $(SRC)/build/images $(OUT)
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
 # PROBE_ARGS="--listen 4": listen first, and reset the board meanwhile to see its BL: lines.
@@ -77,6 +115,25 @@ PROBE_ARGS ?=
 link-probe:
 	@test -n "$(PORT)" || (echo "no /dev/cu.usbmodem* port: is the board plugged in?"; false)
 	$(PY) link_probe.py $(PORT) $(PROBE_ARGS)
+
+# Needs the step-2c firmware running (make -C ../../src/controller flash-firmware). Learns the
+# running slot from a HEALTH report, uploads into the other one stop-and-wait, and checks the
+# refused uploads. In TRIAL mode it checks the 0x07 refusals instead. PROBE_ARGS as above.
+upload-probe: images src-images
+	@test -n "$(PORT)" || (echo "no /dev/cu.usbmodem* port: is the board plugged in?"; false)
+	$(PY) upload_probe.py $(PORT) --images $(SRC)/build/images --test-images $(OUT) $(PROBE_ARGS)
+
+# Boot-state pages, as programmer page numbers: page = (address - flash start) / 2 KB.
+CONFIRMED ?= A
+TRIAL     ?= B
+FLASH0      = $(call ADDR,FLASH_START)
+PAGE        = $(call ADDR,FLASH_PAGE_BYTES)
+STATE_FIRST = $(shell echo $$(( ($(ADDR_STATE) - $(FLASH0)) / $(PAGE) )))
+STATE_LAST  = $(shell echo $$(( ($(ADDR_STATE) - $(FLASH0) + 2 * $(call ADDR,BOOT_STATE_COPY_BYTES)) / $(PAGE) - 1 )))
+# Both copies erased, so the record written here (sequence 1) is the only valid one.
+set-trial:
+	$(PY) $(TOOLS)/make_boot_state.py --confirmed $(CONFIRMED) --trial $(TRIAL) --out $(OUT)/state-set-trial.bin
+	$(CLI) -e [$(STATE_FIRST) $(STATE_LAST)] -w $(OUT)/state-set-trial.bin $(ADDR_STATE) -v -rst
 
 # ---- Writing the board through the ST-LINK (SWD) -------------------------------------
 # -e all erases everything first, the boot state included.
@@ -101,5 +158,5 @@ scenario-7: images
 clean:
 	rm -rf test-firmware/build build
 
-.PHONY: all programs images check unit link-probe flash clean \
+.PHONY: all programs images src-images check unit link-probe upload-probe set-trial flash clean \
         scenario-1 scenario-2 scenario-3 scenario-4 scenario-5 scenario-6 scenario-7

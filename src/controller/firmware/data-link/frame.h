@@ -69,9 +69,14 @@
 #define ANSWER_ALREADY_DONE       0x04U
 /* Code in a DONE answer on success (Interfaces Sec. 4.2). */
 #define ANSWER_CODE_SUCCESS       0x00U
-/* Refusal reason 0x06, "Impossible values, or an unknown command" (Interfaces Sec. 4.2 table,
- * REQ-028). The rest of that table comes with the command checker (step 2b). */
-#define REFUSED_IMPOSSIBLE        0x06U
+/* Refusal reasons (Interfaces Sec. 4.2 table). Only the codes used so far; the rest come with
+ * the command checker (step 2b). */
+#define REFUSED_IMPOSSIBLE        0x06U   /* impossible values, or an unknown command (REQ-028) */
+#define REFUSED_TRIAL             0x07U   /* no new firmware during a trial (REQ-050) */
+#define REFUSED_DAMAGED           0x08U   /* image damaged (REQ-005, REQ-044) */
+#define REFUSED_NOT_OPERATOR      0x09U   /* image not from the operator (REQ-006, REQ-043) */
+#define REFUSED_OTHER_CONTROLLER  0x0BU   /* image built for another controller (REQ-046) */
+#define REFUSED_OTHER_SLOT        0x0EU   /* image built for the other slot (REQ-005) */
 
 /* One frame's fields. payload points at length bytes. */
 typedef struct {

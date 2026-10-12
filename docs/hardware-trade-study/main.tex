@@ -183,7 +183,7 @@ Need [2,~Sec.~8.0] & Answer & STM32MP257F-DK \\
 \midrule
 UART for data link A & MET & USART6 on the header [8,~Table~24, p.~35] \\
 UART to the factory loader & PARTLY & No second UART documented on the header; a USB-to-RS-422 adapter on a host port meets it \tbd{uart2} \\
-CAN FD controller with transceiver & PARTLY & No CAN signal on the header and no transceiver on the board [8,~Table~24, p.~35]; a USB CAN FD adapter meets it, with CAN FD support in the mainline Linux driver [12,~ll.~181, 969] \\
+CAN FD controller with transceiver & PARTLY & No CAN signal on the header and no transceiver on the board [8,~Table~24, p.~35]; a USB CAN FD adapter meets it, with CAN FD support in the mainline Linux driver [12,~ll.~181, 969], but the board's kernel is built without that driver (\texttt{CONFIG\_CAN\_GS\_USB is not set}, read from the board on 12 October 2026) \\
 Four GPIOs: SWDIO, SWCLK, NRST, BOOT & MET & Free header pins, for example PZ0, PZ1 and PZ9 on pins 15, 16 and 13 [8,~Table~24, p.~35] \\
 Storage for two firmware stores & MET & 8\,GB eMMC and a microSD slot [8,~pp.~2, 18] \\
 \bottomrule
@@ -248,9 +248,13 @@ the controller at a chosen moment, in place of a power cut. A bench-only
 program on the onboard computer drops, cuts or changes bytes on a link, in
 place of a link tool. The CAN FD software is tested on each end alone: the
 controller's with its CAN controller in loop-back test mode [5,~Sec.~44.2,
-p.~1953], the onboard computer's on a virtual CAN interface, which sends and
-receives CAN frames ``without real CAN controller hardware''
-[18,~Sec.~The Virtual CAN Driver (vcan)]. Before wiring, the high level of a
+p.~1953], the onboard computer's splitting of frames into CAN frames in unit tests on
+the Mac. A virtual CAN interface, which sends and receives CAN frames
+``without real CAN controller hardware'' [18,~Sec.~The Virtual CAN Driver
+(vcan)], is not available: the board's kernel is built without it
+(\texttt{CONFIG\_CAN\_VCAN is not set}, read from the board on 12 October
+2026), and so is the Linux of Docker on the Mac. The onboard computer's CAN
+driver is tested once a kernel with these modules is built \tbd{kernel}. Before wiring, the high level of a
 header pin of the onboard computer is measured \tbd{level}.
 
 \begin{table}[H]
@@ -304,6 +308,8 @@ The values below are not yet known.
   on the header; settled by its datasheet.}
 \tbditem{hub}{The USB hub model.}
 \tbditem{analyzer}{The logic analyzer model.}
+\tbditem{kernel}{A kernel for the onboard computer with the virtual CAN and USB CAN
+  adapter modules.}
 \tbditem{level}{The logic level of the onboard computer's header pins; 3.3\,V
   expected, measured before wiring.}
 \tbditem{linktool}{The board placed in the middle of a data link.}

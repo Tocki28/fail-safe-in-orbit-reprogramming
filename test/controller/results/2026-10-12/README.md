@@ -17,3 +17,11 @@ written to the board, so a log can start with lines from the previous scenario's
 
 Measured: two Ed25519 signature checks of a 2,660-byte test image take 37.8 to 39.6 ms at 170 MHz
 (6.4 to 6.7 million cycles), Monocypher 4.0.2, bootloader built with -O2.
+
+## Build step 2a — data link (same day, commit after 1452557)
+
+Board: bootloader + firmware A (confirmed). `make -C test/controller link-probe`:
+PASS — GET STATUS answered RECEIVED then DONE (3 times); bad check value dropped with no answer;
+unknown command refused 0x06 only; frame for another destination ignored; the controller's sequence
+numbers go up by one; the bootloader's lines appear once (the watchdog is reloaded).
+Log: `step-2a-link-probe.log`. Host: frame unit tests 16/16.

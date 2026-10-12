@@ -9,7 +9,8 @@ software only: it contains no fault-injection function (REQ-101). Bench-only tes
 | Folder | Component (Architecture Sec. 6.0) | Requirements | Verified by (Verification Plan) | Build step | Status |
 |---|---|---|---|---|---|
 | `controller/bootloader` | Bootloader | REQ-004 to 006, REQ-013 to 019, REQ-023, REQ-113, REQ-119, REQ-125, REQ-130, REQ-136 | Test-3 to Test-7 | 1 | BUILT; bench scenarios 1-7 PASS on 12 Oct (`test/controller/results/2026-10-12`) |
-| `controller/firmware/data-link` | Data-link drivers | REQ-042, REQ-099, REQ-138 | Test-26, Inspection-1, Inspection-7 | 2a | NEXT |
+| `controller/firmware` | Main firmware: start-up, core clock, watchdog reload, main loop (`main.c`, `core_clock.c`); answers GET STATUS until the command checker exists | REQ-022 | — | 2a | BUILT; hardware test pending |
+| `controller/firmware/data-link` | Data-link drivers: data link A (`uart_link.c`, USART2) and the frame layer (`frame.c`) | REQ-042, REQ-099, REQ-138 | Test-26, Inspection-1, Inspection-7 | 2a | BUILT; unit tests PASS; hardware test pending |
 | `controller/firmware/command-checker` | Command checker | REQ-027 to 036, REQ-100, REQ-133, REQ-134, REQ-136, REQ-137 | Test-9, Test-10 | 2b | LATER |
 | `controller/firmware/update-receiver` | Update receiver | REQ-007, REQ-008 | Test-6 | 2c | LATER |
 | `controller/firmware/mode-manager` | Mode manager | REQ-001 to 003, REQ-011 to 013, REQ-020, REQ-021, REQ-024 to 026, REQ-113, REQ-117, REQ-125, REQ-136 | Test-1, Test-4, Test-8 | 2d | LATER |
@@ -31,6 +32,8 @@ software only: it contains no fault-injection function (REQ-101). Bench-only tes
 |---|---|---|
 | `test/controller/test-firmware` | Test tool "Test firmware": built to fail on purpose; bench only (REQ-101) | BUILT |
 | `test/controller/Makefile` | Bench scenarios 1 to 7 and the host checks | BUILT |
+| `test/controller/unit` | Host unit tests of the frame layer (`make -C test/controller unit`) | BUILT |
+| `test/controller/link_probe.py` | Test tool: sends frames over data link A and checks the answers | BUILT |
 | `tools/` | Development tools: dev keys, bench image signing, host checks | BUILT |
 | `third_party/monocypher` | Ed25519 verification, Monocypher 4.0.2 | VENDORED |
 
@@ -38,9 +41,11 @@ software only: it contains no fault-injection function (REQ-101). Bench-only tes
 
 STM32CubeIDE's `arm-none-eabi-gcc` must be on `PATH` (see `src/controller/common/build.mk`).
 
-    make -C src/controller               # build the operating programs
+    make -C src/controller               # build the operating programs, sign the firmware images
     make -C src/controller check         # host checks (same as: make -C test/controller check)
     make -C test/controller              # test firmware + signed test images
     make -C test/controller scenario-N   # write bench test N (1-7) to the board
     make -C src/controller flash         # bootloader only;  reset / monitor also there
+    make -C src/controller flash-firmware  # bootloader + firmware in slot A, confirmed
+    make -C test/controller link-probe   # GET STATUS and bad frames over data link A
     make -C src/controller clean && make -C test/controller clean

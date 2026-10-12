@@ -4,7 +4,9 @@
 #
 #   make              build the bootloader and the test firmware, sign the test images
 #   make check        host checks: CRC-32 against zlib; every image through the bootloader's
-#                     own check code (tools/check_images.py)
+#                     own check code (tools/check_images.py); the frame unit tests
+#   make unit         frame unit tests only (unit/test_frame.c, built with the Mac's cc)
+#   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make flash        same as scenario-1
 #   make scenario-N   write the flash contents of bench test N (1-7), then restart the chip
 #
@@ -26,10 +28,6 @@ include ../../src/controller/bench.mk
 SRC   = $(CTRL)
 OUT   = build/images
 APPS  = test-firmware/build
-# Build identifier written into each image header: commit, "-dirty" if the tree has changes.
-COMMIT := $(shell git -C $(REPO) rev-parse --short HEAD 2>/dev/null || echo none)$(shell git -C $(REPO) diff --quiet HEAD 2>/dev/null || echo -dirty)
-
-SIGN  = $(PY) $(TOOLS)/make_image.py --key-a $(KEYS)/key-a.pem --key-b $(KEYS)/key-b.pem
 SIGN_BAD_A = $(PY) $(TOOLS)/make_image.py --key-a $(KEYS)/key-wrong.pem --key-b $(KEYS)/key-b.pem
 SIGN_BAD_B = $(PY) $(TOOLS)/make_image.py --key-a $(KEYS)/key-a.pem --key-b $(KEYS)/key-wrong.pem
 
@@ -57,9 +55,28 @@ images: programs
 	$(PY) $(TOOLS)/flip_byte.py $(OUT)/slotA-v1.img $(FLIP_OFFSET) $(OUT)/slotA-v1-flipped.img
 	$(PY) $(TOOLS)/make_boot_state.py --confirmed A --trial B --out $(OUT)/state-trial-B.bin
 
-check: images
+check: images unit
 	$(PY) $(TOOLS)/check_crc32.py build/host
 	$(PY) $(TOOLS)/check_images.py $(OUT) build/host
+
+# The frame layer compiled for this computer. The undefined-behaviour sanitizer stops the run
+# on any array index out of bounds (the address sanitizer does not run on this Mac).
+LINK_SRC  = $(SRC)/firmware/data-link
+UNIT_SRCS = unit/test_frame.c $(LINK_SRC)/frame.c $(SRC)/common/crc32.c
+build/host/test_frame: $(UNIT_SRCS) $(LINK_SRC)/frame.h $(SRC)/common/crc32.h
+	mkdir -p build/host
+	cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined \
+	   -I$(LINK_SRC) -I$(SRC)/common $(UNIT_SRCS) -o $@
+
+unit: build/host/test_frame
+	build/host/test_frame
+
+# Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
+# PROBE_ARGS="--listen 4": listen first, and reset the board meanwhile to see its BL: lines.
+PROBE_ARGS ?=
+link-probe:
+	@test -n "$(PORT)" || (echo "no /dev/cu.usbmodem* port: is the board plugged in?"; false)
+	$(PY) link_probe.py $(PORT) $(PROBE_ARGS)
 
 # ---- Writing the board through the ST-LINK (SWD) -------------------------------------
 # -e all erases everything first, the boot state included.
@@ -84,5 +101,5 @@ scenario-7: images
 clean:
 	rm -rf test-firmware/build build
 
-.PHONY: all programs images check flash clean \
+.PHONY: all programs images check unit link-probe flash clean \
         scenario-1 scenario-2 scenario-3 scenario-4 scenario-5 scenario-6 scenario-7

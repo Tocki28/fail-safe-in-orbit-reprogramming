@@ -1,5 +1,6 @@
 # bench.mk — settings shared by src/controller/Makefile and test/controller/Makefile:
-# repository paths, development keys, Python, the programmer, and the flash region addresses.
+# repository paths, development keys, image signing, Python, the programmer, and the flash
+# region addresses.
 
 CTRL  := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 REPO  := $(abspath $(CTRL)/../..)
@@ -12,6 +13,10 @@ PROG  ?= /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cub
 PORT  ?= $(firstword $(wildcard /dev/cu.usbmodem*))
 
 BL    = $(CTRL)/bootloader/build/bootloader.bin
+
+# Build identifier written into each image header: commit, "-dirty" if the tree has changes.
+COMMIT := $(shell git -C $(REPO) rev-parse --short HEAD 2>/dev/null || echo none)$(shell git -C $(REPO) diff --quiet HEAD 2>/dev/null || echo -dirty)
+SIGN   = $(PY) $(TOOLS)/make_image.py --key-a $(KEYS)/key-a.pem --key-b $(KEYS)/key-b.pem
 
 # Region addresses for the programmer, read from common/layout.h.
 ADDR = $(shell $(PY) $(TOOLS)/firmware_layout.py $(1))

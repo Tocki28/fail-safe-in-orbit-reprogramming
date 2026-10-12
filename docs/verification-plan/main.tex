@@ -181,9 +181,11 @@ the requirements specification [3,~Secs.~4.0--7.0]. The four methods [1,~p.~93]:
   individual specified requirement.''
 \end{description}
 
-\noindent Tests and demonstrations run at one of three levels:
+\noindent Tests and demonstrations run at one of four levels:
 
 \begin{description}[leftmargin=3.8cm]
+\item[COMPONENT] One component of the architecture [5,~Sec.~6.0] alone; test
+  code stands in for its neighbours.
 \item[ITEM] One software item alone; test tools stand in for its neighbours.
 \item[INTEGRATION] Two or more items together, over their real interfaces.
 \item[SYSTEM] All three items together, with faults caused on purpose.
@@ -213,9 +215,21 @@ performance'' [1,~p.~124]. Besides the hardware needs of the architecture
 hardware needs of the architecture, and is named here \tbd{hardware}.
 
 % ===========================================================================
-\section{Item Verification}
-Each software item is tested alone, at the ITEM level. A test passes when its
-success criterion holds in every run.
+\section{Component and Item Verification}
+Each component, then each software item, is tested alone. A test passes when
+its success criterion holds in every run. Each activity is broken into test
+procedures, one per condition, once the test articles are chosen
+[2,~SWE-065, Sec.~4.5.2, p.~35].
+
+\subsection{Components}
+Every component of the architecture is tested alone, at the COMPONENT level
+[2,~SWE-062, Sec.~4.4.5, p.~34]. Its tests are written with its code, and its
+results are repeatable [2,~SWE-186, Sec.~4.4.6, p.~35]. The safety-critical
+components reach 100\,\% modified condition/decision coverage [3,~REQ-108].
+The test cases are kept with the code, not listed in this plan.
+
+\subsection{Controller Firmware}
+The tests below run at the ITEM level.
 
 \subsection{Controller Firmware}
 % BEGIN GENERATED ctl

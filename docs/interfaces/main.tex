@@ -476,29 +476,45 @@ tested [3,~REQ-090].}
 \label{fig:header}
 \end{figure}
 
+An update uses the commands in this order: UPLOAD BEGIN, UPLOAD CHUNK and
+UPLOAD END to bring the image to the onboard computer (steps 2--3 of
+[2,~Fig.~2]); DELIVER to pass it to the controller (step 4); then ARM and
+SWITCH to start it (step 6). Each command gets its two answers
+(Section~4.2): the answers to UPLOAD CHUNK tell the ground where to resume a
+broken upload [3,~REQ-049], and the answer to UPLOAD END says whether the
+image passed its checks. The trial's result reaches the ground as event
+reports: trial started, then firmware confirmed or firmware given up
+(Section~5.4). Figure~\ref{fig:update} shows the whole exchange.
+
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\scriptsize,
   head/.style={draw, fill=black!5, minimum width=2.6cm, minimum height=0.5cm, font=\footnotesize\bfseries},
-  act/.style={draw, fill=white, text width=3.3cm, align=center, inner sep=2pt},
-  msg/.style={-{Latex[length=1.5mm]}, thick}]
+  act/.style={draw, fill=white, text width=3.1cm, align=center, inner sep=2pt},
+  msg/.style={-{Latex[length=1.5mm]}, thick},
+  ret/.style={-{Latex[length=1.5mm]}, thick, dashed}]
 \node[head] at (0,0) {Ground};
-\node[head] at (5,0) {Onboard computer};
-\node[head] at (10,0) {Controller};
-\foreach \x in {0,5,10} \draw[dashed, black!40] (\x,-0.3) -- (\x,-7.6);
-\draw[msg] (0,-0.9) -- node[above]{UPLOAD BEGIN, UPLOAD CHUNK} (5,-0.9);
-\node[act] at (5,-1.7) {a broken contact resumes at the last chunk answered \mbox{[3,~REQ-049]}};
-\draw[msg] (0,-2.6) -- node[above]{UPLOAD END} (5,-2.6);
-\node[act] at (5,-3.3) {image checked: origin, damage, version, target};
-\draw[msg] (0,-4.1) -- node[above]{DELIVER} (5,-4.1);
-\draw[msg] (5,-4.7) -- node[above]{the same chunks, over a data link} (10,-4.7);
-\node[act] at (10,-5.4) {written to the copy that is not confirmed};
-\draw[msg] (0,-6.2) -- node[above]{ARM, then SWITCH} (5,-6.2);
-\draw[msg] (5,-6.4) -- node[above]{passed on} (10,-6.4);
-\node[act] at (10,-7.1) {the bootloader checks the copy, then the trial runs};
+\node[head] at (6.5,0) {Onboard computer};
+\node[head] at (13,0) {Controller};
+\foreach \x in {0,6.5,13} \draw[dashed, black!40] (\x,-0.3) -- (\x,-10.4);
+\draw[msg] (0,-0.9) -- node[above]{UPLOAD BEGIN} (6.5,-0.9);
+\draw[msg] (0,-1.5) -- node[above]{UPLOAD CHUNK, one per chunk} (6.5,-1.5);
+\draw[ret] (6.5,-2.1) -- node[above]{answers: which chunks arrived} (0,-2.1);
+\draw[msg] (0,-2.7) -- node[above]{UPLOAD END} (6.5,-2.7);
+\node[act] at (6.5,-3.4) {image checked: origin, damage, version, target};
+\draw[ret] (6.5,-4.3) -- node[above]{DONE, or REFUSED with the reason} (0,-4.3);
+\draw[msg] (0,-4.9) -- node[above]{DELIVER} (6.5,-4.9);
+\draw[msg] (6.5,-5.5) -- node[above]{the image, chunk by chunk, over a data link} (13,-5.5);
+\node[act] at (13,-6.2) {written to the copy that is not confirmed};
+\draw[ret] (6.5,-6.9) -- node[above]{DONE} (0,-6.9);
+\draw[msg] (0,-7.5) -- node[above]{ARM, then SWITCH} (6.5,-7.5);
+\draw[msg] (6.5,-7.8) -- node[above]{passed on} (13,-7.8);
+\node[act] at (13,-8.5) {the bootloader checks the copy; the trial runs};
+\draw[ret] (13,-9.5) -- node[above]{event reports: trial started; confirmed or given up} (6.5,-9.5);
+\draw[ret] (6.5,-10.1) -- node[above]{reports, at the next contact} (0,-10.1);
 \end{tikzpicture}
-\caption{An update, as commands. Each command gets its two answers
-(Figure~\ref{fig:answers}).}
+\caption{An update. Solid: commands and the image. Dashed: answers and
+reports. Messages to and from the ground travel only during contacts.}
 \label{fig:update}
 \end{figure}
 
@@ -747,8 +763,8 @@ Galois/Counter Mode (Section~4.1); no answer to a failed envelope
 (Section~4.2); which commands are dangerous (Section~5.1); an arming command
 for one named command only (Section~5.2); no scheduling of dangerous commands
 (Section~5.3); the reports and event codes (Section~5.4); one layout for every
-firmware image, signatures over its header and body, and 256-byte chunks
-(Section~5.5). The
+firmware image, signatures over its header and body, 256-byte chunks, and the
+update sequence (Section~5.5). The
 proposals below await the author's acceptance.
 \begin{description}
 \tbritem{uart}{The UART settings of data link A (Section~6.2).}

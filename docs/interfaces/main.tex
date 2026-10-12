@@ -13,7 +13,7 @@
 \usepackage{needspace}
 \usepackage{bytefield}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning,fit,calc,decorations.pathreplacing}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,decorations.pathreplacing,shapes.geometric}
 \usepackage[hidelinks]{hyperref}
 \setlength{\emergencystretch}{1.5em}
 
@@ -39,6 +39,9 @@
 \newcommand{\tbritem}[2]{\refstepcounter{tbr}\label{tbr:#1}\item[TBR-\thetbr] #2}
 \newcommand{\tbd}[1]{\mbox{\textbf{[\hyperref[tbd:#1]{TBD-\ref*{tbd:#1}}]}}}
 \newcommand{\tbr}[1]{\mbox{\textbf{[\hyperref[tbr:#1]{TBR-\ref*{tbr:#1}}]}}}
+
+% Keeps words whole inside figure boxes.
+\newcommand{\nohyph}{\hyphenpenalty=10000\exhyphenpenalty=10000\relax}
 
 \setlist[description]{style=multiline,leftmargin=2cm,nosep,font=\normalfont\bfseries}
 \setlist[itemize]{nosep}
@@ -574,17 +577,38 @@ controller held stopped, so that no controller software runs
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\scriptsize,
-  st/.style={draw, rounded corners=2pt, text width=11cm, align=left, inner sep=3pt},
-  ar/.style={-{Latex[length=1.5mm]}, thick}]
-\node[st] (s1) at (0,0) {1. Hold NRST low.};
-\node[st, below=0.25cm of s1] (s2) {2. Switch the debug port to SWD: more than 50 clock cycles with SWDIO high, the 16-bit sequence 0111100111100111, then more than 50 clock cycles with SWDIO high again [9,~Sec.~47.3.1, p.~2090].};
-\node[st, below=0.25cm of s2] (s3) {3. Read the IDCODE register, as required after every line reset \mbox{[8,~Sec.~5.4.1, p.~5-10]}.};
-\node[st, below=0.25cm of s3] (s4) {4. Still in reset, set the core to stop on the reset vector, then release NRST: the core stops before its first instruction [9,~p.~2093].};
-\node[st, below=0.25cm of s4] (s5) {5. Unlock the flash, erase the pages, write the checked image, and read it back to compare [3,~REQ-118].};
-\node[st, below=0.25cm of s5] (s6) {6. Clear the stop and pulse NRST: the controller starts on what was written.};
-\foreach \a/\b in {s1/s2,s2/s3,s3/s4,s4/s5,s5/s6} \draw[ar] (\a) -- (\b);
+  box/.style={draw, rounded corners=3pt, text width=6.0cm, align=center, minimum height=0.7cm, inner sep=2pt, execute at begin node=\nohyph},
+  side/.style={draw, rounded corners=3pt, text width=3.0cm, align=center, minimum height=0.7cm, inner sep=2pt, fill=black!12, execute at begin node=\nohyph},
+  ask/.style={draw, diamond, aspect=2.4, inner sep=1pt, align=center, text width=2.8cm},
+  tr/.style={-{Latex[length=1.6mm]}, thick},
+  yn/.style={font=\scriptsize\itshape}]
+\node[box, rounded corners=8pt] (st) at (0,0) {Restore ordered};
+\node[box] (b1) at (0,-1.0) {Hold NRST low.};
+\node[box] (b2) at (0,-2.2) {Switch the debug port to SWD: more than 50 clock cycles with SWDIO high, the sequence 0111100111100111, then more than 50 again [9,~Sec.~47.3.1, p.~2090].};
+\node[ask] (d1) at (0,-4.0) {IDCODE read? \mbox{[8,~Sec.~5.4.1, p.~5-10]}};
+\node[box] (b3) at (0,-5.8) {Still in reset, set the core to stop on the reset vector, then release NRST [9,~p.~2093].};
+\node[box] (b4) at (0,-7.0) {Unlock the flash, erase the pages, write the checked image [3,~REQ-118].};
+\node[ask] (d2) at (0,-8.6) {Read-back matches?};
+\node[box] (b5) at (0,-10.2) {Clear the stop and pulse NRST: the controller starts on what was written.};
+\node[box, rounded corners=8pt] (en) at (0,-11.4) {Report the result at the next contact [3,~REQ-060].};
+\node[side] (lb1) at (7.2,-4.0) {Reprogramming link B (Figure~\ref{fig:loader})};
+\node[ask] (d3) at (7.2,-8.6) {Tries left? \tbd{tries}};
+\node[side] (lb2) at (7.2,-10.2) {Reprogramming link B (Figure~\ref{fig:loader})};
+\draw[tr] (st) -- (b1);
+\draw[tr] (b1) -- (b2);
+\draw[tr] (b2) -- (d1);
+\draw[tr] (d1) -- node[pos=0.4, right, yn]{yes} (b3);
+\draw[tr] (d1) -- node[above, yn]{no} (lb1);
+\draw[tr] (b3) -- (b4);
+\draw[tr] (b4) -- (d2);
+\draw[tr] (d2) -- node[pos=0.4, right, yn]{yes} (b5);
+\draw[tr] (d2) -- node[above, yn]{no} (d3);
+\draw[tr] (d3.north) |- node[pos=0.25, right, yn]{yes} (b4.east);
+\draw[tr] (d3) -- node[pos=0.4, right, yn]{no} (lb2);
+\draw[tr] (b5) -- (en);
 \end{tikzpicture}
-\caption{A restore through SWD.}
+\caption{A restore through SWD. Each diamond is a check with a yes and a no
+exit.}
 \label{fig:swd}
 \end{figure}
 
@@ -603,21 +627,42 @@ ends with the XOR of its bytes, and each packet is answered ACK 0x79 or NACK
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[font=\scriptsize,
-  head/.style={draw, fill=black!5, minimum width=2.8cm, minimum height=0.5cm, font=\footnotesize\bfseries},
-  msg/.style={-{Latex[length=1.5mm]}, thick}]
-\node[head] at (0,0) {Onboard computer};
-\node[head] at (10,0) {Factory loader};
-\foreach \x in {0,10} \draw[dashed, black!40] (\x,-0.3) -- (\x,-5.1);
-\draw[msg] (0,-0.7) -- node[above]{BOOT high, NRST pulse} (10,-0.7);
-\draw[msg] (0,-1.3) -- node[above]{0x7F} (10,-1.3);
-\draw[msg] (10,-1.8) -- node[above]{ACK 0x79} (0,-1.8);
-\draw[msg] (0,-2.5) -- node[above]{Extended Erase 0x44 0xBB, pages, XOR} (10,-2.5);
-\draw[msg] (0,-3.2) -- node[above]{Write Memory 0x31 0xCE, address, 256 bytes, XOR; repeated} (10,-3.2);
-\draw[msg] (0,-3.9) -- node[above]{Read Memory 0x11 0xEE: read back and compare} (10,-3.9);
-\draw[msg] (0,-4.6) -- node[above]{BOOT low, NRST pulse} (10,-4.6);
+  box/.style={draw, rounded corners=3pt, text width=6.0cm, align=center, minimum height=0.7cm, inner sep=2pt, execute at begin node=\nohyph},
+  side/.style={draw, rounded corners=3pt, text width=3.0cm, align=center, minimum height=0.7cm, inner sep=2pt, fill=black!12, execute at begin node=\nohyph},
+  ask/.style={draw, diamond, aspect=2.4, inner sep=1pt, align=center, text width=2.8cm},
+  tr/.style={-{Latex[length=1.6mm]}, thick},
+  yn/.style={font=\scriptsize\itshape}]
+\node[box, rounded corners=8pt] (st) at (0,0) {Reprogramming link A failed (Figure~\ref{fig:swd})};
+\node[box] (b1) at (0,-1.1) {Hold BOOT high and pulse NRST: the factory loader starts [11,~Table~2, p.~36].};
+\node[box] (b2) at (0,-2.2) {Send 0x7F.};
+\node[ask] (d1) at (0,-3.7) {ACK 0x79? [10,~p.~5]};
+\node[box] (b3) at (0,-5.2) {Extended Erase 0x44 0xBB, the pages, XOR.};
+\node[box] (b4) at (0,-6.2) {Write Memory 0x31 0xCE, address, 256 bytes, XOR; once per chunk.};
+\node[ask] (d2) at (0,-7.8) {Every packet answered ACK?};
+\node[box] (b5) at (0,-9.4) {Read Memory 0x11 0xEE: read the image back.};
+\node[ask] (d3) at (0,-10.9) {Read-back matches?};
+\node[box] (b6) at (0,-12.4) {BOOT low and pulse NRST: the controller starts on what was written.};
+\node[box, rounded corners=8pt] (en) at (0,-13.6) {Report the result at the next contact [3,~REQ-060].};
+\node[ask] (dt) at (7.2,-7.8) {Tries left? \tbd{tries}};
+\node[side, rounded corners=8pt] (fail) at (7.2,-13.6) {Report the failure at the next contact [3,~REQ-060].};
+\draw[tr] (st) -- (b1);
+\draw[tr] (b1) -- (b2);
+\draw[tr] (b2) -- (d1);
+\draw[tr] (d1) -- node[pos=0.4, right, yn]{yes} (b3);
+\draw[tr] (b3) -- (b4);
+\draw[tr] (b4) -- (d2);
+\draw[tr] (d2) -- node[pos=0.4, right, yn]{yes} (b5);
+\draw[tr] (b5) -- (d3);
+\draw[tr] (d3) -- node[pos=0.4, right, yn]{yes} (b6);
+\draw[tr] (b6) -- (en);
+\draw[thick] (d1.east) -- node[above, yn]{no} (4.7,-3.7) -- (4.7,-10.9);
+\draw[thick] (d3.east) -- node[above, yn]{no} (4.7,-10.9);
+\draw[tr] (d2.east) -- node[above, yn, pos=0.25]{no} (dt.west);
+\draw[tr] (dt.north) |- node[pos=0.25, right, yn]{yes} (b1.east);
+\draw[tr] (dt) -- node[pos=0.4, right, yn]{no} (fail);
 \end{tikzpicture}
-\caption{A restore through the factory loader. Each command is answered ACK
-before the next one. Command codes from [10,~p.~7].}
+\caption{A restore through the factory loader. Each diamond is a check with a
+yes and a no exit. Command codes from [10,~p.~7].}
 \label{fig:loader}
 \end{figure}
 
@@ -745,6 +790,8 @@ The values below are not yet known.
 \tbditem{misses}{Number of missed answers in a row after which a data link is
   reported lost.}
 \tbditem{canrate}{CAN bit rate of data link B.}
+\tbditem{tries}{Number of tries of each reprogramming link before a restore
+  moves on.}
 \tbditem{lines}{Electrical form of the SWD, NRST and BOOT lines between the
   units.}
 \end{description}

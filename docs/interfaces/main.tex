@@ -532,7 +532,7 @@ exchange envelopes (Section~4.1) through it.
 \subsection{Data Link A: UART over RS-422}
 \label{sec:linka}
 The UART runs at 115\,200 baud, 8 data bits, no parity, 1 stop bit; a frame
-with a gap of more than 10\,ms inside it is dropped \tbr{uart}. Each direction
+with a gap of more than 10\,ms inside it is dropped. Each direction
 has its own RS-422 line, because an RS-422 line has one driver
 [12,~Sec.~2, p.~3]. RS-422 sets no maximum cable length [12,~Sec.~2.1, p.~3].
 On each data link the onboard computer sends GET STATUS every \tbd{beat}. A
@@ -764,10 +764,9 @@ Galois/Counter Mode (Section~4.1); no answer to a failed envelope
 for one named command only (Section~5.2); no scheduling of dangerous commands
 (Section~5.3); the reports and event codes (Section~5.4); one layout for every
 firmware image, signatures over its header and body, 256-byte chunks, and the
-update sequence (Section~5.5). The
+update sequence (Section~5.5); the UART settings of data link A (Section~6.2). The
 proposals below await the author's acceptance.
 \begin{description}
-\tbritem{uart}{The UART settings of data link A (Section~6.2).}
 \tbritem{canfd}{CAN FD frames on data link B (Section~6.3).}
 \tbritem{canseg}{The splitting of a frame into CAN frames, and one CAN
   identifier per direction (Section~6.3).}

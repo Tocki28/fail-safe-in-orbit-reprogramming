@@ -182,9 +182,17 @@ RESTORE, during a restore or a reload through the reprogramming link.}
 \label{sec:frame}
 Every command, answer and report travels in the same frame on the radio link
 and on both data links (Figure~\ref{fig:frame}). Multi-byte fields are
-little-endian. The check value is the CRC-32 of every byte before it, with
-the polynomial 0x4C11DB7 [9,~p.~454]. A receiver drops a frame whose check
-value or version it does not accept \tbr{frame}.
+little-endian. The check value is a CRC-32 of every byte before it: those
+bytes, read as one long binary number, are divided by a fixed number, the
+polynomial, in binary arithmetic without carries, and the 32-bit remainder is
+the check value. The receiver computes it again; a different result means the
+frame was damaged on the way. The polynomial is 0x4C11DB7, which stands for
+$x^{32}+x^{26}+x^{23}+x^{22}+x^{16}+x^{12}+x^{11}+x^{10}+x^{8}+x^{7}+x^{5}+x^{4}+x^{2}+x+1$
+[9,~Sec.~16.2, p.~454]: each 1 bit marks a power of $x$, and the top term
+$x^{32}$ is left out of the hexadecimal. The calculation starts from
+0xFFFFFFFF, takes each byte least significant bit first, and inverts the
+result. A receiver drops a frame whose check value or version it does not
+accept \tbr{frame}.
 
 \begin{figure}[H]
 \centering
@@ -217,7 +225,7 @@ Length & 2 & 0 to 1024 & Payload length in bytes \\
 Sequence number & 4 & 1 to $2^{32}-1$ & One higher than the sender's last frame [3,~REQ-065] \\
 Expiry & 4 & seconds of ground time & After it, the command is refused [3,~REQ-066, REQ-133]; 0 in answers and reports \\
 Payload & Length & & The command, answer or report \\
-Check value & 4 & CRC-32 & Proves the frame undamaged [3,~REQ-107] \\
+Check value & 4 & CRC-32 & Detects damage to the frame [3,~REQ-107] \\
 \bottomrule
 \end{tabularx}}
 
@@ -456,7 +464,7 @@ factory loader writes at once [10,~p.~7], so one chunk size serves every path.
 \end{bytefield}
 \caption{The image header. Kind: 0x01 bootloader, 0x02 main firmware, 0x03
 last-resort firmware. Target: the controller identity [3,~REQ-046]. Body
-check value: CRC-32 of the body. Build identifier: names the build that was
+check value: CRC-32 of the body, computed as for the frame. Build identifier: names the build that was
 tested [3,~REQ-090].}
 \label{fig:header}
 \end{figure}

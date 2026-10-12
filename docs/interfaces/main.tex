@@ -59,7 +59,7 @@ Reference & TBD \tbd{ref} \\
 Issue / revision & Issue 1, Revision 0 --- DRAFT \\
 Date & 12 October 2026 \\
 Author & Andrew Toma \\
-Open items & \total{tbd} TBD, \total{tbr} TBR (App.~C) \\
+Open items & \total{tbd} TBD (App.~C) \\
 \end{tabular}
 \end{center}
 
@@ -542,13 +542,13 @@ and is used again once it answers [3,~REQ-082].
 \subsection{Data Link B: CAN}
 \label{sec:linkb}
 Data link B uses CAN FD frames, which carry up to 64 data bytes
-[9,~Sec.~44.2, p.~1953], at a bit rate of \tbd{canrate} \tbr{canfd}. Either
+[9,~Sec.~44.2, p.~1953], at a bit rate of \tbd{canrate}. Either
 end sends whenever it has a frame [13,~Sec.~3, p.~3]. A CAN frame received
 with an error is sent again [13,~Sec.~3.1, p.~3]. A longer frame is split into segments
 (Figure~\ref{fig:can}): each CAN frame carries a segment number in its first
 byte, then up to 63 bytes of the frame. Segment 0 starts a frame; the receiver
 joins the segments in order and checks the whole frame with its check value.
-Each direction uses its own CAN identifier \tbr{canseg}.
+Each direction uses its own CAN identifier.
 
 \begin{figure}[H]
 \centering
@@ -797,19 +797,7 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent Accepted by the author on 12 October 2026: the interface priorities
-(Section~3.0); the frame (Section~4.0); the Ed25519 signatures and AES-256 in
-Galois/Counter Mode (Section~4.1); no answer to a failed envelope
-(Section~4.2); which commands are dangerous (Section~5.1); an arming command
-for one named command only (Section~5.2); no scheduling of dangerous commands
-(Section~5.3); the reports and event codes (Section~5.4); one layout for every
-firmware image, signatures over its header and body, 256-byte chunks, and the
-update sequence (Section~5.5); the UART settings of data link A (Section~6.2). The
-proposals below await the author's acceptance.
-\begin{description}
-\tbritem{canfd}{CAN FD frames on data link B (Section~6.3).}
-\tbritem{canseg}{The splitting of a frame into CAN frames, and one CAN
-  identifier per direction (Section~6.3).}
-\end{description}
+\noindent All statements in this document were stated or accepted by the
+author on 12 October 2026.
 
 \end{document}

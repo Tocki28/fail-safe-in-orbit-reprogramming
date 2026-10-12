@@ -830,29 +830,36 @@ board, only what a board must have.
 \toprule
 Controller & Count & For \\
 \midrule
-Processor that checks two signatures within the restart time & 1 & Section~\ref{sec:origin}; REQ-023 \\
-Non-volatile memory for the bootloader, two main firmware copies, the last-resort firmware and the kept data, writable while the firmware runs & 1 & Section~\ref{sec:startup}; REQ-048 \\
-UART, for data link A & 1 & Section~\ref{sec:links} \\
-SPI, for data link B & 1 & Section~\ref{sec:links} \\
-SWD debug port (Serial Wire Debug: data line SWDIO, clock line SWCLK) that writes memory whatever it holds & 1 & Section~\ref{sec:wayback} \\
-Factory loader in read-only memory, started by the boot pin, on a UART of its own & 1 & Section~\ref{sec:wayback} \\
-Reset pin and boot pin, reachable from outside & 2 & Section~\ref{sec:wayback} \\
-Independent watchdog that firmware cannot stop & 1 & REQ-022 \\
-Independent time source for the controller's clock & 1 & Section~\ref{sec:clocks} \\
+Core clock and RAM sufficient to verify two signatures at boot within the restart time & 1 & Section~\ref{sec:origin}; REQ-023 \\
+Internal flash: bootloader, two application slots, last-resort image, persistent-data region; in-application programming while executing & 1 & Section~\ref{sec:startup}; REQ-048 \\
+UART & 1 & data link A (Section~\ref{sec:links}) \\
+SPI, slave & 1 & data link B (Section~\ref{sec:links}) \\
+SWD, with full memory access under reset & 1 & reprogramming link A (Section~\ref{sec:wayback}) \\
+Factory loader in ROM, entered by the BOOT pin, on a dedicated UART & 1 & reprogramming link B (Section~\ref{sec:wayback}) \\
+NRST and BOOT pins, accessible & 2 & Section~\ref{sec:wayback} \\
+Independent watchdog, own oscillator, cannot be disabled by software & 1 & REQ-022 \\
+RTC with an independent clock source & 1 & Section~\ref{sec:clocks} \\
 \midrule
 Onboard computer & & \\
 \midrule
-UART, for data link A & 1 & Section~\ref{sec:links} \\
-SPI, for data link B & 1 & Section~\ref{sec:links} \\
-UART, for the controller's factory loader & 1 & Section~\ref{sec:wayback} \\
-General-purpose pins driving SWDIO, SWCLK, the reset pin and the boot pin & 4 & Section~\ref{sec:wayback} \\
-Storage for two separate firmware stores & 1 & Section~\ref{sec:apart} \\
+UART & 1 & data link A \\
+SPI, master & 1 & data link B \\
+UART to the controller's factory loader & 1 & reprogramming link B \\
+GPIO: SWDIO, SWCLK (software-driven SWD), NRST, BOOT & 4 & reprogramming links A and B \\
+Non-volatile storage, two independent firmware stores & 1 & Section~\ref{sec:apart} \\
 \bottomrule
 \end{tabularx}}
 
+\smallskip
+\noindent The clock needed follows from the cycles one verification takes with
+the chosen library and the rest of the start-up time, both measured on the
+bench, and from the restart time limit [6,~REQ-023]; RAM must hold the
+library's working memory.
+
 \medskip
-\noindent One condition holds for the controller: no controller firmware can
-disable the SWD debug port or the factory loader [6,~REQ-125].
+\noindent Condition: controller firmware never writes the configuration that
+disables SWD or the factory loader, such as read-out protection or a boot-pin
+override [6,~REQ-125].
 
 % ===========================================================================
 \appendix

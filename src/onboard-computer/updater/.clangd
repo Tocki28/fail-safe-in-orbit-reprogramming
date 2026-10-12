@@ -1,0 +1,4 @@
+# Editor (clangd) settings: tell the editor what the Makefile tells the compiler.
+# Each -I path is relative to the edited file's own folder (this one).
+CompileFlags:
+  Add: [-std=c++17, -I../../controller/common, -isystem/usr/local/opt/openssl@3/include]

@@ -22,6 +22,9 @@ docs/hardware-trade-study/main.pdf
 
 # Firmware build output (objects, ELF, BIN, maps, signed test images, host check libraries)
 build/
+# ...except the OpenOCD build recipe of the restore path; its output (static binary) stays out
+!src/onboard-computer/restore/build/
+src/onboard-computer/restore/dist/
 
 # Signing keys: private keys never enter the repository
 keys*/

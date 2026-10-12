@@ -1,0 +1,85 @@
+/Library/Developer/CommandLineTools/usr/bin/make -C /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller programs
+/Library/Developer/CommandLineTools/usr/bin/make -C bootloader
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C firmware SLOT=A
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C firmware SLOT=B
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C test-firmware SLOT=A  VERSION=1 BEHAVIOUR=confirm
+make[1]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C test-firmware SLOT=B  VERSION=2 BEHAVIOUR=confirm
+make[1]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C test-firmware SLOT=B  VERSION=2 BEHAVIOUR=hang
+make[1]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C test-firmware SLOT=LR VERSION=1 BEHAVIOUR=confirm
+make[1]: Nothing to be done for `all'.
+mkdir -p build/images
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin test-firmware/build/A-v1-confirm/app.bin  --kind main --slot A --version 1 --build-id "bd82bab test A" --out build/images/slotA-v1.img
+build/images/slotA-v1.img: main v1 for slot A at 0x08006000, 2660 of 40960 bytes, body CRC 0x92669a3b
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin test-firmware/build/B-v2-confirm/app.bin  --kind main --slot B --version 2 --build-id "bd82bab test B" --out build/images/slotB-v2.img
+build/images/slotB-v2.img: main v2 for slot B at 0x08010000, 2660 of 40960 bytes, body CRC 0x961ce834
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin test-firmware/build/B-v2-hang/app.bin     --kind main --slot B --version 2 --build-id "bd82bab test B hang" --out build/images/slotB-v2-hang.img
+build/images/slotB-v2-hang.img: main v2 for slot B at 0x08010000, 1736 of 40960 bytes, body CRC 0xdf33a258
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin test-firmware/build/LR-v1-confirm/app.bin --kind last-resort --slot last-resort --version 1 --build-id "bd82bab test LR" --out build/images/last-resort-v1.img
+build/images/last-resort-v1.img: last-resort v1 for slot last-resort at 0x0801a000, 1664 of 16384 bytes, body CRC 0xab72f07b
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-wrong.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin test-firmware/build/A-v1-confirm/app.bin --kind main --slot A --version 1 --build-id "bd82bab bad key A" --out build/images/slotA-v1-wrong-key-a.img
+build/images/slotA-v1-wrong-key-a.img: main v1 for slot A at 0x08006000, 2660 of 40960 bytes, body CRC 0x92669a3b
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-wrong.pem --bin test-firmware/build/B-v2-confirm/app.bin --kind main --slot B --version 2 --build-id "bd82bab bad key B" --out build/images/slotB-v2-wrong-key-b.img
+build/images/slotB-v2-wrong-key-b.img: main v2 for slot B at 0x08010000, 2660 of 40960 bytes, body CRC 0x961ce834
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/flip_byte.py build/images/slotA-v1.img 0x600 build/images/slotA-v1-flipped.img
+build/images/slotA-v1-flipped.img: byte 0x600 inverted
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_boot_state.py --confirmed A --trial B --out build/images/state-trial-B.bin
+build/images/state-trial-B.bin: confirmed A, trial B, failed starts 0, sequence 1 -> write at 0x0801e000
+# The operating firmware signed with an unknown key A: UPLOAD END must refuse it 0x09.
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-wrong.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller/firmware/build/A/firmware.bin --kind main --slot A --version 1 --build-id "bd82bab fw A bad key" --out build/images/firmware-A-wrong-key-a.img
+build/images/firmware-A-wrong-key-a.img: main v1 for slot A at 0x08006000, 15696 of 40960 bytes, body CRC 0x042efbc7
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-wrong.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller/firmware/build/B/firmware.bin --kind main --slot B --version 1 --build-id "bd82bab fw B bad key" --out build/images/firmware-B-wrong-key-a.img
+build/images/firmware-B-wrong-key-a.img: main v1 for slot B at 0x08010000, 15696 of 40960 bytes, body CRC 0xfdf11577
+/Library/Developer/CommandLineTools/usr/bin/make -C /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller images
+/Library/Developer/CommandLineTools/usr/bin/make -C bootloader
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C firmware SLOT=A
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C firmware SLOT=B
+make[2]: Nothing to be done for `all'.
+mkdir -p build/images
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin firmware/build/A/firmware.bin --kind main --slot A --version 1 --build-id "bd82bab firmware A" --out build/images/firmware-A.img
+build/images/firmware-A.img: main v1 for slot A at 0x08006000, 15696 of 40960 bytes, body CRC 0x042efbc7
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin firmware/build/B/firmware.bin --kind main --slot B --version 1 --build-id "bd82bab firmware B" --out build/images/firmware-B.img
+build/images/firmware-B.img: main v1 for slot B at 0x08010000, 15696 of 40960 bytes, body CRC 0xfdf11577
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_boot_state.py --confirmed A --out build/images/state-confirmed-A.bin
+build/images/state-confirmed-A.bin: confirmed A, trial none, failed starts 0, sequence 1 -> write at 0x0801e000
+/Users/mingw/lodestar-prep/.venv/bin/python upload_probe.py /dev/cu.usbmodem143203 --images /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller/build/images --test-images build/images 
+PASS  a HEALTH report arrived
+      HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 11 s
+PASS  HEALTH: report number and onboard computer time sent as 0
+PASS  HEALTH: mode OPERATE or TRIAL, running slot A or B, firmware kind 0x02
+PASS  HEALTH: trial time left 0 and self-test 0x00 (placeholders until 2d/2e)
+running slot A; uploading into slot B
+---- CHUNK with a wrong offset
+PASS  CHUNK at offset 512 where 256 is next: REFUSED 0x06 only (got REFUSED 0x06)
+PASS  UPLOAD CANCEL: RECEIVED, then DONE 0x00 (got RECEIVED 0x00, DONE 0x00)
+---- firmware-B.img, byte 0x600 inverted
+      4096 of 15696 bytes
+      8192 of 15696 bytes
+      12288 of 15696 bytes
+PASS  firmware-B.img, byte 0x600 inverted: END RECEIVED, then REFUSED 0x08 (got at END: RECEIVED 0x00, REFUSED 0x08)
+---- firmware-B signed with an unknown key A
+      4096 of 15696 bytes
+      8192 of 15696 bytes
+      12288 of 15696 bytes
+PASS  firmware-B signed with an unknown key A: END RECEIVED, then REFUSED 0x09 (got at END: RECEIVED 0x00, REFUSED 0x09)
+---- firmware-A.img (linked for slot A)
+      4096 of 15696 bytes
+      8192 of 15696 bytes
+      12288 of 15696 bytes
+PASS  firmware-A.img (linked for slot A): END RECEIVED, then REFUSED 0x0e (got at END: RECEIVED 0x00, REFUSED 0x0e)
+---- firmware-B.img
+      4096 of 15696 bytes
+      8192 of 15696 bytes
+      12288 of 15696 bytes
+PASS  firmware-B.img: 15696 bytes in 62 chunks, every command RECEIVED then DONE 0x00 (stopped at END: RECEIVED 0x00, DONE 0x00)
+      total 2.49 s; BEGIN (erase) 0.446 s; END (checks) 0.081 s
+PASS  HEALTH reports 1000 ms apart: 997 ms, 996 ms
+PASS  controller's sequence numbers go up by one (531 frames, 18 to 548)
+upload probe: all passed

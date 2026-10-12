@@ -21,6 +21,7 @@
 /* Set by the NMI handler; volatile because it changes outside the normal flow of code. */
 static volatile bool s_ecc_error = false;
 
+/* Waits until the flash is not busy. The wait has no time limit. */
 static void wait_not_busy(void)
 {
     while ((FLASH->SR & FLASH_SR_BSY) != 0U) {
@@ -62,6 +63,8 @@ static void flush_data_cache(void)
     FLASH->ACR |= FLASH_ACR_DCEN;
 }
 
+/* Erases the 2 KB page that starts at page_start, then flushes the data cache.
+ * Returns true if the chip reported no error. */
 bool flash_erase_page(uint32_t page_start)
 {
     uint32_t page = (page_start - (uint32_t)FLASH_START) / (uint32_t)FLASH_PAGE_BYTES;
@@ -77,6 +80,8 @@ bool flash_erase_page(uint32_t page_start)
     return ok;
 }
 
+/* Programs pairs of 32-bit words from words to start, one 64-bit flash word per pair.
+ * The target must be erased. Returns true if the chip reported no error. */
 bool flash_program(uint32_t start, const uint32_t *words, uint32_t pairs)
 {
     bool ok = true;
@@ -105,18 +110,22 @@ static void clear_ecc_flags(void)
     FLASH->ECCR = (FLASH->ECCR & FLASH_ECCR_ECCIE) | FLASH_ECCR_ECCD | FLASH_ECCR_ECCC;
 }
 
+/* Clears the ECC flags and the error recorded by the NMI handler. */
 void flash_ecc_clear(void)
 {
     clear_ecc_flags();
     s_ecc_error = false;
 }
 
+/* Returns true if the NMI handler recorded an ECC error since flash_ecc_clear(). */
 bool flash_ecc_error_seen(void)
 {
     return s_ecc_error;
 }
 
-/* Replaces ST's default NMI handler (a weak symbol in startup_stm32g431xx.s). */
+/* Handles the NMI. If the ECC detection flag is set, clears it, records an error and returns.
+ * For any other cause it loops for ever.
+ * Replaces ST's default NMI handler (a weak symbol in startup_stm32g431xx.s). */
 void NMI_Handler(void)
 {
     if ((FLASH->ECCR & FLASH_ECCR_ECCD) != 0U) {

@@ -60,3 +60,16 @@ Bench: Mac (`src/ground/console.py`) → USB-C network → STM32MP257F-DK (`fsir
 Log: `milestone-2-updater.log` (the onboard computer's log lines). Finding: the wrong-slot build is
 caught only after it is written into the free slot, which erases the good image delivered before it;
 the onboard computer could compare the build with the running slot before delivering.
+
+## C++ firmware on the board (commit bd82bab)
+
+Board: NUCLEO-G431KB on the Mac's USB; bootloader (C) + firmware A in C++17, confirmed. Same
+probes as steps 2a and 2c, unchanged.
+
+| Test | Result | Log |
+|---|---|---|
+| Link probe | PASS: all checks as in step 2a | `step-2c-cpp-link-probe.log` |
+| Upload of firmware-B (15,696 bytes, 62 chunks) | PASS: 2.49 s total; erase 0.446 s; END checks 0.081 s | `step-2c-cpp-upload-probe.log` |
+| Wrong offset; flipped byte; unknown key A; slot-A build into slot B | PASS: REFUSED 0x06; 0x08; 0x09; 0x0E | `step-2c-cpp-upload-probe.log` |
+| Slot B (written by the C++ receiver) set on trial; uploads during the trial | PASS: slot B starts on trial; all four commands REFUSED 0x07 | `step-2c-cpp-upload-probe-in-trial.log` |
+| Three unconfirmed trial starts | PASS: trial given up; slot A started | `step-2c-cpp-trial-rollback.log` |

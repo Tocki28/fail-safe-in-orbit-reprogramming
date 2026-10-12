@@ -1,0 +1,34 @@
+/Users/mingw/lodestar-prep/.venv/bin/python link_probe.py /dev/cu.usbmodem143203 --listen 4
+listening 4.0 s
+recv  report seq 6 to 0x01: HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 6 s
+text  BL: start, reset by reset pin
+text  BL: boot state: confirmed A, trial none, failed starts 0
+text  BL: slot A signature check: 61148 us (10395274 cycles at 170 MHz)
+text  BL: slot A accepted: version 1, build bd82bab firmware A
+text  BL: starting slot A (confirmed)
+recv  report seq 1 to 0x01: HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 1 s
+recv  report seq 2 to 0x01: HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 2 s
+sent  GET STATUS seq 1: a5 5a 01 01 02 00 01 00 01 00 00 00 ff ff ff ff 25 98 0e 00 75
+recv  answer seq 3 to 0x01: RECEIVED for seq 1, code 0x00   [a5 5a 01 02 01 00 06 00 03 00 00 00 00 00 00 00 01 00 00 00 01 00 b7 e7 d7 59]
+recv  answer seq 4 to 0x01: DONE for seq 1, code 0x00   [a5 5a 01 02 01 00 06 00 04 00 00 00 00 00 00 00 01 00 00 00 02 00 b4 1e 37 17]
+PASS  GET STATUS seq 1: RECEIVED, then DONE 0x00
+sent  GET STATUS seq 2: a5 5a 01 01 02 00 01 00 02 00 00 00 ff ff ff ff 25 5d 32 8d 4c
+recv  answer seq 5 to 0x01: RECEIVED for seq 2, code 0x00   [a5 5a 01 02 01 00 06 00 05 00 00 00 00 00 00 00 02 00 00 00 01 00 af de 81 27]
+recv  answer seq 6 to 0x01: DONE for seq 2, code 0x00   [a5 5a 01 02 01 00 06 00 06 00 00 00 00 00 00 00 02 00 00 00 02 00 b7 a8 cd 70]
+PASS  GET STATUS seq 2: RECEIVED, then DONE 0x00
+sent  GET STATUS seq 3: a5 5a 01 01 02 00 01 00 03 00 00 00 ff ff ff ff 25 1e 26 f6 5b
+recv  answer seq 7 to 0x01: RECEIVED for seq 3, code 0x00   [a5 5a 01 02 01 00 06 00 07 00 00 00 00 00 00 00 03 00 00 00 01 00 a7 c9 b3 0d]
+recv  answer seq 8 to 0x01: DONE for seq 3, code 0x00   [a5 5a 01 02 01 00 06 00 08 00 00 00 00 00 00 00 03 00 00 00 02 00 92 2e 0a 70]
+PASS  GET STATUS seq 3: RECEIVED, then DONE 0x00
+sent  GET STATUS seq 4, check value bit flipped: a5 5a 01 01 02 00 01 00 04 00 00 00 ff ff ff ff 25 d7 4b 97 3e
+recv  report seq 9 to 0x01: HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 3 s
+PASS  seq 4 with a bad check value: no answer (dropped)
+sent  unknown command 0x3f seq 5: a5 5a 01 01 02 00 01 00 05 00 00 00 ff ff ff ff 3f ee a6 8e d5
+recv  answer seq 10 to 0x01: REFUSED for seq 5, code 0x06   [a5 5a 01 02 01 00 06 00 0a 00 00 00 00 00 00 00 05 00 00 00 03 06 56 9d 45 b7]
+PASS  unknown command seq 5: REFUSED 0x06 only
+sent  GET STATUS seq 6 to Destination 0x01: a5 5a 01 01 01 00 01 00 06 00 00 00 ff ff ff ff 25 9f 0f ab ac
+recv  report seq 11 to 0x01: HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 4 s
+PASS  seq 6 not addressed to the controller: no answer
+PASS  controller's sequence numbers go up by one: [3, 4, 5, 6, 7, 8, 9, 10, 11]
+PASS  answers and reports go to Destination 0x01 with Expiry 0
+link probe: all passed

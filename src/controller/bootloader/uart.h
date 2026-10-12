@@ -10,7 +10,9 @@
 
 /* Needs the core at CORE_CLOCK_HZ (clock_to_170mhz) first. */
 void uart_init(void);
+/* Send a zero-terminated string. */
 void uart_put(const char *text);
+/* Send a number as decimal digits. */
 void uart_put_decimal(uint32_t value);
 /* Wait until the last bit has left, then put USART2 and GPIOA back to their reset state. */
 void uart_off(void);

@@ -46,6 +46,7 @@ static const region_t REGION_LAST_RESORT = {"last-resort", LAST_RESORT_START, LA
 
 /* ---- Log lines -------------------------------------------------------------------- */
 
+/* Writes one log line to USART2: "BL: ", the three strings one after the other, a line end. */
 static void log_text(const char *a, const char *b, const char *c)
 {
     uart_put("BL: ");
@@ -55,11 +56,13 @@ static void log_text(const char *a, const char *b, const char *c)
     uart_put("\r\n");
 }
 
+/* Returns "A", "B" or "none" for a slot code. */
 static const char *slot_letter(uint8_t slot)
 {
     return (slot == BOOT_SLOT_A) ? "A" : ((slot == BOOT_SLOT_B) ? "B" : "none");
 }
 
+/* Writes the boot state to the log: confirmed slot, trial slot and failed starts. */
 static void log_state(const boot_state_t *state)
 {
     uart_put("BL: boot state: confirmed ");
@@ -71,7 +74,8 @@ static void log_state(const boot_state_t *state)
     uart_put("\r\n");
 }
 
-/* Which reset brought us here; a watchdog restart is the evidence of a hung trial. Flags
+/* Logs the cause of the last reset, then clears the reset flags.
+ * Which reset brought us here; a watchdog restart is the evidence of a hung trial. Flags
  * from RCC_CSR [RM0440 Rev 9, Sec. 7.4.28, p. 327-328]. Internal resets are also driven out
  * on the NRST pin [RM0440 Rev 9, Sec. 7.1.2, p. 270], so the pin flag is looked at last. */
 static void log_reset_cause(void)
@@ -92,7 +96,8 @@ static void log_reset_cause(void)
     log_text("start, reset by ", cause, "");
 }
 
-/* Up to 32 printable characters of the build identifier (Interfaces Sec. 5.5, Figure 6). */
+/* Logs that the image in a region was accepted, with its version and build identifier.
+ * Up to 32 printable characters of the build identifier (Interfaces Sec. 5.5, Figure 6). */
 static void log_accepted(const region_t *region, const uint8_t *image)
 {
     char build[IMAGE_BUILD_ID_BYTES + 1U];
@@ -113,7 +118,8 @@ static void log_accepted(const region_t *region, const uint8_t *image)
     uart_put("\r\n");
 }
 
-/* Microseconds from the clock actually in use (170 MHz, or 16 MHz after a clock fault); cycles
+/* Logs how long the signature checks of a region took, from the cycles they used.
+ * Microseconds from the clock actually in use (170 MHz, or 16 MHz after a clock fault); cycles
  * only when the clock is not known. */
 static void log_signature_time(const region_t *region, uint32_t cycles)
 {
@@ -137,6 +143,7 @@ static void log_signature_time(const region_t *region, uint32_t cycles)
 
 /* ---- Boot state ------------------------------------------------------------------- */
 
+/* Writes the boot state to flash. Logs a failure and returns false if the write failed. */
 static bool save_state(boot_state_t *state)
 {
     if (boot_state_write(state)) {
@@ -146,6 +153,9 @@ static bool save_state(boot_state_t *state)
     return false;
 }
 
+/* Reads the boot state from flash, logs it and returns it.
+ * If no valid state is stored, logs that, sets confirmed slot A, no trial and 0 failed starts,
+ * tries to save that state and returns it. */
 static boot_state_t load_state(void)
 {
     boot_state_t state;
@@ -163,6 +173,8 @@ static boot_state_t load_state(void)
     return state;
 }
 
+/* Ends the trial: logs the reason, clears the trial slot and the failed starts, saves the state.
+ * why is the text for the log. The result of the save is not checked. */
 static void give_up_trial(boot_state_t *state, const char *why)
 {
     uart_put("BL: trial slot ");
@@ -204,11 +216,13 @@ static void count_trial_start(boot_state_t *state)
 
 /* ---- Candidates ------------------------------------------------------------------- */
 
+/* Returns the region of slot A, or the region of slot B for any other slot code. */
 static const region_t *slot_region(uint8_t slot)
 {
     return (slot == BOOT_SLOT_A) ? &REGION_A : &REGION_B;
 }
 
+/* Returns the log text that says why a region is started: last resort, trial or confirmed. */
 static const char *role(const region_t *region, const boot_state_t *state)
 {
     if (region->slot == BOOT_SLOT_NONE) {
@@ -259,6 +273,14 @@ static bool image_passes(const region_t *region)
     return true;
 }
 
+/* Chooses the firmware to run and starts it. Does not return.
+ * 1. Starts the cycle counter, sets the clock to 170 MHz, starts the UART, logs the reset cause.
+ *    A clock fault is logged and the bootloader carries on.
+ * 2. Loads the boot state and counts this start if a trial is set.
+ * 3. Takes the regions in order: trial slot (if set), confirmed slot, last-resort firmware.
+ * 4. Starts the first region whose image passes all checks.
+ * 5. Gives the trial up at once if the image of the trial slot is refused.
+ * 6. If no image passes: logs that, turns the UART off and waits in an endless loop. */
 int main(void)
 {
     cycles_start();

@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+/* CRC-32 of the size bytes at data. */
 uint32_t crc32_compute(const uint8_t *data, uint32_t size);
 
 #ifdef __cplusplus

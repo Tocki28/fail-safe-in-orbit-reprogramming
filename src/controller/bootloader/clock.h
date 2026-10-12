@@ -18,6 +18,7 @@
 
 /* Start the core's cycle counter (DWT CYCCNT). Call first: every wait here is bounded by it. */
 void cycles_start(void);
+/* Value of the cycle counter. */
 uint32_t cycles_now(void);
 
 /* HSI16 -> PLL -> 170 MHz, Range 1 boost mode, 4 flash wait states. False if a step did not

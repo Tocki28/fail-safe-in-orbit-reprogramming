@@ -27,12 +27,14 @@ _Static_assert(sizeof(boot_state_t) == 16U, "boot state must be two 64-bit flash
 
 static const uint32_t COPY_START[2] = {BOOT_STATE_COPY_0, BOOT_STATE_COPY_1};
 
+/* Returns the check value of a record: the CRC-32 of the bytes before the check field. */
 static uint32_t record_check(const boot_state_t *state)
 {
     return crc32_compute((const uint8_t *)state, CHECKED_BYTES);
 }
 
-/* A record with a good check value must still name a real slot, and the trial slot can only
+/* Returns true if the confirmed and the trial slot of a record have allowed values.
+ * A record with a good check value must still name a real slot, and the trial slot can only
  * be the slot that is not confirmed. */
 static bool fields_valid(const boot_state_t *state)
 {
@@ -54,7 +56,8 @@ static bool read_copy(uint32_t copy, boot_state_t *out)
     return (out->check == record_check(out)) && fields_valid(out);
 }
 
-/* The copy to trust: the valid one with the higher sequence number. */
+/* The copy to trust: the valid one with the higher sequence number.
+ * Fills *out with it and returns its number, 0 or 1. Returns NO_VALID_COPY if neither is valid. */
 static uint32_t newest_copy(boot_state_t *out)
 {
     boot_state_t copy0;
@@ -73,11 +76,15 @@ static uint32_t newest_copy(boot_state_t *out)
     return NO_VALID_COPY;
 }
 
+/* Reads the boot state into *state from the newest valid copy. Returns false if none is valid. */
 bool boot_state_read(boot_state_t *state)
 {
     return newest_copy(state) != NO_VALID_COPY;
 }
 
+/* Writes the boot state to the copy that is not current, then reads it back and compares.
+ * Sets the sequence number and the check value in *state. Returns false if the state is not
+ * valid, or if the erase, the programming or the read-back fails. */
 bool boot_state_write(boot_state_t *state)
 {
     boot_state_t current;
@@ -103,6 +110,7 @@ bool boot_state_write(boot_state_t *state)
     return ok && read_copy(target, &back) && (memcmp(&back, state, sizeof(back)) == 0);
 }
 
+/* Returns slot B for slot A, and slot A for any other value. */
 uint8_t boot_state_other_slot(uint8_t slot)
 {
     return (slot == BOOT_SLOT_A) ? BOOT_SLOT_B : BOOT_SLOT_A;

@@ -115,9 +115,11 @@ happens (Figure~\ref{fig:setup}). The test tools exist only on the bench
 [3,~REQ-101].
 
 \begin{description}
-\item[Radio stand-in] Carries envelopes between the ground software and the
-  onboard computer. Opens and closes contact windows; drops, repeats, changes
-  or forges messages.
+\item[Radio simulator] Software that takes the place of the radio equipment,
+  which lies outside the System [4,~Sec.~1.2.2]. It carries envelopes between
+  the ground software and the onboard computer, opens and closes contact
+  windows, and mimics losses, noise and attacks: it drops, repeats, changes or
+  forges messages.
 \item[Link tool] On each data link. Cuts and restores it; changes bytes on it.
 \item[Power switch] Cuts the controller's power at a chosen moment.
 \item[Debug probe] Reads and changes the controller's memory, and stops its
@@ -138,7 +140,7 @@ happens (Figure~\ref{fig:setup}). The test tools exist only on the bench
 \node[item] (g) at (0,0) {Ground\\software};
 \node[item] (o) at (5.6,0) {Onboard\\computer\\software};
 \node[item] (c) at (12.4,0) {Controller\\firmware};
-\node[tool] (rs) at (2.8,1.6) {Radio stand-in};
+\node[tool] (rs) at (2.8,1.6) {Radio simulator};
 \node[tool] (la) at (10.0,1.0) {Link tool};
 \node[tool] (lb) at (10.0,-1.0) {Link tool};
 \node[tool] (ps) at (12.4,2.2) {Power switch};
@@ -336,10 +338,10 @@ Activity & Success criterion & Requirements \\
 \toprule
 Fault & Caused by & ConOps scenario \\
 \midrule
-Radio link cut during an upload & RADIO STAND-IN & Scenario-200 \\
-Long gap between contacts fills the report storage & RADIO STAND-IN & Scenario-210 \\
-Forged command, or old command sent again & RADIO STAND-IN & Scenario-300 \\
-Firmware damaged in transfer & RADIO STAND-IN & Scenario-400 \\
+Radio link cut during an upload & RADIO SIMULATOR & Scenario-200 \\
+Long gap between contacts fills the report storage & RADIO SIMULATOR & Scenario-210 \\
+Forged command, or old command sent again & RADIO SIMULATOR & Scenario-300 \\
+Firmware damaged in transfer & RADIO SIMULATOR & Scenario-400 \\
 New firmware hangs, restarts over and over, or is never judged good & TEST FIRMWARE & Scenario-430 to 450 \\
 Previous firmware also unusable & DEBUG PROBE & Scenario-460 \\
 No firmware can run & DEBUG PROBE & Scenario-480 \\
@@ -411,7 +413,7 @@ REQ-026 & Correct operation through the run of Test-8 & Operation for longer tha
 REQ-064, REQ-129 & Forged and changed frames are refused & Resistance to every possible forgery, which rests on Ed25519 and AES-256 in Galois/Counter Mode \\
 REQ-098, REQ-103 & Nothing; Analysis-1 shows it & That the analysis found every combination of failures \\
 REQ-080 & Both data links work over bench cables & The length and electrical noise of a spacecraft harness \\
-REQ-067 & Contact windows and losses made by the radio stand-in & The real radio equipment, which lies outside the System \\
+REQ-067 & Contact windows and losses made by the radio simulator & The real radio equipment, which lies outside the System \\
 All & Behaviour at room temperature and pressure & Temperature, vacuum, vibration and launch \\
 \bottomrule
 \end{tabularx}}

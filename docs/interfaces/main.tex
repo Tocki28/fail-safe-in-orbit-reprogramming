@@ -311,6 +311,7 @@ Code & Reason & Requirement \\
 0x0C & The controller's clock disagrees with the scheduled time & REQ-134 \\
 0x0D & A dangerous command cannot be scheduled & REQ-029, REQ-112 \\
 0x0E & Image built for the other slot & REQ-005 \\
+0x0F & Trial tests not passed & REQ-012 \\
 \bottomrule
 \end{tabularx}}
 
@@ -324,7 +325,10 @@ Identifiers 0x01 to 0x1F are commands to the onboard computer, 0x20 to 0x3F
 commands to the controller. UPLOAD BEGIN to UPLOAD CANCEL also go to the
 controller, with Destination 0x02: it writes the image into its slot that is
 not confirmed, so it can never write over the firmware it runs
-\mbox{[3,~REQ-007]}.
+\mbox{[3,~REQ-007]}. During a trial, the controller accepts them only for the
+test image of its trial tests, image number 0xFFFF \tbr{testimage}: it keeps
+the image in working memory, checks its check value, and writes nothing into
+either slot \mbox{[3,~REQ-139]}.
 
 {\footnotesize
 \begin{xltabular}{\textwidth}{@{}l>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{1.9cm}cl@{}}
@@ -332,10 +336,10 @@ not confirmed, so it can never write over the firmware it runs
 ID & Command & Fields (bytes) & Modes & Dangerous & Requirement \\
 \midrule
 \endhead
-0x01 & UPLOAD BEGIN & image number (2), image length (4) & ANY; controller: OPERATE, FALLBACK & NO & REQ-049 \\
-0x02 & UPLOAD CHUNK & image number (2), offset (4), data (up to 256) & ANY; controller: OPERATE, FALLBACK & NO & REQ-049 \\
-0x03 & UPLOAD END & image number (2) & ANY; controller: OPERATE, FALLBACK & NO & REQ-043 to 047 \\
-0x04 & UPLOAD CANCEL & image number (2) & ANY; controller: OPERATE, FALLBACK & NO & REQ-051 \\
+0x01 & UPLOAD BEGIN & image number (2), image length (4) & ANY; controller: OPERATE, FALLBACK; TRIAL, test image only & NO & REQ-049 \\
+0x02 & UPLOAD CHUNK & image number (2), offset (4), data (up to 256) & ANY; controller: OPERATE, FALLBACK; TRIAL, test image only & NO & REQ-049 \\
+0x03 & UPLOAD END & image number (2) & ANY; controller: OPERATE, FALLBACK; TRIAL, test image only & NO & REQ-043 to 047 \\
+0x04 & UPLOAD CANCEL & image number (2) & ANY; controller: OPERATE, FALLBACK; TRIAL, test image only & NO & REQ-051 \\
 0x05 & DELIVER & image number (2) & OPERATE, FALLBACK & NO & REQ-048, REQ-050 \\
 0x06 & SET LIMITS & minimum version (4), controller identity (2) & ANY & YES & REQ-053 \\
 0x07 & RESTORE & none & ANY & YES & REQ-055 \\
@@ -351,6 +355,7 @@ ID & Command & Fields (bytes) & Modes & Dangerous & Requirement \\
 0x23 & LEAVE FALLBACK & none & FALLBACK & NO & REQ-117 \\
 0x24 & SET CONTROLLER TIME & ground time (4) & OPERATE, TRIAL, FALLBACK & YES & REQ-132 \\
 0x25 & GET STATUS & none & OPERATE, TRIAL, FALLBACK & NO & REQ-081 \\
+0x26 & CONFIRM & none & TRIAL & YES & REQ-012, REQ-020 \\
 0x40 & EQUIPMENT & set by the controlled equipment & \tbd{equip} & \tbd{equip} & --- \\
 \bottomrule
 \end{xltabular}}
@@ -423,6 +428,8 @@ Code & Event & Sent by & Requirement \\
 0x0007 & firmware confirmed & controller & REQ-037 \\
 0x0008 & firmware given up & controller & REQ-037 \\
 0x0009 & restart & controller & REQ-037 \\
+0x000A & trial tests passed & controller & REQ-139 \\
+0x000B & trial tests failed; detail: which test & controller & REQ-139, REQ-140 \\
 0x0101 & data link lost & onboard computer & REQ-081 \\
 0x0102 & data link working again & onboard computer & REQ-082 \\
 0x0103 & restore done; detail: its result & onboard computer & REQ-060 \\
@@ -485,12 +492,15 @@ An update uses the commands in this order: UPLOAD BEGIN, UPLOAD CHUNK and
 UPLOAD END to bring the image to the onboard computer (steps 2--3 of
 [2,~Fig.~2]); DELIVER, after which the onboard computer sends the same UPLOAD commands to
 the controller (step 4); then ARM and
-SWITCH to start it (step 6). Each command gets its two answers
+SWITCH to start it (step 6). During the trial the onboard computer sends the
+test image, the controller runs its trial tests and reports the result, and
+the operator keeps the new firmware with ARM and CONFIRM (step 7). Each command
+gets its two answers
 (Section~4.2): the answers to UPLOAD CHUNK tell the ground where to resume a
 broken upload [3,~REQ-049], and the answer to UPLOAD END says whether the
-image passed its checks. The trial's result reaches the ground as event
-reports: trial started, then firmware confirmed or firmware given up
-(Section~5.4). Figure~\ref{fig:update} shows the whole exchange.
+image passed its checks. The trial's progress reaches the ground as event
+reports: trial started; trial tests passed or failed; firmware confirmed or
+given up (Section~5.4). Figure~\ref{fig:update} shows the whole exchange.
 
 \begin{figure}[H]
 \centering
@@ -502,7 +512,7 @@ reports: trial started, then firmware confirmed or firmware given up
 \node[head] at (0,0) {Ground};
 \node[head] at (6.5,0) {Onboard computer};
 \node[head] at (13,0) {Controller};
-\foreach \x in {0,6.5,13} \draw[dashed, black!40] (\x,-0.3) -- (\x,-10.4);
+\foreach \x in {0,6.5,13} \draw[dashed, black!40] (\x,-0.3) -- (\x,-13.4);
 \draw[msg] (0,-0.9) -- node[above]{UPLOAD BEGIN} (6.5,-0.9);
 \draw[msg] (0,-1.5) -- node[above]{UPLOAD CHUNK, one per chunk} (6.5,-1.5);
 \draw[ret] (6.5,-2.1) -- node[above]{answers: which chunks arrived} (0,-2.1);
@@ -516,11 +526,19 @@ reports: trial started, then firmware confirmed or firmware given up
 \draw[msg] (0,-7.5) -- node[above]{ARM, then SWITCH} (6.5,-7.5);
 \draw[msg] (6.5,-7.8) -- node[above]{passed on} (13,-7.8);
 \node[act] at (13,-8.5) {the bootloader checks the copy; the trial runs};
-\draw[ret] (13,-9.5) -- node[above]{event reports: trial started; confirmed or given up} (6.5,-9.5);
-\draw[ret] (6.5,-10.1) -- node[above]{reports, at the next contact} (0,-10.1);
+\draw[msg] (6.5,-9.4) -- node[above]{test image} (13,-9.4);
+\node[act] at (13,-10.1) {trial tests};
+\draw[ret] (13,-10.8) -- node[above]{trial started; tests passed or failed} (6.5,-10.8);
+\draw[ret] (6.5,-11.1) -- node[above]{passed on} (0,-11.1);
+\draw[msg] (0,-11.8) -- node[above]{ARM, then CONFIRM} (6.5,-11.8);
+\draw[msg] (6.5,-12.1) -- node[above]{passed on} (13,-12.1);
+\draw[ret] (13,-12.8) -- node[above]{firmware confirmed or given up} (6.5,-12.8);
+\draw[ret] (6.5,-13.1) -- node[above]{passed on} (0,-13.1);
 \end{tikzpicture}
 \caption{An update. Solid: commands and the image. Dashed: answers and
-reports. Messages to and from the ground travel only during contacts.}
+reports. Messages to and from the ground travel only during contacts. If a
+trial test fails, the controller returns to its previous copy at once and no
+CONFIRM follows.}
 \label{fig:update}
 \end{figure}
 
@@ -802,8 +820,16 @@ The values below are not yet known.
   units.}
 \end{description}
 
+\noindent The proposal below awaits the author's acceptance.
+\begin{description}
+\tbritem{testimage}{The test image travels as an upload with image number
+  0xFFFF. Its last four bytes are the CRC-32 of the bytes before them. The
+  controller accepts it only during a trial, keeps it in working memory, and
+  writes it into neither slot.}
+\end{description}
+
 \medskip
-\noindent All statements in this document were stated or accepted by the
-author on 12 October 2026.
+\noindent All statements in this document, except the one marked TBR, were
+stated or accepted by the author on 12 October 2026.
 
 \end{document}

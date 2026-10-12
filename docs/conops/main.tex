@@ -86,7 +86,8 @@ Issue & Rev. & Date & Change \\
 1 & 0 & 2026-10-10 & First draft \\
 1 & 1 & 2026-10-11 & Gaps found by the hazard analysis: scope, objective O-6, assumption A-6, command checks,
   functions per mode, origin replaced in flight, and seven scenarios and one
-  risk added or completed; the exit from FALLBACK, from the architecture \\
+  risk added or completed; the exit from FALLBACK, from the architecture; the
+  operator judges new firmware after the controller's trial tests (12 October) \\
 \bottomrule
 \end{tabular}
 
@@ -331,9 +332,11 @@ outside the System; it uses them as given.
 \item[OPERATE] Nominal state executing confirmed firmware. New firmware images
   can be staged in the background during execution.
 \item[TRIAL] Entered upon transitioning to updated firmware. Executes the new
-  image for a bounded evaluation window \tbd{trialtime}. If the new image is
-  judged good, the update is committed and the controller returns to OPERATE;
-  if not, it enters FALLBACK.
+  image for a bounded evaluation window \tbd{trialtime}. The controller tests
+  the new image and reports the result. If a test fails, it enters FALLBACK at
+  once. If the tests pass and the operator confirms the new image within the
+  window, the update is committed and the controller returns to OPERATE; if
+  not, it enters FALLBACK.
 \item[FALLBACK] Entered following a failed firmware trial or boot failure.
   Reverts execution to the previous known-good firmware image or the
   last-resort firmware. The controller stays in FALLBACK until the operator
@@ -379,8 +382,8 @@ Each capability is shown in detail by the scenarios in Section~6.0.
 \item[Capability-3] \textbf{Fault handling} (serves G-1): detect faults between
   contacts, respond without the ground, and record them.
 \item[Capability-4] \textbf{Update} (serves G-3): receive, check, install and
-  judge new firmware, and return to working firmware without outside help if
-  it fails \tbd{switch} \tbd{confirm}.
+  test new firmware, keep it only when the operator confirms it, and return to
+  working firmware without outside help if it fails \tbd{switch}.
 \item[Capability-5] \textbf{Test} (verification only): degrade the radio link;
   cut power or break a data-link connection on command.
 \item[Disposal] None; bench demonstration.
@@ -479,8 +482,9 @@ hazards [2,~App.~A, Table~2].
     the controller keeps working meanwhile.
   \item The controller switches to the new firmware and enters TRIAL
     \tbd{switch}.
-  \item The new firmware is judged good within the trial time \tbd{trialtime}
-    \tbd{confirm}; the update is committed and the controller returns to
+  \item The controller tests the new firmware and reports the result.
+  \item The operator confirms the new firmware within the trial time
+    \tbd{trialtime}; the update is committed and the controller returns to
     OPERATE.
   \item The outcome is stored and sent down at the next contact.
   \end{enumerate}
@@ -575,8 +579,12 @@ trigger, then the expected outcome.
 \item[Scenario-440] The new firmware restarts over and over. After
   \tbd{bootcount} failed starts, the controller returns to its previous
   firmware [2,~p.~64].
-\item[Scenario-450] The new firmware runs but is never judged good. After the
-  trial time, the controller returns to its previous firmware.
+\item[Scenario-445] The new firmware fails one of its trial tests. The
+  controller reports which test failed and returns to its previous firmware at
+  once.
+\item[Scenario-450] The new firmware passes its trial tests, but the operator
+  never confirms it. After the trial time, the controller returns to its
+  previous firmware.
 \item[Scenario-460] The previous firmware is also unusable. The controller runs
   its last-resort firmware.
 \item[Scenario-470] The operator cancels an update in progress. The update stops;
@@ -675,8 +683,8 @@ recorded result of every scenario stay in the repository.
 
 \section{Glossary}
 \begin{description}[leftmargin=3.2cm]
-\item[Confirmed] Firmware judged good after its trial; only confirmed firmware
-  is known-good.
+\item[Confirmed] Firmware the operator confirmed after it passed its trial
+  tests; only confirmed firmware is known-good.
 \item[Last-resort] Known-good firmware that updates never replace (golden
   image).
 \item[Switch] The controller stops running old firmware and starts the new.
@@ -687,11 +695,10 @@ recorded result of every scenario stay in the repository.
 
 \section{Open Items}
 All statements in this document were stated or accepted by the author on
-9--11 October 2026. The values below are not yet known.
+9--12 October 2026. The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
 \tbditem{switch}{Switch automatically on arrival, or only on operator command.}
-\tbditem{confirm}{Who judges new firmware good: controller or operator.}
 \tbditem{window}{Contact window length and gap (sourced, or a test parameter).}
 \tbditem{trialtime}{Trial time limit (requirements).}
 \tbditem{bootcount}{Failed starts before going back (requirements).}

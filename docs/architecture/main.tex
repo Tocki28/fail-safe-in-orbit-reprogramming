@@ -250,7 +250,7 @@ memory holds.}
 \draw[msg] (6,-4.1) -- node[above]{4. Delivered over the data link} (12,-4.1);
 \node[act] at (12,-5.0) {5. Written to the copy that is not confirmed, while the controller keeps working};
 \node[act] at (12,-6.1) {6. Switches to the new copy and restarts};
-\node[act] at (12,-7.1) {7. Bootloader checks it; trial; judged good; confirmed};
+\node[act] at (12,-7.1) {7. Bootloader checks it; trial tests pass; the operator confirms it};
 \draw[msg] (12,-8.4) -- node[above]{8. Reports which firmware runs} (6,-8.4);
 \draw[msg] (6,-8.4) -- node[above]{9. Reports at the next contact} (0,-8.4);
 \end{tikzpicture}
@@ -744,7 +744,7 @@ Component & Role & Requirements \\
 \endhead
 \multicolumn{3}{@{}l}{\textit{Controller firmware}} \\
 Bootloader & Runs first at every start. Sets a safe state, checks each firmware copy for damage and origin, counts failed starts, and starts the new, previous or last-resort firmware. & REQ-004~to~006, REQ-013~to~019, REQ-023, REQ-113, REQ-119, REQ-125, REQ-130, REQ-136 \\
-Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113, REQ-117, REQ-125, REQ-136 \\
+Mode manager & Holds the controller mode, runs the trial, and confirms new firmware or gives it up. & REQ-001~to~003, REQ-011~to~013, REQ-020, REQ-021, REQ-024~to~026, REQ-113, REQ-117, REQ-125, REQ-136, REQ-139, REQ-140 \\
 Command checker & Checks every command for mode, values, arming, expiry and repeats; checks held commands again before running them; answers and logs. & REQ-027~to~036, REQ-100, REQ-133, REQ-134, REQ-136, REQ-137 \\
 Update receiver & Stores new firmware in the free copy, never over the previous or last-resort firmware. & REQ-007, REQ-008 \\
 Health monitor & Tests the controller, detects faults, restarts it when it stops responding, and sends health and event reports. & REQ-022, REQ-037~to~041, REQ-135 \\

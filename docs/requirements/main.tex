@@ -173,7 +173,7 @@ REQ-008 & The controller shall keep a last-resort firmware that no update replac
 REQ-009 & The last-resort firmware shall share no start-up code, kept data or other code with the main firmware. & H-1 cause g; H-8 cause g; Shared cause: image code and data & INSPECTION \\
 REQ-010 & The last-resort firmware shall be able to receive new firmware. & H-3 control 3; Mode table & TEST \\
 REQ-011 & New firmware shall run a trial of set length \tbd{trial} before it is confirmed. & H-3 control 1; Scenario-100; Capability-4 & TEST \\
-REQ-012 & New firmware shall be judged good only after it has received firmware itself during its trial, by the judge set in \tbd{judge}. & H-3 control 2 & TEST \\
+REQ-012 & New firmware shall be judged good only when the operator confirms it, after the controller has reported that it passed its trial tests. & H-3 control 2; Scenario-100 & TEST \\
 REQ-013 & New firmware not judged good within the trial time shall be given up, and the controller shall return to its previous firmware. & H-7 control 1; Scenario-450 & TEST \\
 REQ-014 & New firmware that hangs during its trial shall be given up, and the controller shall return to its previous firmware. & H-8 control 4; Scenario-430 & TEST \\
 REQ-015 & After \tbd{starts} failed starts of new firmware, the controller shall return to its previous firmware. & H-1 control 3; Scenario-440 & TEST \\
@@ -213,6 +213,8 @@ REQ-131 & The controller firmware shall keep its own clock, from a time source s
 REQ-132 & The controller's clock shall be set only by time values sent from the ground, never from the onboard computer's clock. & Architecture 5.5 & TEST \\
 REQ-133 & The controller firmware shall refuse a command past its expiry, by its own clock. & Architecture 5.5 & TEST \\
 REQ-134 & The controller firmware shall run a scheduled command only when its own clock agrees with the scheduled time within \tbd{agree}. & Architecture 5.5 & TEST \\
+REQ-139 & During its trial, new firmware shall test itself and report the result: its self-test, its answers on the data link, and the receipt of a test image with a correct check value. & H-3 control 2; Scenario-100; Capability-4 & TEST \\
+REQ-140 & New firmware that fails a trial test shall be given up at once, and the controller shall return to its previous firmware. & Scenario-445 & TEST \\
 \bottomrule
 \end{xltabular}}
 
@@ -360,7 +362,7 @@ H-1 control 1 & REQ-007 & H-1 control 2 & REQ-005 & H-1 control 3 & REQ-015, REQ
 H-1 control 4 & REQ-008 & H-1 control 5 & REQ-054, REQ-056 & H-1 control 6 & REQ-059 \\
 H-1 control 7 & REQ-016 & H-1 control 8 & REQ-019 & H-2 control 1 & REQ-043, REQ-118 \\
 H-2 control 2 & REQ-006 & H-2 control 3 & REQ-055 & H-2 control 4 & REQ-085 \\
-H-3 control 1 & REQ-011 & H-3 control 2 & REQ-012 & H-3 control 3 & REQ-010 \\
+H-3 control 1 & REQ-011 & H-3 control 2 & REQ-012, REQ-139 & H-3 control 3 & REQ-010 \\
 H-3 control 4 & REQ-055 & H-3 control 5 & OUTSIDE & H-4 control 1 & REQ-080 \\
 H-4 control 2 & REQ-081 & H-4 control 3 & REQ-083 & H-4 control 4 & REQ-073 \\
 H-4 control 5 & REQ-082 & H-5 control 1 & REQ-064, REQ-067 & H-5 control 2 & REQ-091 \\
@@ -444,18 +446,18 @@ Accept a new means of proving origin not proven with the current one & REQ-084 \
 Item & Requirements & Item & Requirements & Item & Requirements \\
 \midrule
 \endhead
-Scenario-100 & REQ-011, REQ-021, REQ-048, REQ-090 & Scenario-110 & REQ-037, REQ-070, REQ-074 & Scenario-120 & REQ-033, REQ-089 \\
+Scenario-100 & REQ-011, REQ-012, REQ-021, REQ-048, REQ-090, REQ-139 & Scenario-110 & REQ-037, REQ-070, REQ-074 & Scenario-120 & REQ-033, REQ-089 \\
 Scenario-130 & REQ-068 & Scenario-200 & REQ-049 & Scenario-210 & REQ-075, REQ-076, REQ-078 \\
 Scenario-300 & REQ-064, REQ-065, REQ-088 & Scenario-310 & REQ-027 & Scenario-320 & REQ-028 \\
 Scenario-330 & REQ-029, REQ-112 & Scenario-335 & REQ-030, REQ-112 & Scenario-340 & REQ-035, REQ-066 \\
 Scenario-350 & REQ-031 & Scenario-360 & REQ-046 & Scenario-370 & REQ-084, REQ-085 \\
 Scenario-400 & REQ-044 & Scenario-410 & REQ-043 & Scenario-420 & REQ-045 \\
 Scenario-425 & REQ-002, REQ-050 & Scenario-430 & REQ-014, REQ-040 & Scenario-440 & REQ-015 \\
-Scenario-450 & REQ-013 & Scenario-460 & REQ-008, REQ-018, REQ-117 & Scenario-470 & REQ-051 \\
-Scenario-480 & REQ-054, REQ-060 & Scenario-500 & REQ-080, REQ-081 & Scenario-505 & REQ-082 \\
-Scenario-510 & REQ-025, REQ-081, REQ-083 & Scenario-520 & REQ-061 & Scenario-530 & REQ-062 \\
-Scenario-535 & REQ-024, REQ-063, REQ-077 & Scenario-600 & REQ-007 & Scenario-605 & REQ-016 \\
-Scenario-610 & REQ-005 & Scenario-620 & REQ-022 &  &  \\
+Scenario-445 & REQ-140 & Scenario-450 & REQ-013 & Scenario-460 & REQ-008, REQ-018, REQ-117 \\
+Scenario-470 & REQ-051 & Scenario-480 & REQ-054, REQ-060 & Scenario-500 & REQ-080, REQ-081 \\
+Scenario-505 & REQ-082 & Scenario-510 & REQ-025, REQ-081, REQ-083 & Scenario-520 & REQ-061 \\
+Scenario-530 & REQ-062 & Scenario-535 & REQ-024, REQ-063, REQ-077 & Scenario-600 & REQ-007 \\
+Scenario-605 & REQ-016 & Scenario-610 & REQ-005 & Scenario-620 & REQ-022 \\
 \bottomrule
 \end{longtable}}
 
@@ -549,10 +551,8 @@ Architecture 5.7 & REQ-138 \\
 The values below are not yet known.
 \begin{description}
 \tbditem{ref}{Project name and document reference.}
-\tbditem{trial}{Trial time limit (ConOps TBD-5).}
-\tbditem{judge}{Who judges new firmware good: controller or operator (ConOps
-  TBD-3).}
-\tbditem{starts}{Failed starts before going back (ConOps TBD-6).}
+\tbditem{trial}{Trial time limit (ConOps TBD-4).}
+\tbditem{starts}{Failed starts before going back (ConOps TBD-5).}
 \tbditem{switch}{Switch on arrival, or only on operator command (ConOps
   TBD-2).}
 \tbditem{restart}{Longest time a controller restart may take.}
@@ -561,7 +561,7 @@ The values below are not yet known.
 \tbditem{selftest}{Interval between controller self-tests.}
 \tbditem{clock}{Largest allowed difference between the onboard clock and
   ground time.}
-\tbditem{window}{Contact window length and gap (ConOps TBD-4).}
+\tbditem{window}{Contact window length and gap (ConOps TBD-3).}
 \tbditem{response}{Response time for each off-nominal condition.}
 \tbditem{coding}{The coding standard.}
 \tbditem{agree}{Largest allowed difference between the controller's clock and

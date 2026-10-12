@@ -144,21 +144,6 @@ Draft~2, 2 April 2012. A draft, not a released standard.
 \noindent [13] MCUboot project, \emph{Serial recovery},
 \texttt{docs/serial\_recovery.md}, commit 1d2643c, 11 September 2026.
 
-\noindent [14] STMicroelectronics, \emph{STM32G4 Series Reference Manual},
-RM0440 Rev~9.
-
-\noindent [15] STMicroelectronics, \emph{STM32G431x6/x8/xB Datasheet},
-DS12589 Rev~6.
-
-\noindent [16] STMicroelectronics, \emph{Introduction to System Memory Boot
-Mode on STM32 MCUs}, AN2606 Rev~70.
-
-\noindent [17] STMicroelectronics, \emph{STM32G4 Nucleo-32 Board (MB1430)},
-UM2397 Rev~2.
-
-\noindent [18] STMicroelectronics, \emph{Discovery Kit with STM32MP257F MPU},
-UM3385 Rev~2.
-
 % ===========================================================================
 \section{System Overview}
 \label{sec:overview}
@@ -291,8 +276,7 @@ Three constraints of the ConOps change the design [4,~Secs.~1.1.2 and 8.0].
   [5,~Sec.~5.2].
 \item[C-4] The onboard computer software and the controller firmware execute on
   two given development boards. The architectural design remains
-  hardware-agnostic, with board compatibility evaluated separately at the end of
-  this document.
+  hardware-agnostic: it names no board, only what a board must have.
 \end{description}
 
 % ===========================================================================
@@ -718,7 +702,7 @@ both connections at once.
 \midrule
 a & Two connections of the same kind, for example two serial lines, served by one driver at each end. One bug in that driver cuts both. & 1 & NO \\
 b & Two connections of the same kind, each with its own driver. A fault that comes with that kind of connection, such as a flaw in the chip's hardware for it, still cuts both. & 1 & NO \\
-c & Two different kinds of connection, for example a serial line and a CAN bus, each with its own driver. Cutting both takes a separate failure in each. & 2 & YES \\
+c & Two different kinds of connection, a UART and an SPI connection, each with its own driver. Cutting both takes a separate failure in each. & 2 & YES \\
 \bottomrule
 \end{tabularx}}
 
@@ -828,74 +812,47 @@ Interface & Between & Carries \\
 \midrule
 Operator interface & Operator and ground software & The operator's decisions; reports and the System's state \\
 Radio link & Ground software and onboard computer software & Up: encrypted, signed commands and firmware, sent by the link encryptor. Down: answers and reports, received by the report archive \\
-Data link A & Onboard computer and controller & Commands, answers, reports and firmware \\
-Data link B & Onboard computer and controller & The same as data link A, over a different kind of connection \\
-Reprogramming link A & Reprogramming drivers and controller & The controller's debug port: its restart, and memory writes with the processor stopped \\
-Reprogramming link B & Reprogramming drivers and controller & The controller's factory loader: started by a boot pin, it accepts new firmware \\
+Data link A & Onboard computer and controller & Over a UART: commands, answers, reports and firmware \\
+Data link B & Onboard computer and controller & Over an SPI connection: the same as data link A \\
+Reprogramming link A & Reprogramming drivers and controller & The controller's SWD debug port: its restart, and memory writes with the processor stopped \\
+Reprogramming link B & Reprogramming drivers and controller & The controller's factory loader, over a UART of its own: started by the boot pin, it accepts new firmware \\
 \bottomrule
 \end{tabularx}}
 
 % ===========================================================================
 \section{Hardware Needs}
 \label{sec:hardware}
-The hardware must provide what the design decisions and the requirements rely
-on. Section~8.1 checks each need against the two boards.
+The hardware must provide the resources below. The architecture names no
+board, only what a board must have.
 
 \smallskip
-{\small\renewcommand{\arraystretch}{1.3}\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xl@{}}
+{\small\renewcommand{\arraystretch}{1.25}\noindent\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}Xcl@{}}
 \toprule
-Need & From \\
+Controller & Count & For \\
 \midrule
-\textbf{Debug port:} the onboard computer can write the controller's memory and restart it, whatever the memory holds, even with no firmware running & Section~\ref{sec:wayback} \\
-\textbf{Factory loader:} a loader in the controller's read-only memory, written at the factory, started by a boot pin instead of our bootloader, that accepts new firmware & Section~\ref{sec:wayback} \\
-\textbf{Control wires:} wires from the onboard computer to the controller's reset and boot pins & Section~\ref{sec:wayback} \\
-\textbf{No firmware lock-out:} controller firmware cannot disable the debug port or the factory loader & Section~\ref{sec:wayback} \\
-\textbf{Reprogramming protocols:} the onboard computer can drive the debug port's protocol and the factory loader's protocol over its own pins & Section~\ref{sec:wayback} \\
-\textbf{Writable start position:} the restore can write the last-resort firmware into the place the controller starts from & Section~\ref{sec:startup} \\
-\textbf{Controller memory size:} room for the bootloader, two main firmware copies, the last-resort firmware and the kept data; checked once the code sizes are known & Section~\ref{sec:startup} \\
-\textbf{Writing while running:} new firmware is written into one part of the controller's memory while its firmware keeps running from another & REQ-048 \\
-\textbf{Kept data storage:} memory in the controller that keeps the kept data through restarts and power loss & REQ-017 \\
-\textbf{Independent watchdog:} a watchdog with its own clock that restarts the controller when its firmware stops responding, and that firmware cannot switch off & REQ-022 \\
-\textbf{Independent time source:} a time source in the controller, separate from the onboard computer's & Section~\ref{sec:clocks} \\
-\textbf{Two kinds of data link, both ends:} hardware for two different kinds of connection on both boards, for example a serial line and a CAN bus & Section~\ref{sec:links} \\
-\textbf{Signature checking speed:} enough processing and working memory in the controller to check two signatures within the restart time & Section~\ref{sec:origin}; REQ-023 \\
-\textbf{Onboard computer storage:} room for two separate firmware stores, one for the update manager and one for the restore program & Section~\ref{sec:apart} \\
+Processor that checks two signatures within the restart time & 1 & Section~\ref{sec:origin}; REQ-023 \\
+Non-volatile memory for the bootloader, two main firmware copies, the last-resort firmware and the kept data, writable while the firmware runs & 1 & Section~\ref{sec:startup}; REQ-048 \\
+UART, for data link A & 1 & Section~\ref{sec:links} \\
+SPI, for data link B & 1 & Section~\ref{sec:links} \\
+SWD debug port (Serial Wire Debug: data line SWDIO, clock line SWCLK) that writes memory whatever it holds & 1 & Section~\ref{sec:wayback} \\
+Factory loader in read-only memory, started by the boot pin, on a UART of its own & 1 & Section~\ref{sec:wayback} \\
+Reset pin and boot pin, reachable from outside & 2 & Section~\ref{sec:wayback} \\
+Independent watchdog that firmware cannot stop & 1 & REQ-022 \\
+Independent time source for the controller's clock & 1 & Section~\ref{sec:clocks} \\
+\midrule
+Onboard computer & & \\
+\midrule
+UART, for data link A & 1 & Section~\ref{sec:links} \\
+SPI, for data link B & 1 & Section~\ref{sec:links} \\
+UART, for the controller's factory loader & 1 & Section~\ref{sec:wayback} \\
+General-purpose pins driving SWDIO, SWCLK, the reset pin and the boot pin & 4 & Section~\ref{sec:wayback} \\
+Storage for two separate firmware stores & 1 & Section~\ref{sec:apart} \\
 \bottomrule
 \end{tabularx}}
 
-\subsection{Board Check}
-\label{sec:boardcheck}
-Each need, checked against the controller board, NUCLEO-G431KB, and the
-onboard computer board, STM32MP257F-DK. Result: MET; PARTLY, met with the limit
-stated; NOT MET; TO MEASURE, settled only by a measurement on the bench.
-
-{\footnotesize\renewcommand{\arraystretch}{1.2}
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{2.6cm}l>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}X@{}}
-\toprule
-Need & Result & Source & What it means \\
-\midrule
-\endhead
-Debug port & PARTLY & [14, p.~2091]; [17, pp.~22--23] & The chip allows it, but the controller board brings the debug pins only to its own programmer; wires must be soldered on, or that programmer used. \\
-Factory loader & MET & [14, p.~189]; [16, p.~274] & A serial port on two header pins, as long as the boot pin is honoured. \\
-Control wires & NOT MET & [17, pp.~16, 22--23] & The boot pin is on no header and drives an LED; the reset pin is shared with the board's programmer. \\
-No firmware lock-out & NOT MET & [14, pp.~205, 207, 271] & Firmware can rewrite the chip's option settings with published keys: one setting, read-out protection level~2, ends both ways in for good; others switch off the boot pin or the reset pin. \\
-Reprogramming protocols & PARTLY & [18, p.~35] & The onboard computer board offers a serial port and spare pins; the speed of a debug port driven from software must be measured. \\
-Writable start position & MET & [14, p.~92] & The start position is ordinary flash, writable once its protections are cleared. \\
-Controller memory size & TO MEASURE & [15, pp.~1, 18] & 128\,KB of flash and 32\,KB of working memory; checked once the code sizes are known. \\
-Writing while running & PARTLY & [14, pp.~188, 195]; [15, p.~107] & One flash bank: code running from flash stops for up to 24.47\,ms during each page erase. \\
-Kept data storage & MET & [15, p.~107] & Flash keeps it through power loss; on this package the backup registers do not. \\
-Independent watchdog & PARTLY & [14, pp.~201, 1557] & Once running it cannot be stopped, but starting it at power-on is an option setting that firmware could rewrite. \\
-Independent time source & PARTLY & [15, pp.~51, 105]; [17, p.~15] & No 32\,kHz crystal on this package; the internal oscillator runs up to about 8\,\% off, unless the board's 24\,MHz crystal is connected by two solder bridges. \\
-Two kinds of data link, both ends & MET & [15, p.~14]; [18, p.~35] & A serial line and SPI exist on both boards; CAN would need an external transceiver on the controller board. \\
-Signature checking speed & TO MEASURE & [15, pp.~1, 14] & A 170\,MHz processor with no cryptographic hardware; the time for two signatures must be measured. \\
-Onboard computer storage & MET & [18, pp.~2, 18] & 8\,GB of eMMC and a microSD slot: two separate stores fit. \\
-\bottomrule
-\end{xltabular}}
-
-\noindent Of the 14 needs, five are met, five are met only in part, two are
-not met by the boards as delivered (control wires, no firmware lock-out), and
-two wait for a measurement. The response is open \tbd{boardfix}.
-
+\medskip
+\noindent One condition holds for the controller: no controller firmware can
+disable the SWD debug port or the factory loader [6,~REQ-125].
 
 % ===========================================================================
 \appendix
@@ -908,8 +865,6 @@ The values below are not yet known.
 \tbditem{ref}{Project name and document reference.}
 \tbditem{agree}{Largest allowed difference between the controller's clock and
   the time of a scheduled command.}
-\tbditem{boardfix}{The response to the board check (Section~\ref{sec:boardcheck}):
-  board changes, other boards, or the risks accepted.}
 \end{description}
 
 \medskip

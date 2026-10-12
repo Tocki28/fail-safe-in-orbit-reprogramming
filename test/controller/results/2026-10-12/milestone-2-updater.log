@@ -1,0 +1,8 @@
+[    14.934] UPLOAD END image 1: checks passed (kind 0x02, version 1); stored
+[    15.042] DELIVER image 1: 15436 bytes, version 1, to the controller
+[    17.511] DELIVER image 1: done; the controller accepted UPLOAD END
+[    27.240] UPLOAD END image 2: refused 0x08 (body check value)
+[    28.014] UPLOAD END image 4: checks passed (kind 0x02, version 1); stored
+[    28.128] DELIVER image 4: 15436 bytes, version 1, to the controller
+[    30.523] DELIVER image 4: refused 0x0e after 15436 of 15436 bytes
+[    37.290] UPLOAD END image 3: refused 0x09 (signature A)

@@ -42,3 +42,21 @@ CRC 6/6, images 14/14.
 | Three unconfirmed trial starts | PASS: trial given up; slot A started (the firmware cannot confirm itself until step 2d) | `step-2c-trial-rollback.log` |
 
 Measured: two signature checks of the 15,436-byte firmware image take 60.8 to 61.0 ms at 170 MHz.
+
+## Milestone 2 — ground to onboard computer to controller
+
+Bench: Mac (`src/ground/console.py`) → USB-C network → STM32MP257F-DK (`fsir-updater`, commit 9da60f3)
+→ Nucleo's ST-LINK serial port (`/dev/ttyACM0`) → controller running the 2c firmware in slot A.
+
+| Test | Result |
+|---|---|
+| HEALTH reports reach the Mac through the onboard computer | PASS: OPERATE, slot A, numbered and time-stamped by the onboard computer |
+| Upload firmware-B (15,436 bytes) to the onboard computer | PASS: 0.54 s; its checks (OpenSSL) passed |
+| DELIVER to the controller | PASS: 2.47 s; the controller's own check passed at UPLOAD END |
+| Image with one flipped byte | PASS: the onboard computer refuses at UPLOAD END, 0x08 |
+| Image signed with an unknown key A | PASS: the onboard computer refuses at UPLOAD END, 0x09 |
+| Build for the running slot delivered | PASS: the controller refuses at UPLOAD END, 0x0E, passed back to the Mac |
+
+Log: `milestone-2-updater.log` (the onboard computer's log lines). Finding: the wrong-slot build is
+caught only after it is written into the free slot, which erases the good image delivered before it;
+the onboard computer could compare the build with the running slot before delivering.

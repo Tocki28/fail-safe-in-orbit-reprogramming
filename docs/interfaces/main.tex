@@ -182,10 +182,7 @@ RESTORE, during a restore or a reload through the reprogramming link.}
 \label{sec:frame}
 Every command, answer and report travels in the same frame on the radio link
 and on both data links (Figure~\ref{fig:frame}). Multi-byte fields are
-little-endian. The check value is a CRC-32 of every byte before it: those
-bytes, read as one long binary number, are divided by a fixed number, the
-polynomial, in binary arithmetic without carries, and the 32-bit remainder is
-the check value. The receiver computes it again; a different result means the
+little-endian. The check value is a CRC-32 of every byte before it. The receiver computes it again; a different result means the
 frame was damaged on the way. The polynomial is 0x4C11DB7, the one the
 controller's processor computes in hardware. It stands for
 $x^{32}+x^{26}+x^{23}+x^{22}+x^{16}+x^{12}+x^{11}+x^{10}+x^{8}+x^{7}+x^{5}+x^{4}+x^{2}+x+1$

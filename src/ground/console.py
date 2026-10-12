@@ -12,7 +12,10 @@ REFUSED (Sec. 4.2). Commands whose answer does not come within the timeout are s
 with the same sequence number, so the onboard computer answers ALREADY DONE and does not run
 them twice (Sec. 4.2, REQ-031).
 
-Subcommands:  status | upload IMAGE --number N | deliver --number N | switch | update
+Subcommands:  status | upload IMAGE --number N | deliver --number N | switch | update [--yes] | confirm
+
+`update` ends with the operator's decision: after the controller reports "trial tests passed"
+the console shows the trial report and asks "Confirm? [y/N]"; only y sends CONFIRM (Sec. 5.1, REQ-012).
 """
 import argparse
 import random
@@ -51,11 +54,12 @@ REFUSAL_TEXT = {                        # Sec. 4.2: table of REFUSED codes
     0x0C: "The controller's clock disagrees with the scheduled time",
     0x0D: "A dangerous command cannot be scheduled",
     0x0E: "Image built for the other slot",
+    0x0F: "Trial tests not passed",
 }
 
 # ---- Commands, Sec. 5.1 --------------------------------------------------------------
 UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END, UPLOAD_CANCEL, DELIVER = 0x01, 0x02, 0x03, 0x04, 0x05
-ARM, SWITCH, GET_STATUS = 0x0D, 0x20, 0x25
+ARM, SWITCH, GET_STATUS, CONFIRM = 0x0D, 0x20, 0x25, 0x26
 CHUNK_MAX = 256                         # Sec. 5.1: UPLOAD CHUNK carries up to 256 data bytes
 
 # ---- Reports, Sec. 5.4 ---------------------------------------------------------------
@@ -68,10 +72,16 @@ EVENTS = {                                                           # Sec. 5.4:
     0x0003: "fall-back to the last-resort firmware", 0x0004: "self-test failed",
     0x0005: "change in memory detected", 0x0006: "trial started",
     0x0007: "firmware confirmed", 0x0008: "firmware given up", 0x0009: "restart",
+    0x000A: "trial tests passed", 0x000B: "trial tests failed",
     0x0101: "data link lost", 0x0102: "data link working again",
     0x0103: "restore done", 0x0104: "health reports dropped",
     0x0105: "onboard computer clock differs from ground time",
 }
+EVENT_TRIAL_STARTED, EVENT_CONFIRMED, EVENT_GIVEN_UP = 0x0006, 0x0007, 0x0008   # Sec. 5.4: event codes
+EVENT_TESTS_PASSED, EVENT_TESTS_FAILED = 0x000A, 0x000B                         # Sec. 5.4: event codes
+# Detail byte of EVENT 0x000B, which test failed (Sec. 5.4: "detail: which test").
+# TBD-tests: these three numbers are the owner's proposal, awaiting acceptance.
+TRIAL_TESTS = {0x01: "self-test", 0x02: "data-link answer", 0x03: "test image"}
 ADDED = struct.Struct("<II")            # Sec. 5.4: report number (4), onboard clock time (4)
 HEALTH_BODY = struct.Struct("<IBBBIBBHB")   # Sec. 5.4 order: controller clock (4), kind (1),
 #   mode (1), firmware kind (1), version (4), slot (1), failed starts (1), trial left (2), self-test (1)
@@ -88,7 +98,12 @@ TIMEOUT_S = 3.0             # brief: a command normally answers within a few ms;
 DELIVER_TIMEOUT_S = 30.0
 RETRIES = 5                 # resends of one command before giving up; keeps a dead link from hanging the demo
 HEALTH_WAIT_S = 10.0        # how long `update` waits for the first HEALTH report
-UPDATE_WATCH_S = 60.0       # brief: the update has 60 s after SWITCH to confirm or roll back
+# TBD-trial: the trial time is the bench value 120 s (owner's decision for the bench); the flight
+# value is not set. The controller reports "trial tests passed" or "failed" inside this time.
+TRIAL_TIME_S = 120.0
+TRIAL_MARGIN_S = 30.0       # margin for the restart, report delays and the radio loss simulator
+UPDATE_WATCH_S = TRIAL_TIME_S + TRIAL_MARGIN_S   # how long `update` watches reports after SWITCH
+CONFIRM_WAIT_S = 10.0       # how long to wait for EVENT 0x0007 and HEALTH OPERATE after CONFIRM is DONE
 STATUS_SECONDS = 10.0       # default listening time of `status`
 RECV_BYTES = 2048           # larger than the biggest frame (16 + 1024 + 4)
 
@@ -98,6 +113,21 @@ class Refused(Exception):
 
 
 def build(ftype, dest, seq, payload, expiry=0):
+    """One frame of bytes: header, payload and CRC-32 (Sec. 4.0).
+
+    The receiver drops any frame whose check value does not match, so every frame the console
+    sends is closed with the CRC-32 (zlib) over all bytes before it (Sec. 4.0).
+
+    Args:
+        ftype: Type field, TYPE_COMMAND, TYPE_ANSWER or TYPE_REPORT.
+        dest: Destination field, DEST_ONBOARD, DEST_CONTROLLER or DEST_GROUND.
+        seq: sequence number, 1 to 2^32-1.
+        payload: payload bytes, at most PAYLOAD_MAX (1024).
+        expiry: expiry time, seconds of Unix time (bench ground time); 0 for none.
+
+    Returns:
+        The complete frame as bytes: 16-byte header, payload, 4-byte CRC-32.
+    """
     head = HEADER.pack(SYNC, VERSION, ftype, dest, 0, len(payload), seq, expiry) + payload
     return head + struct.pack("<I", zlib.crc32(head))   # Sec. 4.0: CRC-32 like zlib over all bytes before it
 
@@ -117,15 +147,37 @@ def parse(data):
 
 
 def decode_report(payload):
-    """Sec. 5.4 report payload -> dict. Added fields (report number, onboard time) if present."""
+    """Decode a Sec. 5.4 report payload into a dict, or None if it is not a report.
+
+    The onboard computer puts its two added fields (report number, onboard time; 8 bytes) in
+    front of every report it forwards (Sec. 5.4, REQ-070, REQ-071). A HEALTH report is a fixed
+    length, so with or without the fields is told by length. An EVENT report is of variable
+    length, so it is told by the kind byte: at offset 12 with the fields, offset 4 without.
+    EVENT 0x000B carries the failed test in its detail; it is decoded into the text.
+
+    Args:
+        payload: the report frame's payload bytes.
+
+    Returns:
+        dict with kind "HEALTH" or "EVENT" and the decoded fields, or None.
+    """
     out = {}
-    if len(payload) >= HEALTH_LEN_ADDED:
+    offset = ADDED.size
+    if len(payload) >= offset + 7 and payload[offset + 4] == REPORT_EVENT:
         out["report_number"], out["onboard_time"] = ADDED.unpack_from(payload)
-        payload = payload[ADDED.size:]
-    if len(payload) >= 5 and payload[4] == REPORT_EVENT:
-        code = struct.unpack_from("<H", payload, 5)[0] if len(payload) >= 7 else 0
-        return dict(out, kind="EVENT", code=code, text=EVENTS.get(code, f"event 0x{code:04x}"),
-                    detail=payload[7:])
+        payload = payload[offset:]
+    elif len(payload) == HEALTH_LEN_ADDED:
+        out["report_number"], out["onboard_time"] = ADDED.unpack_from(payload)
+        payload = payload[offset:]
+    if len(payload) >= 7 and payload[4] == REPORT_EVENT:
+        code = struct.unpack_from("<H", payload, 5)[0]
+        detail = payload[7:]
+        text = EVENTS.get(code, f"event 0x{code:04x}")
+        if code == EVENT_TESTS_FAILED:
+            test = detail[0] if detail else None
+            name = "test not named" if test is None else TRIAL_TESTS.get(test, f"test 0x{test:02x}")
+            text += f": {name}"
+        return dict(out, kind="EVENT", code=code, text=text, detail=detail)
     if len(payload) != HEALTH_LEN or payload[4] != REPORT_HEALTH:
         return None
     clock, _, mode, fwkind, version, slot, failed, trial_left, selftest = HEALTH_BODY.unpack(payload)
@@ -136,6 +188,16 @@ def decode_report(payload):
 
 
 def format_report(r):
+    """One decoded report as a single line of text for the operator (Sec. 5.4).
+
+    Args:
+        r: report dict from decode_report(), kind "HEALTH" or "EVENT".
+
+    Returns:
+        The line: for an EVENT the code and text; for a HEALTH the mode, firmware kind and version,
+        slot, failed starts, trial time left in seconds and last self-test. The onboard computer's
+        report number and clock time lead the line when the report carries them.
+    """
     extra = ""
     if "report_number" in r:
         extra = f"#{r['report_number']} onboard t={r['onboard_time']} "
@@ -151,6 +213,21 @@ class Console:
 
     def __init__(self, host, port, loss=0.0, timeout=TIMEOUT_S, first_seq=1, local_port=0,
                  quiet=False, rng=None):
+        """Open the UDP socket to the onboard computer and set the sequence counter.
+
+        The socket is bound to a local port because the onboard computer reports to the source
+        address of the latest datagram it received (Sec. 5.4).
+
+        Args:
+            host: onboard computer address.
+            port: onboard computer UDP port.
+            loss: probability 0..1 that an outgoing datagram is dropped (radio simulator).
+            timeout: seconds to wait for an answer before sending a command again.
+            first_seq: first sequence number to use, 1 or more (Sec. 4.0, REQ-065).
+            local_port: local UDP port to bind; 0 for any.
+            quiet: True to print nothing from say().
+            rng: random.Random for the radio simulator; a fresh one if None.
+        """
         self.addr = (host, port)
         self.loss = loss
         self.timeout = timeout
@@ -165,10 +242,24 @@ class Console:
         self.reports = []                   # reports received and not yet consumed
 
     def say(self, text, end="\n"):
+        """Print a progress line unless the console is quiet.
+
+        Args:
+            text: the text to print.
+            end: string printed after the text; "\\r" keeps a progress line on one row.
+        """
         if not self.quiet:
             print(text, end=end, flush=True)
 
     def next_seq(self):
+        """Take the next sequence number (Sec. 4.0: numbers run 1 to 2^32-1, never reused).
+
+        Returns:
+            The new sequence number.
+
+        Raises:
+            Refused: the numbers are used up.
+        """
         self.seq += 1
         if self.seq > SEQ_MAX:
             raise Refused("sequence numbers used up")
@@ -251,17 +342,73 @@ def upload(con, data, number, start=0):
 
 
 def deliver(con, number):
+    """DELIVER an uploaded image from the onboard computer to the controller (Sec. 5.1, REQ-048).
+
+    The transfer runs over data link A and takes seconds, so the command waits
+    DELIVER_TIMEOUT_S, not the normal command timeout. Prints the elapsed time.
+
+    Args:
+        con: the Console.
+        number: image number, 0 to 65535, as given to UPLOAD BEGIN.
+
+    Raises:
+        Refused: DELIVER was refused or never answered.
+    """
     t0 = time.monotonic()
     con.command(DEST_ONBOARD, struct.pack("<BH", DELIVER, number), timeout=DELIVER_TIMEOUT_S, what="DELIVER")
     con.say(f"deliver complete in {time.monotonic() - t0:.2f} s")
 
 
+def arm_and_send(con, command_id, name):
+    """Send ARM naming a dangerous controller command and its sequence number, then that command.
+
+    A dangerous command needs an arming command first, and the ARM names the sequence number the
+    command will use (Sec. 5.1, 5.2, REQ-029, REQ-112). Both go to the controller (Destination
+    0x02); the onboard computer holds the ARM and passes the pair on (Sec. 5.2).
+
+    Args:
+        con: the Console.
+        command_id: identifier of the dangerous command (SWITCH or CONFIRM).
+        name: the command's name, for messages.
+
+    Returns:
+        DONE or ALREADY_DONE, the answer kind of the dangerous command.
+
+    Raises:
+        Refused: either command was refused or never answered.
+    """
+    command_seq = con.seq + 2           # ARM takes the next number, the command the one after
+    con.command(DEST_CONTROLLER, struct.pack("<BBI", ARM, command_id, command_seq), what="ARM")
+    kind = con.command(DEST_CONTROLLER, bytes([command_id]), what=name)
+    con.say(f"{name.lower()}  sent, answered {KINDS[kind]}")
+    return kind
+
+
 def arm_and_switch(con):
-    """ARM naming SWITCH and the sequence number SWITCH will use, then SWITCH (Sec. 5.1, 5.2)."""
-    switch_seq = con.seq + 2            # ARM takes the next number, SWITCH the one after
-    con.command(DEST_CONTROLLER, struct.pack("<BBI", ARM, SWITCH, switch_seq), what="ARM")
-    con.command(DEST_CONTROLLER, bytes([SWITCH]), what="SWITCH")
-    con.say("switch  sent")
+    """ARM naming SWITCH and the sequence number SWITCH will use, then SWITCH (Sec. 5.1, 5.2).
+
+    Args:
+        con: the Console.
+
+    Returns:
+        DONE or ALREADY_DONE, the answer kind of SWITCH.
+    """
+    return arm_and_send(con, SWITCH, "SWITCH")
+
+
+def arm_and_confirm(con):
+    """ARM naming CONFIRM and the sequence number CONFIRM will use, then CONFIRM (Sec. 5.1, 5.2).
+
+    CONFIRM makes the controller keep the firmware it runs on trial; it is dangerous, so it
+    needs its ARM like SWITCH does (Sec. 5.1, REQ-012, REQ-020).
+
+    Args:
+        con: the Console.
+
+    Returns:
+        DONE or ALREADY_DONE, the answer kind of CONFIRM.
+    """
+    return arm_and_send(con, CONFIRM, "CONFIRM")
 
 
 def wait_health(con, seconds):
@@ -275,26 +422,163 @@ def wait_health(con, seconds):
     return con.health
 
 
-def watch_update(con, old, free_code, seconds):
-    """Watch HEALTH reports after SWITCH. Returns ('confirmed'|'rolled back'|'timeout', report)."""
+def watch_trial(con, old, free_code, seconds):
+    """Watch reports after SWITCH until the trial tests have a result.
+
+    Waits for EVENT 0x0006 trial started (or HEALTH TRIAL on the new slot), then for EVENT
+    0x000A trial tests passed or 0x000B trial tests failed (Sec. 5.4, REQ-139, REQ-140). A
+    HEALTH report back in OPERATE on the old slot, after the controller left it, means the
+    controller gave the new firmware up without a test result. OPERATE on the new slot means
+    someone else confirmed it.
+
+    Args:
+        con: the Console; its stored reports are consumed.
+        old: the HEALTH report taken before SWITCH (names the old slot).
+        free_code: slot code of the new firmware's slot.
+        seconds: how long to watch, seconds.
+
+    Returns:
+        (result, report) with result "passed", "failed", "confirmed", "rolled back" or
+        "timeout"; report is the EVENT or HEALTH report that decided it, or the latest HEALTH.
+    """
     left = False                        # has the controller left the old state since SWITCH?
+    started = False
     end = time.monotonic() + seconds
     while time.monotonic() < end:
         con.pump(min(0.5, end - time.monotonic()))
         while con.reports:
             r = con.reports.pop(0)
-            if r["kind"] != "HEALTH":
+            if r["kind"] == "EVENT":
+                if r["code"] == EVENT_TRIAL_STARTED:
+                    started = True
+                    con.say("update  trial started, waiting for the trial tests")
+                elif r["code"] == EVENT_TESTS_PASSED:
+                    return "passed", r
+                elif r["code"] == EVENT_TESTS_FAILED:
+                    return "failed", r
                 continue
+            if r["mode"] == "TRIAL" and r["slot_code"] == free_code and not started:
+                started = True
+                con.say("update  trial running on the new slot, waiting for the trial tests")
             if r["slot_code"] == free_code and r["mode"] == "OPERATE":
                 return "confirmed", r
             if r["mode"] != "OPERATE" or r["slot_code"] != old["slot_code"]:
                 left = True
-            elif left and r["mode"] == "OPERATE" and r["slot_code"] == old["slot_code"]:
+            elif left:
                 return "rolled back", r
     return "timeout", con.health
 
 
+def watch_return(con, old, seconds):
+    """Wait for HEALTH OPERATE on the old slot after the controller gave the new firmware up.
+
+    After a failed trial test the controller gives the firmware up at once (EVENT 0x0008) and
+    restarts on the previous copy (Sec. 5.4).
+
+    Args:
+        con: the Console; its stored reports are consumed.
+        old: the HEALTH report taken before SWITCH (names the old slot).
+        seconds: how long to wait, seconds.
+
+    Returns:
+        The HEALTH report showing OPERATE on the old slot, or None if none came in time.
+    """
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        con.pump(min(0.5, end - time.monotonic()))
+        while con.reports:
+            r = con.reports.pop(0)
+            if r["kind"] == "HEALTH" and r["mode"] == "OPERATE" and r["slot_code"] == old["slot_code"]:
+                return r
+    return None
+
+
+def read_answer(prompt):
+    """Ask the operator a question on the terminal.
+
+    The decision to confirm is the operator's (Sec. 5.1, CONFIRM; REQ-012), so the answer is
+    read only from a real terminal. With input piped in, or at end of input, there is no
+    operator and no answer.
+
+    Args:
+        prompt: the question text.
+
+    Returns:
+        The typed line, or None when stdin is not a terminal or input ended.
+    """
+    if not sys.stdin.isatty():
+        return None
+    try:
+        return input(prompt)
+    except EOFError:
+        return None
+
+
+def show_trial_report(con, old):
+    """Print the HEALTH report fields the operator judges: mode, slot, version, self-test, trial time left.
+
+    Asks for a fresh HEALTH report first (GET STATUS, Sec. 5.1), so the figures are current.
+
+    Args:
+        con: the Console.
+        old: the HEALTH report taken before SWITCH, used if no fresh one arrives.
+
+    Returns:
+        The HEALTH report shown.
+    """
+    last = con.health
+    h = wait_health(con, HEALTH_WAIT_S) or last or old
+    print("TRIAL REPORT")
+    print(f"  mode               {h['mode']}")
+    print(f"  running slot       {h['slot']}")
+    print(f"  firmware version   {h['version']}")
+    print(f"  self-test          {h['self_test']}")
+    print(f"  trial time left    {h['trial_left']} s")
+    return h
+
+
+def wait_confirmed(con, expect_slot, seconds):
+    """Wait for EVENT 0x0007 firmware confirmed, then HEALTH OPERATE (on `expect_slot` if given).
+
+    Args:
+        con: the Console; its stored reports are consumed.
+        expect_slot: slot code the HEALTH report must show, or None for any slot.
+        seconds: how long to wait, seconds.
+
+    Returns:
+        (event_seen, health): whether EVENT 0x0007 came, and the HEALTH OPERATE report that
+        followed it (None if none came in time).
+    """
+    seen = False
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        con.pump(min(0.5, end - time.monotonic()))
+        while con.reports:
+            r = con.reports.pop(0)
+            if r["kind"] == "EVENT" and r["code"] == EVENT_CONFIRMED:
+                seen = True
+            elif (seen and r["kind"] == "HEALTH" and r["mode"] == "OPERATE"
+                  and (expect_slot is None or r["slot_code"] == expect_slot)):
+                return True, r
+    return seen, None
+
+
 def image_for_free_slot(running_code, image_dir):
+    """Pick the image built for the slot the controller does not run (Sec. 5.1, REFUSED 0x0E).
+
+    An image is built for one slot, and the controller writes only the slot it does not run
+    (REQ-007), so the free slot decides which file is sent.
+
+    Args:
+        running_code: slot code from HEALTH, 0x01 A or 0x02 B.
+        image_dir: directory that holds firmware-A.img and firmware-B.img.
+
+    Returns:
+        (slot name, image path, slot code) of the free slot.
+
+    Raises:
+        Refused: the controller runs the last-resort firmware, so no slot is free.
+    """
     if running_code == 0x01:
         return "B", f"{image_dir}/firmware-B.img", 0x02
     if running_code == 0x02:
@@ -302,7 +586,44 @@ def image_for_free_slot(running_code, image_dir):
     raise Refused("controller runs the last-resort firmware: no free slot to update")
 
 
+def send_confirm(con, expect_slot):
+    """Send ARM and CONFIRM, then wait for the controller to say it kept the firmware.
+
+    Success is CONFIRM answered DONE 0x00, EVENT 0x0007, and HEALTH OPERATE (Sec. 5.1, 5.4).
+    A refusal such as 0x0F "Trial tests not passed" is raised by the command layer.
+
+    Args:
+        con: the Console.
+        expect_slot: slot code HEALTH must show afterwards, or None for any slot.
+
+    Returns:
+        (event_seen, health) as wait_confirmed() gives them.
+
+    Raises:
+        Refused: ARM or CONFIRM was refused or never answered.
+    """
+    con.reports.clear()                 # only reports from now on count
+    arm_and_confirm(con)
+    return wait_confirmed(con, expect_slot, CONFIRM_WAIT_S)
+
+
 def cmd_update(con, args):
+    """Whole update: status, upload, deliver, arm, switch, trial, then the operator's decision.
+
+    After SWITCH the controller runs the new firmware on trial and tests it (Sec. 5.4). When the
+    tests pass, the console shows the trial report and asks "Confirm? [y/N]"; y sends ARM and
+    CONFIRM, anything else sends nothing and the controller returns to the previous copy when
+    the trial time ends (REQ-012, REQ-020). A failed test makes the controller give the firmware
+    up at once; the console reports which test and waits for the old slot to run again.
+
+    Args:
+        con: the Console.
+        args: parsed options: image_dir, number, yes (answer y without asking).
+
+    Returns:
+        Exit code: 0 confirmed, 1 rolled back or tests failed, 2 unresolved, 3 not confirmed
+        by the operator.
+    """
     t0 = time.monotonic()
     con.say("update  reading a HEALTH report")
     old = wait_health(con, HEALTH_WAIT_S)
@@ -318,19 +639,85 @@ def cmd_update(con, args):
     deliver(con, args.number)
     con.reports.clear()                 # only reports from now on count
     arm_and_switch(con)
-    result, r = watch_update(con, old, free_code, UPDATE_WATCH_S)
-    elapsed = time.monotonic() - t0
+    result, r = watch_trial(con, old, free_code, UPDATE_WATCH_S)
+    elapsed = lambda: time.monotonic() - t0     # noqa: E731
     if result == "confirmed":
-        print(f"UPDATE CONFIRMED: slot {r['slot']} version {r['version']}  ({elapsed:.1f} s)")
+        print(f"UPDATE CONFIRMED: slot {r['slot']} version {r['version']}  ({elapsed():.1f} s)")
         return 0
     if result == "rolled back":
-        print(f"UPDATE ROLLED BACK: running slot {r['slot']} version {r['version']}  ({elapsed:.1f} s)")
+        print(f"UPDATE ROLLED BACK: running slot {r['slot']} version {r['version']}  ({elapsed():.1f} s)")
         return 1
-    print(f"UPDATE UNRESOLVED: no confirmation or rollback within {UPDATE_WATCH_S:g} s  ({elapsed:.1f} s)")
+    if result == "failed":
+        print(f"TRIAL TESTS FAILED: {r['text']}")
+        print("update  the controller gives the new firmware up and returns to the previous copy")
+        back = watch_return(con, old, TRIAL_MARGIN_S)
+        if back:
+            print(f"UPDATE REJECTED: running slot {back['slot']} version {back['version']} in "
+                  f"{back['mode']}  ({elapsed():.1f} s)")
+        else:
+            print(f"UPDATE REJECTED: no OPERATE report from the old slot within {TRIAL_MARGIN_S:g} s")
+        return 1
+    if result == "timeout":
+        print(f"UPDATE UNRESOLVED: no trial result or rollback within {UPDATE_WATCH_S:g} s  ({elapsed():.1f} s)")
+        return 2
+    show_trial_report(con, old)
+    if args.yes:
+        answer = "y"
+        print("Confirm? [y/N] y (--yes)")
+    else:
+        answer = read_answer("Confirm? [y/N] ")
+    if (answer or "").strip().lower() not in ("y", "yes"):
+        why = "no answer" if answer is None else "answered N"
+        print(f"UPDATE NOT CONFIRMED ({why}): nothing sent. The controller returns to the "
+              f"previous copy when its trial time ends.")
+        return 3
+    seen, health = send_confirm(con, free_code)
+    if seen and health:
+        print(f"UPDATE CONFIRMED: slot {health['slot']} version {health['version']}  ({elapsed():.1f} s)")
+        return 0
+    print(f"UPDATE UNRESOLVED: CONFIRM answered DONE but "
+          f"{'no HEALTH OPERATE on the new slot' if seen else 'no EVENT 0x0007'} within {CONFIRM_WAIT_S:g} s")
+    return 2
+
+
+def cmd_confirm(con, args):
+    """Send ARM and CONFIRM for a controller in a trial, and report the answers and EVENT 0x0007.
+
+    For an operator who answered N to `update`, or confirms with another tool (Sec. 5.1,
+    REQ-012). A controller whose trial tests have not passed refuses with 0x0F.
+
+    Args:
+        con: the Console.
+        args: parsed options (none used).
+
+    Returns:
+        Exit code: 0 confirmed, 2 CONFIRM done but the event or HEALTH OPERATE did not follow.
+    """
+    seen, health = send_confirm(con, None)
+    if seen and health:
+        print(f"CONFIRMED: EVENT 0x0007 seen; slot {health['slot']} version {health['version']} in OPERATE")
+        return 0
+    print(f"CONFIRM UNRESOLVED: CONFIRM answered DONE but "
+          f"{'no HEALTH OPERATE' if seen else 'no EVENT 0x0007'} within {CONFIRM_WAIT_S:g} s")
     return 2
 
 
 def cmd_status(con, args):
+    """Send GET STATUS and print the reports that arrive for a while (Sec. 5.1, 5.4).
+
+    GET STATUS also tells the onboard computer where to send reports, since it reports to the
+    source of the latest datagram.
+
+    Args:
+        con: the Console.
+        args: parsed options; args.seconds is the listening time, seconds.
+
+    Returns:
+        Exit code 0.
+
+    Raises:
+        Refused: GET STATUS was refused or never answered.
+    """
     con.command(DEST_CONTROLLER, bytes([GET_STATUS]), what="GET STATUS")
     end = time.monotonic() + args.seconds
     while time.monotonic() < end:
@@ -339,6 +726,14 @@ def cmd_status(con, args):
 
 
 def main(argv=None):
+    """Parse the command line, run one subcommand, print FAILED on a refusal.
+
+    Args:
+        argv: argument list, or None for sys.argv.
+
+    Returns:
+        The subcommand's exit code (1 after a refusal).
+    """
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--host", default=DEFAULT_HOST, help="onboard computer address (default %(default)s)")
     p.add_argument("--port", type=int, default=DEFAULT_PORT, help="onboard computer UDP port")
@@ -359,9 +754,12 @@ def main(argv=None):
     s = sub.add_parser("deliver", help="DELIVER an uploaded image to the controller")
     s.add_argument("--number", type=int, required=True)
     sub.add_parser("switch", help="ARM, then SWITCH, both to the controller")
-    s = sub.add_parser("update", help="whole update: status, upload, deliver, arm, switch, watch")
+    s = sub.add_parser("update", help="whole update: status, upload, deliver, arm, switch, trial, confirm?")
+    s.add_argument("--yes", action="store_true",
+                   help="answer y to 'Confirm?' without asking (bench test); otherwise the answer is read from the terminal")
     s.add_argument("--number", type=int, default=1, help="image number (default 1)")
     s.add_argument("--image-dir", default="src/controller/build/images")
+    sub.add_parser("confirm", help="ARM, then CONFIRM, both to the controller (new firmware in its trial)")
     a = p.parse_args(argv)
     if not 0.0 <= a.radio_loss <= 1.0:
         p.error("--radio-loss must be between 0 and 1")
@@ -381,6 +779,8 @@ def main(argv=None):
         elif a.cmd == "switch":
             arm_and_switch(con)
             code = 0
+        elif a.cmd == "confirm":
+            code = cmd_confirm(con, a)
         else:
             code = cmd_update(con, a)
     except Refused as e:

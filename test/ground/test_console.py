@@ -5,7 +5,10 @@ import io
 import random
 import sys
 import tempfile
+import threading
+import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -19,6 +22,15 @@ FAST_S = "0.3"           # command timeout in tests; real value is 3 s
 
 
 def run_console(fake, *args):
+    """Run console.main() against the fake and capture its output.
+
+    Args:
+        fake: the FakeOnboard to talk to.
+        *args: console arguments after the common --host, --port and --timeout.
+
+    Returns:
+        (exit code, text printed to stdout).
+    """
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
         code = c.main(["--host", "127.0.0.1", "--port", str(fake.port), "--timeout", FAST_S, *args])
@@ -27,20 +39,50 @@ def run_console(fake, *args):
 
 class ConsoleTests(unittest.TestCase):
     def setUp(self):
+        """Start a fake onboard computer and find the slot B image; fails if the image is not built."""
         self.fake = FakeOnboard()
         self.addCleanup(self.fake.close)
         self.image = IMAGES / "firmware-B.img"
         self.assertTrue(self.image.exists(), "run `make -C src/controller` first")
 
-    def update_args(self):
-        return ["update", "--image-dir", str(IMAGES)]
+    def update_args(self, *extra):
+        """Arguments of the `update` subcommand with the image directory set.
+
+        Args:
+            *extra: further arguments, such as --yes.
+
+        Returns:
+            The argument list.
+        """
+        return ["update", "--image-dir", str(IMAGES), *extra]
+
+    def wait_for(self, condition, seconds=5.0):
+        """Poll until a condition holds or the time is up.
+
+        Args:
+            condition: function returning True when done.
+            seconds: longest wait, seconds.
+
+        Returns:
+            The condition's last value.
+        """
+        end = time.monotonic() + seconds
+        while time.monotonic() < end and not condition():
+            time.sleep(0.05)
+        return condition()
 
     def test_frame_roundtrip_and_bad_crc(self):
+        """Check that a built frame parses back with its sequence number and a flipped CRC bit is
+        dropped (Sec. 4.0). Passes if parse() returns the frame, then None.
+        """
         f = c.build(c.TYPE_COMMAND, 2, 7, b"\x25", 99)
         self.assertEqual(c.parse(f)["seq"], 7)
         self.assertIsNone(c.parse(f[:-1] + bytes([f[-1] ^ 1])))
 
     def test_upload_bytes_equal_image_and_stop_and_wait(self):
+        """Check that upload sends the image byte for byte and every command waits for the previous
+        answer (Sec. 4.2). Passes if the received bytes equal the file and stop-and-wait held.
+        """
         code, out = run_console(self.fake, "upload", str(self.image), "--number", "1")
         self.assertEqual(code, 0, out)
         self.assertEqual(bytes(self.fake.upload), self.image.read_bytes())
@@ -48,29 +90,135 @@ class ConsoleTests(unittest.TestCase):
         self.assertTrue(self.fake.stop_and_wait_held())
 
     def test_update_confirmed(self):
-        code, out = run_console(self.fake, *self.update_args())
+        """Check that `update` with the answer y sends ARM and CONFIRM and ends confirmed (Sec. 5.1,
+        REQ-012). Passes if exit code is 0, the prompt was asked once, CONFIRM was the last
+        command and its ARM named its own sequence number.
+        """
+        with mock.patch.object(c, "read_answer", return_value="y") as ask:
+            code, out = run_console(self.fake, *self.update_args())
         self.assertEqual(code, 0, out)
         self.assertIn("UPDATE CONFIRMED: slot B version 2", out)
+        ask.assert_called_once_with("Confirm? [y/N] ")
+        self.assertIn("trial time left", out)
         self.assertEqual(bytes(self.fake.upload), self.image.read_bytes())  # free slot was B
         self.assertTrue(self.fake.stop_and_wait_held())
         self.assertIn((c.DEST_CONTROLLER, c.ARM), self.fake.log)
-        self.assertEqual(self.fake.log[-1], (c.DEST_CONTROLLER, c.SWITCH))
+        self.assertEqual(self.fake.log[-1], (c.DEST_CONTROLLER, c.CONFIRM))
+        self.assertEqual(self.fake.armed[0], c.CONFIRM)
+        self.assertEqual(self.fake.armed[1], self.fake.arrivals[-1][1])   # ARM named CONFIRM's own number
+        self.assertIn((c.DEST_CONTROLLER, c.SWITCH), self.fake.log)
+        self.assertTrue(self.fake.confirmed.is_set())
 
     def test_update_rolled_back(self):
+        """Check that `update` reports a rollback when the controller gives the firmware up without a
+        test result. Passes if exit code is 1 and the old slot A version 1 is reported.
+        """
         self.fake.rollback = True
         code, out = run_console(self.fake, *self.update_args())
         self.assertEqual(code, 1, out)
         self.assertIn("UPDATE ROLLED BACK: running slot A version 1", out)
 
     def test_update_with_radio_loss(self):
-        code, out = run_console(self.fake, "--radio-loss", "0.3", "--seed", "5", *self.update_args())
+        """Check that `update --yes` still completes with 30 % of outgoing datagrams dropped (Sec.
+        4.2, REQ-031). Passes if confirmed, the image arrived intact and stop-and-wait held.
+        """
+        code, out = run_console(self.fake, "--radio-loss", "0.3", "--seed", "5", *self.update_args("--yes"))
         self.assertEqual(code, 0, out)
         self.assertIn("UPDATE CONFIRMED: slot B version 2", out)
         self.assertIn("radio simulator: dropped", out)
         self.assertEqual(bytes(self.fake.upload), self.image.read_bytes())
         self.assertTrue(self.fake.stop_and_wait_held())
 
+    def test_update_yes_does_not_ask(self):
+        """Check that --yes answers the prompt without reading the terminal. Passes if read_answer is
+        never called and the update is confirmed.
+        """
+        with mock.patch.object(c, "read_answer", side_effect=AssertionError("asked")):
+            code, out = run_console(self.fake, *self.update_args("--yes"))
+        self.assertEqual(code, 0, out)
+        self.assertIn("UPDATE CONFIRMED: slot B version 2", out)
+        self.assertTrue(self.fake.confirmed.is_set())
+
+    def test_update_answer_n_sends_nothing(self):
+        """Check that the answer N sends no CONFIRM. Passes if exit code is 3, the output says
+        nothing was sent and the controller returns to the previous copy, and the fake gave the
+        firmware up itself.
+        """
+        self.fake.trial_s = 1.0
+        with mock.patch.object(c, "read_answer", return_value="n"):
+            code, out = run_console(self.fake, *self.update_args())
+        self.assertEqual(code, 3, out)
+        self.assertIn("nothing sent", out)
+        self.assertIn("returns to the previous copy when its trial time ends", out)
+        self.assertNotIn((c.DEST_CONTROLLER, c.CONFIRM), self.fake.log)
+        self.assertEqual(self.fake.log[-1], (c.DEST_CONTROLLER, c.GET_STATUS))  # the trial report; no ARM for CONFIRM
+        self.assertTrue(self.wait_for(lambda: self.fake.state["slot"] == 1))   # fake gave the firmware up
+
+    def test_update_no_terminal_means_no_answer(self):
+        """Check that input that is not a terminal counts as no answer. Passes if exit code is 3, the
+        output says "no answer" and no CONFIRM was sent.
+        """
+        self.fake.trial_s = 1.0
+        with mock.patch.object(c.sys, "stdin", io.StringIO("y\n")):    # piped, not a terminal
+            code, out = run_console(self.fake, *self.update_args())
+        self.assertEqual(code, 3, out)
+        self.assertIn("no answer", out)
+        self.assertNotIn((c.DEST_CONTROLLER, c.CONFIRM), self.fake.log)
+
+    def test_update_trial_test_failed(self):
+        """Check the failed-test path: the failed test is named and the old slot is reported running
+        again. Passes if exit code is 1, the output names the data-link answer test and slot A in
+        OPERATE, no CONFIRM was sent and the operator was not asked.
+        """
+        self.fake.fail_test = 0x02
+        with mock.patch.object(c, "read_answer", side_effect=AssertionError("asked")):
+            code, out = run_console(self.fake, *self.update_args("--yes"))
+        self.assertEqual(code, 1, out)
+        self.assertIn("TRIAL TESTS FAILED: trial tests failed: data-link answer", out)
+        self.assertIn("returns to the previous copy", out)
+        self.assertIn("UPDATE REJECTED: running slot A version 1 in OPERATE", out)
+        self.assertNotIn((c.DEST_CONTROLLER, c.CONFIRM), self.fake.log)
+
+    def test_confirm_subcommand(self):
+        """Check that `confirm` sends ARM and CONFIRM to a controller whose trial tests passed (Sec.
+        5.1). Passes if exit code is 0, EVENT 0x0007 and OPERATE on slot B are reported and the
+        ARM named CONFIRM's own sequence number.
+        """
+        self.fake.state = dict(mode=2, slot=2, version=2)
+        self.fake.tests_passed = True
+        self.fake.armed = None
+        code, out = run_console(self.fake, "confirm")
+        self.assertEqual(code, 0, out)
+        self.assertIn("CONFIRMED: EVENT 0x0007 seen; slot B version 2 in OPERATE", out)
+        self.assertIn("answered DONE", out)
+        self.assertEqual(self.fake.armed, (c.CONFIRM, self.fake.arrivals[-1][1]))
+
+    def test_confirm_refused_when_tests_not_passed(self):
+        """Check that CONFIRM before the trial tests passed is refused with 0x0F (Sec. 4.2). Passes
+        if exit code is 1 and the refusal text is printed.
+        """
+        self.fake.state = dict(mode=2, slot=2, version=2)
+        code, out = run_console(self.fake, "confirm")
+        self.assertEqual(code, 1, out)
+        self.assertIn("REFUSED 0x0f: Trial tests not passed", out)
+
+    def test_failed_event_detail_decoding(self):
+        """Check that EVENT 0x000B decodes its detail byte into the test name, with and without the
+        onboard computer's added fields (Sec. 5.4), and that 0x000A decodes. Passes if the texts
+        match.
+        """
+        body = c.struct.pack("<IBH", 5, c.REPORT_EVENT, c.EVENT_TESTS_FAILED) + b"\x03"
+        r = c.decode_report(c.ADDED.pack(9, 8) + body)
+        self.assertEqual((r["kind"], r["code"], r["report_number"]), ("EVENT", 0x000B, 9))
+        self.assertEqual(r["text"], "trial tests failed: test image")
+        self.assertEqual(c.decode_report(body)["text"], "trial tests failed: test image")
+        r = c.decode_report(c.struct.pack("<IBH", 5, c.REPORT_EVENT, c.EVENT_TESTS_PASSED))
+        self.assertEqual(r["text"], "trial tests passed")
+
     def test_upload_with_radio_loss_larger_image(self):
+        """Check that a 13-chunk upload survives 30 % radio loss (Sec. 4.2, REQ-031). Passes if exit
+        code is 0, the bytes are intact and some datagrams were dropped.
+        """
         big = Path(tempfile.mkdtemp()) / "big.img"
         big.write_bytes(random.Random(1).randbytes(256 * 12 + 77))   # 13 chunks
         code, out = run_console(self.fake, "--radio-loss", "0.3", "--seed", "3",
@@ -80,17 +228,27 @@ class ConsoleTests(unittest.TestCase):
         self.assertRegex(out, r"dropped [1-9]\d* of")
 
     def test_refusal_printed_with_text(self):
+        """Check that a REFUSED answer is printed with its code and reason text (Sec. 4.2). Passes if
+        exit code is 1 and "Image not from the operator" appears for 0x09.
+        """
         self.fake.refuse = {c.UPLOAD_END: 0x09}
         code, out = run_console(self.fake, "upload", str(self.image), "--number", "1")
         self.assertEqual(code, 1)
         self.assertIn("REFUSED 0x09: Image not from the operator", out)
 
     def test_refusal_0e_text(self):
+        """Check the text of REFUSED 0x0E (Sec. 4.2). Passes if "Image built for the other slot" is
+        printed.
+        """
         self.fake.refuse = {c.DELIVER: 0x0E}
         code, out = run_console(self.fake, "deliver", "--number", "1")
         self.assertIn("REFUSED 0x0e: Image built for the other slot", out)
 
     def test_switch_arms_the_switch_sequence_number(self):
+        """Check that `switch` sends an ARM naming SWITCH and SWITCH's own sequence number (Sec.
+        5.2). Passes if exit code is 0, the fake was armed for SWITCH with the last sequence
+        number seen and the controller is on slot B.
+        """
         self.fake.delivered = True
         code, out = run_console(self.fake, "switch")
         self.assertEqual(code, 0, out)
@@ -99,12 +257,18 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(self.fake.state["slot"], 2)
 
     def test_help_states_bench_limit(self):
+        """Check that --help states the bench limit of no envelope encryption (Sec. 4.1 left out).
+        Passes if the help text contains it.
+        """
         out = io.StringIO()
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
             c.main(["--help"])
         self.assertIn("no envelope encryption", out.getvalue())
 
     def test_health_decoding(self):
+        """Check that a HEALTH payload decodes, with and without the added fields (Sec. 5.4). Passes
+        if mode, version, slot, trial time left, report number and onboard time match.
+        """
         body = c.HEALTH_BODY.pack(5, 1, 2, 1, 2, 2, 1, 42, 0)
         r = c.decode_report(body)
         self.assertEqual((r["mode"], r["version"], r["slot"], r["trial_left"]), ("TRIAL", 2, "B", 42))

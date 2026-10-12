@@ -9,15 +9,17 @@ development tools in `tools/`. Each component's requirements are in the Architec
 | Step | Folder | What it does | Status |
 |---|---|---|---|
 | 1 | `controller/bootloader` | Picks, checks and starts the firmware | Done, bench-tested |
-| 2a | `controller/firmware/data-link` | UART and frames | Done, bench-tested |
-| 2c | `controller/firmware/update-receiver` | Receives a new image | Building |
+| 2a | `controller/firmware/data-link` | UART and frames | Done, bench-tested; C++ port running |
+| 2c | `controller/firmware/update-receiver` | Receives a new image | Done, bench-tested; C++ port running |
 | 2d | `controller/firmware/mode-manager` | Trial and confirmation | Waiting for the trial judge |
-| 2e | `controller/firmware/health-monitor` | Reports, watchdog, self-test | Building (reports) |
+| 2e | `controller/firmware/health-monitor` | Reports, watchdog, self-test | Reports done, bench-tested; self-test later |
 | 2b | `controller/firmware/command-checker` | Sequence, mode and arming checks | Later |
 | — | `controller/common` | Code shared by bootloader and firmware | Done |
 | 3 | `onboard-computer/updater` | Checks images and delivers them | Building |
 | 3r | `onboard-computer/restore` | Rewrites a bricked controller | Building |
 | 4 | `ground` | Operator console | Done, host-tested |
+
+Languages: bootloader in C; firmware in C++ (port running); onboard computer in C++; ground in Python.
 
 Bench limit: the bootloader and the firmware share `controller/common`, against REQ-119.
 

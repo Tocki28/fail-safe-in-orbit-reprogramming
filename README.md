@@ -39,7 +39,8 @@ changes it: NASA applies these processes "iteratively and recursively"
 6. **Interfaces:** Byte-level communication specs (fixed before coding).
    **Draft:** [Issue 1, Rev 0](docs/interfaces/Interface-Design_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 7. **Verification Plan:** Test, analysis, inspection, and demonstration
-   methods. *Not started.*
+   methods.
+   **Draft:** [Issue 1, Rev 0](docs/verification-plan/Verification-Plan_Fail-Safe-In-Orbit-Reprogramming_Iss1_Rev0_DRAFT.pdf)
 8. **Implementation:** Strict compilation rules, zero warnings, mandatory
    static analysis. *Not started.*
 9. **Verification:** Unit tests, integration, hardware-in-the-loop, and

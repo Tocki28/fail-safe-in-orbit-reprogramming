@@ -456,7 +456,7 @@ received it.
 \centering
 \begin{bytefield}[bitwidth=0.42cm]{32}
 \bitbox[]{8}{\scriptsize byte 0} & \bitbox[]{8}{\scriptsize byte 1} & \bitbox[]{8}{\scriptsize byte 2} & \bitbox[]{8}{\scriptsize byte 3} \\
-\wordbox{1}{Magic: the characters FSIR} \\
+\wordbox{1}{Proprietary string: ``FSIR''} \\
 \bitbox{8}{Format} & \bitbox{8}{Kind} & \bitbox{16}{Target} \\
 \wordbox{1}{Version} \\
 \wordbox{1}{Length} \\
@@ -466,7 +466,10 @@ received it.
 \wordbox[lrb]{1}{} \\
 \wordbox{3}{Reserved: 12 bytes of 0x00} \\
 \end{bytefield}
-\caption{The image header. Kind: 0x01 bootloader, 0x02 main firmware, 0x03
+\caption{The image header. Proprietary string: four fixed bytes, 0x46 0x53
+0x49 0x52, that mark the start of an image; the checker rejects any other
+value at once. MCUboot's image header also starts with a fixed 4-byte value
+[15,~Sec.~Image format]. Kind: 0x01 bootloader, 0x02 main firmware, 0x03
 last-resort firmware. Target: the controller identity [3,~REQ-046]. Body
 check value: CRC-32 of the body, computed as for the frame. Build identifier: names the build that was
 tested [3,~REQ-090].}

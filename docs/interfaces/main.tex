@@ -167,7 +167,7 @@ Reprogramming link A & Memory load & PRIMARY & RESTORE & YES \\
 Reprogramming link B & Memory load & BACKUP & RESTORE & YES \\
 \bottomrule
 \end{tabularx}}
-\caption{Interface types \tbr{priority}.}
+\caption{Interface types.}
 \label{tab:kinds}
 \end{table}
 
@@ -731,12 +731,11 @@ The values below are not yet known.
 \end{description}
 
 \medskip
-\noindent Section~4.0, and the Ed25519 signatures and AES-256 in Galois/Counter
-Mode of Section~4.1, were accepted by the author on 12 October 2026. The
+\noindent The interface priorities of Section~3.0, Section~4.0, and the Ed25519
+signatures and AES-256 in Galois/Counter Mode of Section~4.1 were accepted by
+the author on 12 October 2026. The
 proposals below await the author's acceptance.
 \begin{description}
-\tbritem{priority}{Data link A and reprogramming link A used first; the B
-  links used when the A links are lost (Section~3.0).}
 \tbritem{silent}{A failed envelope gets no answer (Section~4.2).}
 \tbritem{dangerous}{Which commands are dangerous (Section~5.1).}
 \tbritem{armone}{An arming command allows one named command only

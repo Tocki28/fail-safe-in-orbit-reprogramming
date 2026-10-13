@@ -1004,8 +1004,9 @@ int main(void)
         }
         count = candidates(&state, skipped != NULL, order);
     } else {
-        /* Slot A and slot B are passed over unchecked: recorded with 0x10 (owner, 13 Oct 2026,
-         * second round), so the firmware that runs reports both. */
+        /* Slot A and slot B are passed over unchecked: recorded with 0x10, one record each, so the
+         * firmware that runs reports both — the same format as every other fall-back, and it says
+         * that neither slot was tried and why (owner accepted the two-event form, 13 Oct 2026). */
         add_record(&records, &REGION_A, CHECK_STATE_DAMAGED);
         add_record(&records, &REGION_B, CHECK_STATE_DAMAGED);
         order[0] = &REGION_LAST_RESORT;

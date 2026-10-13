@@ -9,7 +9,10 @@
 #
 # The mock OpenOCD (written into a temp dir) records its arguments, keeps the Tcl file it was
 # given and a copy of every file named in "flash write_image {FILE} ADDR bin", prints the
-# "STEP:" lines, and by environment variable fails at, or hangs in, a named step.
+# "STEP:" and "STEPDONE:" lines, and by environment variable fails at, or hangs in, a named step
+# (MOCK_FAIL_STEP, MOCK_HANG_STEP), or fails or hangs just after it (MOCK_FAIL_AFTER, MOCK_HANG_AFTER).
+# Mode reset (decision H, accepted by the owner, 13 Oct 2026): success, a step that fails,
+# time-outs and signals before and after the reset, no image needed, no fsir-updater needed.
 # The real fsir-updater (host build) and real signed images are used.
 #
 # Usage: restore_test.sh      env: PY, KEYS, FSIR_UPDATER, SHELLS (default "sh dash"), RESTORE and BRICK
@@ -161,6 +164,9 @@ while IFS= read -r line; do
     echo "STEP: $name"
     if [ "${MOCK_FAIL_STEP:-}" = "$name" ]; then echo "STEPFAIL: $name: mock failure"; exit 1; fi
     if [ "${MOCK_HANG_STEP:-}" = "$name" ]; then echo $$ > "$MOCK_DIR/pid"; exec sleep 100; fi
+    echo "STEPDONE: $name"   # as the step procedure of the Tcl head does on success
+    if [ "${MOCK_FAIL_AFTER:-}" = "$name" ]; then echo "mock: OpenOCD exits 1 after the step"; exit 1; fi
+    if [ "${MOCK_HANG_AFTER:-}" = "$name" ]; then echo $$ > "$MOCK_DIR/pid"; exec sleep 100; fi
 done < "$tcl"
 exit 0
 EOT
@@ -208,7 +214,7 @@ cp "$LR_IMG" "$T/in/br[ack]et/lr.img"
 for SH in $SHELLS; do
     command -v "$SH" > /dev/null 2>&1 || { echo "NOTE shell $SH not installed: not run"; continue; }
     GOOD_UPDATER=$FSIR_UPDATER; export FSIR_UPDATER
-    unset MOCK_FAIL_STEP MOCK_HANG_STEP OPENOCD_TIMEOUT_S
+    unset MOCK_FAIL_STEP MOCK_HANG_STEP MOCK_FAIL_AFTER MOCK_HANG_AFTER OPENOCD_TIMEOUT_S
 
     # Syntax of the scripts under test.
     "$SH" -n "$RESTORE" && "$SH" -n "$BRICK" && verdict 1 "$SH -n restore.sh brick.sh" || verdict 0 "$SH -n restore.sh brick.sh"
@@ -316,6 +322,73 @@ for SH in $SHELLS; do
         grep -q '^RESTORE FAILED: erase slot A (interrupted by SIG'"$sig"')' "$R_OUT" && [ "$R_RC" -eq 1 ] \
             && verdict 1 "SIG$sig: names the step, exit 1" || verdict 0 "SIG$sig: rc $R_RC: $(cat "$R_OUT")"
         check_mock_dead "SIG$sig" "$R_MOCK/pid"
+    done
+
+    # Mode reset (decision H, accepted by the owner, 13 Oct 2026): restart the controller, write nothing.
+    run_restore reset
+    check_common "good reset" 1
+    [ "$(cat "$R_OUT")" = "RESTORE DONE: reset" ] && [ "$R_RC" -eq 0 ] && verdict 1 "good reset: the line is exactly RESTORE DONE: reset, exit 0" || verdict 0 "good reset: rc $R_RC: $(cat "$R_OUT")"
+    [ "$(grep -c '^step ' "$R_MOCK/steps.tcl")" -eq 2 ] && grep -q '^step "connect" { init }$' "$R_MOCK/steps.tcl" \
+        && grep -q '^step "reset and run" { reset run }$' "$R_MOCK/steps.tcl" \
+        && [ "$(grep -v '^[[:space:]]*$' "$R_MOCK/steps.tcl" | tail -n 1)" = shutdown ] \
+        && verdict 1 "good reset: the Tcl is init, reset run, shutdown, and nothing else" || verdict 0 "good reset: unexpected Tcl: $(cat "$R_MOCK/steps.tcl")"
+    ! grep -q 'flash' "$R_MOCK/steps.tcl" && ! ls "$R_MOCK"/written.* > /dev/null 2>&1 && verdict 1 "good reset: nothing erased or written" || verdict 0 "good reset: flash command or written file"
+    grep -q 'reset_config srst_only srst_nogate connect_assert_srst' "$R_MOCK/calls" && verdict 1 "good reset: same reset configuration as restore" || verdict 0 "good reset: reset_config missing: $(cat "$R_MOCK/calls")"
+    FSIR_UPDATER=$T/does-not-exist
+    run_restore reset
+    FSIR_UPDATER=$GOOD_UPDATER; export FSIR_UPDATER
+    grep -q '^RESTORE DONE: reset$' "$R_OUT" && [ "$R_RC" -eq 0 ] && verdict 1 "good reset: needs no fsir-updater" || verdict 0 "good reset without fsir-updater: rc $R_RC: $(cat "$R_OUT")"
+    run_restore reset --bootloader "$T/in/bl.img"
+    check_refused "reset with an image" 2
+    grep -q '^RESTORE FAILED: usage (mode reset takes no images)' "$R_OUT" && verdict 1 "reset with an image: usage failure" || verdict 0 "reset with an image: $(cat "$R_OUT")"
+    MOCK_FAIL_STEP="reset and run"; export MOCK_FAIL_STEP
+    run_restore reset
+    unset MOCK_FAIL_STEP
+    check_common "reset step failure" 1
+    grep -q '^RESTORE FAILED: reset and run' "$R_OUT" && [ "$R_RC" -eq 1 ] && verdict 1 "reset step failure: names the step, exit 1" || verdict 0 "reset step failure: rc $R_RC: $(cat "$R_OUT")"
+    MOCK_FAIL_AFTER="reset and run"; export MOCK_FAIL_AFTER
+    run_restore reset
+    unset MOCK_FAIL_AFTER
+    check_common "reset then OpenOCD fails" 1
+    grep -q '^RESTORE FAILED: after reset' "$R_OUT" && [ "$R_RC" -eq 1 ] && verdict 1 "reset then OpenOCD fails: RESTORE FAILED: after reset, exit 1" || verdict 0 "reset then OpenOCD fails: rc $R_RC: $(cat "$R_OUT")"
+
+    # Reset time-out: before the reset (hang in connect) and after it (hang after the reset step); limit 2 s.
+    t0=$(date +%s)
+    OPENOCD_TIMEOUT_S=2; MOCK_HANG_STEP="connect"; export OPENOCD_TIMEOUT_S MOCK_HANG_STEP
+    run_restore reset
+    unset OPENOCD_TIMEOUT_S MOCK_HANG_STEP
+    t1=$(date +%s)
+    check_common "reset time-out before" 1
+    grep -q '^RESTORE FAILED: connect (time-out after 2 s' "$R_OUT" && [ "$R_RC" -eq 1 ] \
+        && verdict 1 "reset time-out before the reset: names connect and the limit, exit 1" || verdict 0 "reset time-out before: rc $R_RC: $(cat "$R_OUT")"
+    [ $((t1 - t0)) -le 10 ] && verdict 1 "reset time-out before: ended in $((t1 - t0)) s" || verdict 0 "reset time-out before: took $((t1 - t0)) s"
+    check_mock_dead "reset time-out before" "$R_MOCK/pid"
+    OPENOCD_TIMEOUT_S=2; MOCK_HANG_AFTER="reset and run"; export OPENOCD_TIMEOUT_S MOCK_HANG_AFTER
+    run_restore reset
+    unset OPENOCD_TIMEOUT_S MOCK_HANG_AFTER
+    check_common "reset time-out after" 1
+    grep -q '^RESTORE FAILED: after reset (time-out after 2 s' "$R_OUT" && [ "$R_RC" -eq 1 ] \
+        && verdict 1 "reset time-out after the reset: RESTORE FAILED: after reset, exit 1" || verdict 0 "reset time-out after: rc $R_RC: $(cat "$R_OUT")"
+    check_mock_dead "reset time-out after" "$R_MOCK/pid"
+
+    # Reset signals, before and after the reset step.
+    for sig in INT TERM HUP; do
+        MOCK_HANG_STEP="connect"; export MOCK_HANG_STEP
+        SIGNAL=$sig; export SIGNAL
+        run_restore reset
+        unset MOCK_HANG_STEP SIGNAL
+        check_common "reset SIG$sig" 1
+        grep -q '^RESTORE FAILED: connect (interrupted by SIG'"$sig"')' "$R_OUT" && [ "$R_RC" -eq 1 ] \
+            && verdict 1 "reset SIG$sig before the reset: names connect, exit 1" || verdict 0 "reset SIG$sig: rc $R_RC: $(cat "$R_OUT")"
+        check_mock_dead "reset SIG$sig" "$R_MOCK/pid"
+        MOCK_HANG_AFTER="reset and run"; export MOCK_HANG_AFTER
+        SIGNAL=$sig; export SIGNAL
+        run_restore reset
+        unset MOCK_HANG_AFTER SIGNAL
+        check_common "reset SIG$sig after" 1
+        grep -q '^RESTORE FAILED: after reset (interrupted by SIG'"$sig"')' "$R_OUT" && [ "$R_RC" -eq 1 ] \
+            && verdict 1 "reset SIG$sig after the reset: RESTORE FAILED: after reset, exit 1" || verdict 0 "reset SIG$sig after: rc $R_RC: $(cat "$R_OUT")"
+        check_mock_dead "reset SIG$sig after" "$R_MOCK/pid"
     done
 
     # brick.sh: the check after the mass erase. The mock interprets the Tcl with tclsh.

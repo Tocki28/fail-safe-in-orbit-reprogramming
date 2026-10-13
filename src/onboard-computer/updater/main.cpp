@@ -49,8 +49,17 @@ constexpr int kExitLoopFailed = 4;  // poll() failed
 
 volatile std::sig_atomic_t g_stop = 0;
 
-extern "C" void onSignal(int)
+/**
+ * @brief Signal handler for SIGINT and SIGTERM: asks the main loop to stop.
+ *
+ * Only sets a flag, which is all a handler may safely do; the loop reads it after poll() returns.
+ *
+ * @param[in]     signal_number  the signal delivered (unused)
+ * @return nothing
+ */
+extern "C" void onSignal(int signal_number)
 {
+  (void)signal_number;   // the same reaction for both signals
   g_stop = 1;
 }
 
@@ -167,17 +176,32 @@ int main(int argc, char ** argv)
     return kExitCannotRun;
   }
 
+  // 3b. The restart script (decision H): --restore-script, else restore.sh next to this program.
+  std::array<char, 512> default_script{};
+  const char * restart_script = options.restore_script;
+  if (restart_script == nullptr) {
+    if (defaultRestoreScript(argv[0], default_script.data(), default_script.size())) {
+      restart_script = default_script.data();
+    } else {
+      logging::line("restart script: the program's directory is not known (argv[0] has no slash "
+        "and there is no /proc); give --restore-script PATH. Without it a trial overrun is logged "
+        "and the controller is not restarted");
+    }
+  }
+
   // 4. Data link A, the reports, the watch, and the wiring.
   SerialPort serial(options.device);
   DataLink link(serial);
   ReportStore reports;
   ControllerWatch watch(config::kSilenceMs, clocks::nowMs());
-  Updater updater(gate, link, store, checker, reports, watch, options.beat_s * 1000U);
+  Updater updater(gate, link, store, checker, reports, watch, options.beat_s * 1000U,
+    restart_script);
 
   logging::line("fsir-updater: ground on UDP port %u (all interfaces); data link A on %s; "
-    "images in %s; keys %s; beat %s", options.udp_port, options.device, options.data_dir,
+    "images in %s; keys %s; beat %s; restart script %s", options.udp_port, options.device,
+    options.data_dir,
     (options.key_a_file == nullptr && options.key_b_file == nullptr) ? "built in" : "from files",
-    (options.beat_s == 0) ? "off" : "on");
+    (options.beat_s == 0) ? "off" : "on", (restart_script != nullptr) ? restart_script : "none");
 
   // 5. The loop.
   uint64_t listen_ms = 0;

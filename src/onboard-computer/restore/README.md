@@ -5,7 +5,7 @@ plugged into the MP257's USB. Bench stand-in for reprogramming link A (Interface
 in the final design the MP257's own pins drive SWD. Requirements: REQ-054/055/056/057/060/118/120/121.
 
 ## Files
-- `restore.sh` - modes `restore` and `full`; prints one `RESTORE DONE: ...` / `RESTORE FAILED: <step>` line.
+- `restore.sh` - modes `restore`, `full` and `reset`; prints one `RESTORE DONE: ...` / `RESTORE FAILED: <step>` line.
 - `fsir-updater` (board build of `src/onboard-computer/updater`) - deployed next to `restore.sh`; its check-only mode
   (`--check-image FILE --kind bootloader|main|last-resort`) is the check before any write (REQ-118).
 - `../../../test/onboard-computer/restore_test.sh` - tests of `restore.sh` and `brick.sh` with a mock OpenOCD.
@@ -34,6 +34,14 @@ The bootloader input is a signed image of kind bootloader, made from the linked 
     scp -r $D/dist/openocd $D/dist/tcl $D/restore.sh test/onboard-computer/brick.sh \
         $U/build/board/fsir-updater bootloader.img $I/last-resort-v1.img $I/slotA-v1.img \
         root@192.168.7.1:/home/root/restore/
+
+## Mode reset (decision H, accepted by the owner, 13 Oct 2026)
+    ./restore.sh reset [--serial S]
+Writes nothing: OpenOCD `init; reset run; shutdown` under the same reset configuration and time limit
+(`OPENOCD_TIMEOUT_S`). Needs no image and no `fsir-updater`. The updater runs it when a trial overruns
+(`../updater/README.md`). One result line: `RESTORE DONE: reset`; `RESTORE FAILED: after reset (...)` when the
+reset ran and OpenOCD then did not end cleanly (time-out, signal, non-zero exit); `RESTORE FAILED: <step> (...)`
+otherwise (the reset is not shown to have happened).
 
 ## Run (on the MP257)
     cd /home/root/restore

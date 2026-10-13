@@ -75,6 +75,20 @@ OPERATE, TRIAL = 0x01, 0x02
 
 
 def build(ftype, dest, seq, payload, expiry=0):
+    """Builds one frame as the updater's frame layer defines it (Interfaces Sec. 6.2).
+
+    The header is packed, then a CRC-32 over it and the payload is appended, so the updater's parser accepts the bytes.
+
+    Args:
+        ftype: frame type byte
+        dest: Destination byte
+        seq: sequence number
+        payload: payload bytes
+        expiry: expiry field (a number, as the frame carries it)
+
+    Returns:
+        The frame as bytes.
+    """
     head = HEADER.pack(SYNC, VERSION, ftype, dest, 0, len(payload), seq, expiry) + payload
     return head + struct.pack("<I", zlib.crc32(head))
 
@@ -118,6 +132,16 @@ def split(buf):
 
 class FakeController(threading.Thread):
     def __init__(self, fd):
+        """Makes the fake controller on the pseudo-terminal's master side.
+
+        Keeps the state the scenarios change: mode, refusals, frames seen, stop-and-wait violations.
+
+        Args:
+            fd: file descriptor of the pseudo-terminal master
+
+        Returns:
+            None.
+        """
         super().__init__(daemon=True)
         self.fd = fd
         self.buf = bytearray()
@@ -138,13 +162,41 @@ class FakeController(threading.Thread):
         self.next_health = time.monotonic() + 0.5
 
     def write(self, ftype, payload):
+        """Sends one frame to the updater on data link A.
+
+        Numbers the frames itself, as the controller does.
+
+        Args:
+            ftype: frame type byte
+            payload: payload bytes
+
+        Returns:
+            None.
+        """
         self.seq += 1
         os.write(self.fd, build(ftype, ONBOARD, self.seq, payload))
 
     def answer(self, seq, kind, code=0):
+        """Sends an answer frame (Interfaces Sec. 4.2).
+
+        Args:
+            seq: sequence number being answered
+            kind: answer kind byte
+            code: answer code byte
+
+        Returns:
+            None.
+        """
         self.write(ANSWER, ANSWER_FIELDS.pack(seq, kind, code))
 
     def read_waiting(self):
+        """Reads every byte already waiting on data link A into the buffer, without blocking.
+
+        The select with timeout 0 keeps the fake controller's loop and its stop-and-wait check from stalling.
+
+        Returns:
+            None.
+        """
         while select.select([self.fd], [], [], 0)[0]:
             try:
                 data = os.read(self.fd, 4096)
@@ -155,12 +207,26 @@ class FakeController(threading.Thread):
             self.buf += data
 
     def send_health(self):
+        """Sends one HEALTH report in the current mode (Interfaces Sec. 5.4).
+
+        Trial time left is 300 s in TRIAL mode, else 0, as the table shows.
+
+        Returns:
+            None.
+        """
         payload = HEALTH.pack(0, 0, int(time.monotonic()), 0x01, self.mode, 0x02, 1, 0x01, 0,
                               0 if self.mode != TRIAL else 300, 0x00)
         self.write(REPORT, payload)
         self.health_sent += 1
 
     def run(self):
+        """Thread body: reads commands, handles them, sends HEALTH once a second.
+
+        Runs until stop is set; select waits at most 50 ms so the stop flag is seen.
+
+        Returns:
+            None.
+        """
         while not self.stop:
             wait = max(0.0, self.next_health - time.monotonic())
             if select.select([self.fd], [], [], min(wait, 0.05))[0]:
@@ -173,6 +239,16 @@ class FakeController(threading.Thread):
                     self.send_health()
 
     def handle(self, f):
+        """Answers one frame from the updater as the controller would.
+
+        RECEIVED first, then DONE or a configured REFUSED; sleeps stand for the controller's flash work.
+
+        Args:
+            f: decoded frame (dict)
+
+        Returns:
+            None.
+        """
         with self.lock:
             self.frames.append(f)
         if f["type"] != COMMAND or f["dest"] != CONTROLLER or not f["payload"]:
@@ -214,6 +290,19 @@ class FakeController(threading.Thread):
 
     def finish(self, seq, kind, code, received=True):
         # Any byte from the updater before this last answer breaks stop-and-wait.
+        """Sends the last answer to a command and checks stop-and-wait.
+
+        Any byte from the updater before the last answer breaks the controller's rule that it cannot receive while it writes flash.
+
+        Args:
+            seq: sequence number answered
+            kind: answer kind byte
+            code: answer code byte
+            received: whether RECEIVED was sent first (unused here)
+
+        Returns:
+            None.
+        """
         self.read_waiting()
         if self.buf:
             self.violations.append(f"bytes arrived before the last answer to {seq}")
@@ -222,6 +311,14 @@ class FakeController(threading.Thread):
 
 class Ground:
     def __init__(self, port):
+        """Makes the fake ground: a UDP socket and a receiving thread.
+
+        Args:
+            port: the updater's UDP port
+
+        Returns:
+            None.
+        """
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("127.0.0.1", 0))
         self.sock.settimeout(0.1)
@@ -233,6 +330,13 @@ class Ground:
         threading.Thread(target=self.receive, daemon=True).start()
 
     def receive(self):
+        """Thread body: collects every datagram from the updater.
+
+        A bad frame is kept as dict(bad=bytes) so tests can see it.
+
+        Returns:
+            None.
+        """
         while not self.stop:
             try:
                 data = self.sock.recv(4096)
@@ -244,6 +348,18 @@ class Ground:
                 self.cond.notify_all()
 
     def send(self, dest, payload, damage=False):
+        """Sends one command frame to the updater.
+
+        With damage the last byte is flipped to test the CRC check.
+
+        Args:
+            dest: Destination byte
+            payload: payload bytes
+            damage: flip one bit of the check value
+
+        Returns:
+            The ground sequence number used.
+        """
         self.seq += 1
         raw = bytearray(build(COMMAND, dest, self.seq, payload, EXPIRY))
         if damage:
@@ -252,6 +368,14 @@ class Ground:
         return self.seq
 
     def answers(self, seq):
+        """Lists the answers received for one command.
+
+        Args:
+            seq: ground sequence number
+
+        Returns:
+            List of (kind, code) pairs.
+        """
         with self.cond:
             out = []
             for f in self.frames:
@@ -262,6 +386,17 @@ class Ground:
             return out
 
     def wait_final(self, seq, timeout):
+        """Waits for the last answer (DONE, REFUSED or ALREADY DONE) to a command.
+
+        The wait is bounded by timeout.
+
+        Args:
+            seq: ground sequence number
+            timeout: longest wait, seconds
+
+        Returns:
+            The answers received so far.
+        """
         end = time.monotonic() + timeout
         with self.cond:
             while time.monotonic() < end:
@@ -271,29 +406,75 @@ class Ground:
         return self.answers(seq)
 
     def command(self, dest, payload, timeout=5.0):
+        """Sends a command and waits for its last answer.
+
+        Args:
+            dest: Destination byte
+            payload: payload bytes
+            timeout: longest wait, seconds
+
+        Returns:
+            (sequence number, answers).
+        """
         seq = self.send(dest, payload)
         return seq, self.wait_final(seq, timeout)
 
     def reports(self):
+        """Lists the reports received.
+
+        Returns:
+            The report frames.
+        """
         with self.cond:
             return [f for f in self.frames if f.get("type") == REPORT]
 
 
 class Checks:
     def __init__(self):
+        """Makes a check counter.
+
+        Returns:
+            None.
+        """
         self.failed = 0
 
     def report(self, ok, name):
+        """Counts and prints one check.
+
+        Args:
+            ok: whether the condition held
+            name: the check's name
+
+        Returns:
+            None.
+        """
         self.failed += not ok
         print(f"{'PASS' if ok else 'FAIL'}  {name}", flush=True)
 
 
 def show(answers):
+    """Turns a list of answers into text for a failure message.
+
+    Makes a FAIL line readable without a decoder.
+
+    Args:
+        answers: list of (kind, code) pairs
+
+    Returns:
+        Names joined by commas; REFUSED shows its code.
+    """
     return ", ".join(KIND.get(k, hex(k)) + (f" 0x{c:02x}" if k == REFUSED else "")
                      for k, c in answers)
 
 
 def free_udp_port():
+    """Finds a free UDP port on the loopback address.
+
+    Each bench run needs its own port so runs do not collide.
+
+    Returns:
+        The port number.
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]
@@ -303,12 +484,31 @@ def free_udp_port():
 
 class UpdaterLog:
     def __init__(self, stream, path):
+        """Starts a thread that collects the updater's log lines.
+
+        The log is also written to a file for the person reading a failure.
+
+        Args:
+            stream: the updater's stderr
+            path: file that receives the lines
+
+        Returns:
+            None.
+        """
         self.lines = []
         self.lock = threading.Lock()
         self.file = open(path, "w")
         threading.Thread(target=self.read, args=(stream,), daemon=True).start()
 
     def read(self, stream):
+        """Thread body: copies log lines into memory and the file.
+
+        Args:
+            stream: the updater's stderr
+
+        Returns:
+            None.
+        """
         for line in stream:
             with self.lock:
                 self.lines.append(line.rstrip("\n"))
@@ -316,10 +516,29 @@ class UpdaterLog:
             self.file.flush()
 
     def has(self, text):
+        """Tells whether any log line contains the text.
+
+        Args:
+            text: text to find
+
+        Returns:
+            True if found.
+        """
         with self.lock:
             return any(text in line for line in self.lines)
 
     def wait_for(self, text, timeout):
+        """Waits for a log line containing the text.
+
+        The wait is bounded by timeout.
+
+        Args:
+            text: text to find
+            timeout: longest wait, seconds
+
+        Returns:
+            True if it appeared in time.
+        """
         end = time.monotonic() + timeout
         while time.monotonic() < end:
             if self.has(text):
@@ -343,6 +562,19 @@ class Bench:
     """One fsir-updater between a fake controller on a pseudo-terminal and a fake ground."""
 
     def __init__(self, updater, work, name, extra=()):
+        """Starts one fsir-updater between a fake controller and a fake ground.
+
+        Own pseudo-terminal, own UDP port and data directory per scenario.
+
+        Args:
+            updater: path of the host fsir-updater
+            work: scratch directory
+            name: scenario name, used in file names
+            extra: extra updater options
+
+        Returns:
+            None.
+        """
         self.master, self.slave = os.openpty()
         tty.setraw(self.slave)
         self.port = free_udp_port()
@@ -356,12 +588,30 @@ class Bench:
         self.ground = None
 
     def start(self, checks):
+        """Checks that the updater opened data link A, then starts the fake controller and the ground.
+
+        Args:
+            checks: the Checks counter
+
+        Returns:
+            None.
+        """
         checks.report(self.log.wait_for("open, 115200", 3),
                       "updater started; data link A open on the pseudo-terminal")
         self.fake.start()
         self.ground = Ground(self.port)
 
     def stop(self, checks):
+        """Stops the updater with SIGTERM and checks that it ended with status 0.
+
+        Killed after 5 s if it does not stop.
+
+        Args:
+            checks: the Checks counter
+
+        Returns:
+            None.
+        """
         self.proc.send_signal(signal.SIGTERM)
         try:
             code = self.proc.wait(5)
@@ -426,6 +676,13 @@ def sigpipe_phase(updater, work, checks):
 
 
 def main():
+    """Runs the whole bench test.
+
+    Starts one updater per scenario, plays fake controller and fake ground, prints PASS or FAIL per check.
+
+    Returns:
+        Exit status: 0 all passed, 1 a check failed, 2 bad command line.
+    """
     if len(sys.argv) != 6:
         print(__doc__)
         return 2

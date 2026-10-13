@@ -1,5 +1,7 @@
 #include "report_store.hpp"
 
+#include <array>
+#include <cstdio>
 #include <cstring>
 
 #include "bytes.hpp"
@@ -18,7 +20,7 @@ const char * modeName(uint8_t mode)
     case report::kModeOperate:  return "OPERATE";
     case report::kModeTrial:    return "TRIAL";
     case report::kModeFallback: return "FALLBACK";
-    default:                    return "unknown";   // raw byte off the wire: any other value is unknown
+    default:                    return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
   }
 }
 
@@ -39,7 +41,7 @@ const char * eventName(uint16_t code)
     case report::kEventTrialStarted: return "trial started";
     case report::kEventFirmwareConfirmed: return "firmware confirmed";
     case report::kEventFirmwareGivenUp: return "firmware given up";
-    case 0x0009: return "restart";
+    case 0x0009: return "restart";   // the controller's own event; the onboard computer's is 0x0106
     case report::kEventTrialTestsPassed: return "trial tests passed";
     case report::kEventTrialTestsFailed: return "trial tests failed";
     case 0x0101: return "data link lost";
@@ -47,7 +49,111 @@ const char * eventName(uint16_t code)
     case 0x0103: return "restore done";
     case 0x0104: return "health reports dropped";
     case 0x0105: return "onboard computer clock differs from ground time";
-    default:     return "unknown";   // raw byte off the wire: any other value is unknown
+    case report::kEventControllerRestarted: return "controller restarted by the onboard computer";
+    default:     return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
+  }
+}
+
+/**
+ * @brief Names a refusal reason as the Interfaces Sec. 4.2 table does, for the log.
+ *
+ * Decision (owner, 13 Oct 2026): 0x10 "Image of the wrong kind for its place" and 0x11 "Boot state
+ * could not be stored" are named like the rest. 0xFD to 0xFF are the bench codes of protocol.hpp
+ * (not in the table).
+ *
+ * @param[in]     code  the refusal reason (Interfaces Sec. 4.2; protocol.hpp)
+ * @return the reason's name; "unknown" for a code not in the table or protocol.hpp
+ */
+const char * refusalName(uint8_t code)
+{
+  switch (code) {
+    case answer::kNotArmed:           return "dangerous command without a valid arming command";
+    case answer::kArmExpired:         return "arming command expired";
+    case 0x03:                        return "command past its expiry";
+    case answer::kOldCommand:         return "old command sent again";
+    case answer::kNotInThisMode:      return "not allowed in the current mode";
+    case answer::kImpossible:         return "impossible values, or an unknown command";
+    case answer::kTrialRunning:       return "no new firmware during a trial";
+    case answer::kImageDamaged:       return "image damaged";
+    case answer::kNotFromOperator:    return "image not from the operator";
+    case 0x0A:                        return "image older than the minimum version";
+    case answer::kOtherController:    return "image built for another controller";
+    case 0x0C:                        return "the controller's clock disagrees with the scheduled time";
+    case 0x0D:                        return "a dangerous command cannot be scheduled";
+    case 0x0E:                        return "image built for the other slot";
+    case answer::kTrialTestsNotPassed: return "trial tests not passed";
+    case answer::kWrongKind:          return "image of the wrong kind for its place";
+    case answer::kBootStateNotStored: return "boot state could not be stored";
+    case answer::kNoAnswerBench:      return "controller did not answer (bench code)";
+    case answer::kStorageBench:       return "onboard storage failed (bench code)";
+    case answer::kCannotSendBench:    return "data link A cannot send (bench code)";
+    default:                          return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
+  }
+}
+
+/**
+ * @brief Names a check result of events 0x0002 and 0x0003 as the Interfaces Sec. 5.4 check-result table does.
+ *
+ * @param[in]     result  the check-result byte of the detail
+ * @return the check that failed ("none: the copy passed" for 0x00); "unknown" for a value not in the table
+ */
+const char * checkResultName(uint8_t result)
+{
+  switch (result) {
+    case 0x00: return "none: the copy passed";
+    case 0x01: return "the copy is empty";
+    case 0x02: return "proprietary string";
+    case 0x03: return "format";
+    case 0x04: return "kind";
+    case 0x05: return "target";
+    case 0x06: return "length";
+    case 0x07: return "start address outside the region";
+    case 0x08: return "body check value";
+    case 0x09: return "signature A";
+    case 0x0A: return "signature B";
+    default:   return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
+  }
+}
+
+/**
+ * @brief Writes the log text of one EVENT report: its code, its name and its decoded detail.
+ *
+ * Events 0x0002 and 0x0003 carry a 2-byte detail, refused copy (1) and check result (1), which
+ * are decoded with slotName() and checkResultName() so the operator reads which copy failed which
+ * check (Interfaces Sec. 5.4 event table and check-result table; REQ-040). A detail of another
+ * length is shown as what it is, never padded. Event 0x000B shows its detail byte (which test).
+ * Event 0x0106 shows its reason byte (decision H, accepted by the owner, 13 Oct 2026).
+ *
+ * @param[in]     code           the event code
+ * @param[in]     detail         the detail bytes after the code; may be null when detail_length is 0
+ * @param[in]     detail_length  number of detail bytes, 0 to report::kEventMaxBytes - kEventDetailOffset
+ * @param[out]    out            receives the text, always terminated
+ * @param[in]     room           size of out, in bytes (at least 1)
+ * @return nothing
+ */
+void describeEvent(uint16_t code, const uint8_t * detail, size_t detail_length, char * out,
+  size_t room)
+{
+  if (room == 0) {
+    return;
+  }
+  out[0] = '\0';
+  int n = 0;
+  bool fallback = code == report::kEventFallbackPrevious || code == report::kEventFallbackLastResort;
+  if (fallback && detail_length >= report::kFallbackDetailBytes) {
+    n = std::snprintf(out, room, "EVENT 0x%04x (%s), refused copy 0x%02x (%s), check result 0x%02x (%s)",
+      code, eventName(code), detail[0], slotName(detail[0]), detail[1], checkResultName(detail[1]));
+  } else if (fallback) {
+    n = std::snprintf(out, room, "EVENT 0x%04x (%s), detail of %zu byte(s) instead of the 2 of Sec. 5.4%s",
+      code, eventName(code), detail_length, (detail_length == 1) ? ": refused copy only, no check result" : "");
+  } else if ((code == report::kEventTrialTestsFailed || code == report::kEventControllerRestarted) &&
+             detail_length >= 1) {
+    n = std::snprintf(out, room, "EVENT 0x%04x (%s), detail 0x%02x", code, eventName(code), detail[0]);
+  } else {
+    n = std::snprintf(out, room, "EVENT 0x%04x (%s)", code, eventName(code));
+  }
+  if (n < 0) {
+    out[0] = '\0';   // snprintf failed: no text rather than a half-written one
   }
 }
 
@@ -63,7 +169,7 @@ const char * slotName(uint8_t slot)
     case 0x01: return "A";
     case 0x02: return "B";
     case 0x03: return "last-resort";
-    default:   return "unknown";   // raw byte off the wire: any other value is unknown
+    default:   return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
   }
 }
 
@@ -121,12 +227,10 @@ bool ReportStore::accept(const uint8_t * payload, size_t length, uint32_t onboar
     noteHealth(payload, now_ms);
   } else {
     uint16_t code = bytes::readU16(&payload[report::kOffsetKind + 1]);
-    if (code == report::kEventTrialTestsFailed && length > report::kEventDetailOffset) {
-      logging::line("controller: EVENT 0x%04x (%s), detail 0x%02x", code, eventName(code),
-        payload[report::kEventDetailOffset]);
-    } else {
-      logging::line("controller: EVENT 0x%04x (%s)", code, eventName(code));
-    }
+    std::array<char, 192> text{};
+    size_t detail_length = (length > report::kEventDetailOffset) ? length - report::kEventDetailOffset : 0;
+    describeEvent(code, &payload[report::kEventDetailOffset], detail_length, text.data(), text.size());
+    logging::line("controller: %s", text.data());
   }
   return true;
 }

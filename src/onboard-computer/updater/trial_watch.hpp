@@ -8,12 +8,14 @@
  * confirmed), EVENT 0x0008 (firmware given up) or a HEALTH report showing another mode ends
  * it. If none arrives within config::kTrialMs + config::kTrialMarginMs, expired() says so once.
  *
- * STATUS: decision H, Proposal (TBR), awaiting the owner's acceptance. Separable: this file,
- * trial_watch.cpp, the two constants in config.hpp, kEventRestart in protocol.hpp, and
- * Updater::trialWatch with its two calls.
+ * STATUS: decision H, accepted by the owner, 13 Oct 2026 (trial time 120 s stays the bench value
+ * for TBD-trial; margin 30 s). Separable: this file, trial_watch.cpp, restart_runner.*, the
+ * constants in config.hpp, Updater::trialWatch with its two calls, and the restart members of
+ * Updater.
  *
- * What the updater does then: the restart path of the controller (REQ-061, REQ-124) is not
- * built yet, so it only logs and reports to the ground (updater.cpp, onTrialOverrun).
+ * What the updater does then: it runs the restart script (restore.sh reset, restart_runner.hpp)
+ * and, once the controller was reset, sends the ground EVENT 0x0106 with detail 0x01 (updater.cpp,
+ * onTrialOverrun and onRestartFinished; Interfaces Sec. 5.4).
  */
 #ifndef FSIR_UPDATER_TRIAL_WATCH_HPP
 #define FSIR_UPDATER_TRIAL_WATCH_HPP

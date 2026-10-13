@@ -17,9 +17,10 @@
  *     only DELIVER produces UPLOAD commands to the controller, after the image checks (REQ-047).
  *     Passed on over data link A with the onboard computer's own
  *     sequence number; the controller's answers come back to the ground with the ground's
- *     sequence number (why: data_link.hpp). No answer from the controller in time: nothing is
- *     made up for the ground, which sees an unanswered command; a late answer is still passed
- *     on. While data link A is busy (a delivery), they wait in a queue of 8; when it is full,
+ *     sequence number (why: data_link.hpp). No answer from the controller in time to an ordinary
+ *     command: nothing is made up for the ground, which sees an unanswered command; a late answer
+ *     is still passed on. (No answer to the ARM of a dangerous command is different: see below.)
+ *     While data link A is busy (a delivery), they wait in a queue of 8; when it is full,
  *     REFUSED 0x05 (bench choice: Sec. 4.2 has no reason for "busy").
  * From the controller:
  *   answers: to the command outstanding on data link A; reports: numbered, stamped and sent
@@ -77,7 +78,17 @@
  *   as during a delivery. The commands are the onboard computer's own, so no answer goes to
  *   the ground: DONE, the controller's refusal code or no answer is logged, and not retried.
  *   The controller's EVENT reports (trial tests passed or failed, ...) reach the ground as
- *   all reports do (test_image.hpp for the image and the once-per-trial rule).
+ *   all reports do (test_image.hpp for the image and the once-per-trial rule). A second EVENT
+ *   0x0006 within one trial sends the image again (decision R, accepted by the owner, 13 Oct 2026).
+ *
+ * TRIAL OVERRUN (decision H, accepted by the owner, 13 Oct 2026; Interfaces Sec. 5.4 event 0x0106;
+ *   REQ-013, REQ-037, REQ-061): no EVENT 0x0007 or 0x0008 within config::kTrialMs +
+ *   config::kTrialMarginMs of the trial's start (trial_watch.hpp) -> the updater runs
+ *   "restore.sh reset" (restart_runner.hpp) as a child process and keeps serving both links.
+ *   When the child ends: the controller was reset (script line "RESTORE DONE: reset", or "RESTORE
+ *   FAILED: after reset") -> EVENT 0x0106 with detail 0x01 "trial past its time" to the ground;
+ *   otherwise the reset is not shown to have happened, so nothing is sent and the log says which
+ *   step failed. The script path is --restore-script, default restore.sh next to the program.
  */
 #ifndef FSIR_UPDATER_UPDATER_HPP
 #define FSIR_UPDATER_UPDATER_HPP
@@ -92,6 +103,7 @@
 #include "image_checker.hpp"
 #include "protocol.hpp"
 #include "report_store.hpp"
+#include "restart_runner.hpp"
 #include "test_image.hpp"
 #include "trial_watch.hpp"
 #include "update_manager.hpp"
@@ -100,7 +112,7 @@ class Updater final : public ControllerFrameHandler
 {
 public:
   Updater(CommandGate & gate, DataLink & link, UploadStore & store, const ImageChecker & checker,
-    ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms);
+    ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms, const char * restart_script);
 
   // The ground link's socket is readable.
   void onGroundReadable(uint64_t now_ms);
@@ -162,6 +174,9 @@ private:
   void startTestImage();
   void trialWatch(const frame::Frame * report);   // decision H, separable
   void onTrialOverrun();   // decision H
+  void restartWatch();   // decision H: polls the restart script every tick
+  void onRestartFinished(const RestartRunner::Outcome & outcome);   // decision H
+  void sendOwnEvent(uint16_t code, uint8_t detail);   // the onboard computer's own EVENT, to the ground
 
   void sendNext();
   void onTimeout();
@@ -188,6 +203,7 @@ private:
   PairStage pair_;
   TestImageTrigger test_trigger_;
   TrialWatch trial_watch_;   // decision H, separable
+  RestartRunner restart_;    // decision H: restore.sh reset as a child process
   UsedSequences used_;
   bool test_image_running_;   // delivery_ carries the test image, not a ground DELIVER
   std::array<uint8_t, frame::kPayloadMax> payload_;

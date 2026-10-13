@@ -9,6 +9,10 @@
 # Options as the bench runs them (Makefile header, README.md): serial device /dev/ttyACM0,
 # ground link UDP port 47001 on all interfaces (the updater has no --host option: it binds
 # 0.0.0.0, command_gate.hpp), images in /var/lib/fsir/images, a beat of 2 s.
+# Restart script (decision H): on a trial overrun the updater runs "restore.sh reset". Default path:
+# restore.sh in the directory of /usr/local/bin/fsir-updater, i.e. /usr/local/bin/restore.sh, which
+# looks for openocd and tcl/ next to itself. If the restore folder is elsewhere, add
+# --restore-script /path/to/restore.sh to ExecStart.
 [Unit]
 Description=fsir-updater: onboard computer update manager (ground link UDP, data link A serial)
 After=network.target

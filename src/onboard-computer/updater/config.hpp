@@ -55,20 +55,30 @@ constexpr uint32_t kMaxBeatS = 3600;
 
 // ---- Arming ----------------------------------------------------------------------------------
 // How long the onboard computer holds a ground ARM before a dangerous command must use it
-// (Interfaces Sec. 5.2, REQ-030). Proposal (TBR), awaiting the owner's acceptance: 30 s,
-// standing for TBD-arm; the controller uses the same 30 s. A bench value.
+// (Interfaces Sec. 5.2, REQ-030). Accepted by the owner, 13 Oct 2026 (decision Q): 30 s, a bench
+// value standing for TBD-arm; the controller uses the same 30 s.
 constexpr uint64_t kArmExpiryMs = 30000;
 
-// ---- Trial time: decision H, Proposal (TBR), awaiting the owner's acceptance -----------------------------------------------------------------------------
+// ---- Trial time and restart: decision H, accepted by the owner, 13 Oct 2026 ------------------
 // The controller enforces the trial time itself; the onboard computer checks that it did
-// (decision H of the controller audit). Trial time 120 s: bench value (TBD-trial in the
-// requirements). Margin 30 s: Proposal (TBR), awaiting the owner's acceptance. No EVENT 0x0007
+// (decision H of the controller audit). Trial time 120 s: bench value standing for TBD-trial
+// in the requirements. Margin 30 s: accepted by the owner, 13 Oct 2026. No EVENT 0x0007
 // (confirmed) or 0x0008 (given up) within trial time + margin after the trial began means the
-// controller's own limit did not work (trial_watch.hpp).
-// Proposal (TBR), awaiting the owner's acceptance.
+// controller's own limit did not work (trial_watch.hpp); the updater then runs the restart
+// script (restart_runner.hpp) and tells the ground with EVENT 0x0106.
 constexpr uint64_t kTrialMs = 120000;
-// Proposal (TBR), awaiting the owner's acceptance.
 constexpr uint64_t kTrialMarginMs = 30000;
+// The restart script: restore.sh in mode "reset" (restore.sh header), looked for next to the
+// updater's own program file unless --restore-script names another (options.hpp).
+constexpr const char * kRestoreScriptName = "restore.sh";
+// The longest the updater lets the restart script run before it sends it TERM. TBD, a PLACEHOLDER
+// and not a measured value: it is the script's own default limit for OpenOCD (OPENOCD_TIMEOUT_S
+// 300 s) plus its wait between TERM and KILL (KILL_GRACE_S 5 s) plus 5 s, so that the script's own
+// time-out line arrives before the updater steps in. To be set from a measured reset on the bench.
+constexpr uint64_t kRestartScriptMs = 310000;
+// After TERM, the wait before the updater sends KILL to the script's whole process group. TBD,
+// a PLACEHOLDER (the script's KILL_GRACE_S default is 5 s); not measured.
+constexpr uint64_t kRestartKillGraceMs = 5000;
 
 // ---- Controller watch ----------------------------------------------------------------------
 // REQ-061: notice a silent controller. Bench value 5 s from the build brief; the requirements

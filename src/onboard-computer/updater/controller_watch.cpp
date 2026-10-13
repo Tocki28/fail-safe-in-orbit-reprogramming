@@ -65,6 +65,11 @@ void ControllerWatch::check(uint64_t now_ms)
     static_cast<unsigned long long>((now_ms - last_heard_ms_) / kMsPerSecond));
 }
 
+/**
+ * @brief Tells whether the controller is currently considered silent (REQ-061).
+ *
+ * @return true: no frame within the silence limit; false: heard recently
+ */
 bool ControllerWatch::silent() const
 {
   return silent_;

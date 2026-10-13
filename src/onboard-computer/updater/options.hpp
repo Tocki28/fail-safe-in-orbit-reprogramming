@@ -5,6 +5,7 @@
 #ifndef FSIR_UPDATER_OPTIONS_HPP
 #define FSIR_UPDATER_OPTIONS_HPP
 
+#include <cstddef>
 #include <cstdint>
 
 struct Options
@@ -18,6 +19,7 @@ struct Options
   bool verbose;              // print every frame
   const char * check_image;  // --check-image FILE: check-only mode (image_file_check.hpp); nullptr: run as the updater
   const char * check_kind;   // --kind: bootloader, main or last-resort; used with --check-image
+  const char * restore_script;   // --restore-script: restore.sh, run in mode "reset" when a trial overruns; nullptr: next to the program (defaultRestoreScript)
 };
 
 void printUsage(const char * program);
@@ -29,6 +31,12 @@ void printUsage(const char * program);
 
 // Sets the defaults, then reads every word. False if a word is not understood.
 [[nodiscard]] bool parseOptions(int argc, const char * const * argv, Options & options);
+
+// The restart script next to the program file: <directory of the program>/restore.sh, written to
+// out (room bytes). On Linux the program file is read from /proc/self/exe, else from program
+// (argv[0]). False if the directory is not known (argv[0] without a slash and no /proc) or the
+// path does not fit.
+[[nodiscard]] bool defaultRestoreScript(const char * program, char * out, size_t room);
 
 // Reads a public key file: exactly 32 bytes, the raw Ed25519 public key [RFC 8032, Sec. 5.1.5].
 [[nodiscard]] bool readKeyFile(const char * path, uint8_t * key);

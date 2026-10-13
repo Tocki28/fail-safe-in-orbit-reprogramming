@@ -1,9 +1,11 @@
 #include "options.hpp"
 
+#include <array>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <unistd.h>
 
 #include "config.hpp"
 
@@ -19,7 +21,7 @@ void printUsage(const char * program)
 {
   (void)std::fprintf(stderr,
     "usage: %s [--device PATH] [--udp-port N] [--data-dir DIR]\n"
-    "          [--key-a FILE] [--key-b FILE] [--beat-s N] [--verbose]\n"
+    "          [--key-a FILE] [--key-b FILE] [--beat-s N] [--restore-script PATH] [--verbose]\n"
     "       %s --check-image FILE --kind bootloader|main|last-resort [--key-a FILE] [--key-b FILE]\n"
     "  --device PATH   data link A serial device (default %s)\n"
     "  --udp-port N    UDP port for the ground, on all interfaces (default %u)\n"
@@ -28,12 +30,14 @@ void printUsage(const char * program)
     "  --key-b FILE    public key B: a file of exactly 32 bytes (default: built in, keys.h)\n"
     "  --beat-s N      GET STATUS to the controller every N s when the link is idle,\n"
     "                  0..%u, 0 = off (default %u)\n"
+    "  --restore-script PATH  restore.sh, run as 'restore.sh reset' to restart the controller when a\n"
+    "                  trial runs past its time (default: %s next to this program)\n"
     "  --verbose       print every frame sent and received\n"
     "  --check-image FILE  check-only mode: run the checks of an upload on FILE and exit;\n"
     "                  0 = passed, 1 = refused (one line says why), 2 = usage, 3 = keys unusable\n"
     "  --kind K        the kind FILE must be: bootloader, main or last-resort (with --check-image)\n",
     program, program, config::kDefaultDevice, config::kDefaultUdpPort, config::kDefaultDataDir,
-    config::kMaxBeatS, config::kDefaultBeatS);
+    config::kMaxBeatS, config::kDefaultBeatS, config::kRestoreScriptName);
 }
 
 /**
@@ -88,6 +92,7 @@ bool parseOptions(int argc, const char * const * argv, Options & options)
   options.verbose = false;
   options.check_image = nullptr;
   options.check_kind = nullptr;
+  options.restore_script = nullptr;
 
   constexpr unsigned long kMaxPort = 65535;
   for (int i = 1; i < argc; i++) {   // bounded by argc
@@ -107,6 +112,8 @@ bool parseOptions(int argc, const char * const * argv, Options & options)
       options.key_b_file = argv[++i];
     } else if (std::strcmp(word, "--check-image") == 0 && has_value) {
       options.check_image = argv[++i];
+    } else if (std::strcmp(word, "--restore-script") == 0 && has_value) {
+      options.restore_script = argv[++i];
     } else if (std::strcmp(word, "--kind") == 0 && has_value) {
       options.check_kind = argv[++i];
     } else if (std::strcmp(word, "--udp-port") == 0 && has_value &&
@@ -149,5 +156,47 @@ bool readKeyFile(const char * path, uint8_t * key)
     return false;
   }
   std::memcpy(key, extra, config::kPublicKeyBytes);
+  return true;
+}
+
+/**
+ * @brief Builds the path of the restart script next to the program file.
+ *
+ * Decision H (accepted by the owner, 13 Oct 2026): the default is restore.sh in the directory of
+ * the running program, so the deployment keeps the program, the script, OpenOCD and its scripts
+ * together (restore.sh finds OpenOCD next to itself). On Linux the program file comes from
+ * /proc/self/exe, which is right however the program was started; elsewhere argv[0] is used, which
+ * is right only when it holds a slash.
+ *
+ * @param[in]     program  argv[0]
+ * @param[out]    out      receives the path, terminated; written only when true is returned
+ * @param[in]     room     size of out, in bytes
+ * @return true: out holds the path; false: the directory is not known, or the path does not fit
+ */
+bool defaultRestoreScript(const char * program, char * out, size_t room)
+{
+  std::array<char, 512> self{};
+  const char * path = nullptr;
+  ssize_t n = ::readlink("/proc/self/exe", self.data(), self.size() - 1);
+  if (n > 0) {
+    self[static_cast<size_t>(n)] = '\0';
+    path = self.data();
+  } else if (program != nullptr && std::strchr(program, '/') != nullptr) {
+    path = program;
+  }
+  if (path == nullptr) {
+    return false;
+  }
+  const char * slash = std::strrchr(path, '/');
+  if (slash == nullptr) {
+    return false;
+  }
+  size_t dir = static_cast<size_t>(slash - path) + 1;   // keeps the slash
+  size_t name = std::strlen(config::kRestoreScriptName);
+  if (dir + name + 1 > room) {
+    return false;
+  }
+  std::memcpy(out, path, dir);
+  std::memcpy(out + dir, config::kRestoreScriptName, name + 1);
   return true;
 }

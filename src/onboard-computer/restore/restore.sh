@@ -9,6 +9,17 @@
 #
 #   restore.sh restore --bootloader BL.img --last-resort LR.img
 #   restore.sh full    --bootloader BL.img --last-resort LR.img --main FW.img
+#   restore.sh reset
+#
+# Mode reset (decision H, accepted by the owner, 13 Oct 2026; REQ-013, REQ-061, REQ-124) writes
+# nothing: OpenOCD runs "init; reset run; shutdown" under the same reset configuration, time
+# limit and result line as the other modes. The updater runs it when a trial has run past its
+# time (src/onboard-computer/updater/restart_runner.hpp) and reads the result line:
+#   RESTORE DONE: reset                   the controller was reset and runs
+#   RESTORE FAILED: after reset (...)     the reset ran, then OpenOCD did not end cleanly (time-out,
+#                                         signal or non-zero exit after the "reset and run" step)
+#   RESTORE FAILED: <step> (...)          the reset is not shown to have happened
+# Mode reset takes no image and does not need fsir-updater.
 #
 # BL.img is a SIGNED bootloader image (kind bootloader, tools/make_image.py), not the raw
 # .bin. Every input is copied into a private work folder and checked there by the updater's
@@ -17,7 +28,7 @@
 #
 # Output: exactly one result line on stdout at the end, from which the updater will read
 # the result (REQ-060):
-#   RESTORE DONE: <mode> ...        exit 0
+#   RESTORE DONE: <mode> ...        exit 0 (mode reset: exactly "RESTORE DONE: reset")
 #   RESTORE FAILED: <step> ...      exit 1 (step failed) or 2 (usage / tool missing)
 # The OpenOCD log is kept in $LOG (default /tmp/restore-openocd.log).
 #
@@ -72,6 +83,7 @@ FSIR_UPDATER=${FSIR_UPDATER:-$here/fsir-updater}
 LOG=${LOG:-/tmp/restore-openocd.log}
 
 # State of the run. REPORTED is set when the one result line has been printed.
+mode=           # restore, full or reset; set from the first argument (reset_ran reads it from a signal handler)
 WORK=
 REPORTED=0
 CHILD_PID=
@@ -112,6 +124,7 @@ fail() {
 # @return exits the script with 2
 usage() {
     echo "usage: $0 restore|full --bootloader IMG --last-resort IMG [--main IMG] [--serial ST-LINK-serial]" >&2
+    echo "       $0 reset [--serial ST-LINK-serial]     (restart the controller; writes nothing)" >&2
     echo "  IMG: signed images (tools/make_image.py); the bootloader image has kind bootloader" >&2
     echo "  env: OPENOCD=path/to/openocd  OCD_SCRIPTS=path/to/tcl  FSIR_UPDATER=path/to/fsir-updater" >&2
     echo "       LOG=path  OPENOCD_TIMEOUT_S=seconds" >&2
@@ -374,8 +387,9 @@ cut_bootloader() {
 TCL_HEAD='
 # @brief  Run one OpenOCD command block under a step name and stop with an error if it fails.
 #
-# The log then names the step: "STEP: <name>" before, "STEPFAIL: <name>: <error>" on failure
-# (failed_step reads them). "shutdown error" makes OpenOCD exit non-zero.
+# The log then names the step: "STEP: <name>" before, "STEPFAIL: <name>: <error>" on failure,
+# "STEPDONE: <name>" on success (failed_step and reset_ran read them). "shutdown error" makes
+# OpenOCD exit non-zero.
 #
 # @param name  step name shown in the log and in the RESTORE FAILED line
 # @param body  Tcl commands to run in the calling scope
@@ -386,6 +400,7 @@ proc step {name body} {
         puts "STEPFAIL: $name: $err"
         shutdown error
     }
+    puts "STEPDONE: $name"
 }
 '
 
@@ -413,14 +428,29 @@ run_openocd() {
     fi
 }
 
+# @brief  Tell whether the reset of mode reset has already run, from the OpenOCD log.
+#
+# Why: after "STEPDONE: reset and run" the controller is running again, so a later failure (a
+# time-out, a signal, a non-zero exit of OpenOCD) must be reported as "after reset": the updater
+# sends EVENT 0x0106 only when the reset happened (decision H).
+#
+# @return 0 if mode is reset and the log holds "STEPDONE: reset and run"; 1 otherwise
+reset_ran() {
+    [ "$mode" = reset ] && [ "$OCD_STARTED" -eq 1 ] && [ -f "$LOG" ] || return 1
+    grep -q '^STEPDONE: reset and run$' "$LOG"
+}
+
 # @brief  Find the last step OpenOCD announced in the log.
 #
-# Why: names the step in the result line when a run is interrupted or times out (REQ-060).
+# Why: names the step in the result line when a run is interrupted or times out (REQ-060). In
+# mode reset the name is "after reset" once the reset has run (see reset_ran).
 #
-# @stdout the name of the last "STEP:" line, or nothing if there is none (or no log)
+# @stdout the name of the last "STEP:" line ("after reset" in mode reset once it ran), or nothing
+#         if there is none (or no log)
 # @return 0
 last_step() {
     [ "$OCD_STARTED" -eq 1 ] && [ -f "$LOG" ] || return 0
+    if reset_ran; then echo "after reset"; return 0; fi
     grep '^STEP: ' "$LOG" | tail -1 | sed 's/^STEP: //'
     return 0
 }
@@ -434,6 +464,7 @@ last_step() {
 # @return 0
 failed_step() {
     s=
+    if reset_ran; then echo "after reset"; return 0; fi
     if [ "$OCD_STARTED" -eq 1 ] && [ -f "$LOG" ]; then
         s=$(grep '^STEPFAIL: ' "$LOG" | tail -1 | sed 's/^STEPFAIL: //; s/: .*//')
     fi
@@ -464,16 +495,22 @@ done
 case $mode in
     restore) ;;
     full) ;;
+    reset) ;;
     *) usage "unknown mode: $mode" ;;
 esac
-[ -n "$BL" ] && [ -n "$LR" ] || usage "--bootloader and --last-resort are required"
+if [ "$mode" = reset ]; then
+    [ -z "$BL$LR$MAIN" ] || usage "mode reset takes no images"
+else
+    [ -n "$BL" ] && [ -n "$LR" ] || usage "--bootloader and --last-resort are required"
+fi
 case $mode in
     full) [ -n "$MAIN" ] || usage "mode full needs --main" ;;
     restore) [ -z "$MAIN" ] || usage "mode restore takes no --main" ;;
+    reset) ;;
     *) usage "unknown mode: $mode" ;;
 esac
 # Paths: refuse characters that are syntax in Tcl (see path_ok).
-for p in "$BL" "$LR" ${MAIN:+"$MAIN"}; do
+for p in ${BL:+"$BL"} ${LR:+"$LR"} ${MAIN:+"$MAIN"}; do   # mode reset has none
     path_ok "$p" || usage "path contains a space, [ ] { } \$ \" \\ or a newline: refused (paths)"
 done
 case $OPENOCD_TIMEOUT_S in
@@ -487,39 +524,55 @@ esac
 
 [ -x "$OPENOCD" ] || fail "openocd" "not executable: $OPENOCD" 2
 [ -d "$OCD_SCRIPTS" ] || fail "openocd" "script directory not found: $OCD_SCRIPTS" 2
-[ -x "$FSIR_UPDATER" ] || fail "check tool" "fsir-updater not executable: $FSIR_UPDATER" 2
+if [ "$mode" != reset ]; then   # the image checks are the only use of fsir-updater
+    [ -x "$FSIR_UPDATER" ] || fail "check tool" "fsir-updater not executable: $FSIR_UPDATER" 2
+fi
 
 # Private work folder: mktemp makes an unpredictable name (the old $$ name could be guessed
 # and pre-created by another user). TMPDIR convention kept.
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/restore.XXXXXX") || fail "work dir" "mktemp failed" 2
 path_ok "$WORK" || fail "usage" "work folder path contains a character not allowed in a Tcl path (paths): $WORK" 2
 
-# REQ-118: nothing is written before every image has passed. The updater checks the COPIES.
-check_copy "$BL" bootloader $(( BOOTLOADER_BYTES + HDR + SIGS )) "bootloader image" "$WORK/bootloader.img"
-cut_bootloader "$WORK/bootloader.img" "$WORK/bootloader-body.bin"
-check_copy "$LR" last-resort "$LAST_RESORT_BYTES" "last-resort image" "$WORK/last-resort.img"
-if [ "$mode" = full ]; then
-    check_copy "$MAIN" main "$SLOT_BYTES" "main firmware image" "$WORK/main.img"
-fi
-BL_FILE=$WORK/bootloader-body.bin
-LR_FILE=$WORK/last-resort.img
-MAIN_FILE=$WORK/main.img
+if [ "$mode" != reset ]; then
+    # REQ-118: nothing is written before every image has passed. The updater checks the COPIES.
+    check_copy "$BL" bootloader $(( BOOTLOADER_BYTES + HDR + SIGS )) "bootloader image" "$WORK/bootloader.img"
+    cut_bootloader "$WORK/bootloader.img" "$WORK/bootloader-body.bin"
+    check_copy "$LR" last-resort "$LAST_RESORT_BYTES" "last-resort image" "$WORK/last-resort.img"
+    if [ "$mode" = full ]; then
+        check_copy "$MAIN" main "$SLOT_BYTES" "main firmware image" "$WORK/main.img"
+    fi
+    BL_FILE=$WORK/bootloader-body.bin
+    LR_FILE=$WORK/last-resort.img
+    MAIN_FILE=$WORK/main.img
 
-# BENCH VERSION vs REQ-120. REQ-120 puts the last-resort firmware first, in the
-# bootloader's place, so a restored chip runs it at once. On this bench the bootloader is
-# plain and small (it starts the last-resort itself when no slot is valid), so the chip
-# gets the bootloader at the start of flash and the last-resort image in its own region
-# (0x0801A000). The chip then boots: bootloader, no valid slot, last-resort runs.
-# Order inside the run: last-resort region first (REQ-120's intent), then bootloader,
-# so a power cut in between leaves a chip that does not start the bootloader at all
-# rather than one that starts without its fallback.
-# All-0xFF reference files for the erase read-back (an erased flash word reads 0xFF).
-head -c "$SLOT_BYTES" /dev/zero | tr '\000' '\377' > "$WORK/ff-slot.bin"
-head -c "$BOOT_STATE_BYTES" /dev/zero | tr '\000' '\377' > "$WORK/ff-state.bin"
+    # BENCH VERSION vs REQ-120. REQ-120 puts the last-resort firmware first, in the
+    # bootloader's place, so a restored chip runs it at once. On this bench the bootloader is
+    # plain and small (it starts the last-resort itself when no slot is valid), so the chip
+    # gets the bootloader at the start of flash and the last-resort image in its own region
+    # (0x0801A000). The chip then boots: bootloader, no valid slot, last-resort runs.
+    # Order inside the run: last-resort region first (REQ-120's intent), then bootloader,
+    # so a power cut in between leaves a chip that does not start the bootloader at all
+    # rather than one that starts without its fallback.
+    # All-0xFF reference files for the erase read-back (an erased flash word reads 0xFF).
+    head -c "$SLOT_BYTES" /dev/zero | tr '\000' '\377' > "$WORK/ff-slot.bin"
+    head -c "$BOOT_STATE_BYTES" /dev/zero | tr '\000' '\377' > "$WORK/ff-state.bin"
+fi
 # Every path is in braces in the Tcl text (and none holds a Tcl special character).
-{
-    printf '%s\n' "$TCL_HEAD"
-    cat <<EOT
+if [ "$mode" = reset ]; then
+    # Mode reset (decision H): connect with the chip held in reset, then release it. Nothing is
+    # erased or written. The same reset_config as the other modes (run_openocd).
+    {
+        printf '%s\n' "$TCL_HEAD"
+        cat <<EOT
+step "connect" { init }
+step "reset and run" { reset run }
+shutdown
+EOT
+    } > "$WORK/steps.tcl" || fail "step file" "cannot write $WORK/steps.tcl" 2
+else
+    {
+        printf '%s\n' "$TCL_HEAD"
+        cat <<EOT
 step "connect" { init }
 step "halt under reset" { reset halt }
 step "erase last-resort region" { flash erase_address $LAST_RESORT_START $LAST_RESORT_BYTES }
@@ -535,17 +588,18 @@ step "read back slot A erased" { flash verify_image {$WORK/ff-slot.bin} $SLOT_A_
 step "erase boot state (REQ-057)" { flash erase_address $BOOT_STATE_START $BOOT_STATE_BYTES }
 step "read back boot state erased" { flash verify_image {$WORK/ff-state.bin} $BOOT_STATE_START bin }
 EOT
-    if [ "$mode" = full ]; then
-        cat <<EOT
+        if [ "$mode" = full ]; then
+            cat <<EOT
 step "write main firmware (REQ-121)" { flash write_image {$MAIN_FILE} $SLOT_A_START bin }
 step "verify main firmware" { flash verify_image {$MAIN_FILE} $SLOT_A_START bin }
 EOT
-    fi
-    cat <<EOT
+        fi
+        cat <<EOT
 step "reset and run" { reset run }
 shutdown
 EOT
-} > "$WORK/steps.tcl" || fail "step file" "cannot write $WORK/steps.tcl" 2
+    } > "$WORK/steps.tcl" || fail "step file" "cannot write $WORK/steps.tcl" 2
+fi
 
 # The script must end with shutdown, else OpenOCD would stay running after the last step.
 last_line=$(grep -v '^[[:space:]]*$' "$WORK/steps.tcl" | tail -n 1)
@@ -554,7 +608,9 @@ last_line=$(grep -v '^[[:space:]]*$' "$WORK/steps.tcl" | tail -n 1)
 OCD_STARTED=1
 if run_openocd "$WORK/steps.tcl"; then
     REPORTED=1
-    if [ "$mode" = full ]; then
+    if [ "$mode" = reset ]; then
+        echo "RESTORE DONE: reset"
+    elif [ "$mode" = full ]; then
         echo "RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running"
     else
         echo "RESTORE DONE: restore: bootloader and last-resort written and verified; slots A, B and boot state erased; chip running"

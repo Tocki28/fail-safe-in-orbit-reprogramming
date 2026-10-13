@@ -162,7 +162,7 @@ bool Parser::headerSoFarOk() const
       return bytes_[kOffsetVersion] == kVersion;
     case kOffsetLength + 2:
       return bytes::readU16(&bytes_[kOffsetLength]) <= kPayloadMax;
-    default:   // count_ is a byte count, not an enum: every other count has nothing to check yet
+    default:   // input from the link: count_ counts the bytes received so far; every other count has nothing to check yet
       return true;
   }
 }

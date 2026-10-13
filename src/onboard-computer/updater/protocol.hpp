@@ -78,13 +78,17 @@ constexpr uint8_t kImageDamaged = 0x08;       // REQ-005, REQ-044
 constexpr uint8_t kNotFromOperator = 0x09;    // REQ-006, REQ-043
 constexpr uint8_t kOtherController = 0x0B;    // REQ-046
 constexpr uint8_t kTrialTestsNotPassed = 0x0F;   // "Trial tests not passed"; REQ-012
+constexpr uint8_t kWrongKind = 0x10;          // "Image of the wrong kind for its place"; REQ-005, REQ-008
+constexpr uint8_t kBootStateNotStored = 0x11; // "Boot state could not be stored"; REQ-012, REQ-021
 
 // BENCH ONLY, not in the Interfaces table. Sec. 4.2 has no reason for "the onboard computer
 // could not do it", yet a delivery must end with DONE or REFUSED (REQ-033) and the ground
 // should be able to tell the causes apart. The three values lie outside the table on purpose
 // (0xFD to 0xFF), so none can be read as a real reason, and each names one cause. Open item
 // for the owner: add reasons to Sec. 4.2.
-//   0xFF  the controller did not answer a command of a delivery within its timeout;
+//   0xFF  "controller did not answer": the controller did not answer a command of a delivery
+//         within its timeout, or did not answer the ARM of a ground dangerous command within the
+//         answer time (decision S, accepted by the owner, 13 Oct 2026; Interfaces Sec. 5.2);
 //   0xFE  the onboard computer's own storage failed (cannot open, write, flush or read back);
 //   0xFD  the onboard computer could not send on data link A (device missing or failed).
 constexpr uint8_t kNoAnswerBench = 0xFF;
@@ -142,14 +146,20 @@ constexpr size_t kOffsetSelfTest = 23;
 constexpr uint16_t kEventTrialStarted = 0x0006;
 constexpr uint16_t kEventFirmwareConfirmed = 0x0007;
 constexpr uint16_t kEventFirmwareGivenUp = 0x0008;
-// "restart" (Sec. 5.4 table; the controller's own event). The updater sends it to the ground
-// when the trial has overrun its time (updater.cpp, onTrialOverrun) because it is the one row of
-// the table about a restart; the onboard computer has no restart path built yet, so the event
-// says "a restart is due", not "a restart happened". Proposal (TBR), awaiting the owner's
-// acceptance; the table has no onboard-computer event for it.
-constexpr uint16_t kEventRestart = 0x0009;
+// 0x0009 "restart" is the controller's own event (Sec. 5.4 table); the updater only names it.
+// 0x0106 "controller restarted by the onboard computer" is the onboard computer's own event
+// (Sec. 5.4 table, REQ-013); detail: reason (1). The updater sends it to the ground after it
+// has run the restart script and the controller was reset (decision H, accepted by the owner,
+// 13 Oct 2026; updater.cpp, onTrialOverrun and onRestartFinished).
+constexpr uint16_t kEventControllerRestarted = 0x0106;
+constexpr uint8_t kRestartReasonTrialPastTime = 0x01;   // Sec. 5.4 table: "0x01 trial past its time"
 constexpr uint16_t kEventTrialTestsPassed = 0x000A;   // REQ-139
 constexpr uint16_t kEventTrialTestsFailed = 0x000B;   // REQ-139, REQ-140; detail (1): which test
+// Events 0x0002 and 0x0003 carry a 2-byte detail: refused copy (1), check result (1) (Sec. 5.4
+// table and the check-result table below it).
+constexpr uint16_t kEventFallbackPrevious = 0x0002;
+constexpr uint16_t kEventFallbackLastResort = 0x0003;
+constexpr size_t kFallbackDetailBytes = 2;
 constexpr size_t kOffsetEventCode = 13;
 constexpr size_t kEventDetailOffset = 15;
 constexpr size_t kEventMinBytes = 15;

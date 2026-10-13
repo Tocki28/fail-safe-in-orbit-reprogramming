@@ -60,7 +60,7 @@ const char * destinationName(uint8_t destination)
     case frame::kDestOnboard:    return "onboard computer";
     case frame::kDestController: return "controller";
     case frame::kDestGround:     return "ground";
-    default:                     return "unknown";   // raw Destination byte off the wire: any other value is unknown
+    default:                     return "unknown";   // input from the link: a raw Destination byte; any other value is unknown
   }
 }
 
@@ -132,11 +132,21 @@ bool CommandGate::open()
   return true;
 }
 
+/**
+ * @brief Gives the ground socket's descriptor, for poll().
+ *
+ * @return the descriptor; -1 while the socket is closed
+ */
 int CommandGate::fd() const
 {
   return fd_;
 }
 
+/**
+ * @brief Tells whether a ground has sent a good frame yet (reports have somewhere to go).
+ *
+ * @return true: a ground address is known; false: none yet
+ */
 bool CommandGate::haveGround() const
 {
   return have_ground_;
@@ -338,11 +348,21 @@ ForwardQueue::ForwardQueue()
 {
 }
 
+/**
+ * @brief Tells whether the queue holds no command.
+ *
+ * @return true: empty; false: at least one command waits
+ */
 bool ForwardQueue::empty() const
 {
   return count_ == 0;
 }
 
+/**
+ * @brief Tells whether the queue is full (config::kForwardQueueSize commands).
+ *
+ * @return true: full; false: there is room
+ */
 bool ForwardQueue::full() const
 {
   return count_ == items_.size();
@@ -377,6 +397,13 @@ bool ForwardQueue::push(const frame::Frame & command, bool armed, uint64_t arm_a
   return true;
 }
 
+/**
+ * @brief Gives the oldest command in the queue.
+ *
+ * Only valid when the queue is not empty; callers check empty() first.
+ *
+ * @return the oldest command, still in the queue
+ */
 const ForwardedCommand & ForwardQueue::front() const
 {
   return items_[head_];
@@ -416,6 +443,13 @@ void ForwardTable::add(uint32_t link_sequence, uint32_t ground_sequence)
   next_ = (next_ + 1) % entries_.size();
 }
 
+/**
+ * @brief Looks up the ground sequence number of a command sent on data link A.
+ *
+ * @param[in]     link_sequence    the sequence number the command carried on data link A
+ * @param[out]    ground_sequence  the ground's sequence number; written only when true is returned
+ * @return true: found; false: not in the table (never added, or replaced since)
+ */
 bool ForwardTable::find(uint32_t link_sequence, uint32_t & ground_sequence) const
 {
   for (const Entry & entry : entries_) {

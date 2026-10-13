@@ -149,13 +149,17 @@ uint16_t imageNumber(const frame::Frame & c)
  * @param[in]     reports  the report store, which keeps the last HEALTH report
  * @param[in]     watch    the controller watch (REQ-061)
  * @param[in]     beat_ms  period of the idle GET STATUS to the controller, in ms; 0: off
+ * @param[in]     restart_script  path of restore.sh, run as "restore.sh reset" when a trial overruns
+ *                                (decision H), copied; null or empty: no restart path, the overrun is only logged
  * @return nothing (constructor)
  */
 Updater::Updater(CommandGate & gate, DataLink & link, UploadStore & store,
-  const ImageChecker & checker, ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms)
+  const ImageChecker & checker, ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms,
+  const char * restart_script)
 : gate_(gate), link_(link), store_(store), checker_(checker), reports_(reports), watch_(watch),
   beat_ms_(beat_ms), next_beat_ms_(0), now_ms_(0), sender_(Sender::kNone), reports_dropped_(0),
-  queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), trial_watch_(config::kTrialMs, config::kTrialMarginMs), used_(),
+  queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), trial_watch_(config::kTrialMs, config::kTrialMarginMs),
+  restart_(restart_script, config::kRestartScriptMs, config::kRestartKillGraceMs), used_(),
   test_image_running_(false), payload_{},
   report_{}
 {
@@ -632,8 +636,8 @@ void Updater::finishDelivery(Delivery::Step step, uint8_t code)
       logging::line("test image: data link A cannot send, after %zu of %zu bytes; not retried",
         delivery_.sent(), delivery_.size());
     } else {
-      logging::line("test image: refused 0x%02x after %zu of %zu bytes; not retried", code,
-        delivery_.sent(), delivery_.size());
+      logging::line("test image: refused 0x%02x (%s) after %zu of %zu bytes; not retried", code,
+        refusalName(code), delivery_.sent(), delivery_.size());
     }
     test_image_running_ = false;
   } else if (step == Delivery::Step::kDone) {
@@ -641,8 +645,8 @@ void Updater::finishDelivery(Delivery::Step step, uint8_t code)
       delivery_.number());
     done(delivery_.groundSequence());
   } else {
-    logging::line("DELIVER image %u: refused 0x%02x after %zu of %zu bytes",
-      delivery_.number(), code, delivery_.sent(), delivery_.size());
+    logging::line("DELIVER image %u: refused 0x%02x (%s) after %zu of %zu bytes",
+      delivery_.number(), code, refusalName(code), delivery_.sent(), delivery_.size());
     refused(delivery_.groundSequence(), code);
   }
   delivery_.stop();
@@ -1002,7 +1006,8 @@ void Updater::sendNext()
  *
  * Every wait is bounded. Ground command: the ground gets no answer, a late one is still passed
  * on. Delivery or test image: ends with 0xFF (protocol.hpp). ARM of a pair: the command is not
- * sent and the ground gets no answer. Beat: logged.
+ * sent and the ground's command is answered REFUSED 0xFF "controller did not answer" (decision S,
+ * accepted by the owner, 13 Oct 2026; Interfaces Sec. 5.2). Beat: logged.
  *
  * @return nothing
  */
@@ -1019,8 +1024,12 @@ void Updater::onTimeout()
       finishDelivery(Delivery::Step::kRefused, answer::kNoAnswerBench);
       break;
     case Sender::kArm:
-      logging::line("controller: no answer to ARM sequence %u in time; the ground command is not "
-        "sent and gets no answer", sequence);
+      // Decision S (accepted by the owner, 13 Oct 2026): the operator who sent a dangerous
+      // command is told it did not go, with the bench code 0xFF "controller did not answer".
+      logging::line("controller: no answer to ARM sequence %u in time; the ground command sequence "
+        "%u is not sent; refused 0xff (controller did not answer)", sequence,
+        queue_.front().ground_sequence);
+      refused(queue_.front().ground_sequence, answer::kNoAnswerBench);
       queue_.pop();
       pair_ = PairStage::kNone;
       break;
@@ -1034,12 +1043,12 @@ void Updater::onTimeout()
 }
 
 /**
- * @brief The one wiring point of the trial-overrun watch (decision H, awaiting the owner's acceptance).
+ * @brief The one wiring point of the trial-overrun watch (decision H, accepted by the owner, 13 Oct 2026).
  *
  * Called with a good report from the controller (the HEALTH mode or the EVENT code is fed to the
  * TrialWatch) and, with a null pointer, on every tick (the clock is checked). To drop decision H,
- * delete this function, its two calls, onTrialOverrun, the member trial_watch_ and trial_watch.*;
- * nothing else uses them.
+ * delete this function, its two calls, onTrialOverrun, restartWatch, onRestartFinished, the members
+ * trial_watch_ and restart_, trial_watch.* and restart_runner.*; nothing else uses them.
  *
  * @param[in]     report  a report frame that passed the report store's checks, or nullptr on a tick
  * @return nothing
@@ -1061,30 +1070,127 @@ void Updater::trialWatch(const frame::Frame * report)
 }
 
 /**
- * @brief Acts on a trial that ran past its time plus margin without EVENT 0x0007 or 0x0008.
+ * @brief Acts on a trial that ran past its time plus margin: starts the restart script.
  *
- * Decision H of the controller audit: the trial time is enforced by the firmware on trial, so
- * the onboard computer times it too. The restart of the controller (REQ-061, REQ-124) is not
- * built (controller_watch.hpp); no hardware mechanism is invented here. What it does: logs the
- * overrun, and sends the ground an EVENT 0x0009 "restart" (Interfaces Sec. 5.4 table; the only
- * row about a restart, and a proposal awaiting the owner, see protocol.hpp) numbered and stamped
- * by the report store like any report. The event says a restart is due; none is carried out.
+ * Decision H (accepted by the owner, 13 Oct 2026): the firmware on trial enforces the trial time,
+ * so the onboard computer times it too, and when that limit did not work it restarts the
+ * controller (REQ-013, REQ-061) by running "restore.sh reset" (restart_runner.hpp). The script
+ * runs as a child process under a deadline; nothing here waits for it (restartWatch picks up its
+ * end). The EVENT 0x0106 goes to the ground only once the reset has happened
+ * (onRestartFinished). A script that cannot be started, or one that is already running, is logged
+ * and nothing is sent: no reset happened, and the ground is not told one did.
  *
  * @return nothing
  */
 void Updater::onTrialOverrun()
 {
   logging::line("trial: no EVENT 0x0007 or 0x0008 within %llu s + %llu s margin of the trial's "
-    "start (REQ-037); the controller should be restarted, but the restart path (REQ-061, "
-    "REQ-124) is not built: nothing restarted",
+    "start (REQ-037); restarting the controller with the restart script",
     static_cast<unsigned long long>(config::kTrialMs / 1000),
     static_cast<unsigned long long>(config::kTrialMarginMs / 1000));
-  std::array<uint8_t, report::kEventMinBytes> event{};
+  if (!restart_.configured()) {
+    logging::line("trial: no restart script is configured (--restore-script); nothing restarted, "
+      "no EVENT 0x0106 sent");
+    return;
+  }
+  if (restart_.running()) {
+    logging::line("trial: the restart script %s is still running; not started again, no new "
+      "EVENT 0x0106", restart_.script());
+    return;
+  }
+  int error = 0;
+  if (!restart_.start(now_ms_, error)) {
+    logging::line("trial: cannot start %s reset: %s; the controller was not restarted, no EVENT "
+      "0x0106 sent", restart_.script(), std::strerror(error));
+    return;
+  }
+  logging::line("trial: %s reset started (deadline %llu s, then TERM, KILL after %llu s)",
+    restart_.script(), static_cast<unsigned long long>(config::kRestartScriptMs / 1000),
+    static_cast<unsigned long long>(config::kRestartKillGraceMs / 1000));
+}
+
+/**
+ * @brief Looks at the restart script once, without waiting; acts when it has ended.
+ *
+ * Called every tick. The reaping and the deadline are in RestartRunner::poll, which never blocks
+ * (decision H: the main loop keeps serving both links while the script runs).
+ *
+ * @return nothing
+ */
+void Updater::restartWatch()
+{
+  RestartRunner::Outcome outcome{};
+  if (restart_.running() && restart_.poll(now_ms_, outcome)) {
+    onRestartFinished(outcome);
+  }
+}
+
+/**
+ * @brief Logs how the restart script ended and tells the ground if the controller was reset.
+ *
+ * EVENT 0x0106 "controller restarted by the onboard computer", detail 0x01 "trial past its time"
+ * (Interfaces Sec. 5.4 table; REQ-013) goes to the ground when the reset happened: the script's
+ * line was "RESTORE DONE: reset", or "RESTORE FAILED: after reset" (the reset ran, OpenOCD then
+ * did not end cleanly). In every other case the reset is not shown to have happened (the script
+ * failed before it, was stopped, or printed nothing) and nothing new is sent; the log names the
+ * line, the exit status or signal, and whether the deadline stopped it.
+ *
+ * @param[in]     outcome  how the child ended (RestartRunner::poll)
+ * @return nothing
+ */
+void Updater::onRestartFinished(const RestartRunner::Outcome & outcome)
+{
+  const char * how = outcome.abandoned ? "given up after KILL, not reaped"
+                   : outcome.killed ? "killed after the deadline"
+                   : outcome.deadline_hit ? "stopped with TERM after the deadline"
+                   : "ended by itself";
+  logging::line("trial: restart script %s: exit status %d, signal %d; result line \"%s\"", how,
+    outcome.exit_code, outcome.term_signal, outcome.line.data());
+  switch (outcome.result) {
+    case RestartRunner::Result::kDone:
+      logging::line("trial: the controller was reset; sending EVENT 0x0106 (%s), reason 0x01 "
+        "trial past its time", eventName(report::kEventControllerRestarted));
+      sendOwnEvent(report::kEventControllerRestarted, report::kRestartReasonTrialPastTime);
+      break;
+    case RestartRunner::Result::kFailedAfterReset:
+      logging::line("trial: the script failed after the reset ran (the line says so); the "
+        "controller was reset, so EVENT 0x0106 is sent, reason 0x01 trial past its time");
+      sendOwnEvent(report::kEventControllerRestarted, report::kRestartReasonTrialPastTime);
+      break;
+    case RestartRunner::Result::kFailed:
+      logging::line("trial: the restart script did not show that the controller was reset (no "
+        "\"RESTORE DONE: reset\" and no \"RESTORE FAILED: after reset\"); no EVENT 0x0106 sent");
+      break;
+  }
+}
+
+/**
+ * @brief Sends the onboard computer's own EVENT, with a one-byte detail, to the ground.
+ *
+ * The event is numbered and stamped by the report store like any report, then sent when a ground
+ * has spoken (report_store.hpp; reports before that are dropped, as for the controller's).
+ *
+ * @param[in]     code    the event code (Interfaces Sec. 5.4, 0x0101 to 0x0106)
+ * @param[in]     detail  the detail byte (for 0x0106: the reason)
+ * @return nothing
+ */
+void Updater::sendOwnEvent(uint16_t code, uint8_t detail)
+{
+  std::array<uint8_t, report::kEventMinBytes + 1> event{};
   event[report::kOffsetKind] = report::kEvent;
-  bytes::writeU16(&event[report::kOffsetEventCode], report::kEventRestart);
-  if (reports_.accept(event.data(), event.size(), clocks::onboardTimeS(), now_ms_, report_.data(),
-        report_.size()) && gate_.haveGround()) {
-    (void)gate_.sendReport(report_.data(), static_cast<uint16_t>(event.size()));
+  bytes::writeU16(&event[report::kOffsetEventCode], code);
+  event[report::kEventDetailOffset] = detail;
+  if (!reports_.accept(event.data(), event.size(), clocks::onboardTimeS(), now_ms_, report_.data(),
+        report_.size())) {
+    logging::line("EVENT 0x%04x not sent: the report store refused it", code);
+    return;
+  }
+  if (!gate_.haveGround()) {
+    logging::line("EVENT 0x%04x not sent: no ground has spoken yet", code);
+    return;
+  }
+  if (!gate_.sendReport(report_.data(), static_cast<uint16_t>(event.size()))) {
+    logging::line("EVENT 0x%04x not sent: the ground link did not take it", code);
   }
 }
 
@@ -1103,6 +1209,7 @@ void Updater::tick(uint64_t now_ms)
     onTimeout();
   }
   trialWatch(nullptr);   // decision H, separable: see trialWatch
+  restartWatch();        // decision H: the restart script, if one runs
   watch_.check(now_ms);
   sendNext();
 }

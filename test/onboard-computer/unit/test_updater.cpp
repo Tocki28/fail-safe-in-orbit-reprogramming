@@ -17,7 +17,10 @@
  *   arming        a ground ARM held and paired with its dangerous command on data link A
  *   reports       report number and onboard time filled in; lengths and kinds checked
  *   data link     stop-and-wait, sequence numbers, timeout, the 10 ms gap
- *   options       the command line
+ *   options       the command line, including --restore-script
+ *   restart       RestartRunner on mock scripts (result lines, deadline, TERM, KILL, never blocks);
+ *                 the Updater's trial-overrun path with a mock restore.sh (decision H); ARM with no
+ *                 answer (decision S); names and decoded event detail
  *
  * Usage: test_updater CONTROLLER_IMAGES TEST_IMAGES FLIPPED_IMAGE SCRATCH_DIR
  * Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -27,6 +30,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
+#include <cerrno>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -41,6 +46,7 @@
 #include <vector>
 
 #include "bytes.hpp"
+#include "clock.hpp"
 #include "command_gate.hpp"
 #include "config.hpp"
 #include "controller_watch.hpp"
@@ -54,6 +60,7 @@
 #include "options.hpp"
 #include "protocol.hpp"
 #include "report_store.hpp"
+#include "restart_runner.hpp"
 #include "serial_port.hpp"
 #include "test_image.hpp"
 #include "trial_watch.hpp"
@@ -1130,11 +1137,13 @@ public:
    *
    * @param[in]     dir      data directory of the upload store
    * @param[in]     beat_ms  the Updater's beat period, ms
+   * @param[in]     restart_script  path of the restart script the Updater runs on a trial overrun
+   *                                (decision H); empty: none configured
    */
-  UpdaterRig(const std::string & dir, uint32_t beat_ms)
+  UpdaterRig(const std::string & dir, uint32_t beat_ms, const std::string & restart_script = "")
   : transport_(), link_(transport_), gate_(kPort), store_(dir.c_str()),
-    checker_(PUBLIC_KEY_A, PUBLIC_KEY_B), reports_(), watch_(5000, 0),
-    updater_(gate_, link_, store_, checker_, reports_, watch_, beat_ms), client_(-1), now_(1000),
+    checker_(PUBLIC_KEY_A, PUBLIC_KEY_B), reports_(), watch_(5000, 0), script_(restart_script),
+    updater_(gate_, link_, store_, checker_, reports_, watch_, beat_ms, script_.c_str()), client_(-1), now_(1000),
     listen_(0), next_sequence_(1), parser_(), pending_()
   {
   }
@@ -1343,6 +1352,7 @@ private:
   ImageChecker checker_;
   ReportStore reports_;
   ControllerWatch watch_;
+  std::string script_;   // before updater_: the Updater keeps the pointer
   Updater updater_;
   int client_;
   uint64_t now_;
@@ -2033,12 +2043,14 @@ void testTestImageOnEvent(const std::string & scratch)
 }
 
 /**
- * @brief Decision H (separable, awaiting the owner): the trial watch and its wiring in the updater.
+ * @brief Decision H (accepted by the owner, 13 Oct 2026): the trial watch's timing rules.
  *
- * @param[in]     scratch  scratch directory
+ * The trial time (120 s) and margin (30 s); one overrun reported once; HEALTH reports that keep
+ * showing TRIAL do not restart the timing; EVENT 0x0007 and 0x0008 end it; EVENT 0x0006 starts it.
+ *
  * @return nothing
  */
-void testTrialWatch(const std::string & scratch)
+void testTrialWatch()
 {
   TrialWatch w(config::kTrialMs, config::kTrialMarginMs);
   w.onHealthMode(report::kModeTrial, 1000);
@@ -2055,28 +2067,631 @@ void testTrialWatch(const std::string & scratch)
   report(!w.expired(1000000 + 400000), "trial watch: EVENT 0x0008 ends the timing");
   w.onEvent(report::kEventTrialStarted, 2000000);
   report(w.expired(2000000 + 150001), "trial watch: EVENT 0x0006 starts the timing");
+}
 
-  std::string dir = scratch + "/audit-trial";
+/**
+ * @brief Writes an executable sh script.
+ *
+ * @param[in]     path  where to write it
+ * @param[in]     body  the script's text after the "#!/bin/sh" line
+ * @param[in]     mode  file mode, e.g. 0755; 0644 makes a script that cannot be executed
+ * @return true: written; false: the file could not be written
+ */
+bool writeScript(const std::string & path, const std::string & body, mode_t mode)
+{
+  std::FILE * f = std::fopen(path.c_str(), "wb");
+  if (f == nullptr) {
+    return false;
+  }
+  std::string text = "#!/bin/sh\n" + body;
+  bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
+  ok = (std::fclose(f) == 0) && ok;
+  return ok && ::chmod(path.c_str(), mode) == 0;
+}
+
+/**
+ * @brief Tells whether a file's first line equals text.
+ *
+ * @param[in]     path  file to read
+ * @param[in]     text  expected first line, without the newline
+ * @return true: the file exists and its first line is text
+ */
+bool firstLineIs(const std::string & path, const std::string & text)
+{
+  std::vector<uint8_t> data = readFile(path);
+  std::string content(data.begin(), data.end());
+  return content.substr(0, content.find('\n')) == text && !data.empty();
+}
+
+/**
+ * @brief Polls a RestartRunner on the real clock until it ends or the limit passes.
+ *
+ * Sleeps 5 ms between polls: a bounded wait of the test, not of the runner.
+ *
+ * @param[in,out] runner    the runner, started
+ * @param[in]     limit_ms  most real time to wait, ms
+ * @param[out]    outcome   the outcome when true is returned
+ * @return true: the child ended or was given up in time; false: still running at the limit
+ */
+bool runUntilEnded(RestartRunner & runner, uint64_t limit_ms, RestartRunner::Outcome & outcome)
+{
+  uint64_t start = clocks::nowMs();
+  while (clocks::nowMs() - start <= limit_ms) {
+    if (runner.poll(clocks::nowMs(), outcome)) {
+      return true;
+    }
+    ::usleep(5000);
+  }
+  return false;
+}
+
+/**
+ * @brief Tells whether a process is gone, waiting up to 2 s for it to disappear.
+ *
+ * @param[in]     pid  process id read from a file; 0 or negative counts as gone
+ * @return true: kill(pid, 0) says no such process; false: still there after 2 s
+ */
+bool processGone(long pid)
+{
+  if (pid <= 0) {
+    return true;
+  }
+  for (int i = 0; i < 400; i++) {
+    if (::kill(static_cast<pid_t>(pid), 0) != 0 && errno == ESRCH) {
+      return true;
+    }
+    ::usleep(5000);
+  }
+  return false;
+}
+
+/**
+ * @brief Reads a process id written by a mock script into a file.
+ *
+ * @param[in]     path  the file
+ * @return the id; 0 if the file is missing or empty
+ */
+long readPid(const std::string & path)
+{
+  std::vector<uint8_t> data = readFile(path);
+  std::string text(data.begin(), data.end());
+  return text.empty() ? 0 : std::atol(text.c_str());
+}
+
+/**
+ * @brief RestartRunner (decision H): the result lines, the exit status, start errors, the deadline.
+ *
+ * Mock scripts in the scratch directory stand for restore.sh. Real child processes, the real
+ * clock, deadlines of 150 ms. Passes when each result line gives its Result, a script that cannot
+ * start gives its errno, start() and poll() return at once while the child runs, TERM comes after
+ * the deadline, KILL reaches a script that ignores TERM and the sleep it started.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testRestartRunner(const std::string & scratch)
+{
+  std::string dir = scratch + "/restart-runner";
+  removeTree(dir);
+  (void)::mkdir(dir.c_str(), 0755);
+  using R = RestartRunner::Result;
+  RestartRunner::Outcome o{};
+  int error = 0;
+
+  report(!RestartRunner(nullptr, 1000, 1000).configured() && !RestartRunner("", 1000, 1000).configured() &&
+         RestartRunner("x", 1000, 1000).configured(), "restart runner: configured only with a non-empty path");
+
+  // The script is called with the one argument "reset".
+  std::string s = dir + "/done.sh";
+  bool ok = writeScript(s, "echo \"$#:$1\" > " + dir + "/args\necho 'RESTORE DONE: reset'\n", 0755);
+  RestartRunner a(s.c_str(), 5000, 150);
+  ok = ok && a.start(clocks::nowMs(), error) && a.running() && runUntilEnded(a, 3000, o);
+  report(ok && !a.running() && o.result == R::kDone && o.exit_code == 0 && o.term_signal == 0 &&
+         std::strcmp(o.line.data(), "RESTORE DONE: reset") == 0 && firstLineIs(dir + "/args", "1:reset"),
+    "restart runner: 'RESTORE DONE: reset', exit 0: kDone; called as 'script reset'");
+
+  struct Case { const char * name; const char * body; R expected; };
+  const Case cases[] = {
+    {"done line but exit 1", "echo 'RESTORE DONE: reset'\nexit 1\n", R::kFailed},
+    {"after reset", "echo 'RESTORE FAILED: after reset (time-out after 2 s)'\nexit 1\n", R::kFailedAfterReset},
+    {"failed in connect", "echo 'RESTORE FAILED: connect (log: x)'\nexit 1\n", R::kFailed},
+    {"failed in reset and run", "echo 'RESTORE FAILED: reset and run (log: x)'\nexit 1\n", R::kFailed},
+    {"no line, exit 0", "exit 0\n", R::kFailed},
+    {"DONE line of another word", "echo 'RESTORE DONE: resetting'\n", R::kFailed},
+    {"a done line of another mode", "echo 'RESTORE DONE: restore: x'\n", R::kFailed},
+    {"after-reset word prefix", "echo 'RESTORE FAILED: after resetting'\nexit 1\n", R::kFailed},
+    {"line among noise", "echo noise\necho 'RESTORE DONE: reset'\n", R::kDone},
+  };
+  for (const Case & c : cases) {
+    std::string path = dir + "/case.sh";
+    RestartRunner r(path.c_str(), 5000, 150);
+    bool good = writeScript(path, c.body, 0755) && r.start(clocks::nowMs(), error) &&
+                runUntilEnded(r, 3000, o);
+    report(good && o.result == c.expected && !o.deadline_hit, std::string("restart runner: ") + c.name);
+  }
+
+  // A chatty script: the newest bytes are kept, so the last line is still read.
+  s = dir + "/chatty.sh";
+  ok = writeScript(s, "i=0\nwhile [ $i -lt 400 ]; do echo 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'; i=$((i+1)); done\necho 'RESTORE DONE: reset'\n", 0755);
+  RestartRunner chatty(s.c_str(), 5000, 150);
+  ok = ok && chatty.start(clocks::nowMs(), error) && runUntilEnded(chatty, 3000, o);
+  report(ok && o.result == R::kDone, "restart runner: 28 KB of output before the result line: the line is still read");
+
+  // A script that kills itself: a signal, no line.
+  s = dir + "/killed.sh";
+  ok = writeScript(s, "kill -9 $$\n", 0755);
+  RestartRunner killed(s.c_str(), 5000, 150);
+  ok = ok && killed.start(clocks::nowMs(), error) && runUntilEnded(killed, 3000, o);
+  report(ok && o.result == R::kFailed && o.exit_code == -1 && o.term_signal == SIGKILL,
+    "restart runner: a script ended by a signal: kFailed, the signal reported");
+
+  // Scripts that cannot start.
+  RestartRunner missing((dir + "/no-such-script.sh").c_str(), 5000, 150);
+  report(!missing.start(clocks::nowMs(), error) && error == ENOENT && !missing.running(),
+    "restart runner: a missing script: start() false, ENOENT, nothing running");
+  s = dir + "/not-executable.sh";
+  ok = writeScript(s, "echo 'RESTORE DONE: reset'\n", 0644);
+  RestartRunner noexec(s.c_str(), 5000, 150);
+  report(ok && !noexec.start(clocks::nowMs(), error) && error == EACCES && !noexec.running(),
+    "restart runner: a script without the execute bit: start() false, EACCES");
+  RestartRunner none(nullptr, 5000, 150);
+  report(!none.start(clocks::nowMs(), error) && !none.running(), "restart runner: no script configured: start() false");
+
+  // Never blocks: start and poll return at once while the child sleeps.
+  s = dir + "/slow.sh";
+  ok = writeScript(s, "echo $$ > " + dir + "/slow.pid\nsleep 1\necho 'RESTORE DONE: reset'\n", 0755);
+  RestartRunner slow(s.c_str(), 5000, 150);
+  uint64_t t0 = clocks::nowMs();
+  ok = ok && slow.start(t0, error);
+  bool quick_poll = true;
+  for (int i = 0; i < 20; i++) {
+    quick_poll = quick_poll && !slow.poll(clocks::nowMs(), o);
+  }
+  uint64_t took = clocks::nowMs() - t0;
+  bool second = slow.start(clocks::nowMs(), error);
+  report(ok && quick_poll && took < 250 && slow.running() && !second && error == EBUSY,
+    "restart runner: start() and 20 polls of a 1 s script took under 250 ms; a second start() is refused (EBUSY)");
+  ok = runUntilEnded(slow, 3000, o);
+  report(ok && o.result == R::kDone && clocks::nowMs() - t0 >= 900, "restart runner: and the result comes when the script ends");
+
+  // Deadline: TERM to a script that obeys it.
+  s = dir + "/obeys.sh";
+  ok = writeScript(s, "echo $$ > " + dir + "/obeys.pid\nexec sleep 30\n", 0755);
+  RestartRunner obeys(s.c_str(), 150, 150);
+  t0 = clocks::nowMs();
+  ok = ok && obeys.start(t0, error) && runUntilEnded(obeys, 4000, o);
+  report(ok && o.deadline_hit && !o.killed && o.term_signal == SIGTERM && o.result == R::kFailed &&
+         clocks::nowMs() - t0 < 2000 && processGone(readPid(dir + "/obeys.pid")),
+    "restart runner: past the deadline the script gets TERM, is reaped, and the result is kFailed");
+
+  // Deadline: KILL to a script that ignores TERM, and to the sleep it started.
+  s = dir + "/stubborn.sh";
+  ok = writeScript(s, "trap '' TERM\necho $$ > " + dir + "/stubborn.pid\nsleep 1000 &\necho $! > " + dir +
+                      "/stubborn-child.pid\nwhile :; do sleep 1; done\n", 0755);
+  RestartRunner stubborn(s.c_str(), 2500, 300);   // 2.5 s: a slow first start of sh (seen: over 600 ms) must still reach its trap
+  t0 = clocks::nowMs();
+  ok = ok && stubborn.start(t0, error) && runUntilEnded(stubborn, 8000, o);
+  report(ok && o.deadline_hit && o.killed && !o.abandoned && o.term_signal == SIGKILL && o.result == R::kFailed &&
+         processGone(readPid(dir + "/stubborn.pid")),
+    "restart runner: a script that ignores TERM gets KILL after the grace");
+  report(processGone(readPid(dir + "/stubborn-child.pid")),
+    "restart runner: KILL goes to the whole process group: the sleep the script started is gone too");
+  report(!stubborn.running() && !stubborn.poll(clocks::nowMs(), o), "restart runner: after the end, poll() is false and nothing runs");
+
+  // The runner can be used again after an end.
+  RestartRunner again((dir + "/done.sh").c_str(), 5000, 150);
+  ok = again.start(clocks::nowMs(), error) && runUntilEnded(again, 3000, o) &&
+       again.start(clocks::nowMs(), error) && runUntilEnded(again, 3000, o);
+  report(ok && o.result == R::kDone, "restart runner: used twice in a row");
+}
+
+/**
+ * @brief Waits for a mock restart script to finish, serving the Updater meanwhile.
+ *
+ * Calls tick and collects the ground's reports until the file named by done_file exists and then
+ * for 150 ms more (reports from the end of the script), or until 5 s of real time pass.
+ *
+ * @param[in,out] rig        the updater under test
+ * @param[in]     done_file  a file the mock script creates as its last act; "" to wait 300 ms only
+ * @param[out]    reports    every report the ground received meanwhile
+ * @return nothing
+ */
+void serveUntilScriptEnds(UpdaterRig & rig, const std::string & done_file,
+  std::vector<std::vector<uint8_t>> & reports)
+{
+  SentFrame f{};
+  uint64_t start = clocks::nowMs();
+  uint64_t done_at = 0;
+  while (clocks::nowMs() - start < 5000) {
+    (void)rig.tick(f);
+    for (std::vector<uint8_t> & r : rig.groundReports()) {
+      reports.push_back(r);
+    }
+    if (done_at == 0 && (done_file.empty() ? clocks::nowMs() - start > 300 : exists(done_file))) {
+      done_at = clocks::nowMs();
+    }
+    if (done_at != 0 && clocks::nowMs() - done_at > 150) {
+      return;
+    }
+  }
+}
+
+/**
+ * @brief Counts the reports that are EVENT reports with this code.
+ *
+ * @param[in]     reports  report payloads
+ * @param[in]     code     event code
+ * @return the count
+ */
+size_t countEvents(const std::vector<std::vector<uint8_t>> & reports, uint16_t code)
+{
+  size_t n = 0;
+  for (const std::vector<uint8_t> & r : reports) {
+    if (r.size() >= report::kEventMinBytes && r[report::kOffsetKind] == report::kEvent &&
+        bytes::readU16(&r[report::kOffsetEventCode]) == code) {
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * @brief Tells whether none of the reports is EVENT 0x0106 or the old EVENT 0x0009.
+ *
+ * @param[in]     reports  report payloads the ground received
+ * @return true: neither event is among them (HEALTH reports and other events do not count)
+ */
+bool noRestartEvent(const std::vector<std::vector<uint8_t>> & reports)
+{
+  return countEvents(reports, report::kEventControllerRestarted) == 0 && countEvents(reports, 0x0009) == 0;
+}
+
+/**
+ * @brief Decision H: the trial overruns, the Updater runs the restart script, and tells the ground.
+ *
+ * Mock scripts stand for "restore.sh reset"; the rig's clock is moved by the test, the script runs
+ * in real time. Passes when: nothing at 150 s exactly; at 150.001 s the script starts, once, and
+ * EVENT 0x0106 with detail 0x01 (and no EVENT 0x0009) reaches the ground only after the script
+ * says the controller was reset ("RESTORE DONE: reset", or "RESTORE FAILED: after reset"); a script
+ * that fails before the reset, is missing, is not configured or is already running sends nothing;
+ * the main loop is not blocked while the script runs; the deadline stops a script that hangs.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialOverrunRestart(const std::string & scratch)
+{
+  std::string base = scratch + "/overrun";
+  removeTree(base);
+  (void)::mkdir(base.c_str(), 0755);
+
+  // One run: a trial begins, the ground has spoken, the clock goes to trial time + margin (+1 ms),
+  // the mock script runs. Returns the reports the ground got; marks are written into the result.
+  struct Run
+  {
+    std::vector<std::vector<uint8_t>> reports;
+    bool silent_at_150s;
+    bool started;   // the script was called (its marker file exists)
+    uint64_t overrun_tick_ms;   // real time the tick that started the script took
+  };
+  auto run = [&](const std::string & name, const std::string & script_body, bool make_script,
+                 bool configured) -> Run {
+    Run result{{}, false, false, 0};
+    std::string dir = base + "/" + name;
+    (void)::mkdir(dir.c_str(), 0755);
+    removeTree(dir);   // files of an earlier run (the store's data directory is a subdirectory and stays)
+    (void)::mkdir(dir.c_str(), 0755);
+    std::string script = dir + "/restore.sh";
+    if (make_script) {
+      (void)writeScript(script, "echo called > " + dir + "/called\n" + script_body + "touch " + dir + "/finished\n", 0755);
+    }
+    std::string data = dir + "/data";   // a named string: the store keeps the pointer
+    UpdaterRig rig(data, 0, configured ? script : "");
+    if (!rig.open()) {
+      return result;
+    }
+    SentFrame f{};
+    (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});   // a ground has spoken
+    (void)rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    rig.health(report::kModeTrial);
+    (void)rig.groundReports();
+    rig.advance(config::kTrialMs + config::kTrialMarginMs);
+    (void)rig.tick(f);
+    result.silent_at_150s = rig.groundReports().empty() && !exists(dir + "/called");
+    rig.advance(2);
+    uint64_t t0 = clocks::nowMs();
+    (void)rig.tick(f);
+    result.overrun_tick_ms = clocks::nowMs() - t0;
+    serveUntilScriptEnds(rig, make_script && configured ? dir + "/finished" : "", result.reports);
+    result.started = exists(dir + "/called");
+    return result;
+  };
+
+  Run r = run("done", "echo 'RESTORE DONE: reset'\n", true, true);
+  bool detail_ok = false;
+  for (const std::vector<uint8_t> & p : r.reports) {
+    if (p.size() == report::kEventMinBytes + 1 && p[report::kOffsetKind] == report::kEvent &&
+        bytes::readU16(&p[report::kOffsetEventCode]) == report::kEventControllerRestarted &&
+        p[report::kEventDetailOffset] == report::kRestartReasonTrialPastTime) {
+      detail_ok = true;
+    }
+  }
+  report(r.silent_at_150s, "trial overrun: at exactly 150 s nothing is run and nothing is sent");
+  report(r.started && r.reports.size() == 1 && countEvents(r.reports, 0x0106) == 1 && detail_ok,
+    "trial overrun: the script RESTORE DONE: reset -> exactly one report to the ground, EVENT 0x0106, 16 bytes, detail 0x01");
+  report(countEvents(r.reports, 0x0009) == 0, "trial overrun: and no EVENT 0x0009 any more");
+  report(r.overrun_tick_ms < 250, "trial overrun: the tick that starts the script returns at once (" + std::to_string(r.overrun_tick_ms) + " ms)");
+
+  r = run("after", "echo 'RESTORE FAILED: after reset (time-out after 300 s, OpenOCD stopped; log: x)'\nexit 1\n", true, true);
+  report(r.started && countEvents(r.reports, 0x0106) == 1 && r.reports.size() == 1,
+    "trial overrun: the script RESTORE FAILED: after reset -> the reset happened: EVENT 0x0106 is sent");
+
+  r = run("before", "echo 'RESTORE FAILED: connect (log: x)'\nexit 1\n", true, true);
+  report(r.started && noRestartEvent(r.reports),
+    "trial overrun: the script RESTORE FAILED: connect -> the reset is not shown: nothing is sent");
+  r = run("silent", "exit 1\n", true, true);
+  report(r.started && noRestartEvent(r.reports), "trial overrun: a script that fails with no line: nothing is sent");
+
+  r = run("missing", "", false, true);
+  report(r.silent_at_150s && !r.started && noRestartEvent(r.reports),
+    "trial overrun: the script path does not exist: logged, nothing is sent, the Updater goes on");
+  r = run("unconfigured", "", false, false);
+  report(!r.started && noRestartEvent(r.reports), "trial overrun: no script configured: logged, nothing is sent");
+
+  // The main loop is not blocked while the script runs: a ground command goes through.
+  {
+    std::string dir = base + "/loop";
+    (void)::mkdir(dir.c_str(), 0755);
+    removeTree(dir);
+    (void)::mkdir(dir.c_str(), 0755);
+    bool made = writeScript(dir + "/restore.sh", "sleep 1\necho 'RESTORE DONE: reset'\ntouch " + dir + "/finished\n", 0755);
+    std::string data = dir + "/data";   // a named string: the store keeps the pointer
+    std::string script = dir + "/restore.sh";
+    UpdaterRig rig(data, 0, script);
+    if (!made || !rig.open()) {
+      report(false, "trial overrun: rig or script did not open");
+      return;
+    }
+    SentFrame f{};
+    (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});
+    (void)rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    rig.health(report::kModeTrial);
+    rig.advance(config::kTrialMs + config::kTrialMarginMs + 1);
+    (void)rig.tick(f);
+    rig.advance(config::kBeginTimeoutMs + 1);   // the test image of this trial times out and frees data link A
+    (void)rig.tick(f);
+    uint64_t t0 = clocks::nowMs();
+    bool ok = rig.fromGround(frame::kDestController, 2, {command::kGetStatus});
+    SentFrame g{};
+    ok = ok && rig.tick(g) && isCommand(g, {command::kGetStatus});
+    uint64_t took = clocks::nowMs() - t0;
+    report(ok && took < 800 && !exists(dir + "/finished"),
+      "trial overrun: while the script runs a ground command is passed on to the controller (" + std::to_string(took) + " ms, script still running)");
+    rig.answer(g.sequence, answer::kDone, 0);
+    std::vector<std::vector<uint8_t>> reports;
+    serveUntilScriptEnds(rig, dir + "/finished", reports);
+    report(countEvents(reports, 0x0106) == 1, "trial overrun: and the event comes when the script has ended");
+  }
+
+  // A second overrun while the script still runs does not start a second one.
+  {
+    std::string dir = base + "/twice";
+    (void)::mkdir(dir.c_str(), 0755);
+    removeTree(dir);
+    (void)::mkdir(dir.c_str(), 0755);
+    bool made = writeScript(dir + "/restore.sh", "echo x >> " + dir + "/calls\nsleep 1\necho 'RESTORE DONE: reset'\ntouch " + dir + "/finished\n", 0755);
+    std::string data = dir + "/data";   // a named string: the store keeps the pointer
+    std::string script = dir + "/restore.sh";
+    UpdaterRig rig(data, 0, script);
+    if (!made || !rig.open()) {
+      report(false, "trial overrun twice: rig or script did not open");
+      return;
+    }
+    SentFrame f{};
+    (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});
+    (void)rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    rig.health(report::kModeTrial);
+    rig.advance(config::kTrialMs + config::kTrialMarginMs + 1);
+    (void)rig.tick(f);
+    rig.health(report::kModeOperate);
+    rig.health(report::kModeTrial);   // another trial begins at once
+    rig.advance(config::kTrialMs + config::kTrialMarginMs + 1);
+    (void)rig.tick(f);
+    std::vector<std::vector<uint8_t>> reports;
+    serveUntilScriptEnds(rig, dir + "/finished", reports);
+    std::vector<uint8_t> calls = readFile(dir + "/calls");
+    report(calls.size() == 2 && countEvents(reports, 0x0106) == 1,
+      "trial overrun: a second overrun while the script runs does not start it again; one event");
+  }
+
+  // The deadline stops a script that hangs; nothing is sent.
+  {
+    std::string dir = base + "/hang";
+    (void)::mkdir(dir.c_str(), 0755);
+    removeTree(dir);
+    (void)::mkdir(dir.c_str(), 0755);
+    bool made = writeScript(dir + "/restore.sh", "echo $$ > " + dir + "/pid\nexec sleep 100\n", 0755);
+    std::string data = dir + "/data";   // a named string: the store keeps the pointer
+    std::string script = dir + "/restore.sh";
+    UpdaterRig rig(data, 0, script);
+    if (!made || !rig.open()) {
+      report(false, "trial overrun hang: rig or script did not open");
+      return;
+    }
+    SentFrame f{};
+    (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});
+    (void)rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    rig.health(report::kModeTrial);
+    rig.advance(config::kTrialMs + config::kTrialMarginMs + 1);
+    (void)rig.tick(f);
+    std::vector<std::vector<uint8_t>> reports;
+    serveUntilScriptEnds(rig, "", reports);
+    long pid = readPid(dir + "/pid");
+    bool alive = pid > 0 && ::kill(static_cast<pid_t>(pid), 0) == 0;   // still sleeping before the deadline
+    rig.advance(config::kRestartScriptMs + 1);   // past the updater's deadline: TERM
+    serveUntilScriptEnds(rig, "", reports);
+    report(alive && processGone(readPid(dir + "/pid")) && noRestartEvent(reports),
+      "trial overrun: a script that hangs is stopped at the updater's deadline; nothing is sent");
+  }
+}
+
+/**
+ * @brief Decision S: the controller does not answer an ARM; the ground's dangerous command is refused 0xFF.
+ *
+ * ARM held, dangerous command sent, the ARM goes to the controller, no answer within the answer
+ * time: the ground gets REFUSED 0xFF "controller did not answer" for its command, the command
+ * itself is never sent, and a later answer to the ARM changes nothing. Before the decision the
+ * ground got no answer.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testArmNoAnswer(const std::string & scratch)
+{
+  std::string dir = scratch + "/arm-no-answer";
   removeTree(dir);
   UpdaterRig rig(dir, 0);
-  if (!rig.open()) { report(false, "trial watch: rig did not open"); return; }
+  if (!rig.open()) { report(false, "arm no answer: rig did not open"); return; }
+  const uint32_t kDest = frame::kDestController;
+  SentFrame arm{};
+  bool ok = rig.fromGround(kDest, 1, armOf(command::kSwitch, 2));
+  (void)rig.groundAnswers();
+  ok = ok && rig.fromGround(kDest, 2, {command::kSwitch}) && rig.tick(arm) &&
+       arm.payload.size() == 6 && arm.payload[0] == command::kArm;
+  report(ok && hasAnswer(rig.groundAnswers(), 2, answer::kRefused, 0xFF) == false,
+    "arm no answer: before the answer time passes the ground has no answer for the SWITCH");
+  rig.advance(config::kAnswerTimeoutMs - 1);
   SentFrame f{};
-  (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});   // a ground has spoken
-  (void)rig.tick(f);
-  rig.answer(f.sequence, answer::kDone, 0);
-  rig.health(report::kModeTrial);
-  (void)rig.groundReports();
-  rig.advance(config::kTrialMs + config::kTrialMarginMs);
-  (void)rig.tick(f);
-  std::vector<std::vector<uint8_t>> none = rig.groundReports();
-  rig.advance(2);
-  (void)rig.tick(f);
-  std::vector<std::vector<uint8_t>> sent = rig.groundReports();
-  bool is_event = !sent.empty() && sent[0].size() == report::kEventMinBytes &&
-                  sent[0][report::kOffsetKind] == report::kEvent &&
-                  bytes::readU16(&sent[0][report::kOffsetEventCode]) == report::kEventRestart;
-  report(none.empty() && is_event,
-    "trial watch: a trial with no 0x0007/0x0008 after 150 s: the ground gets EVENT 0x0009; nothing at 150 s exactly");
+  bool early = rig.tick(f);
+  report(!early && rig.groundAnswers().empty(), "arm no answer: 1 ms before the answer time (2 s): still waiting");
+  rig.advance(1);
+  SentFrame after{};
+  bool sent = rig.tick(after);
+  std::vector<GroundAnswer> g = rig.groundAnswers();
+  report(hasAnswer(g, 2, answer::kRefused, answer::kNoAnswerBench) && g.size() == 1,
+    "arm no answer: past the answer time the ground's SWITCH is answered REFUSED 0xFF, once");
+  report(!sent, "arm no answer: and the SWITCH itself is not sent");
+  rig.answer(arm.sequence, answer::kDone, 0);   // a late ARM answer
+  report(!rig.tick(f) && rig.groundAnswers().empty(), "arm no answer: a late answer to the ARM sends nothing more");
+}
+
+/**
+ * @brief Decision S names and the decoded detail: refusals 0x10 and 0x11, event 0x0106, check results, events 0x0002 and 0x0003.
+ *
+ * Passes when each name is the Interfaces Sec. 4.2 / Sec. 5.4 wording, unknown values are
+ * "unknown", the constants have the table's values, and describeEvent writes the refused copy and
+ * the check result of events 0x0002 and 0x0003 (and says so when the detail is short or absent).
+ *
+ * @return nothing
+ */
+void testNamesAndFallbackDetail()
+{
+  report(answer::kWrongKind == 0x10 && answer::kBootStateNotStored == 0x11 &&
+         report::kEventControllerRestarted == 0x0106 && report::kRestartReasonTrialPastTime == 0x01,
+    "names: refusals 0x10 and 0x11, event 0x0106 and reason 0x01 have the table's values");
+  report(std::strcmp(refusalName(0x10), "image of the wrong kind for its place") == 0 &&
+         std::strcmp(refusalName(0x11), "boot state could not be stored") == 0 &&
+         std::strcmp(refusalName(0x0F), "trial tests not passed") == 0 &&
+         std::strcmp(refusalName(0x05), "not allowed in the current mode") == 0 &&
+         std::strcmp(refusalName(0xFF), "controller did not answer (bench code)") == 0 &&
+         std::strcmp(refusalName(0x12), "unknown") == 0 && std::strcmp(refusalName(0x00), "unknown") == 0,
+    "names: refusal 0x10 'image of the wrong kind for its place', 0x11 'boot state could not be stored', 0xFF, unknown");
+  bool all_named = true;
+  for (unsigned code = 0x01; code <= 0x11; code++) {
+    all_named = all_named && std::strcmp(refusalName(static_cast<uint8_t>(code)), "unknown") != 0;
+  }
+  report(all_named, "names: every refusal 0x01 to 0x11 of the Sec. 4.2 table has a name");
+  report(std::strcmp(eventName(0x0106), "controller restarted by the onboard computer") == 0 &&
+         std::strcmp(eventName(0x0009), "restart") == 0 && std::strcmp(eventName(0x0107), "unknown") == 0,
+    "names: event 0x0106 'controller restarted by the onboard computer'; 0x0009 stays the controller's 'restart'");
+  const char * expected[] = {"none: the copy passed", "the copy is empty", "proprietary string", "format", "kind",
+    "target", "length", "start address outside the region", "body check value", "signature A", "signature B"};
+  bool results = true;
+  for (unsigned i = 0; i <= 0x0A; i++) {
+    results = results && std::strcmp(checkResultName(static_cast<uint8_t>(i)), expected[i]) == 0;
+  }
+  report(results && std::strcmp(checkResultName(0x0B), "unknown") == 0,
+    "names: check results 0x00 to 0x0A as in the Sec. 5.4 table; 0x0B unknown");
+
+  std::array<char, 192> text{};
+  const uint8_t previous[] = {0x01, 0x09};
+  describeEvent(0x0002, previous, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0002 (fall-back to the previous copy), refused copy 0x01 (A), check result 0x09 (signature A)") == 0,
+    "event detail: 0x0002 {0x01, 0x09}: refused copy A, check result signature A");
+  const uint8_t last_resort[] = {0x02, 0x0A};
+  describeEvent(0x0003, last_resort, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0003 (fall-back to the last-resort firmware), refused copy 0x02 (B), check result 0x0a (signature B)") == 0,
+    "event detail: 0x0003 {0x02, 0x0A}: refused copy B, check result signature B");
+  const uint8_t odd[] = {0x03, 0x7F, 0x55};
+  describeEvent(0x0002, odd, 3, text.data(), text.size());
+  report(std::strstr(text.data(), "refused copy 0x03 (last-resort), check result 0x7f (unknown)") != nullptr,
+    "event detail: copy 0x03 is last-resort; a check result outside the table is 'unknown'; a third byte is ignored");
+  describeEvent(0x0002, previous, 1, text.data(), text.size());
+  report(std::strstr(text.data(), "detail of 1 byte(s) instead of the 2 of Sec. 5.4: refused copy only, no check result") != nullptr,
+    "event detail: 0x0002 with a 1-byte detail says so");
+  describeEvent(0x0003, nullptr, 0, text.data(), text.size());
+  report(std::strstr(text.data(), "detail of 0 byte(s) instead of the 2 of Sec. 5.4") != nullptr,
+    "event detail: 0x0003 with no detail says so");
+  const uint8_t reason[] = {0x01};
+  describeEvent(0x0106, reason, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0106 (controller restarted by the onboard computer), detail 0x01") == 0,
+    "event detail: 0x0106 shows its reason byte");
+  describeEvent(0x000B, reason, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x000b (trial tests failed), detail 0x01") == 0,
+    "event detail: 0x000B shows which test (unchanged)");
+  describeEvent(0x0004, previous, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0004 (self-test failed)") == 0, "event detail: other events show no detail");
+  std::array<char, 16> small{};
+  describeEvent(0x0002, previous, 2, small.data(), small.size());
+  report(small[small.size() - 1] == '\0' && std::strlen(small.data()) == small.size() - 1,
+    "event detail: a too-small buffer gets cut text, terminated");
+
+  // Through the report store: a 17-byte event 0x0002 is accepted and numbered, as before.
+  ReportStore store;
+  std::vector<uint8_t> event(report::kEventMinBytes + 2, 0);
+  event[report::kOffsetKind] = report::kEvent;
+  bytes::writeU16(&event[report::kOffsetEventCode], 0x0002);
+  event[report::kEventDetailOffset] = 0x01;
+  event[report::kEventDetailOffset + 1] = 0x09;
+  std::array<uint8_t, report::kEventMaxBytes> out{};
+  report(store.accept(event.data(), event.size(), 7, 100, out.data(), out.size()) &&
+         bytes::readU32(&out[report::kOffsetNumber]) == 1 && out[report::kEventDetailOffset + 1] == 0x09,
+    "event detail: the report store passes the 2-byte detail of event 0x0002 on unchanged");
+}
+
+/**
+ * @brief Decision H options: --restore-script, and the default path next to the program.
+ *
+ * @return nothing
+ */
+void testRestoreScriptOption()
+{
+  Options o{};
+  const char * none[] = {"fsir-updater"};
+  report(parseOptions(1, none, o) && o.restore_script == nullptr, "options: --restore-script not given: unset (default next to the program)");
+  const char * given[] = {"x", "--restore-script", "/opt/fsir/restore.sh", "--beat-s", "2"};
+  report(parseOptions(5, given, o) && std::strcmp(o.restore_script, "/opt/fsir/restore.sh") == 0 && o.beat_s == 2,
+    "options: --restore-script PATH read");
+  const char * missing[] = {"x", "--restore-script"};
+  report(!parseOptions(2, missing, o), "options: --restore-script without a value refused");
+
+  std::array<char, 128> path{};
+  bool made = defaultRestoreScript("/opt/fsir/fsir-updater", path.data(), path.size());
+  std::string text(path.data());
+#ifdef __linux__
+  // On Linux the program file is the test program, from /proc/self/exe, not argv[0].
+  report(made && text.size() > 11 && text.substr(text.size() - 11) == "/restore.sh",
+    "options: default restart script is restore.sh in the directory of the program file");
+#else
+  report(made && text == "/opt/fsir/restore.sh", "options: default restart script is restore.sh in the directory of the program");
+#endif
+  std::array<char, 8> tiny{};
+  report(!defaultRestoreScript("/opt/fsir/fsir-updater", tiny.data(), tiny.size()),
+    "options: a path that does not fit gives false");
 }
 
 /**
@@ -2458,7 +3073,12 @@ int main(int argc, char ** argv)
   testAlreadyDone(argv[1], argv[4]);
   testUsedSequences(argv[4]);
   testTestImageOnEvent(argv[4]);
-  testTrialWatch(argv[4]);
+  testTrialWatch();
+  testRestartRunner(argv[4]);
+  testTrialOverrunRestart(argv[4]);
+  testArmNoAnswer(argv[4]);
+  testNamesAndFallbackDetail();
+  testRestoreScriptOption();
   testCheckImageFile(argv[2], argv[3], argv[4]);
   testSeverity3(argv[1], argv[4]);
   testDropLogLimit();

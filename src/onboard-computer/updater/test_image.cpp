@@ -75,7 +75,7 @@ void TestImageTrigger::onHealthMode(uint8_t mode)
  * the image twice. So the first EVENT 0x0006 of a trial only is remembered, and each further
  * one, which can only be the controller starting its trial again while HEALTH shows TRIAL
  * throughout, makes the image due (Interfaces Sec. 5.4, Sec. 5.5 step 7; REQ-139). This ordering
- * rule is a decision of the coordinator for the owner to confirm.
+ * rule is decision R, accepted by the owner, 13 Oct 2026.
  *
  * @return nothing
  */

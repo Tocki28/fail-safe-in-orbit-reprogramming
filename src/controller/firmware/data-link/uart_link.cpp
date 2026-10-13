@@ -32,9 +32,20 @@ constexpr uint32_t kSendByteTimeoutCycles = kCyclesPerMs;
  * shift register (send() writes TDR only once TXE says it is empty). Two bytes need 174 us on
  * the line; 2 ms is over ten times that. */
 constexpr uint32_t kDrainTimeoutCycles = 2U * kCyclesPerMs;
+/* Backstop for a cycle counter that has stopped (CoreClock::start() checks it counts at start,
+ * but it could stop later): as many passes of the wait loop as cycles above. A pass reads the
+ * ISR register and the counter, so it takes at least one core cycle: with a working counter the
+ * cycle limit ends the wait first and the backstop never changes a result; with a dead counter
+ * the wait lasts at least as many cycles as the limit, 1 ms and 2 ms at 170 MHz. The longest it
+ * can take is the passes x (cycles per pass): TBD, not measured. It stays inside the
+ * watchdog's 1.88 s (bootloader/watchdog.c) as long as a pass takes under 1.88 s x 170 MHz /
+ * 340 000 passes = 940 cycles (computed, for the longer of the two waits). */
+constexpr uint32_t kSendByteTimeoutPasses = kSendByteTimeoutCycles;
+constexpr uint32_t kDrainTimeoutPasses = kDrainTimeoutCycles;
 
 /**
- * @brief Wait until USART2 can take the next byte, at most kSendByteTimeoutCycles.
+ * @brief Wait until USART2 can take the next byte, at most kSendByteTimeoutCycles cycles or
+ * kSendByteTimeoutPasses passes.
  *
  * @return true if TXE was set in time; false if the transmitter did not empty
  */
@@ -44,12 +55,15 @@ bool waitTransmitEmpty()
 
     /* TXE: TDR has moved to the shift register and takes the next byte
      * [RM0440 Rev 9, Sec. 40.8.10, p. 1767]. */
-    while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0U) {
+    for (uint32_t n = 0U; n < kSendByteTimeoutPasses; n++) {
+        if ((USART2->ISR & USART_ISR_TXE_TXFNF) != 0U) {
+            return true;
+        }
         if ((CoreClock::cyclesNow() - start) > kSendByteTimeoutCycles) {
             return false;
         }
     }
-    return true;
+    return (USART2->ISR & USART_ISR_TXE_TXFNF) != 0U;
 }
 
 }  // namespace
@@ -175,7 +189,8 @@ bool UartLink::send(const uint8_t *bytes, uint32_t size)
 }
 
 /**
- * @brief Wait until the transmitter has sent its last byte, at most kDrainTimeoutCycles.
+ * @brief Wait until the transmitter has sent its last byte, at most kDrainTimeoutCycles cycles or
+ * kDrainTimeoutPasses passes.
  *
  * Called before a restart (mode-manager/mode_manager.cpp), so the last answer or event leaves
  * the chip before the reset stops the USART halfway through a byte. TC is set when the last
@@ -190,10 +205,13 @@ bool UartLink::waitSent()
     uint32_t start = CoreClock::cyclesNow();
 
     /* Unsigned subtraction stays right when the cycle counter wraps. */
-    while ((USART2->ISR & USART_ISR_TC) == 0U) {
+    for (uint32_t n = 0U; n < kDrainTimeoutPasses; n++) {
+        if ((USART2->ISR & USART_ISR_TC) != 0U) {
+            return true;
+        }
         if ((CoreClock::cyclesNow() - start) > kDrainTimeoutCycles) {
             return false;
         }
     }
-    return true;
+    return (USART2->ISR & USART_ISR_TC) != 0U;
 }

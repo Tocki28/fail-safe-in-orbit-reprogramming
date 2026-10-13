@@ -3,11 +3,14 @@
  *
  * The clock steps are the bootloader's (bootloader/clock.c), copied, not shared: REQ-119 asks
  * the bootloader to share no code with the main firmware. Two differences: every wait here
- * gives up after kWaitCycles, and there is no way back to the reset clock (the firmware hands
- * over to nothing).
+ * gives up after kWaitCycles cycles or kWaitPasses passes, and there is no way back to the
+ * reset clock (the firmware hands over to nothing).
  *
- * The firmware starts on HSI16 at 16 MHz, 1 flash wait state: the bootloader puts the clock
- * back to its reset state before the jump (bootloader/handover.h).
+ * The firmware normally starts on HSI16 at 16 MHz, 1 flash wait state: the bootloader puts the
+ * clock back to its reset state before the jump (bootloader/handover.h). That is not always so:
+ * if the bootloader's switch back to HSI16 does not finish, it returns early and the firmware
+ * starts on the PLL (bootloader/clock.c, clock_back_to_reset). start() copes with both: it
+ * writes every clock setting it needs, in the same order, whichever clock it finds.
  */
 #include "core_clock.hpp"
 
@@ -29,50 +32,83 @@ constexpr uint32_t kPllrDiv2Field = 0U;
 constexpr uint32_t kSettleCycles = kCoreClockHz / 1000000U;
 /* Longest wait here: PLL lock, 40 us at most [DS12589 Rev 6, Table 45, p. 106]. 16 000 cycles
  * last at least 94 us (at 170 MHz), over twice that, and at most 2 ms (at the 8 MHz the core
- * runs at during the change), far inside the watchdog's 1.88 s (bootloader/handover.c). */
+ * runs at during the change), far inside the watchdog's 1.88 s (bootloader/watchdog.c). */
 constexpr uint32_t kWaitCycles = 16000U;
+/* Backstop for a cycle counter that has stopped: as many passes of the wait loop as cycles
+ * above. A pass reads a register and the counter, so it takes at least one core cycle:
+ * (1) with a working counter kWaitCycles cycles pass in at most kWaitCycles passes, so the
+ * cycle limit ends the wait first and the backstop never changes a result; (2) with a dead
+ * counter kWaitCycles passes last at least kWaitCycles cycles, which is at least 94 us at
+ * 170 MHz and 1 ms at 16 MHz, over the 40 us PLL lock above. The longest a dead-counter wait
+ * can take is kWaitCycles x (cycles per pass): TBD, not measured; it stays inside the
+ * watchdog's 1.88 s as long as a pass takes under 1.88 s x 16 MHz / 16 000 = 1880 cycles
+ * (computed at the 16 MHz reset clock; the bootloader's time-out is
+ * bootloader/watchdog.c, IWDG_PR_DIV32, IWDG_RELOAD_FIRMWARE). */
+constexpr uint32_t kWaitPasses = kWaitCycles;
+/* After the counter is enabled it must change within this many reads. A counter that counts
+ * core cycles changes between two reads at least one cycle apart; 100 reads span at least 100
+ * cycles. No count rate is assumed beyond "changes at all". */
+constexpr uint32_t kCycleCheckReads = 100U;
 
 /**
- * @brief Enable and zero the DWT cycle counter.
+ * @brief Enable and zero the DWT cycle counter, then check that it counts.
  *
  * The DWT cycle counter runs only with TRCENA set in DEMCR [RM0440 Rev 9, Sec. 47.10,
- * p. 2102] and CYCCNTENA (bit 0) set in DWT_CTRL [RM0440 Rev 9, Sec. 47.13, p. 2104].
+ * p. 2102] and CYCCNTENA (bit 0) set in DWT_CTRL [RM0440 Rev 9, Sec. 47.13, p. 2104]. Every
+ * wait in this file and in data-link/uart_link.cpp is bounded by this counter, so start()
+ * reports a counter that does not change within kCycleCheckReads reads.
+ *
+ * @return true if the counter advanced, false if it did not
  */
-void cyclesStart()
+bool cyclesStart()
 {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0U;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    const uint32_t first = DWT->CYCCNT;
+    for (uint32_t n = 0U; n < kCycleCheckReads; n++) {
+        if (DWT->CYCCNT != first) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
- * @brief Wait until (reg & mask) == want, at most kWaitCycles.
+ * @brief Wait until (reg & mask) == want, at most kWaitCycles cycles or kWaitPasses passes.
  *
  * C++: the register is passed by reference, not by pointer: it always exists, so there is no
- * null case to think about. The timeout is measured on the cycle counter.
+ * null case to think about. The timeout is measured on the cycle counter; the passes limit is
+ * the backstop for a stopped counter (see kWaitPasses).
  *
  * @param[in] reg   the register to poll (read each pass)
  * @param[in] mask  the bits to look at
  * @param[in] want  the value those bits must have
- * @return true if the bits reached the wanted value; false if kWaitCycles passed first
+ * @return true if the bits reached the wanted value; false if the limit passed first
  */
 bool waitBits(const volatile uint32_t &reg, uint32_t mask, uint32_t want)
 {
     uint32_t start = CoreClock::cyclesNow();
 
     /* Unsigned subtraction stays right when the counter wraps. */
-    while ((reg & mask) != want) {
+    for (uint32_t n = 0U; n < kWaitPasses; n++) {
+        if ((reg & mask) == want) {
+            return true;
+        }
         if ((CoreClock::cyclesNow() - start) > kWaitCycles) {
             return false;
         }
     }
-    return true;
+    return (reg & mask) == want;
 }
 
 /**
- * @brief Busy-wait for a number of core clock cycles.
+ * @brief Busy-wait for a number of core clock cycles, at most that many passes of the loop.
  *
  * Uses the cycle counter; unsigned subtraction keeps the result right when the counter wraps.
+ * The passes limit is the backstop for a stopped counter: every pass takes at least one core
+ * cycle, so `cycles` passes last at least `cycles` cycles, and with a working counter the
+ * cycle count ends the wait first (see kWaitPasses).
  *
  * @param[in] cycles  cycles to wait (core clock cycles)
  */
@@ -80,7 +116,7 @@ void waitCycles(uint32_t cycles)
 {
     uint32_t start = CoreClock::cyclesNow();
 
-    while ((CoreClock::cyclesNow() - start) < cycles) {
+    for (uint32_t n = 0U; (n < cycles) && ((CoreClock::cyclesNow() - start) < cycles); n++) {
     }
 }
 
@@ -113,14 +149,22 @@ uint32_t CoreClock::cyclesNow()
  * @brief Start the cycle counter and move the core clock from HSI16 to the 170 MHz PLL.
  *
  * Steps: AHB / 2, boost mode, 4 flash wait states with prefetch, PLL on and selected as system
- * clock, 1 us wait, AHB / 1. Every wait gives up after kWaitCycles. On failure the function
- * stops at the failed step and leaves the clock as it is.
+ * clock, 1 us wait, AHB / 1. Every wait gives up after kWaitCycles cycles or kWaitPasses passes.
+ * On failure the function stops at the failed step and leaves the clock as it is.
  *
- * @return true if the core clock now runs at 170 MHz; false if a wait timed out
+ * A cycle counter that does not count is handled as a failure: every wait here and in the
+ * link driver depends on it, so the clock is reported not usable and nothing else is touched
+ * (main.cpp then stops reloading the watchdog, which restarts the chip, REQ-022). The firmware
+ * has no log line before its link is up.
+ *
+ * @return true if the core clock now runs at 170 MHz; false if a wait timed out or the cycle
+ *         counter does not count
  */
 bool CoreClock::start()
 {
-    cyclesStart();
+    if (!cyclesStart()) {
+        return false;
+    }
 
     /* PWR registers ignore writes until their bus clock is on. */
     RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;

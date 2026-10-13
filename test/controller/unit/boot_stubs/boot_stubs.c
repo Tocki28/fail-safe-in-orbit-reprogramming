@@ -4,12 +4,15 @@
  *
  * The UART stand-in collects the text in a buffer so a test can look at the log. The flash
  * stand-ins report no error and do nothing: the tests call no function that reads or writes
- * flash (boot_state_read and boot_state_write are not called).
+ * flash. The watchdog stand-ins only record that they were called (ev_trace); the real
+ * watchdog.c is tested apart (test_watchdog.c). Every stand-in that matters to the order of the
+ * bootloader's steps adds one character to ev_trace.
  */
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <setjmp.h>
 #include <string.h>
 
 #include "boot_stubs.h"
@@ -17,9 +20,72 @@
 #include "flash.h"
 #include "handover.h"
 #include "uart.h"
+#include "watchdog.h"
 
 RCC_TypeDef fake_rcc;
 char uart_log[UART_LOG_BYTES];
+char ev_trace[EV_MAX];
+bool stub_cycles_counts = true;
+jmp_buf park_exit;
+
+static uint32_t ev_length;
+static bool uart_is_off;
+static uint32_t reloads_after_off;
+
+/**
+ * @brief Empties the event trace and the park-loop counter.
+ */
+void ev_clear(void)
+{
+    ev_trace[0] = '\0';
+    ev_length = 0U;
+    uart_is_off = false;
+    reloads_after_off = 0U;
+}
+
+/**
+ * @brief Appends one event character to the trace; an event that does not fit is dropped.
+ *
+ * @param[in]     event  character that names the event
+ */
+void ev_add(char event)
+{
+    if (ev_length < (EV_MAX - 1U)) {
+        ev_trace[ev_length] = event;
+        ev_length++;
+        ev_trace[ev_length] = '\0';
+    }
+}
+
+/**
+ * @brief Records that the long watchdog time-out was started.
+ */
+void watchdog_start_long(void)
+{
+    ev_add('W');
+}
+
+/**
+ * @brief Records a watchdog reload; the third one after uart_off() leaves the park loop.
+ */
+void watchdog_reload(void)
+{
+    ev_add('R');
+    if (uart_is_off) {
+        reloads_after_off++;
+        if (reloads_after_off >= 3U) {
+            longjmp(park_exit, 1);
+        }
+    }
+}
+
+/**
+ * @brief Records that the firmware's watchdog time-out was set.
+ */
+void watchdog_set_firmware_timeout(void)
+{
+    ev_add('F');
+}
 
 /**
  * @brief Empties the collected UART text.
@@ -34,6 +100,7 @@ void uart_log_clear(void)
  */
 void uart_init(void)
 {
+    ev_add('U');
 }
 
 /**
@@ -64,17 +131,23 @@ void uart_put_decimal(uint32_t value)
 }
 
 /**
- * @brief Does nothing; the host has no UART to switch off.
+ * @brief Records that the UART was switched off; the host has no UART to switch off.
  */
 void uart_off(void)
 {
+    ev_add('O');
+    uart_is_off = true;
 }
 
 /**
- * @brief Does nothing; the host has no cycle counter to start.
+ * @brief Records the start of the cycle counter; the host has none.
+ *
+ * @return stub_cycles_counts
  */
-void cycles_start(void)
+bool cycles_start(void)
 {
+    ev_add('C');
+    return stub_cycles_counts;
 }
 
 /**
@@ -94,6 +167,7 @@ uint32_t cycles_now(void)
  */
 bool clock_to_170mhz(void)
 {
+    ev_add('K');
     return true;
 }
 

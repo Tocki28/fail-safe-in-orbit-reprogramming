@@ -122,7 +122,7 @@ public:
     void reset();
 
     /* Take one byte that arrived at now_ms (a millisecond count that may wrap). True when this
-     * byte completes a frame that passed every check; `frame` then describes it, and its
+     * byte completes a frame that passed every check (check value, and Flags bits 1 to 7 = 0); `frame` then describes it, and its
      * payload points into the parser, valid until the next call. */
     [[nodiscard]] bool feed(uint8_t byte, uint32_t now_ms, Frame &frame);
 
@@ -131,6 +131,7 @@ private:
     void startOver(uint8_t byte);
     bool headerSoFarOk() const;
     bool checkValueOk() const;
+    bool flagsOk() const;
     void decode(Frame &frame) const;
 
     /* The parser's memory: one frame's bytes as they arrive. count_ never exceeds

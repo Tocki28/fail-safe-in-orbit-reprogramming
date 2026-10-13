@@ -308,7 +308,15 @@ bool ModeManager::isDangerous(const uint8_t *payload, uint16_t length)
  *
  * 0. the command itself: exactly 1 byte (0x06, REQ-028);
  * 1. mode (REQ-027): SWITCH only in OPERATE, CONFIRM only in TRIAL (Interfaces Sec. 5.1, command
- *    table; FALLBACK is a later step); else 0x05;
+ *    table; FALLBACK is a later step); else 0x05. CONFIRM also needs the trial time not to be
+ *    over: from kTrialMs after the start on, the trial is over (REQ-013) even if poll() has not
+ *    yet given it up on this pass, so CONFIRM is refused 0x05 too (audit finding #22). Why 0x05
+ *    and not another code of Interfaces Sec. 4.2: the table's other time codes are 0x02
+ *    (arming command expired, REQ-030) and 0x03 (command past its expiry, REQ-066), which are
+ *    about the ARM and about the command's own expiry, both still valid here; 0x0F is "trial
+ *    tests not passed", which is not the reason. What is wrong is that the controller is no
+ *    longer in a trial, which is "not allowed in the current mode". It is checked with the mode,
+ *    before the arming, so the ARM stays in place (see below);
  * 2. arming (REQ-029, REQ-030): ArmState::check, 0x01 or 0x02. A command that passes uses the
  *    ARM up, also if a later check refuses it;
  * 3. CONFIRM only: all trial tests passed (REQ-012, REQ-020); else 0x0F.
@@ -332,6 +340,10 @@ AnswerCode ModeManager::acceptDangerous(const uint8_t *payload, uint16_t length,
     HealthMode allowed = (command == kCmdSwitch) ? HealthMode::kOperate : HealthMode::kTrial;
     if (mode_ != allowed) {
         return AnswerCode::kMode;
+    }
+    /* Unsigned subtraction stays right when the millisecond count wraps. */
+    if ((command == kCmdConfirm) && ((now_ms - trial_start_ms_) >= kTrialMs)) {
+        return AnswerCode::kMode;   /* the trial time is over: see the list above */
     }
     AnswerCode armed = arm.check(command, sequence, now_ms);
     if (armed != AnswerCode::kSuccess) {

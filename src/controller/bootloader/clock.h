@@ -16,8 +16,10 @@
 #define HSI16_HZ         16000000U
 #define HZ_PER_MHZ       1000000U
 
-/* Start the core's cycle counter (DWT CYCCNT). Call first: every wait here is bounded by it. */
-void cycles_start(void);
+/* Start the core's cycle counter (DWT CYCCNT) and check that it counts. True if it advanced.
+ * Every wait here is bounded by it, and also by a number of loop passes, so a counter that
+ * does not count cannot make a wait endless. */
+bool cycles_start(void);
 /* Value of the cycle counter. */
 uint32_t cycles_now(void);
 

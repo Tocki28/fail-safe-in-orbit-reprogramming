@@ -19,7 +19,8 @@ constexpr uint32_t kCyclesPerMs = kCoreClockHz / 1000U;
 class CoreClock {
 public:
     /* Start the core's cycle counter, then HSI16 -> PLL -> 170 MHz (Range 1 boost mode, 4 flash
-     * wait states). False if a step did not finish in time: the clock is then not usable. */
+     * wait states). False if a step did not finish in time or the cycle counter does not count: the
+     * clock is then not usable. */
     [[nodiscard]] static bool start();
 
     /* Core cycles since start(); wraps every 25 s at 170 MHz. */

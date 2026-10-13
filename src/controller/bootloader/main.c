@@ -25,10 +25,8 @@
 #include "layout.h"
 #include "stm32g4xx.h"
 #include "uart.h"
+#include "watchdog.h"
 
-/* Trial starts allowed before the trial is given up. Bench value; the requirement's value is
- * TBD-starts in the SRS (REQ-015). */
-#define MAX_STARTS      3U
 /* Trial slot, confirmed slot, last-resort. */
 #define MAX_CANDIDATES  3U
 
@@ -192,7 +190,9 @@ static void log_signature_time(const region_t *region, uint32_t cycles)
 /**
  * @brief Writes the boot state to flash.
  *
- * Logs a failure.
+ * Reloads the watchdog first, so the write (two flash operations and a read-back) starts with a
+ * full time-out; nothing is reloaded inside the flash waits, so a BSY that never clears ends in
+ * a watchdog reset (audit finding #3). Logs a failure.
  *
  * @param[in,out] state  boot state to write; boot_state_write sets its sequence number and check
  *                       value
@@ -200,6 +200,7 @@ static void log_signature_time(const region_t *region, uint32_t cycles)
  */
 static bool save_state(boot_state_t *state)
 {
+    watchdog_reload();
     if (boot_state_write(state)) {
         return true;
     }
@@ -256,7 +257,10 @@ static void give_up_trial(boot_state_t *state, const char *why)
  * @brief Count this start of the trial firmware and store the count BEFORE it runs, so a hang or a
  * power loss during the trial counts as a failed start (REQ-016, REQ-017).
  *
- * After MAX_STARTS starts without a confirmation the trial is given up (REQ-015).
+ * After BOOT_STATE_MAX_STARTS starts without a confirmation the trial is given up (REQ-015). The
+ * count is compared before it is incremented: a stored count that is already at or above the
+ * limit (even a damaged 255) gives the trial up, and cannot wrap round to 0 and start the trial
+ * again (audit finding #21).
  *
  * @param[in,out] state  boot state; failed_starts goes up by one; trial is cleared if the trial is
  *                       given up
@@ -267,17 +271,17 @@ static void count_trial_start(boot_state_t *state)
     if (state->trial == BOOT_SLOT_NONE) {
         return;
     }
-    state->failed_starts++;
-    if (state->failed_starts > MAX_STARTS) {
+    if (state->failed_starts >= BOOT_STATE_MAX_STARTS) {
         give_up_trial(state, "started too often without confirming itself");
         return;
     }
+    state->failed_starts++;
     uart_put("BL: trial slot ");
     uart_put(slot_letter(state->trial));
     uart_put(", start ");
     uart_put_decimal(state->failed_starts);
     uart_put(" of ");
-    uart_put_decimal(MAX_STARTS);
+    uart_put_decimal(BOOT_STATE_MAX_STARTS);
     uart_put("\r\n");
     if (!save_state(state)) {
         /* An uncounted start could hang and restart for ever: run the confirmed slot. */
@@ -398,22 +402,33 @@ static bool image_passes(const region_t *region)
 /**
  * @brief Chooses the firmware to run and starts it.
  *
- * 1. Starts the cycle counter, sets the clock to 170 MHz, starts the UART, logs the reset cause.
- *    A clock fault is logged and the bootloader carries on.
+ * 0. Starts the independent watchdog with the long time-out (about 32 s) before anything else,
+ *    so that nothing after this line can stop the chip for good: a flash BSY that never clears
+ *    or the endless loop of a fault handler ends in a watchdog reset (audit findings #3, #4(a)(b)
+ *    and #5, decision A). The watchdog is reloaded before the boot-state writes (save_state),
+ *    before each candidate's checks and in the park loop, never inside a wait.
+ * 1. Starts the cycle counter and checks it counts, sets the clock to 170 MHz, starts the UART,
+ *    logs the reset cause. A clock fault or a stopped cycle counter is logged and the bootloader
+ *    carries on.
  * 2. Loads the boot state and counts this start if a trial is set.
  * 3. Takes the regions in order: trial slot (if set), confirmed slot, last-resort firmware.
  * 4. Starts the first region whose image passes all checks.
  * 5. Gives the trial up at once if the image of the trial slot is refused.
- * 6. If no image passes: logs that, turns the UART off and waits in an endless loop.
+ * 6. If no image passes: logs that, turns the UART off and parks, reloading the watchdog on every
+ *    pass, so the chip stays quiet and reachable through SWD as Architecture Sec. 5.1 decided.
  *
  * @return Does not return.
  */
 int main(void)
 {
-    cycles_start();
+    watchdog_start_long();
+    bool cycles_ok = cycles_start();
     bool clock_ok = clock_to_170mhz();
     uart_init();
     log_reset_cause();
+    if (!cycles_ok) {
+        log_text("cycle counter not counting: waits are held by their pass limits only", "", "");
+    }
     if (!clock_ok) {
         /* Slower, not unsafe: the checks below are the same at 16 MHz. */
         log_text("clock fault, ", (clock_hz() == HSI16_HZ) ? "running at 16 MHz" : "clock not known", "");
@@ -426,6 +441,7 @@ int main(void)
     uint32_t count = candidates(&state, order);
 
     for (uint32_t i = 0U; i < count; i++) {
+        watchdog_reload();   /* a full time-out for this candidate's checks */
         if (image_passes(order[i])) {
             log_text("starting ", order[i]->name, role(order[i], &state));
             handover_start(order[i]->start + (uint32_t)IMAGE_CODE_OFFSET);
@@ -436,10 +452,13 @@ int main(void)
         }
     }
 
-    /* Nothing passed. Drive nothing and leave the watchdog off, so the chip stays quiet and
-     * reachable through SWD for the onboard computer's restore (Architecture Sec. 5.1). */
+    /* Nothing passed. Drive nothing and park, so the chip stays quiet and reachable through SWD
+     * for the onboard computer's restore (Architecture Sec. 5.1). The watchdog keeps running
+     * (it cannot be stopped [RM0440 Rev 9, Sec. 35.3.1, p. 1557]) and is reloaded on every pass:
+     * the park is deliberate, so it must not end in a reset. */
     log_text("no firmware can run", "", "");
     uart_off();
     for (;;) {
+        watchdog_reload();
     }
 }

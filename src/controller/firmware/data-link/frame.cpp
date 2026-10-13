@@ -6,6 +6,8 @@
  *   - a byte that breaks the header (Sync, Version, Length above 1024) may itself be the first
  *     Sync byte of the next frame, so it is looked at again as a possible start;
  *   - a frame whose check value does not match is dropped whole (REQ-107);
+ *   - a frame whose Flags bits 1 to 7 are not 0 is dropped whole the same way, with no answer
+ *     (Interfaces Sec. 4.0, frame table: Flags bit 0 only, other bits 0);
  *   - a gap of more than 10 ms inside a frame drops what was held (Interfaces Sec. 6.2).
  * Limit: after a false start inside noise, a real frame that follows without a 10 ms gap can
  * be taken as payload of the false one and is lost with it; its sender gets no answer.
@@ -143,6 +145,20 @@ bool FrameParser::checkValueOk() const
 }
 
 /**
+ * @brief Check that the held frame's Flags byte has no bit set except bit 0.
+ *
+ * Interfaces Sec. 4.0 (frame table) gives Flags bit 0 as "released scheduled command" and says
+ * the other bits are 0. A frame with any of bits 1 to 7 set is not one this version defines, so
+ * it is not acted on.
+ *
+ * @return true if bits 1 to 7 of Flags are 0; false otherwise
+ */
+bool FrameParser::flagsOk() const
+{
+    return (bytes_[kFrameOffsetFlags] & static_cast<uint8_t>(~kFrameFlagReleased)) == 0U;
+}
+
+/**
  * @brief Copy the header fields of the held frame into a Frame.
  *
  * The payload pointer in the Frame points into the parser's own buffer, so it is valid only
@@ -166,12 +182,14 @@ void FrameParser::decode(Frame &frame) const
  *
  * A gap of more than kFrameGapMaxMs since the previous byte drops what was held first. A byte
  * that breaks the header restarts the search (startOver). A complete frame whose check value
- * does not match is dropped whole.
+ * does not match, or whose Flags bits 1 to 7 are not 0, is dropped whole: no answer, like a
+ * damaged frame.
  *
  * @param[in]  byte    the received byte
  * @param[in]  now_ms  the millisecond the byte arrived
  * @param[out] frame   the decoded frame, written only when true is returned
- * @return true if this byte completed a frame with a matching check value; false otherwise
+ * @return true if this byte completed a frame with a matching check value and Flags bits 1 to 7
+ *         equal to 0; false otherwise
  */
 bool FrameParser::feed(uint8_t byte, uint32_t now_ms, Frame &frame)
 {
@@ -194,7 +212,7 @@ bool FrameParser::feed(uint8_t byte, uint32_t now_ms, Frame &frame)
         return false;   /* not complete yet */
     }
 
-    bool good = checkValueOk();
+    bool good = checkValueOk() && flagsOk();
     if (good) {
         decode(frame);
     }

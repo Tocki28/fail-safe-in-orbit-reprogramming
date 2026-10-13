@@ -3,9 +3,11 @@
  * After reset the core runs from HSI16 at 16 MHz with 1 flash wait state
  * [RM0440 Rev 9, Sec. 5.3.3, p. 190].
  *
- * Every wait gives up after WAIT_CYCLES: the bootloader runs before any watchdog is started, so
- * a wait that never ends would stop the chip for good. If the PLL does not lock, the core stays
- * on HSI16 and the bootloader carries on, slower.
+ * Every wait gives up after WAIT_CYCLES on the cycle counter, and also after the same number of
+ * passes of its loop (the backstop below), so a cycle counter that does not count cannot make a
+ * wait endless. The independent watchdog is a third limit: it runs from the first line of main()
+ * (watchdog.c). If the PLL does not lock, the core stays on HSI16 and the bootloader carries on,
+ * slower.
  */
 #include "clock.h"
 
@@ -27,21 +29,47 @@
  * last at least 94 us (at 170 MHz), over twice that, and at most 2 ms (at the 8 MHz the core
  * runs at during the change). Same bound as the firmware's copy (firmware/core_clock.c). */
 #define WAIT_CYCLES          16000U
+/* Backstop for a cycle counter that has stopped: the same number of passes of the wait loop as
+ * WAIT_CYCLES. A pass reads a register and the counter, so it takes at least one core cycle:
+ * (1) with a working counter, WAIT_CYCLES cycles pass in at most WAIT_CYCLES passes, so the
+ * cycle limit always ends the wait first and the backstop never changes a result; (2) with a
+ * dead counter, WAIT_CYCLES passes last at least WAIT_CYCLES cycles, which is at least 94 us at
+ * 170 MHz and at least 1 ms at the 16 MHz of the reset clock, over the 40 us PLL lock above.
+ * The longest a dead-counter wait can take is WAIT_CYCLES x (cycles per pass): TBD, the
+ * cycles per pass (instruction and register-access timings of this build) are not measured. */
+#define WAIT_PASSES          WAIT_CYCLES
+/* After the counter is enabled, it must change within this many reads. A counter that counts
+ * core cycles changes between two reads at least one cycle apart; 100 reads span at least 100
+ * cycles. No count rate is assumed beyond "changes at all". */
+#define CYCLES_CHECK_READS   100U
 
 /* The clock in use, for the UART divider and the timing log. 0 = not known: a switch of the
  * clock source did not finish. */
 static uint32_t core_hz = HSI16_HZ;
 
 /**
- * @brief Starts the core cycle counter at 0.
+ * @brief Starts the core cycle counter at 0 and checks that it counts.
+ *
+ * Reads the counter up to CYCLES_CHECK_READS times and reports whether its value changed. If it
+ * did not, every wait in this file and in uart.c and watchdog.c is held by its pass limit
+ * alone; main() logs that after the UART is up.
+ *
+ * @return true if the counter advanced, false if it did not
  */
-void cycles_start(void)
+bool cycles_start(void)
 {
     /* The DWT cycle counter runs only with TRCENA set in DEMCR [RM0440 Rev 9, Sec. 47.10,
      * p. 2102] and CYCCNTENA (bit 0) set in DWT_CTRL [RM0440 Rev 9, Sec. 47.13, p. 2104]. */
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0U;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    uint32_t first = DWT->CYCCNT;
+    for (uint32_t n = 0U; n < CYCLES_CHECK_READS; n++) {
+        if (DWT->CYCCNT != first) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -65,7 +93,9 @@ uint32_t clock_hz(void)
 }
 
 /**
- * @brief Wait until (*reg & mask) == want, at most WAIT_CYCLES.
+ * @brief Wait until (*reg & mask) == want, at most WAIT_CYCLES cycles or WAIT_PASSES passes.
+ *
+ * The passes limit is the backstop for a stopped cycle counter (see WAIT_PASSES).
  *
  * @param[in]     reg   register to read
  * @param[in]     mask  bits of the register to look at
@@ -77,16 +107,23 @@ static bool wait_bits(const volatile uint32_t *reg, uint32_t mask, uint32_t want
     uint32_t start = cycles_now();
 
     /* Unsigned subtraction stays right when the counter wraps. */
-    while ((*reg & mask) != want) {
+    for (uint32_t n = 0U; n < WAIT_PASSES; n++) {
+        if ((*reg & mask) == want) {
+            return true;
+        }
         if ((cycles_now() - start) > WAIT_CYCLES) {
             return false;
         }
     }
-    return true;
+    return (*reg & mask) == want;
 }
 
 /**
- * @brief Waits for the given number of cycles.
+ * @brief Waits for the given number of cycles, at most that many passes of the loop.
+ *
+ * The passes limit is the backstop for a stopped cycle counter: every pass takes at least one
+ * core cycle, so `cycles` passes last at least `cycles` cycles, and with a working counter the
+ * cycle count ends the wait first (see WAIT_PASSES).
  *
  * @param[in]     cycles  core cycles to wait
  */
@@ -94,7 +131,7 @@ static void wait_cycles(uint32_t cycles)
 {
     uint32_t start = cycles_now();
 
-    while ((cycles_now() - start) < cycles) {
+    for (uint32_t n = 0U; (n < cycles) && ((cycles_now() - start) < cycles); n++) {
     }
 }
 

@@ -3,7 +3,9 @@
  *
  * Wear: each write erases one page. A page lasts 10 000 erases [DS12589 Rev 6, Table 47,
  * p. 107] and writes alternate between the two copies, so the state survives about 20 000
- * writes. Writes happen once per trial start and once per confirmation, not on normal starts.
+ * writes. A write happens at every trial start, at every give-up of a trial, at every
+ * confirmation and every SWITCH, and when the bootloader saves the default state because no
+ * valid copy was found; a normal start with no trial writes nothing.
  * The same limit means the 32-bit sequence number never wraps.
  */
 #include "boot_state.h"
@@ -39,20 +41,23 @@ static uint32_t record_check(const boot_state_t *state)
 }
 
 /**
- * @brief Returns true if the confirmed and the trial slot of a record have allowed values.
+ * @brief Returns true if the slots and the start count of a record have allowed values.
  *
- * A record with a good check value must still name a real slot, and the trial slot can only be the
- * slot that is not confirmed.
+ * A record with a good check value must still name a real slot, the trial slot can only be the
+ * slot that is not confirmed, and the start count cannot be above BOOT_STATE_MAX_STARTS: the
+ * bootloader gives the trial up before it would store a higher count (bootloader/main.c,
+ * count_trial_start), so a higher stored count is damage.
  *
  * @param[in]     state  record to check
- * @return true if both slots are allowed, false otherwise
+ * @return true if both slots and the count are allowed, false otherwise
  */
 static bool fields_valid(const boot_state_t *state)
 {
     bool confirmed_ok = (state->confirmed == BOOT_SLOT_A) || (state->confirmed == BOOT_SLOT_B);
     bool trial_ok = (state->trial == BOOT_SLOT_NONE) ||
                     (state->trial == boot_state_other_slot(state->confirmed));
-    return confirmed_ok && trial_ok;
+    bool count_ok = (state->failed_starts <= BOOT_STATE_MAX_STARTS);
+    return confirmed_ok && trial_ok && count_ok;
 }
 
 /**
@@ -117,21 +122,24 @@ bool boot_state_read(boot_state_t *state)
  * Sets the sequence number and the check value in *state.
  *
  * @param[in,out] state  boot state to write; sequence, unused, reserved and check are set
- * @return true if the state was written and read back equal; false if the state is not valid, or
- * the erase, the programming or the read-back failed
+ * @return true if the state was written and read back equal; false if the state is not valid
+ * (slots or start count not allowed), or the erase, the programming or the read-back failed
  */
 bool boot_state_write(boot_state_t *state)
 {
     boot_state_t current;
-    uint32_t newest = newest_copy(&current);
-    /* Overwrite the copy that is NOT current, so the current one survives a power cut. */
-    uint32_t target = (newest == 0U) ? 1U : 0U;
+    uint32_t newest;
+    uint32_t target;
     uint32_t words[RECORD_WORDS];
     boot_state_t back;
 
+    /* Checked before any flash is read, so a record that is not allowed touches nothing. */
     if (!fields_valid(state)) {
         return false;
     }
+    newest = newest_copy(&current);
+    /* Overwrite the copy that is NOT current, so the current one survives a power cut. */
+    target = (newest == 0U) ? 1U : 0U;
     state->sequence = (newest == NO_VALID_COPY) ? 1U : (current.sequence + 1U);
     state->unused = 0U;
     state->reserved = 0U;

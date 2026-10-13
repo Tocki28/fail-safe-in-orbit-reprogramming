@@ -157,6 +157,28 @@ static void test_other_slot(void)
 }
 
 /**
+ * @brief boot_state_write refuses a record whose start count is above BOOT_STATE_MAX_STARTS.
+ *
+ * The check is made before any flash is read, so the host never touches the chip's addresses.
+ * Before, fields_valid looked at the slots only: a count of 255 was written, and read back as
+ * valid. (Before the check also moved ahead of newest_copy(), this call read the flash address
+ * and stopped the host test with a memory fault.)
+ */
+static void test_start_count_bound(void)
+{
+    boot_state_t state;
+
+    report(BOOT_STATE_MAX_STARTS == 3U, "BOOT_STATE_MAX_STARTS is 3 (bench value, REQ-015)");
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_A;
+    state.trial = BOOT_SLOT_B;
+    state.failed_starts = (uint8_t)(BOOT_STATE_MAX_STARTS + 1U);
+    report(!boot_state_write(&state), "boot_state_write: failed starts 4 -> refused (false)");
+    state.failed_starts = 255U;
+    report(!boot_state_write(&state), "boot_state_write: failed starts 255 -> refused (false)");
+}
+
+/**
  * @brief Runs the tests and prints the totals.
  *
  * @return 0 if every test passed, 1 otherwise
@@ -167,6 +189,7 @@ int main(void)
     test_candidates();
     test_slot_letter();
     test_other_slot();
+    test_start_count_bound();
     if (failures == 0U) {
         printf("bootloader unit tests: all %u passed\n", tests);
         return 0;

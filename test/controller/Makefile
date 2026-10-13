@@ -10,7 +10,10 @@
 #                     (unit/test_health.cpp), update receiver with a fake flash and the build's
 #                     signed images (unit/test_update.cpp), arm state (unit/test_arm.cpp), mode
 #                     manager, trial tests, SWITCH and CONFIRM (unit/test_mode.cpp), the
-#                     bootloader's slot handling with the chip replaced (unit/test_boot.c)
+#                     bootloader's slot handling with the chip replaced (unit/test_boot.c), the
+#                     order of its steps: watchdog, start count, park loop (unit/test_flow.c),
+#                     its watchdog module (unit/test_watchdog.c) and the flash address barrier
+#                     (unit/test_flash.c)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
@@ -117,6 +120,14 @@ COMMON_OBJS = build/host/crc32.o build/host/image_check.o
 # The bootloader's own main.c with the chip replaced (unit/boot_stubs), and boot_state.c as built.
 BOOT_SRCS   = unit/test_boot.c unit/boot_stubs/boot_stubs.c $(COMMON)/boot_state.c
 BOOT_HDRS   = $(wildcard $(SRC)/bootloader/*.h unit/boot_stubs/*.h)
+# The bootloader's whole main() with the chip, the boot state and the image checks replaced.
+FLOW_SRCS   = unit/test_flow.c unit/boot_stubs/boot_stubs.c
+# watchdog.c and flash.c as built, each against its own register stand-in (unit/*_stubs).
+# flash.c turns a 32-bit address into a pointer, which the chip's 32-bit cores allow and this
+# computer's 64-bit pointers warn about: -Wno-int-to-pointer-cast for that one file (that code is
+# never run here: only the refusals and a zero-length program are).
+WDOG_SRCS   = unit/test_watchdog.c $(SRC)/bootloader/watchdog.c
+FLASH_SRCS  = unit/test_flash.c $(COMMON)/flash.c
 MONO_OBJS   = build/host/monocypher.o build/host/monocypher-ed25519.o
 
 build/host/%.o: $(MONO)/%.c $(MONO)/%.h
@@ -142,6 +153,18 @@ build/host/test_boot: $(BOOT_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(BOOT_HDRS) $(FW
 	$(HOST_CC) -Iunit/boot_stubs -I$(SRC)/bootloader -I$(COMMON) -I$(MONO) $(BOOT_SRCS) \
 	    $(COMMON_OBJS) $(MONO_OBJS) -o $@
 
+build/host/test_flow: $(FLOW_SRCS) $(BOOT_HDRS) $(FW_HEADERS) $(SRC)/bootloader/main.c
+	mkdir -p build/host
+	$(HOST_CC) -Iunit/boot_stubs -I$(SRC)/bootloader -I$(COMMON) $(FLOW_SRCS) -o $@
+
+build/host/test_watchdog: $(WDOG_SRCS) $(wildcard $(SRC)/bootloader/*.h unit/watchdog_stubs/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Iunit/watchdog_stubs -I$(SRC)/bootloader -I$(COMMON) $(WDOG_SRCS) -o $@
+
+build/host/test_flash: $(FLASH_SRCS) $(wildcard $(COMMON)/*.h unit/flash_stubs/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Wno-int-to-pointer-cast -Iunit/flash_stubs -I$(COMMON) $(FLASH_SRCS) -o $@
+
 build/host/test_arm: $(ARM_SRCS) $(FW_HEADERS)
 	mkdir -p build/host
 	$(HOST_CXX) $(CXX_INCLUDES) $(ARM_SRCS) -o $@
@@ -154,13 +177,17 @@ src-images:
 	$(MAKE) -C $(SRC) images
 
 unit: build/host/test_frame build/host/test_health build/host/test_update build/host/test_arm \
-      build/host/test_mode build/host/test_boot images src-images
+      build/host/test_mode build/host/test_boot build/host/test_flow build/host/test_watchdog \
+      build/host/test_flash images src-images
 	build/host/test_frame
 	build/host/test_health
 	build/host/test_update $(SRC)/build/images $(OUT)
 	build/host/test_arm
 	build/host/test_mode $(SRC)/build/images
 	build/host/test_boot
+	build/host/test_flow
+	build/host/test_watchdog
+	build/host/test_flash
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
 # PROBE_ARGS="--listen 4": listen first, and reset the board meanwhile to see its BL: lines.

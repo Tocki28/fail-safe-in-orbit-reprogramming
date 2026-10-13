@@ -412,6 +412,47 @@ void testRoundTrip()
 }
 
 /**
+ * @brief Checks that a frame with any Flags bit 1 to 7 set is dropped, with a valid check value.
+ *
+ * Interfaces Sec. 4.0 (frame table): Flags bit 0 is "released", the other bits are 0. For each
+ * Flags byte the frame is built with buildFrame, so its check value is right and only the Flags
+ * differ. Passes if Flags 0x00 and 0x01 are accepted, each of 0x02, 0x04, 0x80, 0xFE and 0xFF
+ * is not, and a good frame that follows a rejected one is taken. Before the check was added the
+ * parser accepted every one of them.
+ */
+void testReservedFlags()
+{
+    const uint8_t payload[1] = {0x25U};
+    const uint8_t flagsAccepted[] = {0x00U, 0x01U};
+    const uint8_t flagsDropped[] = {0x02U, 0x04U, 0x80U, 0xFEU, 0xFFU};
+    std::array<uint8_t, kFrameMaxBytes> out{};
+    bool ok = true;
+
+    for (uint8_t flags : flagsAccepted) {
+        const Frame in{FrameType::kCommand, Destination::kController, flags, 1U, 5U, 0U, payload};
+        uint32_t size = buildFrame(in, out.data(), kFrameMaxBytes);
+        ok = ok && (accepted(out.data(), size) == 1U);
+    }
+    report(ok, "Flags 0x00 and 0x01 (bit 0 only) accepted");
+
+    ok = true;
+    for (uint8_t flags : flagsDropped) {
+        const Frame in{FrameType::kCommand, Destination::kController, flags, 1U, 5U, 0U, payload};
+        uint32_t size = buildFrame(in, out.data(), kFrameMaxBytes);
+        ok = ok && (size > 0U) && (accepted(out.data(), size) == 0U);
+    }
+    report(ok, "Flags 0x02, 0x04, 0x80, 0xFE, 0xFF (a bit 1 to 7 set), right check value: dropped");
+
+    /* A dropped frame is consumed whole: the good frame right behind it is still taken. */
+    const Frame bad{FrameType::kCommand, Destination::kController, 0x02U, 1U, 5U, 0U, payload};
+    std::array<uint8_t, 2U * kFrameMaxBytes> two{};
+    uint32_t first = buildFrame(bad, two.data(), kFrameMaxBytes);
+    std::memcpy(&two[first], kGetStatusFrame, kGetStatusBytes);
+    report(accepted(two.data(), first + kGetStatusBytes) == 1U,
+           "frame with Flags 0x02 dropped whole; the good frame right behind it is taken");
+}
+
+/**
  * @brief Checks the parser against 100000 pseudo-random bytes, then a good frame.
  *
  * The bytes come from a fixed linear congruential sequence at about 16 bytes per millisecond.
@@ -452,6 +493,7 @@ int main()
     testBackToBack();
     testGap();
     testRoundTrip();
+    testReservedFlags();
     testNoise();
     if (failures == 0U) {
         std::printf("frame unit tests: all %u passed\n", tests);

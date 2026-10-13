@@ -1,6 +1,7 @@
 /*
- * watchdog.hpp — reload the independent watchdog the bootloader started (bootloader/handover.c:
- * 1.88 s at the shortest). A reload restarts its count; the firmware cannot stop it.
+ * watchdog.hpp — reload the independent watchdog the bootloader started (bootloader/watchdog.c,
+ * watchdog_set_firmware_timeout: 1.88 s at the shortest). A reload restarts its count; the
+ * firmware cannot stop it.
  *
  * C++: class Watchdog. reload() is C's watchdog_reload(); reloadWhenDue() is main.c's
  * reload_watchdog_when_due(), with the time of the last reload as a member instead of a
@@ -15,8 +16,13 @@
 
 class Watchdog {
 public:
-    /* Reload now. Static: it only writes the chip's one IWDG register, so the update port can
-     * reload during a long erase (update-receiver/update_port.cpp) without holding the object. */
+    /**
+     * @brief Reload now: a full time-out from this moment.
+     *
+     * Static: it only writes the chip's one IWDG register, so the update port can reload during
+     * a long erase (update-receiver/update_port.cpp) without holding the object. The key
+     * 0xAAAA reloads the counter [RM0440 Rev 9, Sec. 35.4.1, p. 1559].
+     */
     static void reload()
     {
         IWDG->KR = kReloadKey;
@@ -35,7 +41,7 @@ public:
 private:
     /* Reload key [RM0440 Rev 9, Sec. 35.3.2, p. 1557]. */
     static constexpr uint32_t kReloadKey = 0xAAAAU;
-    /* The bootloader starts the watchdog with 1.88 s at the shortest (bootloader/handover.c).
+    /* The bootloader starts the watchdog with 1.88 s at the shortest (bootloader/watchdog.c).
      * Reloaded every 100 ms from the main loop. The longest pass without a reload is UPLOAD
      * END: the CRC-32 and two Ed25519 checks of the slot (about 40 ms at -O2 in the bootloader,
      * test/controller/results/2026-10-12; slower at -Os here; upload_probe.py prints END's

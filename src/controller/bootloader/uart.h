@@ -8,7 +8,8 @@
 
 #include <stdint.h>
 
-/* Needs the core at CORE_CLOCK_HZ (clock_to_170mhz) first. */
+/* Sets the baud rate for the clock in use (clock_hz(): 170 MHz after clock_to_170mhz, 16 MHz
+ * after a clock fault, HSI16 assumed if the clock is not known). Call after clock_to_170mhz. */
 void uart_init(void);
 /* Send a zero-terminated string. */
 void uart_put(const char *text);

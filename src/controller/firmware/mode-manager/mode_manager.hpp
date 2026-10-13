@@ -21,7 +21,7 @@
  *     then starts the confirmed slot.
  *
  * SWITCH (0x20) and CONFIRM (0x26): checks on arrival in this order, each refusal answered
- * REFUSED only: mode (SWITCH in OPERATE, CONFIRM in TRIAL; else 0x05), arming (0x01, 0x02;
+ * REFUSED only: mode (SWITCH in OPERATE, CONFIRM in TRIAL and before kTrialMs have passed; else 0x05), arming (0x01, 0x02;
  * command-checker/arm_state.hpp), and for CONFIRM the trial tests (0x0F). Then RECEIVED, the
  * boot-state write, and DONE.
  *
@@ -63,7 +63,12 @@ enum class TrialTest : uint8_t {
 
 class ModeManager {
 public:
-    /** @brief A mode manager that sends through `sender` and judges `test_image`. */
+    /**
+     * @brief A mode manager that sends through `sender` and judges `test_image`.
+     *
+     * @param[in,out] sender      the frame sender for answers and events
+     * @param[in,out] test_image  the trial's test image
+     */
     constexpr ModeManager(FrameSender &sender, TestImage &test_image)
         : sender_(sender), test_image_(test_image)
     {

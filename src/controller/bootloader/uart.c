@@ -3,9 +3,10 @@
  * BOOT0 [UM2397 Rev 2, p. 23] and drives the LED [UM2397 Rev 2, p. 16-17], and the design keeps
  * firmware off the boot pin.
  *
- * Every wait gives up after BYTE_TIMEOUT_CYCLES: no watchdog runs yet, and a stalled
- * transmitter must not stop the bootloader. After the first stall the text is dropped, so a
- * dead transmitter costs one timeout, not one per character.
+ * Every wait gives up after BYTE_TIMEOUT_CYCLES on the cycle counter, and also after the same
+ * number of loop passes (BYTE_TIMEOUT_PASSES), so a stopped cycle counter cannot make it
+ * endless: a stalled transmitter must not hold the bootloader. After the first stall the text
+ * is dropped, so a dead transmitter costs one timeout, not one per character.
  */
 #include "uart.h"
 
@@ -22,6 +23,12 @@
 /* One byte needs 86.8 us at 115200 baud (10 bits). 1 ms of cycles at 170 MHz is over ten byte
  * times; at 16 MHz (clock fault) the same count lasts 10.6 ms. */
 #define BYTE_TIMEOUT_CYCLES  (CORE_CLOCK_HZ / 1000U)
+/* Backstop for a stopped cycle counter: as many passes of the wait loop as cycles above. A pass
+ * reads the flag register and the counter, so it takes at least one core cycle: with a working
+ * counter the cycle limit ends the wait first; with a dead counter the wait lasts at least
+ * 170 000 cycles, which is 1 ms at 170 MHz and 10.6 ms at 16 MHz, the same lower bound as above.
+ * The longest it can take is 170 000 x (cycles per pass): TBD, not measured. */
+#define BYTE_TIMEOUT_PASSES  BYTE_TIMEOUT_CYCLES
 
 static bool stalled = false;
 
@@ -39,7 +46,8 @@ static void pulse_reset(volatile uint32_t *reset_register, uint32_t bit)
 }
 
 /**
- * @brief Wait for a USART2_ISR flag, at most BYTE_TIMEOUT_CYCLES.
+ * @brief Wait for a USART2_ISR flag, at most BYTE_TIMEOUT_CYCLES cycles or BYTE_TIMEOUT_PASSES
+ * passes.
  *
  * @param[in]     flag  USART2_ISR flag mask
  * @return true if the flag is set, false on time-out
@@ -48,18 +56,22 @@ static bool wait_flag(uint32_t flag)
 {
     uint32_t start = cycles_now();
 
-    while ((USART2->ISR & flag) == 0U) {
+    for (uint32_t n = 0U; n < BYTE_TIMEOUT_PASSES; n++) {
+        if ((USART2->ISR & flag) != 0U) {
+            return true;
+        }
         if ((cycles_now() - start) > BYTE_TIMEOUT_CYCLES) {
             return false;
         }
     }
-    return true;
+    return (USART2->ISR & flag) != 0U;
 }
 
 /**
  * @brief Starts USART2 transmit on PA2 at 115200 baud.
  *
- * The baud rate divider comes from the clock in use.
+ * The baud rate divider comes from the clock in use (clock_hz(): 170 MHz, or 16 MHz after a
+ * clock fault; HSI16 is assumed if the clock is not known).
  */
 void uart_init(void)
 {

@@ -16,6 +16,9 @@
 #define FLASH_START             0x08000000
 /* 2 KB pages: the smallest unit an erase clears [RM0440 Rev 9, Sec. 5.3.1, p. 189]. */
 #define FLASH_PAGE_BYTES        0x800
+/* The STM32G431KB main flash is 128 KB: pages 0 to 63 of 2 KB, 0x0800 0000 to 0x0801 FFFF
+ * [RM0440 Rev 9, Table 28, p. 189]. common/flash.c refuses every address at or past its end. */
+#define FLASH_BYTES             0x20000
 /* SRAM1 16 KB + SRAM2 6 KB + CCM SRAM 10 KB form one block from 0x2000 0000
  * [RM0440 Rev 9, Sec. 2.4, p. 88-89]. */
 #define RAM_START               0x20000000
@@ -38,9 +41,26 @@
 #define LAST_RESORT_START       0x0801A000
 #define LAST_RESORT_BYTES       0x4000
 
-/* Boot state: the last 4 pages, two copies of 2 pages each, so a power cut while one copy
- * is rewritten leaves the other one readable (REQ-017). Only the first 16 bytes of each
- * copy are used today; the rest is spare. */
+/*
+ * Boot state: the record that tells the bootloader which slot is confirmed, which slot is on
+ * trial, and how many times the trial has started. The record is 16 bytes (boot_state.h).
+ * It is kept twice, in the last 8 KB of flash: copy 0 at 0x0801 E000, copy 1 at 0x0801 F000,
+ * 4 KB (two 2 KB pages) each. These are pages 60 to 63 of the 64 [RM0440 Rev 9, Table 28,
+ * p. 189].
+ *
+ * Why two copies: a copy is rewritten by erasing it first, which turns every byte into 0xFF
+ * [RM0440 Rev 9, Sec. 5.3.7, p. 197], then programming the new record. A power cut between
+ * the two steps leaves that copy blank. Each write therefore goes to the older copy, and the
+ * newer copy stays readable (REQ-017). Each copy has a sequence number and a CRC-32, so the
+ * bootloader uses the newest copy that is intact (REQ-136).
+ * Why separate pages: a page is the smallest part an erase clears [RM0440 Rev 9, Sec. 5.3.6,
+ * p. 195], so two copies in one page would be erased together.
+ * Why at the end of flash: the chip starts from the start of flash, so the bootloader is
+ * there [RM0440 Rev 9, Table 5, p. 91]. The boot state at the other end leaves the slots and
+ * the last-resort region in one piece between them.
+ * Why 4 KB per copy: no technical reason. One 2 KB page per copy would hold the 16 bytes; the
+ * size keeps the flash map in round numbers, and the rest of each copy is spare.
+ */
 #define BOOT_STATE_START        0x0801E000
 #define BOOT_STATE_COPY_BYTES   0x1000
 #define BOOT_STATE_COPY_0       BOOT_STATE_START

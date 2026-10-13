@@ -1137,6 +1137,30 @@ void testConfirmRefusals()
                refusedOnly(again, AnswerCode::kNotArmed) && (fake.state_writes == 0U),
            "TRIAL, tests not passed, ARM + CONFIRM: REFUSED 0x0F; the ARM is used up (the same "
            "CONFIRM again: 0x01); boot state untouched");
+
+    /* The trial time: CONFIRM is accepted up to 1 ms before kTrialMs and refused 0x05 from
+     * kTrialMs on, also while poll() has not yet given the trial up (audit finding #22). Before
+     * the check, the late CONFIRM was accepted. */
+    {
+        Rig early;
+        bool earlyPassed = passedTrial(early);
+        sendArm(early, kConfirm, early.seq + 1U, kTrialMs - 10U);
+        Answer a = dangerous(early, kConfirm, early.seq++, kTrialMs - 1U);
+        report(earlyPassed && done(a) && stateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U),
+               "TRIAL, tests passed, ARM + CONFIRM at 119.999 s: accepted, boot state confirmed");
+    }
+    {
+        Rig late;
+        bool latePassed = passedTrial(late);
+        uint32_t writes = fake.state_writes;
+        sendArm(late, kConfirm, late.seq + 1U, kTrialMs - 10U);
+        uint32_t lateSeq = late.seq++;
+        Answer a = dangerous(late, kConfirm, lateSeq, kTrialMs);
+        report(latePassed && refusedOnly(a, AnswerCode::kMode) && (fake.state_writes == writes) &&
+                   (late.arm.check(kConfirm, lateSeq, kTrialMs) == AnswerCode::kSuccess),
+               "TRIAL, tests passed, ARM + CONFIRM at 120 s: REFUSED 0x05 only; boot state "
+               "untouched; the ARM is not used up (mode checks first)");
+    }
 }
 
 /**

@@ -24,13 +24,19 @@ extern "C" {
 #define BOOT_SLOT_A    1U
 #define BOOT_SLOT_B    2U
 
+/* Trial starts allowed before the trial is given up. Bench value; the requirement's value is
+ * TBD-starts in the SRS (REQ-015). One number for both sides: the bootloader counts to it
+ * (bootloader/main.c, count_trial_start) and boot_state.c refuses a stored count above it, so a
+ * damaged count cannot be read as valid. */
+#define BOOT_STATE_MAX_STARTS 3U
+
 /* 16 bytes: two 64-bit flash words, the unit the chip programs [RM0440 Rev 9, Sec. 5.3.7,
  * p. 196]. Field order fixes the byte layout (no padding: 4 + 4 x 1 + 4 + 4). */
 typedef struct {
     uint32_t sequence;      /* one higher on every write; the higher valid copy is current */
     uint8_t confirmed;      /* BOOT_SLOT_A or BOOT_SLOT_B */
     uint8_t trial;          /* BOOT_SLOT_NONE, or the slot that is not confirmed */
-    uint8_t failed_starts;  /* trial starts so far; reset to 0 when the trial ends */
+    uint8_t failed_starts;  /* trial starts so far, 0 to BOOT_STATE_MAX_STARTS; reset to 0 when the trial ends */
     uint8_t unused;         /* written as 0 */
     uint32_t reserved;      /* written as 0; fills the second flash word */
     uint32_t check;         /* CRC-32 of the 12 bytes above (REQ-136) */

@@ -1,0 +1,26 @@
+update  reading a HEALTH report
+report  HEALTH  #31 onboard t=1791887087 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/19836 bytes (1 %)   upload  512/19836 bytes (2 %)   upload  768/19836 bytes (3 %)   upload  1024/19836 bytes (5 %)   upload  1280/19836 bytes (6 %)   upload  1536/19836 bytes (7 %)   upload  1792/19836 bytes (9 %)   upload  2048/19836 bytes (10 %)   upload  2304/19836 bytes (11 %)   upload  2560/19836 bytes (12 %)   upload  2816/19836 bytes (14 %)   upload  3072/19836 bytes (15 %)   upload  3328/19836 bytes (16 %)   upload  3584/19836 bytes (18 %)   upload  3840/19836 bytes (19 %)   upload  4096/19836 bytes (20 %)   upload  4352/19836 bytes (21 %)   upload  4608/19836 bytes (23 %)   upload  4864/19836 bytes (24 %)   upload  5120/19836 bytes (25 %)   upload  5376/19836 bytes (27 %)   upload  5632/19836 bytes (28 %)   upload  5888/19836 bytes (29 %)   upload  6144/19836 bytes (30 %)   upload  6400/19836 bytes (32 %)   upload  6656/19836 bytes (33 %)   upload  6912/19836 bytes (34 %)   upload  7168/19836 bytes (36 %)   upload  7424/19836 bytes (37 %)   upload  7680/19836 bytes (38 %)   upload  7936/19836 bytes (40 %)   upload  8192/19836 bytes (41 %)   upload  8448/19836 bytes (42 %)   upload  8704/19836 bytes (43 %)   upload  8960/19836 bytes (45 %)   upload  9216/19836 bytes (46 %)   upload  9472/19836 bytes (47 %)   upload  9728/19836 bytes (49 %)   upload  9984/19836 bytes (50 %)   upload  10240/19836 bytes (51 %)   upload  10496/19836 bytes (52 %)   upload  10752/19836 bytes (54 %)   upload  11008/19836 bytes (55 %)   upload  11264/19836 bytes (56 %)   upload  11520/19836 bytes (58 %)   upload  11776/19836 bytes (59 %)   upload  12032/19836 bytes (60 %)   upload  12288/19836 bytes (61 %)   upload  12544/19836 bytes (63 %)   upload  12800/19836 bytes (64 %)   upload  13056/19836 bytes (65 %)   upload  13312/19836 bytes (67 %)   upload  13568/19836 bytes (68 %)   upload  13824/19836 bytes (69 %)   upload  14080/19836 bytes (70 %)   upload  14336/19836 bytes (72 %)   upload  14592/19836 bytes (73 %)   upload  14848/19836 bytes (74 %)   upload  15104/19836 bytes (76 %)   upload  15360/19836 bytes (77 %)   upload  15616/19836 bytes (78 %)   upload  15872/19836 bytes (80 %)   upload  16128/19836 bytes (81 %)   upload  16384/19836 bytes (82 %)   upload  16640/19836 bytes (83 %)   upload  16896/19836 bytes (85 %)   upload  17152/19836 bytes (86 %)   upload  17408/19836 bytes (87 %)   upload  17664/19836 bytes (89 %)   upload  17920/19836 bytes (90 %)   upload  18176/19836 bytes (91 %)   upload  18432/19836 bytes (92 %)   upload  18688/19836 bytes (94 %)   upload  18944/19836 bytes (95 %)   upload  19200/19836 bytes (96 %)   upload  19456/19836 bytes (98 %)   upload  19712/19836 bytes (99 %)   upload  19836/19836 bytes (100 %)   
+upload  complete, 19836 bytes in 0.85 s
+report  HEALTH  #32 onboard t=1791887088 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #33 onboard t=1791887089 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #34 onboard t=1791887090 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.04 s
+switch  sent, answered DONE
+report  EVENT   #35 onboard t=1791887091 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #36 onboard t=1791887092 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #37 onboard t=1791887092 0x000a trial tests passed
+report  HEALTH  #38 onboard t=1791887093 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #39 onboard t=1791887093 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #40 onboard t=1791887094 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (7.3 s)

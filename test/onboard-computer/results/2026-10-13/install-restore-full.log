@@ -1,0 +1,72 @@
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : auto-selecting first available session transport "hla_swd". To override use 'transport select <transport>'.
+Info : The selected transport took over low-level target control. The results might differ compared to plain JTAG/SWD
+srst_only separate srst_nogate srst_open_drain connect_assert_srst
+
+STEP: connect
+Info : clock speed 2000 kHz
+Info : STLINK V3J16M9 (API v3) VID:PID 0483:374E
+Info : Target voltage: 3.294807
+Info : [stm32g4x.cpu] Cortex-M4 r0p1 processor detected
+Info : [stm32g4x.cpu] target has 6 breakpoints, 4 watchpoints
+Info : starting gdb server for stm32g4x.cpu on 3333
+Info : Listening on port 3333 for gdb connections
+STEPDONE: connect
+STEP: halt under reset
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+[stm32g4x.cpu] halted due to debug-request, current mode: Thread 
+xPSR: 0x01000000 pc: 0x08003fe4 msp: 0x20008000
+STEPDONE: halt under reset
+STEP: erase last-resort region
+Info : device idcode = 0x20036468 (STM32G43/G44xx - Rev 'unknown' : 0x2003)
+Info : RDP level 0 (0xAA)
+Info : flash size = 128 KiB
+Info : flash mode : single-bank
+STEPDONE: erase last-resort region
+STEP: write last-resort
+STEPDONE: write last-resort
+STEP: verify last-resort
+STEPDONE: verify last-resort
+STEP: erase bootloader region
+STEPDONE: erase bootloader region
+STEP: write bootloader
+Info : Padding image section 0 at 0x080051cc with 4 bytes (bank write end alignment)
+STEPDONE: write bootloader
+STEP: verify bootloader
+Info : Padding image section 0 at 0x080051cc with 4 bytes (bank write end alignment)
+STEPDONE: verify bootloader
+STEP: erase slot B
+STEPDONE: erase slot B
+STEP: read back slot B erased
+STEPDONE: read back slot B erased
+STEP: erase slot A
+STEPDONE: erase slot A
+STEP: read back slot A erased
+STEPDONE: read back slot A erased
+STEP: erase boot state (REQ-057)
+STEPDONE: erase boot state (REQ-057)
+STEP: read back boot state erased
+STEPDONE: read back boot state erased
+STEP: write main firmware (REQ-121)
+Info : Padding image section 0 at 0x0800af34 with 4 bytes (bank write end alignment)
+STEPDONE: write main firmware (REQ-121)
+STEP: verify main firmware
+Info : Padding image section 0 at 0x0800af34 with 4 bytes (bank write end alignment)
+STEPDONE: verify main firmware
+STEP: reset and run
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+STEPDONE: reset and run
+shutdown command invoked
+===CONTROLLER
+BL: start, reset by reset pin
+BL: boot state blank (both copies erased); set to confirmed A, no trial
+BL: slot A signature check: 69323 us (11784961 cycles at 170 MHz)
+BL: slot A accepted: version 1, build 9ddd64a firmware A
+BL: starting slot A (confirmed)
+n#D
+^/H

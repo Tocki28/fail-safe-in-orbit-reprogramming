@@ -88,8 +88,6 @@ ArmState arm_state;
  * ground learns it from EVENT 0x0005's fault-location code (decision 3). volatile: written just
  * before the reset, so the compiler must not drop the write. */
 const char *volatile fault_where = nullptr;
-/* The detail of EVENT 0x0005: the fault-location code, 1 byte (Interfaces Sec. 5.4, decision 3). */
-constexpr uint32_t kFaultDetailBytes = 1U;
 /* True once the fault reaction has begun: a second fault found while it sends its EVENT goes
  * straight to the restart instead of starting the reaction again (no recursion). */
 bool in_fault = false;
@@ -294,13 +292,15 @@ void sendHealthWhenDue()
  * Owner's decision, 13 Oct 2026: a value in memory that cannot exist is a fault, never data, and
  * the reaction is a restart; REQ-041: detect a change in its own memory and return to a known
  * safe state. EVENT 0x0005 "change in memory detected" (Interfaces Sec. 5.4) goes out with a
- * 1-byte detail, the fault-location code of the function that found the value
- * (common/fault_codes.h; decision 3, owner, 13 Oct 2026). Before, it went out with no detail
- * bytes, and only fault_where, for a debugger, said where; `where` still goes there. The restart
- * carries the fault mark in the backup registers (ModePort::restartCounted), so the bootloader
- * counts it like a watchdog restart of the confirmed slot (decision B) and a loop of such
- * restarts ends in the last-resort firmware. A fault found while the EVENT is being sent skips
- * the EVENT (in_fault). Defined here because the frame sender it sends through lives here.
+ * 2-byte detail: the fault-location code of the function that found the value, as it is (bit 7
+ * clear; the bootloader's mark 0x80 is added only for a fault the bootloader found), and 0 later
+ * faults (common/fault_codes.h; decision 3, owner, 13 Oct 2026, second round). Before, it went
+ * out with no detail bytes, and only fault_where, for a debugger, said where; `where` still goes
+ * there. The restart carries the fault mark in the backup registers (ModePort::restartCounted),
+ * so the bootloader counts it like a watchdog restart of the confirmed slot (decision B) and a
+ * loop of such restarts ends in the last-resort firmware. A fault found while the EVENT is being
+ * sent skips the EVENT (in_fault). Defined here because the frame sender it sends through lives
+ * here.
  *
  * @param[in]     location  the fault-location code of the function (common/fault_codes.h)
  * @param[in]     where     the function that found the impossible value
@@ -312,8 +312,12 @@ void faultImpossibleValue(uint8_t location, const char *where)
     if (!in_fault) {
         in_fault = true;
         std::array<uint8_t, kEventReportMaxBytes> payload{};
+        /* Found by the firmware itself: the code as it is (bit 7 clear), no later faults. */
+        const std::array<uint8_t, kMemoryChangedDetailBytes> detail =
+            HealthMonitor::memoryChangedDetailOwn(location);
         uint16_t length = HealthMonitor::eventReport(core_clock.tickMs(), EventCode::kMemoryChanged,
-                                                     &location, kFaultDetailBytes, payload);
+                                                     detail.data(), kMemoryChangedDetailBytes,
+                                                     payload);
         if (length != 0U) {
             sender.send(FrameType::kReport, payload.data(), length);
         }

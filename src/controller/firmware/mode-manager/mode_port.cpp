@@ -235,25 +235,44 @@ bool ModePort::clearFallbackRecord()
 }
 
 /**
- * @brief Reads the fault location the bootloader's fault reaction left (FAULT_LOCATION pair,
- * common/backup_layout.h; decision 3).
+ * @brief Reads the first fault location the bootloader's fault reaction left (FAULT_LOCATION
+ * pair) and the number of faults it found after it (FAULT_LATER pair), common/backup_layout.h;
+ * decision 3.
  *
- * @param[out]    location  the stored value as read; 0 when none is stored
- * @return true if a value is stored (matching pair, value not 0), false otherwise
+ * The count is read only when a location is stored: the bootloader sets it to 0 when it writes
+ * a first location, so a count without a location is a leftover and means nothing.
+ *
+ * @param[out]    location  the stored location as read; 0 when none is stored
+ * @param[out]    later     faults found after the first; 0 when no location is stored or the
+ *                          count's pair is broken
+ * @return true if a location is stored (matching pair, value not 0), false otherwise
  */
-bool ModePort::readBootloaderFault(uint32_t &location)
+bool ModePort::readBootloaderFault(uint32_t &location, uint32_t &later)
 {
-    return readPair<BACKUP_PAIR_FAULT_LOCATION>(location) && (location != 0U);
+    later = 0U;
+    if (!readPair<BACKUP_PAIR_FAULT_LOCATION>(location) || (location == 0U)) {
+        return false;
+    }
+    if (!readPair<BACKUP_PAIR_FAULT_LATER>(later)) {
+        later = 0U;
+    }
+    return true;
 }
 
 /**
- * @brief Clears the bootloader's fault location, so its EVENT 0x0005 goes out once (decision 3).
+ * @brief Clears the bootloader's fault location and the count after it, so its EVENT 0x0005 goes
+ * out once (decision 3).
  *
- * @return true if the cleared pair reads back, false otherwise
+ * The count is cleared first: if only the location clear succeeds, the next fault starts a new
+ * count from 0 anyway (bootloader/backup.c).
+ *
+ * @return true if both cleared pairs read back, false otherwise
  */
 bool ModePort::clearBootloaderFault()
 {
-    return writePair<BACKUP_PAIR_FAULT_LOCATION>(0U);
+    const bool later_cleared = writePair<BACKUP_PAIR_FAULT_LATER>(0U);
+
+    return writePair<BACKUP_PAIR_FAULT_LOCATION>(0U) && later_cleared;
 }
 
 /**

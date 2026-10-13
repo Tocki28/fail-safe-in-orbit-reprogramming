@@ -436,7 +436,7 @@ Code & Event & Sent by & Requirement \\
 0x0002 & fall-back to the previous copy; detail: refused copy (1), check result (1) & controller & REQ-040 \\
 0x0003 & fall-back to the last-resort firmware; detail: refused copy (1), check result (1) & controller & REQ-040 \\
 0x0004 & self-test failed & controller & REQ-039 \\
-0x0005 & change in memory detected; detail: where (1) & controller & REQ-041 \\
+0x0005 & change in memory detected; detail: where (1), later faults (1) & controller & REQ-041 \\
 0x0006 & trial started & controller & REQ-037 \\
 0x0007 & firmware confirmed & controller & REQ-037 \\
 0x0008 & firmware given up & controller & REQ-037 \\
@@ -476,6 +476,9 @@ Check result & Check that failed \\
 0x0B & a flash read error while the copy was checked \\
 0x0C & not checked: the trial was started too often \\
 0x0D & not checked: the copy restarted too often \\
+0x0E & not started: the watchdog was not confirmed running \\
+0x0F & not started: its start count could not be saved \\
+0x10 & not checked: the boot state is damaged, so only the last-resort firmware is tried \\
 \bottomrule
 \end{tabularx}}
 
@@ -497,7 +500,10 @@ Fault kind & Fault \\
 \medskip
 \noindent The detail of event 0x0005 names the check that found a value which cannot exist,
 a sign that memory changed. The controller then restarts \mbox{[3,~REQ-041]}. A value found by
-the bootloader is reported by the firmware that runs next.
+the bootloader is reported by the firmware that runs next, with 0x80 added to the code, so
+0x90 means the bootloader found what 0x10 names. When the bootloader finds several such values
+before a firmware runs, the first is kept, because the first is usually the cause, and the
+second detail byte counts the ones after it.
 
 {\footnotesize\noindent\begin{tabularx}{\textwidth}{@{}llX@{}}
 \toprule

@@ -1,7 +1,8 @@
 /*
  * fault_codes.h — the numbered codes the controller sends as the detail of two EVENT reports
  * (Interfaces Sec. 5.4): the fault kind of EVENT 0x0001 "fault detected", and the fault location
- * of EVENT 0x0005 "change in memory detected". Owner's decisions 2 and 3, 13 Oct 2026.
+ * of EVENT 0x0005 "change in memory detected" (with 0x80 added when the bootloader found it).
+ * Owner's decisions 2 and 3, 13 Oct 2026.
  *
  * One shared header, so the bootloader, the firmware and the ground decode one list (code rule
  * A11). Definitions only, like layout.h: no code is shared (REQ-119). Codes are never reused: a
@@ -29,7 +30,13 @@
  * 16 MHz from HSI16 (decision C). */
 #define FAULT_KIND_CORE_CLOCK                   0x01U
 
-/* ---- Fault location: the 1-byte detail of EVENT 0x0005 (decision 3) -------------------------- */
+/* ---- Fault location: the first byte of EVENT 0x0005's 2-byte detail (decision 3) ------------- */
+
+/* Bit 7 of the first detail byte: set by the firmware, never by a location code, when the fault
+ * was found by the BOOTLOADER at the last start (owner, 13 Oct 2026, second round: 0x80 + code).
+ * A location the firmware finds itself is sent as it is. The second byte is the number of
+ * faults found after the first (backup_layout.h, FAULT_LATER); 0 for the firmware's own. */
+#define FAULT_FOUND_BY_BOOTLOADER               0x80U
 
 /* The ranges, as the owner set them (decision 3). */
 #define FAULT_RANGE_BOOTLOADER_FIRST            0x01U
@@ -38,6 +45,21 @@
 #define FAULT_RANGE_COMMON_LAST                 0x1FU
 #define FAULT_RANGE_FIRMWARE_FIRST              0x20U
 #define FAULT_RANGE_FIRMWARE_LAST               0x4FU
+
+/* Bit 7 is the bootloader mark, so no location code may use it. The ranges stop at 0x4F; this
+ * stops the build if a range is ever moved up to 0x80 or more. check_fault_codes.py checks each
+ * FAULT_AT_ code the same way. */
+#ifdef __cplusplus
+static_assert((FAULT_RANGE_FIRMWARE_LAST & FAULT_FOUND_BY_BOOTLOADER) == 0U,
+              "fault-location codes must not use bit 7 (the bootloader mark)");
+static_assert(FAULT_RANGE_FIRMWARE_LAST < FAULT_FOUND_BY_BOOTLOADER,
+              "every fault-location range lies below 0x80");
+#else
+_Static_assert((FAULT_RANGE_FIRMWARE_LAST & FAULT_FOUND_BY_BOOTLOADER) == 0U,
+               "fault-location codes must not use bit 7 (the bootloader mark)");
+_Static_assert(FAULT_RANGE_FIRMWARE_LAST < FAULT_FOUND_BY_BOOTLOADER,
+               "every fault-location range lies below 0x80");
+#endif
 
 /* -- bootloader/ -- */
 

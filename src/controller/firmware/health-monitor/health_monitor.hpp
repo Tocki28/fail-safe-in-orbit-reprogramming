@@ -56,6 +56,8 @@ constexpr uint8_t kReportKindEvent = 0x02U;
 constexpr uint32_t kEventHeadBytes = 15U;
 constexpr uint32_t kEventDetailMax = 32U;
 constexpr uint32_t kEventReportMaxBytes = kEventHeadBytes + kEventDetailMax;
+/* EVENT 0x0005's detail: where (1), later faults (1) (Interfaces Sec. 5.4, decision 3). */
+constexpr uint32_t kMemoryChangedDetailBytes = 2U;
 
 /* The event codes the controller sends in this step (Interfaces Sec. 5.4, event code table). */
 enum class EventCode : uint16_t {
@@ -64,8 +66,8 @@ enum class EventCode : uint16_t {
     kFaultDetected = 0x0001U,
     kFallbackPrevious = 0x0002U,   /* detail: refused copy (1), check result (1) */
     kSelfTestFailed = 0x0004U,     /* no detail: decision L, a failed self-test in OPERATE */
-    /* detail: fault location (1), common/fault_codes.h (decision 3): the fault reaction
-     * (firmware/fault.hpp), or a fault the bootloader left */
+    /* detail: where (1), later faults (1), common/fault_codes.h (decision 3): the fault reaction
+     * (firmware/fault.hpp), or a fault the bootloader left; see memoryChangedDetail */
     kMemoryChanged = 0x0005U,
     kTrialStarted = 0x0006U,
     kConfirmed = 0x0007U,
@@ -116,6 +118,16 @@ public:
     [[nodiscard]] static uint16_t eventReport(uint32_t now_ms, EventCode code,
                                               const uint8_t *detail, uint32_t detail_bytes,
                                               std::array<uint8_t, kEventReportMaxBytes> &out);
+
+    /** @brief The detail of EVENT 0x0005 for a fault the firmware found itself: the location as
+     *  it is, 0 later faults. */
+    [[nodiscard]] static std::array<uint8_t, kMemoryChangedDetailBytes>
+    memoryChangedDetailOwn(uint8_t location);
+
+    /** @brief The detail of EVENT 0x0005 for a fault the bootloader left: the location with
+     *  0x80 added, and the faults it found after the first. */
+    [[nodiscard]] static std::array<uint8_t, kMemoryChangedDetailBytes>
+    memoryChangedDetailBootloader(uint8_t location, uint8_t later);
 
 private:
     uint32_t last_report_ms_ = 0U;

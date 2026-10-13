@@ -18,7 +18,8 @@
 #include "uart.h"
 
 /**
- * @brief Leaves the fault-location code in the backup registers, logs "BL: corrupted value in
+ * @brief Leaves the fault-location code in the backup registers (the first one is kept, later
+ * faults are counted: backup_leave_fault_location), logs "BL: corrupted value in
  * <where> (fault location <code>); restarting", waits (bounded) for the line to leave the UART,
  * then resets the chip.
  *

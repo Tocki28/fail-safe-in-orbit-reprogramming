@@ -47,12 +47,13 @@ constexpr uint32_t kBodyMaxBytes = SLOT_BYTES - IMAGE_HEADER_BYTES - IMAGE_SIGNA
 constexpr uint32_t kMsPerSecond = 1000U;
 /* EVENT 0x0002's detail: refused copy (1 byte), check result (1 byte) (Interfaces Sec. 5.4). */
 constexpr uint32_t kFallbackDetailBytes = 2U;
-/* The detail of EVENT 0x0001 (fault kind) and of EVENT 0x0005 (fault location): 1 byte each
- * (decisions 2 and 3, common/fault_codes.h). */
+/* The detail of EVENT 0x0001 (fault kind): 1 byte (decision 2, common/fault_codes.h). */
 constexpr uint32_t kCodeDetailBytes = 1U;
-/* The highest check result a refused or skipped copy can have: CHECK_LAST (0x0D, "restarted too
- * often"; Interfaces Sec. 5.4, "Check result" table, common/backup_layout.h). 0x00, "passed", is
- * no refusal. Before decision 4 the highest was 0x0A, "signature B". */
+
+/* The highest check result a refused or skipped copy can have: CHECK_LAST (0x10, "boot state
+ * damaged"; Interfaces Sec. 5.4, "Check result" table, common/backup_layout.h). 0x00, "passed",
+ * is no refusal. Before decision 4 the highest was 0x0A, "signature B"; before the owner's
+ * decisions of 13 Oct 2026, second round, 0x0D, "restarted too often". */
 constexpr uint8_t kCheckResultLast = CHECK_LAST;
 /* The fault locations the bootloader can leave: its own (0x01 to 0x0F) and those of the shared
  * code in common/ it runs (0x10 to 0x1F) (common/fault_codes.h). */
@@ -281,24 +282,33 @@ bool ModeManager::fallbackForThisStart(const FallbackRecord &record) const
  * 13 Oct 2026), then clears it.
  *
  * The bootloader has no link to the ground, so its fault reaction leaves the code in the backup
- * registers and resets (bootloader/fault.c); the first firmware that runs reports it. The code is
- * stored data: one outside the bootloader's and common/'s ranges (0x01 to 0x1F,
- * common/fault_codes.h) is dropped, never a fault. Cleared whether it was sent or dropped; if the
- * clear fails, this start does not read it again (start_events_sent_), and the next start
- * reports it once more.
+ * registers and resets (bootloader/fault.c); the first firmware that runs reports it. The detail
+ * is two bytes: where, which is the code with FAULT_FOUND_BY_BOOTLOADER (0x80) added so the
+ * ground can tell a fault the bootloader found from one the firmware found, and how many faults
+ * the bootloader found after the first (at most 255). The code is stored data: one outside the
+ * bootloader's and common/'s ranges (0x01 to 0x1F, common/fault_codes.h) is dropped, never a
+ * fault. A count above 255 cannot be stored by the bootloader, so a larger value is stored data
+ * that went bad and is cut to 255. Cleared whether it was sent or dropped; if the clear fails,
+ * this start does not read it again (start_events_sent_), and the next start reports it once
+ * more.
  *
  * @param[in]     now_ms  milliseconds since start
  */
 void ModeManager::sendBootloaderFault(uint32_t now_ms)
 {
     uint32_t location = 0U;
+    uint32_t later = 0U;
 
-    if (!ModePort::readBootloaderFault(location)) {
+    if (!ModePort::readBootloaderFault(location, later)) {
         return;
     }
     if ((location >= kBootloaderFaultFirst) && (location <= kBootloaderFaultLast)) {
-        const uint8_t detail = static_cast<uint8_t>(location);
-        sendEvent(EventCode::kMemoryChanged, &detail, kCodeDetailBytes, now_ms);
+        const uint32_t later_sent =
+            (later < BACKUP_FAULT_LATER_MAX) ? later : BACKUP_FAULT_LATER_MAX;
+        const std::array<uint8_t, kMemoryChangedDetailBytes> detail =
+            HealthMonitor::memoryChangedDetailBootloader(static_cast<uint8_t>(location),
+                                                         static_cast<uint8_t>(later_sent));
+        sendEvent(EventCode::kMemoryChanged, detail.data(), kMemoryChangedDetailBytes, now_ms);
     }
     (void)ModePort::clearBootloaderFault();   /* see above */
 }

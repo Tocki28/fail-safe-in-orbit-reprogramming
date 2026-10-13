@@ -1463,6 +1463,33 @@ bool fallbackEventsAre(std::initializer_list<FallbackDetail> want)
 }
 
 /**
+ * @brief Returns true if the frames sent are exactly EVENT 0x0005 reports with these 2-byte
+ * details (where, later faults), in this order, each 17 bytes long.
+ *
+ * @param[in]     want  the 2-byte details expected, in order
+ * @return true if so
+ */
+bool memoryEventsAre(std::initializer_list<FallbackDetail> want)
+{
+    static SentLog log;
+    uint32_t n = decodeRange(0U, fake_link.sent_bytes, log);
+    bool same = (static_cast<size_t>(n) == want.size());
+    uint32_t i = 0U;
+
+    for (const FallbackDetail &w : want) {
+        if (!same) {
+            break;
+        }
+        const Sent &s = log[i];
+        same = (s.type == FrameType::kReport) && (s.length == kEventHeadBytes + 2U) &&
+               (s.payload[12] == kReportKindEvent) && (s.payload[13] == 0x05U) &&
+               (s.payload[14] == 0x00U) && (s.payload[15] == w[0]) && (s.payload[16] == w[1]);
+        i++;
+    }
+    return same;
+}
+
+/**
  * @brief Returns a FALLBACK pair value in the layout of decision 4 (common/backup_layout.h): one
  * byte per copy with its check result, the copy started in the top byte.
  *
@@ -1583,19 +1610,20 @@ void testStartEvents()
         report(other && self && past && whole && (fake_link.sent_bytes == 0U) &&
                    (fault_calls == 0U),
                "record naming another started copy, the running copy as refused, a check result "
-               "past the table (0x0E), one good and one bad copy, or no refused copy: dropped "
+               "past the table (0x11), one good and one bad copy, or no refused copy: dropped "
                "whole and cleared, no event, no fault (stored data, not memory)");
     }
 }
 
 /**
- * @brief Decision 3: a fault location the bootloader left goes out once as EVENT 0x0005 with that
- * code, then is cleared; a value outside the bootloader's and common/'s ranges (0x01 to 0x1F) is
- * dropped and cleared, never a fault. The events of a start go in the order 0x0005, 0x0001,
- * 0x0002.
+ * @brief Decision 3: a fault location the bootloader left goes out once as EVENT 0x0005 with a
+ * 2-byte detail, 0x80 added to the code (found by the bootloader) and the number of faults after
+ * the first; then it is cleared. A value outside the bootloader's and common/'s ranges (0x01 to
+ * 0x1F) is dropped and cleared, never a fault. The events of a start go in the order 0x0005,
+ * 0x0001, 0x0002.
  *
- * Fails on the old code: the pair did not exist and nothing was sent (scratch-copy mutation run:
- * the call removed from ModeManager::sendStartEvents).
+ * Fails on the old code: the code went out as it was (bit 7 clear) with one detail byte and no
+ * count (scratch-copy mutation run: the 0x80 mark and the second byte removed).
  */
 void testBootloaderFault()
 {
@@ -1603,19 +1631,61 @@ void testBootloaderFault()
     for (uint8_t location : {uint8_t{FAULT_AT_SLOT_REGION}, uint8_t{FAULT_AT_IMAGE_RESULT_TEXT}}) {
         Rig rig;
         uint32_t left = 0xFFU;
+        uint32_t left_later = 0xFFU;
         prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
         fakeBackupSet(BACKUP_PAIR_FAULT_LOCATION, location);
+        fakeBackupSet(BACKUP_PAIR_FAULT_LATER, 3U);
         rig.updater.init(Slot::kA);
         rig.mm.start(Slot::kA, 0U, false);
         rig.mm.poll(0U);
         rig.mm.poll(1U);
-        sent = sent && sentIs(0U, {ev(EventCode::kMemoryChanged, location)}) &&
+        sent = sent && memoryEventsAre({{static_cast<uint8_t>(location | 0x80U), 3U}}) &&
                fakeBackupGet(BACKUP_PAIR_FAULT_LOCATION, left) && (left == 0U) &&
+               fakeBackupGet(BACKUP_PAIR_FAULT_LATER, left_later) && (left_later == 0U) &&
                (fake.restarts == 0U) && (fake.counted_restarts == 0U);
     }
     report(sent, "3: bootloader left fault location 0x05 (slot_region) or 0x10 (common/, "
-                 "image_result_text) -> EVENT 0x0005 with that detail, once over two passes; "
-                 "cleared; no restart (was: nothing sent)");
+                 "image_result_text) and 3 later faults -> EVENT 0x0005 detail 85 03 or 90 03, "
+                 "once over two passes; both cleared; no restart (was: the code as it is, "
+                 "1 byte)");
+
+    {
+        Rig none;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fakeBackupSet(BACKUP_PAIR_FAULT_LOCATION, FAULT_AT_SLOT_REGION);
+        none.updater.init(Slot::kA);
+        none.mm.start(Slot::kA, 0U, false);
+        none.mm.poll(0U);
+        bool zero = memoryEventsAre({{0x85U, 0U}});
+        Rig big;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fakeBackupSet(BACKUP_PAIR_FAULT_LOCATION, FAULT_AT_SLOT_REGION);
+        fakeBackupSet(BACKUP_PAIR_FAULT_LATER, 300U);
+        big.updater.init(Slot::kA);
+        big.mm.start(Slot::kA, 0U, false);
+        big.mm.poll(0U);
+        bool cut = memoryEventsAre({{0x85U, 0xFFU}});
+        report(zero && cut,
+               "3: no count stored -> later faults 0 (85 00); a stored count of 300, which the "
+               "bootloader cannot write, is cut to 255 (85 FF)");
+    }
+
+    {
+        /* The firmware's own fault: the code as it is, bit 7 clear, no later faults. Every code
+         * of the table has bit 7 clear, so the ground can tell the two apart. */
+        bool own = true;
+        for (uint8_t location : {uint8_t{FAULT_RANGE_FIRMWARE_FIRST},
+                                 uint8_t{FAULT_AT_MODE_MANAGER_RUN_DANGEROUS},
+                                 uint8_t{FAULT_RANGE_FIRMWARE_LAST}}) {
+            const auto detail = HealthMonitor::memoryChangedDetailOwn(location);
+            own = own && (detail[0] == location) && ((detail[0] & FAULT_FOUND_BY_BOOTLOADER) == 0U) &&
+                  (detail[1] == 0U);
+        }
+        const auto boot = HealthMonitor::memoryChangedDetailBootloader(FAULT_AT_SLOT_REGION, 9U);
+        report(own && (boot[0] == 0x85U) && (boot[1] == 9U),
+               "3: the firmware's own fault 0x20, 0x2F, 0x4F -> detail as it is, 0 later faults "
+               "(bit 7 clear); a bootloader fault 0x05 with 9 later -> 85 09");
+    }
 
     bool dropped = true;
     faultClear();
@@ -1642,7 +1712,7 @@ void testBootloaderFault()
     rig.updater.init(Slot::kA);
     rig.mm.start(Slot::kA, 0U, true);
     rig.mm.poll(0U);
-    report(sentIs(0U, {ev(EventCode::kMemoryChanged, FAULT_AT_SLOT_LETTER),
+    report(sentIs(0U, {ev(EventCode::kMemoryChanged, FAULT_AT_SLOT_LETTER | 0x80U),
                        ev(EventCode::kFaultDetected, FAULT_KIND_CORE_CLOCK),
                        ev(EventCode::kFallbackPrevious, 0x02U)}),
            "start events in order: 0x0005 (bootloader fault 0x02), 0x0001 (fault kind 0x01), "

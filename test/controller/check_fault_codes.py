@@ -9,7 +9,9 @@ check reads the controller's flight sources and fails unless:
   2. the code's name is FAULT_AT_ and the enclosing function's name in capitals, so each site
      names its own function (two sites in one function share its code; two functions never do);
   3. the code lies in the range of the directory the function is in: bootloader/ 0x01-0x0F,
-     common/ 0x10-0x1F, firmware/ 0x20-0x4F;
+     common/ 0x10-0x1F, firmware/ 0x20-0x4F; and no code of the table has bit 7 (0x80) set, the
+     bit the firmware adds to a location the bootloader found (owner, 13 Oct 2026, second round;
+     fault_codes.h also stops the build on the ranges);
   4. no two codes of the table have the same value, and every code is used by a site.
 Why a source check: most fault sites are reached only by a corrupted value, so no run of the
 programs reaches them all; the host unit tests drive many of them and check their codes too.
@@ -29,6 +31,8 @@ NOT_HEADER = ("#", "static_assert", "typedef", "struct", "class", "enum", "names
 REACTIONS = ("fault_impossible_value", "faultImpossibleValue")
 RANGES = {"bootloader": (0x01, 0x0F), "common": (0x10, 0x1F), "firmware": (0x20, 0x4F)}
 SUFFIXES = (".c", ".h", ".cpp", ".hpp")
+# Bit 7 of EVENT 0x0005's first detail byte: FAULT_FOUND_BY_BOOTLOADER in fault_codes.h.
+BOOTLOADER_MARK = 0x80
 
 
 def strip_code(text):
@@ -202,6 +206,9 @@ def check(src):
         if not low <= table[argument] <= high:
             problems[3].append(f"{where}: {argument} = 0x{table[argument]:02X} is outside "
                                f"{path.parts[0]}/'s range")
+    for name, value in table.items():
+        if value & BOOTLOADER_MARK:
+            problems[3].append(f"{name} = 0x{value:02X} uses bit 7, the bootloader mark")
     values = {}
     for name, value in table.items():
         if value in values:
@@ -212,7 +219,7 @@ def check(src):
     names = {1: "every fault site passes a FAULT_AT_ code of common/fault_codes.h",
              2: "each site passes its own function's code (one code per function)",
              3: "each code lies in its directory's range (bootloader 0x01-0x0F, common "
-                "0x10-0x1F, firmware 0x20-0x4F)",
+                "0x10-0x1F, firmware 0x20-0x4F), and none uses bit 7",
              4: "no two codes share a value, and every code is used"}
     for number, name in names.items():
         print(f"{'PASS' if not problems[number] else 'FAIL'}  {name}")

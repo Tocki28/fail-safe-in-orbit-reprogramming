@@ -13,7 +13,8 @@
  *   - a pair number outside the map is the fault reaction (common/fault.h) with value_index's
  *     fault-location code (decision 3), and nothing is written;
  *   - backup_leave_fault_location opens the backup domain itself and writes the FAULT_LOCATION
- *     pair, TAMP_BKP10R and TAMP_BKP11R, and nothing else (decision 3).
+ *     pair, TAMP_BKP10R and TAMP_BKP11R, and the FAULT_LATER pair, TAMP_BKP12R and TAMP_BKP13R,
+ *     and nothing else (decision 3; the keep-the-first and count rules are in test_fault.c).
  * All of these fail on the old code: backup.c did not exist; the fault-location pair and its
  * writer came with decision 3 (owner, 13 Oct 2026).
  *
@@ -192,7 +193,7 @@ static void test_pair_outside(void)
     fault_armed = false;
     report(write_fault && !returned && (fault_calls == 2U) && untouched &&
                (fault_location == FAULT_AT_VALUE_INDEX),
-           "pair number BACKUP_PAIRS (6, outside the map): read and write -> fault reaction, "
+           "pair number BACKUP_PAIRS (7, outside the map): read and write -> fault reaction, "
            "fault location 0x01, no register touched");
 }
 
@@ -210,16 +211,19 @@ static void test_leave_fault_location(void)
     reset_rig();
     backup_leave_fault_location(FAULT_AT_SLOT_REGION);
     for (uint32_t i = 0U; i < FAKE_TAMP_BKP_REGISTERS; i++) {
-        if ((i != 10U) && (i != 11U)) {
+        if ((i < 10U) || (i > 13U)) {
             others = others && (fake_tamp.BKP[i] == UNTOUCHED);
         }
     }
     report((fake_tamp.BKP[10] == 0x05U) && (fake_tamp.BKP[11] == ~0x05U) && others &&
                ((fake_pwr.CR1 & PWR_CR1_DBP) != 0U) &&
                ((fake_rcc.APB1ENR1 & RCC_APB1ENR1_RTCAPBEN) != 0U) &&
-               backup_read(BACKUP_PAIR_FAULT_LOCATION, &v) && (v == 0x05U) && (fault_calls == 0U),
+               backup_read(BACKUP_PAIR_FAULT_LOCATION, &v) && (v == 0x05U) && (fault_calls == 0U) &&
+               (fake_tamp.BKP[12] == 0U) && (fake_tamp.BKP[13] == 0xFFFFFFFFU) &&
+               (fake_tamp.BKP[14] == UNTOUCHED) && (fake_tamp.BKP[15] == UNTOUCHED),
            "3: backup_leave_fault_location(0x05), backup domain closed before -> opened, "
-           "BKP10R = 0x05, BKP11R = its complement, no other register touched");
+           "BKP10R = 0x05, BKP11R = its complement, BKP12R = 0 (later faults), BKP14R and "
+           "BKP15R still free, no other register touched");
 }
 
 /**

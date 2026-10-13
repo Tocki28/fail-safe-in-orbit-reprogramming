@@ -45,7 +45,7 @@ static volatile uint32_t *backup_register(uint32_t index)
  * BACKUP_PAIRS is a corrupted value or a defect, never data: the fault reaction (common/fault.h).
  * The check also keeps every access inside the 16 registers of this chip.
  *
- * @param[in]     pair  BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LOCATION
+ * @param[in]     pair  BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LATER
  * @return register number of the value word; the complement is the next register
  * @note Does not return for a pair number outside the map.
  */
@@ -76,6 +76,31 @@ static bool write_pair(uint32_t index, uint32_t value)
     *word = value;
     *inverse = ~value;
     return (*word == value) && (*inverse == ~value);
+}
+
+/**
+ * @brief Reads the two words from `index` on; they count only when the second is the complement
+ * of the first.
+ *
+ * The one place that reads a pair, so backup_read and the fault reaction's
+ * backup_leave_fault_location read a pair the same way, and the fault reaction needs no pair
+ * number check (value_index can itself call the fault reaction).
+ *
+ * @param[in]     index  register number of the value word; the complement is the next register
+ * @param[out]    value  the stored value; 0 when the pair is broken
+ * @return true if the pair matches, false if it is broken (empty)
+ */
+static bool read_pair(uint32_t index, uint32_t *value)
+{
+    uint32_t word = *backup_register(index);
+    uint32_t inverse = *backup_register(index + 1U);
+
+    if (word != ~inverse) {
+        *value = 0U;
+        return false;
+    }
+    *value = word;
+    return true;
 }
 
 /**
@@ -119,22 +144,13 @@ void backup_close(void)
  * request (decision B). After an RTC domain reset both words are 0, a broken pair, so a fresh
  * chip reads as empty (common/backup_layout.h).
  *
- * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LOCATION
+ * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LATER
  * @param[out]    value  the stored value; 0 when the pair is broken
  * @return true if the pair matches, false if it is broken (empty)
  */
 bool backup_read(uint32_t pair, uint32_t *value)
 {
-    uint32_t index = value_index(pair);
-    uint32_t word = *backup_register(index);
-    uint32_t inverse = *backup_register(index + 1U);
-
-    if (word != ~inverse) {
-        *value = 0U;
-        return false;
-    }
-    *value = word;
-    return true;
+    return read_pair(value_index(pair), value);
 }
 
 /**
@@ -144,7 +160,7 @@ bool backup_read(uint32_t pair, uint32_t *value)
  * read-back then fails, so the caller learns that nothing was stored. A reset between the two
  * writes leaves a broken pair, which reads as empty, never as a wrong value.
  *
- * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LOCATION
+ * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LATER
  * @param[in]     value  value to store
  * @return true if both words read back as written, false otherwise
  */
@@ -154,13 +170,21 @@ bool backup_write(uint32_t pair, uint32_t value)
 }
 
 /**
- * @brief Leaves a fault-location code in the FAULT_LOCATION pair for the firmware that runs next
- * (decision 3, owner, 13 Oct 2026); called by the fault reaction (bootloader/fault.c) only.
+ * @brief Leaves a fault-location code for the firmware that runs next, keeping the FIRST one
+ * (decision 3, owner, 13 Oct 2026 and its second round); called by the fault reaction
+ * (bootloader/fault.c) only.
  *
+ * What it does: if the FAULT_LOCATION pair holds no location (empty, broken or 0), this is the
+ * first fault since a firmware last reported: FAULT_LATER is set to 0, then the location is
+ * written. If a location is stored, it is kept, because the first fault is usually the cause and
+ * the later ones its effects, and FAULT_LATER goes up by one, stopping at BACKUP_FAULT_LATER_MAX.
+ * The count is written before the location on a first fault, so a reset between the two leaves
+ * no location and a count of 0, never a location with a stale count. A broken FAULT_LATER pair
+ * reads as 0, so the count may then be one short.
  * Opens the backup domain first: a fault can come before main() opens it, or after it closed it
- * for the hand-over. The register number is fixed when this is compiled, not found by
+ * for the hand-over. The register numbers are fixed when this is compiled, not found by
  * value_index, so the fault reaction never calls a function that can call it again (no
- * recursion, JPL Power of Ten rule 1, code rule A9). The reset follows whatever the write did: a
+ * recursion, JPL Power of Ten rule 1, code rule A9). The reset follows whatever the writes did: a
  * write the chip ignored leaves the old pair, and one cut short a broken pair, which reads as
  * empty (common/backup_layout.h).
  *
@@ -168,7 +192,21 @@ bool backup_write(uint32_t pair, uint32_t value)
  */
 void backup_leave_fault_location(uint8_t location)
 {
+    uint32_t stored = 0U;
+    uint32_t later = 0U;
+
     backup_open();
-    /* Not read back: the reset follows either way, and nothing here could do better. */
+    /* Nothing is read back: the reset follows either way, and nothing here could do better. */
+    if (read_pair(BACKUP_PAIR_FAULT_LOCATION * PAIR_WORDS, &stored) && (stored != 0U)) {
+        if (!read_pair(BACKUP_PAIR_FAULT_LATER * PAIR_WORDS, &later)) {
+            later = 0U;
+        }
+        if (later < BACKUP_FAULT_LATER_MAX) {
+            later++;
+        }
+        (void)write_pair(BACKUP_PAIR_FAULT_LATER * PAIR_WORDS, later);
+        return;
+    }
+    (void)write_pair(BACKUP_PAIR_FAULT_LATER * PAIR_WORDS, 0U);
     (void)write_pair(BACKUP_PAIR_FAULT_LOCATION * PAIR_WORDS, location);
 }

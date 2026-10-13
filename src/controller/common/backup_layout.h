@@ -36,10 +36,11 @@
  * [RM0440 Rev 9, Sec. 38.1, p. 1610; DS12589 Rev 6, Sec. 3.26, p. 37]. TAMP_BKPxR sits at offset
  * 0x100 + 4 x from the TAMP base [RM0440 Rev 9, Sec. 38.6.8, p. 1623], and the TAMP base is
  * 0x4000 2400 [RM0440 Rev 9, Table 3, p. 87]: TAMP_BKP0R is at 0x4000 2500. Pair n uses
- * TAMP_BKP(2n)R for the value and TAMP_BKP(2n+1)R for its bitwise complement, so the six pairs
- * below take TAMP_BKP0R to TAMP_BKP11R, 0x4000 2500 to 0x4000 252F. Budget: 12 of the 16
- * registers; TAMP_BKP12R to TAMP_BKP15R are free. Before decision 3 (13 Oct 2026) five pairs
- * used 10. Each program checks the map against the 16 registers when it is compiled
+ * TAMP_BKP(2n)R for the value and TAMP_BKP(2n+1)R for its bitwise complement, so the seven pairs
+ * below take TAMP_BKP0R to TAMP_BKP13R, 0x4000 2500 to 0x4000 2537. Budget: 14 of the 16
+ * registers; TAMP_BKP14R and TAMP_BKP15R are free. Before decision 3 (13 Oct 2026) five pairs
+ * used 10; the later-faults count (owner, 13 Oct 2026, second round) added the seventh.
+ * Each program checks the map against the 16 registers when it is compiled
  * (bootloader/backup.c, firmware/mode-manager/mode_port.cpp).
  *
  * ---- One bit error cannot fake a value ---------------------------------------------------------
@@ -63,7 +64,11 @@
  *                   refused or skipped on this     refused copy, then cleared (Interfaces
  *                   start (decision 4)             Sec. 5.4)
  *    5  FAULT_      bootloader's fault reaction,   main firmware: EVENT 0x0005 with the code,
- *       LOCATION    before its reset (decision 3)  once, then cleared
+ *       LOCATION    before its reset, the FIRST    once, then cleared
+ *                   fault only (decision 3)
+ *    6  FAULT_      bootloader's fault reaction,   main firmware: EVENT 0x0005 with the count,
+ *       LATER       before its reset: the faults   once, then cleared
+ *                   after the first (decision 3)
  */
 #ifndef BACKUP_LAYOUT_H
 #define BACKUP_LAYOUT_H
@@ -77,7 +82,8 @@
 #define BACKUP_PAIR_FAULT             3U
 #define BACKUP_PAIR_FALLBACK          4U
 #define BACKUP_PAIR_FAULT_LOCATION    5U
-#define BACKUP_PAIRS                  6U
+#define BACKUP_PAIR_FAULT_LATER       6U
+#define BACKUP_PAIRS                  7U
 
 #define BACKUP_BYTE_MASK              0xFFU
 
@@ -100,10 +106,17 @@
 #define BACKUP_FAULT_IMPOSSIBLE_VALUE 0x01U   /* fault_impossible_value: EVENT 0x0005 sent */
 #define BACKUP_FAULT_SELF_TEST        0x02U   /* self-test failed in OPERATE (decision L) */
 
-/* FAULT_LOCATION: the fault-location code (common/fault_codes.h, 0x01 to 0x1F) of the function
- * that found an impossible value while the bootloader ran (decision 3, owner, 13 Oct 2026). The
- * bootloader never reads or clears it, so it survives the bootloader's later starts until a main
- * firmware reports it. */
+/* FAULT_LOCATION: the fault-location code (common/fault_codes.h, 0x01 to 0x1F) of the FIRST
+ * function that found an impossible value while the bootloader ran (decision 3, owner, 13 Oct
+ * 2026). The bootloader's fault reaction writes it only when the pair holds no location, so a
+ * stored one that no firmware has reported yet is never overwritten (the first fault is usually
+ * the cause). It survives the bootloader's later starts until a main firmware reports it.
+ * FAULT_LATER: how many more faults the bootloader's fault reaction found after the first, before
+ * a firmware reported it. It counts up by one per fault and stops at BACKUP_FAULT_LATER_MAX. It
+ * is its own pair so that counting never rewrites the location; it is set to 0 when the location
+ * is first written, so a count left by an earlier cycle is never read as this one's. A firmware
+ * reads it only when a location is stored. */
+#define BACKUP_FAULT_LATER_MAX        0xFFU   /* one byte of EVENT 0x0005's detail */
 
 /* FALLBACK (decision 4, owner, 13 Oct 2026): every copy refused or skipped on one start. One byte
  * per copy holds the check result it was refused or skipped with (the table below), 0x00 when it
@@ -142,7 +155,17 @@
 #define CHECK_TRIAL_STARTS      0x0CU   /* trial started too often: given up at its start limit */
 #define CHECK_RESTARTS          0x0DU   /* restarted too often: decision B skipped the confirmed
                                          * slot */
+/* Added by the owner's decisions of 13 Oct 2026 (second round): the check results live in this
+ * header only, next to the record that holds them. Each is a trial or copy passed over without a
+ * check of its image. */
+#define CHECK_WATCHDOG_NOT_RUNNING 0x0EU   /* the trial was held back: the watchdog was not
+                                            * confirmed running (decision F(b)) */
+#define CHECK_START_NOT_COUNTED 0x0FU   /* the trial was not started: count_trial_start could not
+                                         * save its start count */
+#define CHECK_STATE_DAMAGED     0x10U   /* the boot state is damaged (decision D): slot A and slot B
+                                         * were not checked, only the last-resort firmware is
+                                         * tried */
 /* The highest code of the table. */
-#define CHECK_LAST              CHECK_RESTARTS
+#define CHECK_LAST              CHECK_STATE_DAMAGED
 
 #endif /* BACKUP_LAYOUT_H */

@@ -177,24 +177,36 @@ bool ModePort::clearFallbackRecord()
 }
 
 /**
- * @brief Host stand-in for ModePort::readBootloaderFault: the FAULT_LOCATION pair (decision 3).
+ * @brief Host stand-in for ModePort::readBootloaderFault: the FAULT_LOCATION pair and, when a
+ * location is stored, the FAULT_LATER pair (decision 3).
  *
  * @param[out]    location  the stored value; 0 when none is stored
- * @return true if the pair matches and is not 0
+ * @param[out]    later     the faults after the first; 0 when no location is stored or the
+ *                          count's pair is broken
+ * @return true if the location pair matches and is not 0
  */
-bool ModePort::readBootloaderFault(uint32_t &location)
+bool ModePort::readBootloaderFault(uint32_t &location, uint32_t &later)
 {
-    return fakeBackupGet(BACKUP_PAIR_FAULT_LOCATION, location) && (location != 0U);
+    later = 0U;
+    if (!fakeBackupGet(BACKUP_PAIR_FAULT_LOCATION, location) || (location == 0U)) {
+        return false;
+    }
+    if (!fakeBackupGet(BACKUP_PAIR_FAULT_LATER, later)) {
+        later = 0U;
+    }
+    return true;
 }
 
 /**
- * @brief Host stand-in for ModePort::clearBootloaderFault.
+ * @brief Host stand-in for ModePort::clearBootloaderFault: both pairs.
  *
  * @return fake.backup_writable
  */
 bool ModePort::clearBootloaderFault()
 {
-    return writePair(BACKUP_PAIR_FAULT_LOCATION, 0U);
+    const bool later_cleared = writePair(BACKUP_PAIR_FAULT_LATER, 0U);
+
+    return writePair(BACKUP_PAIR_FAULT_LOCATION, 0U) && later_cleared;
 }
 
 /**

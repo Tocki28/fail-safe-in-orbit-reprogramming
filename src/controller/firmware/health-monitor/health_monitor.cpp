@@ -182,3 +182,40 @@ uint16_t HealthMonitor::eventReport(uint32_t now_ms, EventCode code, const uint8
     }
     return static_cast<uint16_t>(kEventHeadBytes + detail_bytes);
 }
+
+/**
+ * @brief Returns the detail of EVENT 0x0005 for a fault the firmware found itself (decision 3,
+ * owner, 13 Oct 2026, second round).
+ *
+ * The location goes out as it is: bit 7 is clear because no location code uses it
+ * (common/fault_codes.h checks that when it is compiled), and that is how the ground tells it
+ * from a fault the bootloader found. The firmware's own fault restarts the chip at once, so it
+ * counts no later faults: byte 2 is 0.
+ *
+ * @param[in]     location  the fault-location code (common/fault_codes.h, 0x10 to 0x4F)
+ * @return where (1), later faults (1)
+ */
+std::array<uint8_t, kMemoryChangedDetailBytes> HealthMonitor::memoryChangedDetailOwn(
+    uint8_t location)
+{
+    return {location, 0U};
+}
+
+/**
+ * @brief Returns the detail of EVENT 0x0005 for a fault the bootloader found at the last start
+ * (decision 3, owner, 13 Oct 2026, second round).
+ *
+ * The bootloader has no link to the ground, so the firmware that runs next reports for it. The
+ * location has FAULT_FOUND_BY_BOOTLOADER (0x80) added, so 0x90 means the bootloader found what
+ * 0x10 names (Interfaces Sec. 5.4). Byte 2 is the number of faults the bootloader found after
+ * the first.
+ *
+ * @param[in]     location  the first fault-location code the bootloader left (0x01 to 0x1F)
+ * @param[in]     later     faults found after the first, 0 to 255
+ * @return where (1), later faults (1)
+ */
+std::array<uint8_t, kMemoryChangedDetailBytes> HealthMonitor::memoryChangedDetailBootloader(
+    uint8_t location, uint8_t later)
+{
+    return {static_cast<uint8_t>(location | FAULT_FOUND_BY_BOOTLOADER), later};
+}

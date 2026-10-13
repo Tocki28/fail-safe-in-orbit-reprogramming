@@ -825,6 +825,60 @@ static void test_skip_records(void)
 }
 
 /**
+ * @brief Owner's decision 1, 13 Oct 2026, second round: a trial held back for a watchdog not
+ * confirmed running is recorded 0x0E; a trial whose start count could not be saved is recorded
+ * 0x0F; with the boot state damaged, slot A and slot B are recorded 0x10 and the last-resort
+ * firmware starts. The firmware that starts sends one EVENT 0x0002 per record.
+ *
+ * Fails on the old code (checked by a scratch-copy run of main.c without the three add_record
+ * calls): all three left no record at all, so the pair stayed 0 and no EVENT was sent.
+ */
+static void test_not_started_records(void)
+{
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    stub_watchdog_running = false;
+    int ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(0U, CHECK_WATCHDOG_NOT_RUNNING, 0U, BACKUP_COPY_A)) &&
+               (CHECK_WATCHDOG_NOT_RUNNING == 0x0EU),
+           "F(b): trial B held back, watchdog not confirmed running -> B 0x0E, A started "
+           "(was: no record)");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    write_results[0] = false;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(0U, CHECK_START_NOT_COUNTED, 0U, BACKUP_COPY_A)) &&
+               (CHECK_START_NOT_COUNTED == 0x0FU),
+           "count_trial_start: the start count cannot be saved -> B 0x0F, A started "
+           "(was: no record)");
+
+    reset_rig();
+    stored_load = (int)BOOT_STATE_DAMAGED;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_LR) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(CHECK_STATE_DAMAGED, CHECK_STATE_DAMAGED, 0U,
+                          BACKUP_COPY_LAST_RESORT)) &&
+               (CHECK_STATE_DAMAGED == 0x10U) && (CHECK_LAST == CHECK_STATE_DAMAGED),
+           "D: boot state damaged -> A 0x10 and B 0x10, last-resort started (was: no record)");
+
+    reset_rig();
+    stored_load = (int)BOOT_STATE_DAMAGED;
+    region_result[AT_LR] = IMAGE_BAD_SIGNATURE_A;
+    ended = run_boot();
+    report((ended == RUN_PARKED) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(CHECK_STATE_DAMAGED, CHECK_STATE_DAMAGED, CHECK_SIGNATURE_A, 0U)),
+           "D: boot state damaged and the last-resort firmware refused too -> park; A 0x10, "
+           "B 0x10, last-resort 0x09, none started");
+}
+
+/**
  * @brief Runs the tests and prints the totals.
  *
  * @return 0 if every test passed, 1 otherwise
@@ -843,6 +897,7 @@ int main(void)
     test_i_retry();
     test_fallback_record();
     test_skip_records();
+    test_not_started_records();
     if (failures == 0U) {
         printf("bootloader flow tests: all %u passed\n", tests);
         return 0;

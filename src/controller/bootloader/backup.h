@@ -28,8 +28,9 @@ bool backup_read(uint32_t pair, uint32_t *value);
  * as written. */
 bool backup_write(uint32_t pair, uint32_t value);
 
-/* Leave a fault-location code (common/fault_codes.h) in the FAULT_LOCATION pair for the firmware
- * that runs next (decision 3). Opens the backup domain itself; for the fault reaction only. */
+/* Leave a fault-location code (common/fault_codes.h) for the firmware that runs next (decision 3).
+ * Keeps the first location: if one is stored, FAULT_LATER goes up by one (stops at 255) and the
+ * stored location stays. Opens the backup domain itself; for the fault reaction only. */
 void backup_leave_fault_location(uint8_t location);
 
 #endif /* BACKUP_H */

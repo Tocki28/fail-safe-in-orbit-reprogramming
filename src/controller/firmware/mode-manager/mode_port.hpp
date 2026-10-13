@@ -70,10 +70,13 @@ struct ModePort {
     /** @brief Clear the fall-back record. True if read back. */
     [[nodiscard]] static bool clearFallbackRecord();
 
-    /** @brief Read the fault location the bootloader left (decision 3). False if none is stored. */
-    [[nodiscard]] static bool readBootloaderFault(uint32_t &location);
+    /** @brief Read the first fault location the bootloader left and the number of faults after
+     *  it (decision 3). False if no location is stored; `later` is 0 then, and also when its
+     *  pair is broken. */
+    [[nodiscard]] static bool readBootloaderFault(uint32_t &location, uint32_t &later);
 
-    /** @brief Clear the bootloader's fault location. True if read back. */
+    /** @brief Clear the bootloader's fault location and its later-faults count. True if both
+     *  read back. */
     [[nodiscard]] static bool clearBootloaderFault();
 
     /** @brief Clear decision B's restart count if it belongs to `slot_code`. True unless the

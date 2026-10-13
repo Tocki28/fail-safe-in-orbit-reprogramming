@@ -292,21 +292,32 @@ void testBackup()
            "4: fall-back record BKP8R 0x010D0900 -> A not refused, B 09, last-resort 0D, started "
            "01; one flipped bit -> none; cleared -> none");
 
-    /* Decision 3: the bootloader's fault location is pair 5, BKP10R and BKP11R. Fails on the old
-     * code: the pair and both functions did not exist. */
+    /* Decision 3: the bootloader's first fault location is pair 5, BKP10R and BKP11R; the faults
+     * after it are counted in pair 6, BKP12R and BKP13R. Fails on the old code: the pairs and
+     * both functions did not exist (the count: readBootloaderFault took no second argument). */
     uint32_t location = 0U;
+    uint32_t later = 0xEEU;
     fake_tamp.BKP[10] = 0x05U;
     fake_tamp.BKP[11] = ~uint32_t{0x05U};
-    bool loc_read = ModePort::readBootloaderFault(location) && (location == 0x05U);
-    fake_tamp.BKP[10] ^= 0x01U;   /* one flipped bit */
-    bool loc_broken = !ModePort::readBootloaderFault(location);
+    fake_tamp.BKP[12] = 7U;
+    fake_tamp.BKP[13] = ~uint32_t{7U};
+    bool loc_read = ModePort::readBootloaderFault(location, later) && (location == 0x05U) &&
+                    (later == 7U);
+    fake_tamp.BKP[12] ^= 0x01U;   /* one flipped bit in the count: the location still reads */
+    bool later_broken = ModePort::readBootloaderFault(location, later) && (location == 0x05U) &&
+                        (later == 0U);
+    fake_tamp.BKP[12] = 7U;
+    fake_tamp.BKP[10] ^= 0x01U;   /* one flipped bit in the location */
+    bool loc_broken = !ModePort::readBootloaderFault(location, later) && (later == 0U);
     bool loc_cleared = ModePort::clearBootloaderFault() && (fake_tamp.BKP[10] == 0U) &&
-                       (fake_tamp.BKP[11] == 0xFFFFFFFFU) &&
+                       (fake_tamp.BKP[11] == 0xFFFFFFFFU) && (fake_tamp.BKP[12] == 0U) &&
+                       (fake_tamp.BKP[13] == 0xFFFFFFFFU) &&
                        ((fake_pwr.CR1 & PWR_CR1_DBP) == 0U) &&
-                       !ModePort::readBootloaderFault(location);
-    report(loc_read && loc_broken && loc_cleared,
-           "3: bootloader fault location in BKP10R/BKP11R read as 0x05; one flipped bit -> none; "
-           "cleared to 0 / 0xFFFFFFFF with DBP cleared again -> none");
+                       !ModePort::readBootloaderFault(location, later);
+    report(loc_read && later_broken && loc_broken && loc_cleared,
+           "3: first fault location 0x05 in BKP10R/BKP11R and 7 later faults in BKP12R/BKP13R "
+           "read back; a broken count reads 0; a broken location -> none; both cleared to 0 / "
+           "0xFFFFFFFF with DBP cleared again -> none");
 
     fake_tamp.BKP[0] = (BOOT_SLOT_A << BACKUP_RESTARTS_SLOT_SHIFT) | 2U;
     fake_tamp.BKP[1] = ~fake_tamp.BKP[0];

@@ -27,7 +27,9 @@
  *         (leave_fallback_record; Interfaces Sec. 5.4);
  *   4     every copy refused or skipped on one start is recorded, up to three: a flash read
  *         error, a trial given up at its start limit and a confirmed slot skipped by decision B
- *         have their own check results (0x0B, 0x0C, 0x0D; add_record);
+ *         have their own check results (0x0B, 0x0C, 0x0D; add_record), and so do a trial held
+ *         back without a confirmed watchdog, a trial whose start count could not be saved and
+ *         the two slots passed over when the boot state is damaged (0x0E, 0x0F, 0x10);
  *   faults: a value in memory that cannot exist calls fault_impossible_value (common/fault.h)
  *         with the fault-location code of its function (decision 3, common/fault_codes.h).
  *
@@ -421,7 +423,9 @@ static bool give_up_trial(boot_state_t *state, const char *why)
  *
  * A trial given up here is recorded with check result 0x0C, "trial started too often"
  * (decision 4, owner, 13 Oct 2026): it is the first candidate, so whatever copy starts on this
- * start starts in its place. Before, it left no record.
+ * start starts in its place. Before, it left no record. A trial whose start count could not be
+ * saved is not started and is recorded with 0x0F, "its start count could not be saved" (owner,
+ * 13 Oct 2026, second round); before, it left no record either.
  *
  * @param[in,out] state    boot state; failed_starts goes up by one; trial is cleared if the trial
  *                         is given up
@@ -451,6 +455,7 @@ static void count_trial_start(boot_state_t *state, uint32_t *records)
     if (!save_state(state)) {
         /* An uncounted start could hang and restart for ever: run the confirmed slot. */
         log_text("trial not started: its start could not be counted", "", "");
+        add_record(records, slot_region(state->trial), CHECK_START_NOT_COUNTED);
         state->trial = BOOT_SLOT_NONE;
     }
 }
@@ -510,9 +515,14 @@ static void apply_give_up_request(boot_state_t *state)
  * started, one line gives the time the update really took, so the bound can be confirmed from
  * the board (bench value, TBD for flight; see watchdog.c).
  *
- * @param[in,out] state  boot state; trial is cleared in RAM if the watchdog is not running
+ * The held-back trial is recorded with check result 0x0E, "not started: the watchdog was not
+ * confirmed running" (owner, 13 Oct 2026, second round): the confirmed slot starts in its place,
+ * and the firmware that runs reports the fall-back. Before, it left no record.
+ *
+ * @param[in,out] state    boot state; trial is cleared in RAM if the watchdog is not running
+ * @param[in,out] records  the fall-back record of this start (add_record)
  */
-static void hold_trial_without_watchdog(boot_state_t *state)
+static void hold_trial_without_watchdog(boot_state_t *state, uint32_t *records)
 {
     uint32_t iwdg_sr = 0U;
     uint32_t rcc_csr = 0U;
@@ -536,6 +546,7 @@ static void hold_trial_without_watchdog(boot_state_t *state)
     uart_put(", waited ");
     uart_put_decimal(waited_us);
     uart_put(" us)\r\n");
+    add_record(records, slot_region(state->trial), CHECK_WATCHDOG_NOT_RUNNING);
     state->trial = BOOT_SLOT_NONE;
 }
 
@@ -986,13 +997,17 @@ int main(void)
     memset(&state, 0, sizeof state);
     if (load_state(&state)) {
         apply_give_up_request(&state);
-        hold_trial_without_watchdog(&state);
+        hold_trial_without_watchdog(&state, &records);
         count_trial_start(&state, &records);
         if (confirmed_skipped(&state)) {
             skipped = slot_region(state.confirmed);
         }
         count = candidates(&state, skipped != NULL, order);
     } else {
+        /* Slot A and slot B are passed over unchecked: recorded with 0x10 (owner, 13 Oct 2026,
+         * second round), so the firmware that runs reports both. */
+        add_record(&records, &REGION_A, CHECK_STATE_DAMAGED);
+        add_record(&records, &REGION_B, CHECK_STATE_DAMAGED);
         order[0] = &REGION_LAST_RESORT;
         count = 1U;
     }

@@ -312,6 +312,8 @@ Code & Reason & Requirement \\
 0x0D & A dangerous command cannot be scheduled & REQ-029, REQ-112 \\
 0x0E & Image built for the other slot & REQ-005 \\
 0x0F & Trial tests not passed & REQ-012 \\
+0x10 & Image of the wrong kind for its place & REQ-005, REQ-008 \\
+0x11 & Boot state could not be stored & REQ-012, REQ-021 \\
 \bottomrule
 \end{tabularx}}
 
@@ -323,8 +325,11 @@ Code & Reason & Requirement \\
 A command's payload is its one-byte identifier followed by its fields.
 Identifiers 0x01 to 0x1F are commands to the onboard computer, 0x20 to 0x3F
 commands to the controller. UPLOAD BEGIN to UPLOAD CANCEL also go to the
-controller, with Destination 0x02: it writes the image into its slot that is
-not confirmed, so it can never write over the firmware it runs
+controller, with Destination 0x02, but only from the onboard computer, as the
+steps of a DELIVER. The onboard computer refuses them from the ground with
+0x06, so every image reaches the controller after the onboard computer's own
+checks \mbox{[3,~REQ-047]}. The controller writes the image into its slot that
+is not confirmed, so it can never write over the firmware it runs
 \mbox{[3,~REQ-007]}. During a trial, the controller accepts them only for the
 test image of its trial tests, image number 0xFFFF. The test image's last four
 bytes are the CRC-32 of the bytes before them. The controller keeps the test
@@ -428,8 +433,8 @@ that kind only.}
 Code & Event & Sent by & Requirement \\
 \midrule
 0x0001 & fault detected & controller & REQ-038 \\
-0x0002 & fall-back to the previous copy & controller & REQ-040 \\
-0x0003 & fall-back to the last-resort firmware & controller & REQ-040 \\
+0x0002 & fall-back to the previous copy; detail: refused copy (1), check result (1) & controller & REQ-040 \\
+0x0003 & fall-back to the last-resort firmware; detail: refused copy (1), check result (1) & controller & REQ-040 \\
 0x0004 & self-test failed & controller & REQ-039 \\
 0x0005 & change in memory detected & controller & REQ-041 \\
 0x0006 & trial started & controller & REQ-037 \\
@@ -437,12 +442,37 @@ Code & Event & Sent by & Requirement \\
 0x0008 & firmware given up & controller & REQ-037 \\
 0x0009 & restart & controller & REQ-037 \\
 0x000A & trial tests passed & controller & REQ-139 \\
-0x000B & trial tests failed; detail: which test & controller & REQ-139, REQ-140 \\
+0x000B & trial tests failed; detail: which test (1): 0x01 self-test, 0x02 data link, 0x03 test image & controller & REQ-139, REQ-140 \\
 0x0101 & data link lost & onboard computer & REQ-081 \\
 0x0102 & data link working again & onboard computer & REQ-082 \\
 0x0103 & restore done; detail: its result & onboard computer & REQ-060 \\
 0x0104 & health reports dropped; detail: count and time span & onboard computer & REQ-076 \\
 0x0105 & onboard computer clock differs from ground time & onboard computer & REQ-072 \\
+0x0106 & controller restarted by the onboard computer; detail: reason (1): 0x01 trial past its time & onboard computer & REQ-013 \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+\noindent In events 0x0002 and 0x0003, the refused copy uses the codes of the HEALTH
+report's running slot: 0x01 slot A, 0x02 slot B, 0x03 last-resort firmware. The
+check result names the first check the copy failed, so the operator can tell, for
+example, which of the two signatures failed:
+
+{\footnotesize\noindent\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Check result & Check that failed \\
+\midrule
+0x00 & none: the copy passed \\
+0x01 & the copy is empty \\
+0x02 & proprietary string \\
+0x03 & format \\
+0x04 & kind \\
+0x05 & target \\
+0x06 & length \\
+0x07 & start address outside the region \\
+0x08 & body check value \\
+0x09 & signature A \\
+0x0A & signature B \\
 \bottomrule
 \end{tabularx}}
 

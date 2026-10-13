@@ -168,7 +168,7 @@ REQ-003 & The controller shall change mode only along the transitions the ConOps
 REQ-004 & At every start, the controller firmware shall set itself to a known safe state before acting on any command. & SWE-134 a & TEST \\
 REQ-005 & The controller firmware shall check every firmware image for damage before running it, and shall not run a damaged image. & H-1 control 2; H-7 control 3; Scenario-610; O-6 & TEST \\
 REQ-006 & The controller firmware shall check that a firmware image comes from the operator before running it. & H-2 control 2 & TEST \\
-REQ-007 & An update shall never write over the previous firmware or the last-resort firmware. & H-1 control 1; Scenario-600; O-6 & TEST \\
+REQ-007 & An update shall never write over the confirmed firmware, the running firmware or the last-resort firmware. & H-1 control 1; Scenario-600; O-6 & TEST \\
 REQ-008 & The controller shall keep a last-resort firmware that no update replaces. & H-1 control 4; Scenario-460 & TEST \\
 REQ-009 & The last-resort firmware shall share no start-up code, kept data or other code with the main firmware. & H-1 cause g; H-8 cause g; Shared cause: image code and data & INSPECTION \\
 REQ-010 & The last-resort firmware shall be able to receive new firmware. & H-3 control 3; Mode table & TEST \\

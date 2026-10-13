@@ -1,0 +1,19 @@
+APP LR v1 running
+APP LR v1 running
+APP LR v1 running
+BL: start, reset by reset pin
+BL: boot state: confirmed A, trial B, failed starts 0
+BL: watchdog running (update settled in 12667 us)
+BL: trial slot B, start 1 of 3
+BL: slot B signature check: 39842 us (6773298 cycles at 170 MHz)
+BL: slot B accepted: version 2, build 9efca6f-dirty test B
+BL: starting slot B (trial)
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 confirmed itself
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running
+APP B v2 running

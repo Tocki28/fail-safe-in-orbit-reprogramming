@@ -33,6 +33,7 @@ char ev_trace[EV_MAX];
 bool stub_cycles_counts = true;
 bool stub_watchdog_running = true;
 uint32_t stub_watchdog_sr = 0U;
+uint32_t stub_watchdog_waited_us = 0U;
 uint32_t stub_rcc_csr = 0x00000002U;   /* LSIRDY, bit 1 [RM0440 Rev 9, Sec. 7.4.28, p. 328] */
 jmp_buf run_exit;
 bool run_exit_armed;
@@ -132,12 +133,14 @@ void watchdog_set_firmware_timeout(void)
  *
  * @param[out]    iwdg_sr  set to stub_watchdog_sr
  * @param[out]    rcc_csr  set to stub_rcc_csr
+ * @param[out]    waited_us  set to stub_watchdog_waited_us
  * @return stub_watchdog_running
  */
-bool watchdog_running(uint32_t *iwdg_sr, uint32_t *rcc_csr)
+bool watchdog_running(uint32_t *iwdg_sr, uint32_t *rcc_csr, uint32_t *waited_us)
 {
     *iwdg_sr = stub_watchdog_sr;
     *rcc_csr = stub_rcc_csr;
+    *waited_us = stub_watchdog_waited_us;
     return stub_watchdog_running;
 }
 

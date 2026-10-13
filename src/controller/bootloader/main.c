@@ -478,9 +478,12 @@ static void apply_give_up_request(boot_state_t *state)
  * the held-back start is not counted, and in RAM only: the stored boot state keeps the trial,
  * which the next start tries again.
  *
- * The log line carries the raw IWDG_SR and RCC_CSR that the decision was made on (read once, by
- * watchdog_running), because the bench held a trial back while both bits read as passing a
- * moment later (13 Oct 2026, scenario 2) and the cause is open.
+ * The log line carries the raw IWDG_SR and RCC_CSR that the decision was made on (read by
+ * watchdog_running) and the time it waited. Cause found on the bench (13 Oct 2026, scenario 2):
+ * the check read IWDG_SR 0x00000002 (reload update still running) a few ms after the write, and
+ * the update takes up to 43.4 ms, so watchdog_running now waits for it. When the trial is
+ * started, one line gives the time the update really took, so the bound can be confirmed from
+ * the board (bench value, TBD for flight; see watchdog.c).
  *
  * @param[in,out] state  boot state; trial is cleared in RAM if the watchdog is not running
  */
@@ -488,11 +491,15 @@ static void hold_trial_without_watchdog(boot_state_t *state)
 {
     uint32_t iwdg_sr = 0U;
     uint32_t rcc_csr = 0U;
+    uint32_t waited_us = 0U;
 
     if (state->trial == BOOT_SLOT_NONE) {
         return;
     }
-    if (watchdog_running(&iwdg_sr, &rcc_csr)) {
+    if (watchdog_running(&iwdg_sr, &rcc_csr, &waited_us)) {
+        uart_put("BL: watchdog running (update settled in ");
+        uart_put_decimal(waited_us);
+        uart_put(" us)\r\n");
         return;
     }
     uart_put("BL: trial slot ");
@@ -501,7 +508,9 @@ static void hold_trial_without_watchdog(boot_state_t *state)
     uart_put_hex32(iwdg_sr);
     uart_put(", RCC_CSR ");
     uart_put_hex32(rcc_csr);
-    uart_put(")\r\n");
+    uart_put(", waited ");
+    uart_put_decimal(waited_us);
+    uart_put(" us)\r\n");
     state->trial = BOOT_SLOT_NONE;
 }
 

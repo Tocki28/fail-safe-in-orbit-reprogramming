@@ -22,10 +22,11 @@ void watchdog_start_long(void);
 void watchdog_reload(void);
 
 /* True if the watchdog is confirmed running: IWDG_SR is 0 (updates settled) and LSIRDY is 1
- * (decision F(b): no trial start otherwise). Reads IWDG_SR and RCC_CSR once each and stores the
- * raw values it decided on in *iwdg_sr and *rcc_csr, for the log line. Both pointers must be
- * valid; a null pointer answers false. */
-bool watchdog_running(uint32_t *iwdg_sr, uint32_t *rcc_csr);
+ * (decision F(b): no trial start otherwise). Waits for IWDG_SR = 0 up to 50 ms (the update takes
+ * up to 43.4 ms with prescaler /256), then reads IWDG_SR and RCC_CSR once each and stores the raw
+ * values it decided on in *iwdg_sr and *rcc_csr, and the time waited in microseconds in
+ * *waited_us, for the log line. All pointers must be valid; a null pointer answers false. */
+bool watchdog_running(uint32_t *iwdg_sr, uint32_t *rcc_csr, uint32_t *waited_us);
 
 /* Set the firmware's time-out (about 2 s) on the running watchdog, then reload. Used by the
  * hand-over, once, just before the jump. */

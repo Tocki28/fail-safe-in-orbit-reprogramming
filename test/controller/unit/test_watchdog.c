@@ -9,7 +9,9 @@
  * reload 1999 (about 2 s) without the start key, then reloads, and also ends with a dead cycle
  * counter. Before decision A the bootloader's watchdog_start (in handover.c) was static, started
  * at the hand-over and waited on the cycle counter alone. watchdog_running (decision F(b)) is
- * true only with the IWDG status register 0 and LSIRDY set in RCC_CSR.
+ * true only with the IWDG status register 0 and LSIRDY set in RCC_CSR, and waits up to 50 ms for
+ * the register to clear (an update takes up to five cycles of the prescaled clock, 43.4 ms at
+ * the slowest LSI with /256); watchdog_set_firmware_timeout waits up to 10 ms (5.4 ms for /32).
  *
  * Built with the Mac's cc and the undefined-behaviour sanitizer. Run: make -C test/controller
  * unit. Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -31,16 +33,40 @@ static uint32_t history_length;
 static uint32_t failures;
 static uint32_t tests;
 
-/* Stand-in for the cycle counter: 0 for ever, a counter that does not count. */
+/* Stand-in for the cycle counter: cycles_value moves by cycles_step at every read; a step of 0
+ * is a counter that does not count. */
 static uint32_t cycles_value;
+static uint32_t cycles_step;
+/* The status register clears when the counter reaches this value (0: never). It stands for the
+ * hardware ending the update [RM0440 Rev 9, Sec. 35.4.4, p. 1562]. */
+static uint32_t sr_clears_at;
+
+/* 10 us of the 170 MHz core clock: the counter's step in the timed tests. */
+#define STEP_10US 1700U
+#define CYCLES_PER_MS (CORE_CLOCK_HZ / 1000U)
 
 /**
- * @brief Stand-in for the cycle counter read; returns a value the test sets.
+ * @brief Stand-in for the clock in use.
  *
- * @return cycles_value
+ * @return CORE_CLOCK_HZ
+ */
+uint32_t clock_hz(void)
+{
+    return CORE_CLOCK_HZ;
+}
+
+/**
+ * @brief Stand-in for the cycle counter read: moves the counter on by cycles_step, clears the
+ * status register when sr_clears_at is reached, returns the counter.
+ *
+ * @return cycles_value after the step
  */
 uint32_t cycles_now(void)
 {
+    cycles_value += cycles_step;
+    if ((sr_clears_at != 0U) && (cycles_value >= sr_clears_at)) {
+        fake_iwdg.SR = 0U;
+    }
     return cycles_value;
 }
 
@@ -84,6 +110,8 @@ static void reset_rig(void)
     memset(&fake_rcc, 0, sizeof fake_rcc);
     history_length = 0U;
     cycles_value = 0U;
+    cycles_step = 0U;
+    sr_clears_at = 0U;
 }
 
 /**
@@ -210,23 +238,138 @@ static void test_running(void)
 
     uint32_t sr = 0xFFFFFFFFU;
     uint32_t csr = 0xFFFFFFFFU;
+    uint32_t us = 0xFFFFFFFFU;
 
     reset_rig();
     fake_rcc.CSR = RCC_CSR_LSIRDY;
-    report(watchdog_running(&sr, &csr) && (sr == 0U) && (csr == RCC_CSR_LSIRDY),
+    report(watchdog_running(&sr, &csr, &us) && (sr == 0U) && (csr == RCC_CSR_LSIRDY),
            "watchdog_running: IWDG_SR = 0 and LSIRDY = 1 -> true, raw values handed back");
     for (uint32_t i = 0U; i < 3U; i++) {
         fake_iwdg.SR = update_bits[i];
-        any_true = any_true || watchdog_running(&sr, &csr);
+        any_true = any_true || watchdog_running(&sr, &csr, &us);
     }
     report(!any_true && (sr == update_bits[2]) && (csr == RCC_CSR_LSIRDY),
            "watchdog_running: PVU, RVU or WVU set -> false, the raw values it decided on handed back");
     fake_iwdg.SR = 0U;
     fake_rcc.CSR = 0x0C000000U;   /* LSIRDY clear, other flags set */
-    report(!watchdog_running(&sr, &csr) && (sr == 0U) && (csr == 0x0C000000U),
+    report(!watchdog_running(&sr, &csr, &us) && (sr == 0U) && (csr == 0x0C000000U),
            "watchdog_running: LSIRDY = 0 -> false (trial not started), raw values handed back");
-    report(!watchdog_running(NULL, &csr) && !watchdog_running(&sr, NULL),
-           "watchdog_running: a null pointer -> false, no register read through it");
+    report(!watchdog_running(NULL, &csr, &us) && !watchdog_running(&sr, NULL, &us) &&
+               !watchdog_running(&sr, &csr, NULL),
+           "watchdog_running: a null pointer -> false, nothing waited");
+}
+
+/**
+ * @brief watchdog_running: RVU still set several ms after the write, clearing within the bound
+ * (the bench case, 13 Oct 2026) -> running, and the time waited is reported.
+ *
+ * Bench: IWDG_SR read 0x00000002 a few ms after the long time-out was written, 0 later. The
+ * update ends at 43.4 ms in the worst case (5 x 256 / 29 500 [RM0440 Rev 9, Sec. 35.4.4, p. 1562;
+ * DS12589 Rev 6, Table 44, p. 105]). Fails on the old code: it read IWDG_SR once and answered
+ * false.
+ */
+static void test_running_settles_later(void)
+{
+    uint32_t sr = 0xFFFFFFFFU;
+    uint32_t csr = 0U;
+    uint32_t us = 0U;
+
+    reset_rig();
+    fake_rcc.CSR = RCC_CSR_LSIRDY;
+    fake_iwdg.SR = 0x2U;
+    cycles_step = STEP_10US;
+    sr_clears_at = 43U * CYCLES_PER_MS;   /* 43 ms, the computed worst case */
+    report(watchdog_running(&sr, &csr, &us) && (sr == 0U) && (csr == RCC_CSR_LSIRDY),
+           "watchdog_running: RVU set, clears at 43 ms -> running");
+    report((us >= 42980U) && (us <= 43020U),
+           "watchdog_running: reports the time waited (43 ms, to 10 us)");
+
+    reset_rig();
+    fake_rcc.CSR = RCC_CSR_LSIRDY;
+    fake_iwdg.SR = 0x2U;
+    cycles_step = STEP_10US;
+    sr_clears_at = 49U * CYCLES_PER_MS;
+    report(watchdog_running(&sr, &csr, &us) && (us >= 48980U) && (us <= 49020U),
+           "watchdog_running: RVU clears at 49 ms, just inside the 50 ms bound -> running");
+}
+
+/**
+ * @brief watchdog_running: RVU never clearing -> false after the 50 ms bound, with the raw value
+ * and the time waited handed back; also false when it clears only after the bound.
+ */
+static void test_running_never_settles(void)
+{
+    uint32_t sr = 0U;
+    uint32_t csr = 0U;
+    uint32_t us = 0U;
+
+    reset_rig();
+    fake_rcc.CSR = RCC_CSR_LSIRDY;
+    fake_iwdg.SR = 0x2U;
+    cycles_step = STEP_10US;
+    report(!watchdog_running(&sr, &csr, &us) && (sr == 0x2U) && (csr == RCC_CSR_LSIRDY),
+           "watchdog_running: RVU never clears -> false, raw values handed back");
+    report((us >= 50000U) && (us <= 50020U),
+           "watchdog_running: gave up after 50 ms (reported to 10 us)");
+
+    reset_rig();
+    fake_rcc.CSR = RCC_CSR_LSIRDY;
+    fake_iwdg.SR = 0x2U;
+    cycles_step = STEP_10US;
+    sr_clears_at = 60U * CYCLES_PER_MS;
+    report(!watchdog_running(&sr, &csr, &us),
+           "watchdog_running: RVU clears at 60 ms, after the bound -> false");
+
+    reset_rig();
+    fake_rcc.CSR = RCC_CSR_LSIRDY;
+    fake_iwdg.SR = 0x2U;
+    cycles_step = 0U;   /* a dead cycle counter: only the pass limit ends the wait */
+    report(!watchdog_running(&sr, &csr, &us) && (us == 0U),
+           "watchdog_running: RVU stuck, cycle counter dead -> ends on the pass limit, false");
+}
+
+/**
+ * @brief watchdog_running: LSIRDY clear -> false even when IWDG_SR is 0, without waiting.
+ */
+static void test_running_lsi_not_ready(void)
+{
+    uint32_t sr = 0xFFFFFFFFU;
+    uint32_t csr = 0xFFFFFFFFU;
+    uint32_t us = 0xFFFFFFFFU;
+
+    reset_rig();
+    fake_rcc.CSR = 0U;
+    cycles_step = STEP_10US;
+    report(!watchdog_running(&sr, &csr, &us) && (sr == 0U) && (csr == 0U) && (us < 100U),
+           "watchdog_running: LSIRDY = 0, IWDG_SR = 0 -> false, no wait");
+}
+
+/**
+ * @brief watchdog_set_firmware_timeout waits for an update that takes the computed worst case.
+ *
+ * The update of prescaler /32 takes up to 5 x 32 / 29 500 = 5.4 ms [RM0440 Rev 9, Sec. 35.4.4,
+ * p. 1562; DS12589 Rev 6, Table 44, p. 105]. The status register clears at 5.5 ms; the wait must
+ * not have ended before. Fails on the old code: its bound was 2 ms. Then, with the register
+ * stuck, it ends at 10 ms.
+ */
+static void test_firmware_timeout_waits_for_update(void)
+{
+    reset_rig();
+    fake_iwdg.SR = 0x3U;
+    cycles_step = STEP_10US;
+    sr_clears_at = 5U * CYCLES_PER_MS + CYCLES_PER_MS / 2U;
+    watchdog_set_firmware_timeout();
+    report((fake_iwdg.SR == 0U) && (fake_iwdg.KR == 0xAAAAU),
+           "watchdog_set_firmware_timeout: update ending at 5.5 ms is waited for, then reload");
+
+    reset_rig();
+    fake_iwdg.SR = 0x3U;
+    cycles_step = STEP_10US;
+    watchdog_set_firmware_timeout();
+    report((fake_iwdg.SR != 0U) && (fake_iwdg.KR == 0xAAAAU) &&
+               (cycles_value >= 10U * CYCLES_PER_MS) &&
+               (cycles_value <= 10U * CYCLES_PER_MS + 2U * STEP_10US),
+           "watchdog_set_firmware_timeout: update never ends -> gives up at 10 ms, reloads");
 }
 
 /**
@@ -242,6 +385,10 @@ int main(void)
     test_firmware_timeout();
     test_firmware_timeout_bounded();
     test_running();
+    test_running_settles_later();
+    test_running_never_settles();
+    test_running_lsi_not_ready();
+    test_firmware_timeout_waits_for_update();
     if (failures == 0U) {
         printf("watchdog unit tests: all %u passed\n", tests);
         return 0;

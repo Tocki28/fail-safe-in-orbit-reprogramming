@@ -36,10 +36,12 @@ extern bool stub_cycles_counts;
 
 /* watchdog_running() answers this (decision F(b)); true unless a test sets it false. It also hands
  * back stub_watchdog_sr and stub_rcc_csr as the register values it "read" (0 and LSIRDY, the
- * values of a running watchdog, unless a test sets others). */
+ * values of a running watchdog, unless a test sets others) and stub_watchdog_waited_us as the
+ * time it waited. */
 extern bool stub_watchdog_running;
 extern uint32_t stub_watchdog_sr;
 extern uint32_t stub_rcc_csr;
+extern uint32_t stub_watchdog_waited_us;
 
 /* How a run under test ended. A test sets run_exit with setjmp and arms it (run_exit_armed);
  * the stand-ins leave by longjmp(run_exit, <one of these>):

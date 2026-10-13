@@ -126,7 +126,7 @@ static void test_candidates(void)
 }
 
 /**
- * @brief slot_letter: A, B and none have their own text; a code that is none of them is "unknown".
+ * @brief slot_letter: A, B and none have their own text; a code that is none of them is "corrupted slot code".
  *
  * Before, any other code was logged as "none", which reads as "no trial".
  */
@@ -136,7 +136,8 @@ static void test_slot_letter(void)
                (strcmp(slot_letter(BOOT_SLOT_B), "B") == 0) &&
                (strcmp(slot_letter(BOOT_SLOT_NONE), "none") == 0),
            "slot_letter: A, B and none have their own text");
-    report((strcmp(slot_letter(3U), "unknown") == 0) && (strcmp(slot_letter(0xEEU), "unknown") == 0),
+    report((strcmp(slot_letter(3U), "corrupted slot code") == 0) &&
+           (strcmp(slot_letter(0xEEU), "corrupted slot code") == 0),
            "slot_letter: 3 and 0xEE -> \"unknown\" (not \"none\")");
 }
 

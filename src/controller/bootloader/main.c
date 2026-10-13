@@ -67,11 +67,11 @@ static void log_text(const char *a, const char *b, const char *c)
  * @brief Returns the text for a slot code.
  *
  * Each of the three codes has its own case. The default is only for a value that is none of
- * them (a corrupted variable; MISRA C:2012 Rule 16.4): it logs "unknown", and no longer "none",
+ * them (a corrupted variable; MISRA C:2012 Rule 16.4): it logs "corrupted slot code", and no longer "none",
  * so a damaged code is not read as "no trial".
  *
  * @param[in]     slot  BOOT_SLOT_A, BOOT_SLOT_B or BOOT_SLOT_NONE
- * @return "A", "B", "none", or "unknown" for any other value
+ * @return "A", "B", "none", or "corrupted slot code" for any other value
  */
 static const char *slot_letter(uint8_t slot)
 {
@@ -83,7 +83,7 @@ static const char *slot_letter(uint8_t slot)
     case BOOT_SLOT_NONE:
         return "none";
     default:
-        return "unknown";   /* outside the three codes only: see above */
+        return "corrupted slot code";   /* outside the three codes only: see above */
     }
 }
 

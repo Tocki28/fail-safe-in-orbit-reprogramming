@@ -593,7 +593,7 @@ void testResultCodeEach()
  * @brief Checks image_result_text() for every image_result_t value and a value outside the enum.
  *
  * The text is for the bootloader's log (common/image_check.c). A value outside the enum gives
- * "unknown", never the text of a real result.
+ * "corrupted result value", never the text of a real result.
  */
 void testResultText()
 {
@@ -620,8 +620,8 @@ void testResultText()
         ok = ok && (std::strcmp(image_result_text(c.result), c.text) == 0);
     }
     report(ok, "image_result_text: all 11 results have their own text");
-    report((std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideA)), "unknown") == 0) &&
-               (std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideB)), "unknown") == 0),
+    report((std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideA)), "corrupted result value") == 0) &&
+               (std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideB)), "corrupted result value") == 0),
            "image_result_text: a value outside image_result_t (11, 15) gives \"unknown\"");
 }
 

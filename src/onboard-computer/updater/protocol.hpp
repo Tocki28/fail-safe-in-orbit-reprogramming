@@ -144,10 +144,16 @@ constexpr size_t kOffsetSelfTest = 23;
 // controller sends the first group; the onboard computer's own events (0x0101 to 0x0105) are
 // not sent on the bench.
 // 0x0001 "fault detected" carries a 1-byte detail, the fault kind; 0x0005 "change in memory
-// detected" carries a 1-byte detail, the fault location (owner's decisions 2 and 3, 13 Oct 2026;
-// the code lists are src/controller/common/fault_codes.h, copied into report_store.cpp).
+// detected" carries a 2-byte detail, where (1) and later faults (1) (owner's decisions 2 and 3,
+// 13 Oct 2026, and the second round of that day; the code lists are
+// src/controller/common/fault_codes.h, copied into report_store.cpp).
 constexpr uint16_t kEventFaultDetected = 0x0001;
 constexpr uint16_t kEventMemoryChange = 0x0005;
+// Event 0x0005's detail: where (1) and later faults (1). Bit 7 of where is set when the
+// bootloader found the fault at the last start; the value is a copy of FAULT_FOUND_BY_BOOTLOADER
+// (src/controller/common/fault_codes.h), which the unit test compares with the header.
+constexpr size_t kMemoryChangeDetailBytes = 2;
+constexpr uint8_t kFoundByBootloader = 0x80U;
 constexpr uint16_t kEventTrialStarted = 0x0006;
 constexpr uint16_t kEventFirmwareConfirmed = 0x0007;
 constexpr uint16_t kEventFirmwareGivenUp = 0x0008;

@@ -95,14 +95,28 @@ EVENT_FALLBACK_PREVIOUS, EVENT_FALLBACK_LAST_RESORT = 0x0002, 0x0003   # Sec. 5.
 EVENT_RESTARTED_BY_ONBOARD = 0x0106                                      # Sec. 5.4: event code
 EVENT_FAULT_DETECTED, EVENT_MEMORY_CHANGE = 0x0001, 0x0005              # Sec. 5.4: event codes
 # Check result in the detail of EVENTs 0x0002 and 0x0003 (Sec. 5.4, "Check result" table): the
-# first check the refused copy failed.
+# first check the refused copy failed, or why a copy was passed over without a check. COPIED from
+# src/controller/common/backup_layout.h (CHECK_*), where the bootloader that writes the codes
+# defines them; keep the two in step. Each value is (the header's name without CHECK_, the words).
+# The console's test parses the header and fails when a code or a name differs.
 CHECK_RESULT = {
-    0x00: "passed", 0x01: "empty", 0x02: "proprietary string", 0x03: "format", 0x04: "kind",
-    0x05: "target", 0x06: "length", 0x07: "start address outside the region",
-    0x08: "body check value", 0x09: "signature A", 0x0A: "signature B",
+    0x00: ("PASSED", "passed"), 0x01: ("EMPTY", "empty"), 0x02: ("MAGIC", "proprietary string"),
+    0x03: ("FORMAT", "format"), 0x04: ("KIND", "kind"), 0x05: ("TARGET", "target"),
+    0x06: ("LENGTH", "length"), 0x07: ("START", "start address outside the region"),
+    0x08: ("BODY", "body check value"), 0x09: ("SIGNATURE_A", "signature A"),
+    0x0A: ("SIGNATURE_B", "signature B"),
     # Added 13 Oct 2026 (owner's decision 4): a refusal or skip that is not an image check.
-    0x0B: "flash read error", 0x0C: "trial started too often", 0x0D: "restarted too often",
+    0x0B: ("FLASH_READ", "flash read error"), 0x0C: ("TRIAL_STARTS", "trial started too often"),
+    0x0D: ("RESTARTS", "restarted too often"),
+    # Added 13 Oct 2026, second round: a trial or copy passed over without a check of its image.
+    0x0E: ("WATCHDOG_NOT_RUNNING", "not started: watchdog not confirmed running"),
+    0x0F: ("START_NOT_COUNTED", "not started: start count could not be saved"),
+    0x10: ("STATE_DAMAGED", "boot state damaged, only the last-resort tried"),
 }
+# Bit 7 of the first detail byte of EVENT 0x0005 (Sec. 5.4): set when the bootloader found the
+# fault at the last start. COPIED from FAULT_FOUND_BY_BOOTLOADER in fault_codes.h; the console's
+# test compares the two.
+FOUND_BY_BOOTLOADER = 0x80
 # Fault kind, the 1-byte detail of EVENT 0x0001 (owner's decision 2, 13 Oct 2026). COPIED from
 # src/controller/common/fault_codes.h (FAULT_KIND_*), where the controller defines the codes; keep
 # the two in step. Each value is (the header's name without FAULT_KIND_, the words). The console's
@@ -264,6 +278,55 @@ def refusal_text(code):
     return name_of(REFUSAL_TEXT, code)
 
 
+def check_result_text(result):
+    """Words for a check result, the second detail byte of EVENTs 0x0002 and 0x0003 (Sec. 5.4).
+
+    The operator reads the first check the refused copy failed, or why a copy was passed over,
+    so the byte is turned into the CHECK_RESULT words. A byte outside the table is shown as
+    "unknown code" with the number, never dropped.
+
+    Args:
+        result: the check-result byte (0x00 to 0x10 are listed).
+
+    Returns:
+        The table's words, or "unknown code 0x.." for a byte the table does not list.
+    """
+    return CHECK_RESULT[result][1] if result in CHECK_RESULT else unknown(result)
+
+
+def memory_change_text(detail):
+    """Words for the detail of EVENT 0x0005 "change in memory detected" (Sec. 5.4).
+
+    The detail is where (1) and later faults (1). Bit 7 of where (FAULT_FOUND_BY_BOOTLOADER in
+    fault_codes.h) is set when the bootloader found the fault at the last start, so the operator
+    can tell a fault from before the restart from one the running firmware found. The location is
+    the lower seven bits, looked up in FAULT_LOCATION; one in no table prints as "unknown code".
+    With both bytes the text ends "found by the bootloader, N more after it" (N is the second
+    byte, always shown) or "found by the firmware" (N is added only when not 0, never dropped).
+    With one byte only the text is as before the second byte existed: the byte is read as a
+    location and nothing is said about who found it.
+
+    Args:
+        detail: the bytes after the event code, at least one.
+
+    Returns:
+        The text after the event name, e.g. " at 0x10 (image check result outside its list),
+        found by the bootloader, 3 more after it".
+    """
+    both = len(detail) >= 2
+    bootloader = both and bool(detail[0] & FOUND_BY_BOOTLOADER)
+    where = detail[0] & ~FOUND_BY_BOOTLOADER if both else detail[0]
+    if where in FAULT_LOCATION:
+        text = f" at 0x{where:02x} ({FAULT_LOCATION[where][1]})"
+    else:
+        text = f" at {unknown(where)}"
+    if not both:
+        return text
+    if bootloader:
+        return text + f", found by the bootloader, {detail[1]} more after it"
+    return text + ", found by the firmware" + (f", {detail[1]} more after it" if detail[1] else "")
+
+
 def decode_event(code, detail):
     """Words for an EVENT report: its name and, where the table gives one, its detail (Sec. 5.4).
 
@@ -271,8 +334,9 @@ def decode_event(code, detail):
     0x0003 (so the operator sees which copy was refused and which check failed), the failed test
     of 0x000B, and the reason of 0x0106. The fault kind of 0x0001 and the fault location of
     0x0005 are decoded with FAULT_KIND and FAULT_LOCATION (fault_codes.h; owner's decisions 2
-    and 3, 13 Oct 2026). Each detail byte is turned into the table's words; a
-    value outside the table, or a detail of the wrong length, is shown as such, never left out.
+    and 3, 13 Oct 2026); 0x0005 has a second detail byte and a bit 7, see memory_change_text().
+    Each detail byte is turned into the table's words; a value outside the table, or a detail of
+    the wrong length, is shown as such, never left out.
 
     Args:
         code: 16-bit event code.
@@ -290,7 +354,7 @@ def decode_event(code, detail):
             return text + f": detail of {len(detail)} bytes, expected 2"
         copy = detail[0]
         copy_text = f"slot {SLOTS[copy]}" if copy in (0x01, 0x02) else name_of(SLOTS, copy)
-        return text + f": {copy_text} refused ({name_of(CHECK_RESULT, detail[1])})"
+        return text + f": {copy_text} refused ({check_result_text(detail[1])})"
     if code == EVENT_FAULT_DETECTED:
         if not detail:
             return text + ": fault kind not given"
@@ -298,10 +362,7 @@ def decode_event(code, detail):
     if code == EVENT_MEMORY_CHANGE:
         if not detail:
             return text + ": location not given"
-        where = detail[0]
-        if where not in FAULT_LOCATION:
-            return text + f" at {unknown(where)}"
-        return text + f" at 0x{where:02x} ({FAULT_LOCATION[where][1]})"
+        return text + memory_change_text(detail)
     if code == EVENT_TESTS_FAILED:
         return text + ": " + ("test not named" if not detail else name_of(TRIAL_TESTS, detail[0]))
     if code == EVENT_RESTARTED_BY_ONBOARD:

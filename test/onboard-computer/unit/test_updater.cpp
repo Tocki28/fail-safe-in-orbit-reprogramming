@@ -52,6 +52,7 @@
 #include "controller_watch.hpp"
 #include "crc32.hpp"
 #include "data_link.hpp"
+#include "backup_layout.h"
 #include "fault_codes.h"
 #include "frame.hpp"
 #include "image_checker.hpp"
@@ -2843,13 +2844,16 @@ void testNamesAndFallbackDetail()
     "names: event 0x0106 'controller restarted by the onboard computer'; 0x0009 stays the controller's 'restart'");
   const char * expected[] = {"none: the copy passed", "the copy is empty", "proprietary string", "format", "kind",
     "target", "length", "start address outside the region", "body check value", "signature A", "signature B",
-    "flash read error", "trial started too often", "restarted too often"};
+    "flash read error", "trial started too often", "restarted too often",
+    "not started: watchdog not confirmed running", "not started: start count could not be saved",
+    "boot state damaged, only the last-resort tried"};
   bool results = true;
-  for (unsigned i = 0; i <= 0x0D; i++) {
-    results = results && std::strcmp(checkResultName(static_cast<uint8_t>(i)), expected[i]) == 0;
+  for (unsigned i = 0; i <= 0x10; i++) {
+    const char * name = checkResultName(static_cast<uint8_t>(i));
+    results = results && name != nullptr && std::strcmp(name, expected[i]) == 0;
   }
-  report(results && std::strcmp(checkResultName(0x0E), "unknown") == 0,
-    "names: check results 0x00 to 0x0D as in the Sec. 5.4 table (0x0B to 0x0D added 13 Oct); 0x0E unknown");
+  report(results && checkResultName(0x11) == nullptr && checkResultName(0x7F) == nullptr,
+    "names: check results 0x00 to 0x10 as in the Sec. 5.4 table (0x0E to 0x10 added 13 Oct, second round); 0x11 and 0x7F not listed (null)");
 
   std::array<char, 192> text{};
   const uint8_t previous[] = {0x01, 0x09};
@@ -2871,8 +2875,23 @@ void testNamesAndFallbackDetail()
     "event detail: 0x0003 {0x02, 0x0A}: refused copy B, check result signature B");
   const uint8_t odd[] = {0x03, 0x7F, 0x55};
   describeEvent(0x0002, odd, 3, text.data(), text.size());
-  report(std::strstr(text.data(), "refused copy 0x03 (last-resort), check result 0x7f (unknown)") != nullptr,
-    "event detail: copy 0x03 is last-resort; a check result outside the table is 'unknown'; a third byte is ignored");
+  report(std::strstr(text.data(), "refused copy 0x03 (last-resort), check result unknown code 0x7f") != nullptr &&
+         std::strstr(text.data(), "(unknown)") == nullptr,
+    "event detail: copy 0x03 is last-resort; a check result outside the table is 'unknown code 0x7f'; a third byte is ignored");
+  const char * passed_over[] = {"not started: watchdog not confirmed running",
+    "not started: start count could not be saved", "boot state damaged, only the last-resort tried"};
+  for (uint8_t i = 0; i < 3; i++) {
+    const uint8_t detail[] = {0x01, static_cast<uint8_t>(0x0E + i)};
+    describeEvent(i == 2 ? 0x0003 : 0x0002, detail, 2, text.data(), text.size());
+    std::array<char, 96> want{};
+    std::snprintf(want.data(), want.size(), "check result 0x%02x (%s)", detail[1], passed_over[i]);
+    report(std::strstr(text.data(), want.data()) != nullptr,
+      "event detail: events 0x0002/0x0003 with check result 0x0E, 0x0F, 0x10 are named");
+  }
+  const uint8_t first_unlisted[] = {0x02, 0x11};
+  describeEvent(0x0003, first_unlisted, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0003 (fall-back to the last-resort firmware), refused copy 0x02 (B), check result unknown code 0x11") == 0,
+    "event detail: 0x0003 with check result 0x11 (the first past the table) prints 'unknown code 0x11'");
   describeEvent(0x0002, previous, 1, text.data(), text.size());
   report(std::strstr(text.data(), "detail of 1 byte(s) instead of the 2 of Sec. 5.4: refused copy only, no check result") != nullptr,
     "event detail: 0x0002 with a 1-byte detail says so");
@@ -2996,6 +3015,113 @@ void testFaultCodes()
     "fault codes: event 0x0005 with a location in no table prints 'unknown code 0x99'");
   describeEvent(0x0005, nullptr, 0, text.data(), text.size());
   report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected)") == 0, "fault codes: event 0x0005 without a detail shows no location");
+}
+
+/**
+ * @brief Reads src/controller/common/backup_layout.h and checks the updater's check-result table
+ *        against its CHECK_* codes.
+ *
+ * The updater's checkResultName() (report_store.cpp) is a copy of the controller's CHECK_* list
+ * (Interfaces Sec. 5.4 check-result table). Every CHECK_* number found in the header must be named
+ * by the function, and it must name no other number, so a new CHECK_ code in the header fails this
+ * test until it is added to the table (the same style as testFaultCodes). The header is read
+ * from its place in the repository, relative to the test's working directory test/onboard-computer;
+ * a header that cannot be opened fails the test, it is never skipped. CHECK_LAST is an alias
+ * without a number and is not counted. The macros are also compiled in, so the three codes added
+ * on 13 Oct (second round) are checked by name.
+ *
+ * Passes when every header code is named, nothing else is, and the three new codes have the
+ * header's numbers.
+ *
+ * @return nothing
+ */
+void testCheckResultCodes()
+{
+  std::FILE * header = std::fopen("../../src/controller/common/backup_layout.h", "r");
+  report(header != nullptr, "check results: backup_layout.h opens from test/onboard-computer");
+  std::array<bool, 256> in_header{};
+  size_t codes = 0;
+  if (header != nullptr) {
+    std::array<char, 256> line{};
+    while (std::fgets(line.data(), static_cast<int>(line.size()), header) != nullptr) {
+      char name[96] = {0};
+      unsigned value = 0;
+      if (std::sscanf(line.data(), "#define %95s 0x%xU", name, &value) != 2 || value > 0xFFU) {
+        continue;
+      }
+      if (std::strncmp(name, "CHECK_", 6) == 0) {
+        in_header[value] = true;
+        codes++;
+      }
+    }
+    std::fclose(header);
+  }
+  report(codes >= 1, "check results: the header holds CHECK_* codes");
+  bool match = true;
+  size_t named = 0;
+  for (unsigned code = 0; code <= 0xFFU; code++) {
+    bool listed = checkResultName(static_cast<uint8_t>(code)) != nullptr;
+    match = match && (listed == in_header[code]);
+    named += listed ? 1U : 0U;
+  }
+  report(match && named == codes, "check results: the check-result table is exactly the header's CHECK_* list");
+  report(CHECK_WATCHDOG_NOT_RUNNING == 0x0EU && CHECK_START_NOT_COUNTED == 0x0FU && CHECK_STATE_DAMAGED == 0x10U &&
+         CHECK_LAST == 0x10U && report::kFoundByBootloader == FAULT_FOUND_BY_BOOTLOADER,
+    "check results: codes 0x0E, 0x0F, 0x10 and the bootloader flag 0x80 have the header's numbers");
+}
+
+/**
+ * @brief Event 0x0005 with its 2-byte detail: where (1) and later faults (1), bit 7 of where.
+ *
+ * Interfaces Sec. 5.4 event table; fault_codes.h, FAULT_FOUND_BY_BOOTLOADER. Passes when bit 7
+ * set reads "found by the bootloader" with the number of later faults, bit 7 clear reads "found by
+ * the firmware", a location in no table prints "unknown code 0x.." (also with bit 7 set), a
+ * one-byte detail prints as before, and the longest text still fits the log line whole.
+ *
+ * @return nothing
+ */
+void testMemoryChangeDetail()
+{
+  std::array<char, 192> text{};
+  const uint8_t example[] = {0x10 | FAULT_FOUND_BY_BOOTLOADER, 3};
+  describeEvent(0x0005, example, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at 0x10 (image check (both programs): "
+                                  "image check result outside its list), found by the bootloader, 3 more after it") == 0,
+    "memory change: {0x90, 3} reads 'at 0x10 (...), found by the bootloader, 3 more after it'");
+  const uint8_t none_after[] = {FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR, 0};
+  describeEvent(0x0005, none_after, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at 0x27 (update receiver: image check "
+                                  "result outside its list), found by the firmware") == 0,
+    "memory change: {0x27, 0} reads '..., found by the firmware'");
+  const uint8_t firmware_later[] = {FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR, 2};
+  describeEvent(0x0005, firmware_later, 2, text.data(), text.size());
+  report(std::strstr(text.data(), "found by the firmware, 2 more after it") != nullptr,
+    "memory change: a firmware fault with a non-zero second byte shows the count, never drops it");
+  const uint8_t boot_none[] = {0x01 | FAULT_FOUND_BY_BOOTLOADER, 0};
+  describeEvent(0x0005, boot_none, 2, text.data(), text.size());
+  report(std::strstr(text.data(), " at 0x01 (bootloader backup: ") != nullptr &&
+         std::strstr(text.data(), ", found by the bootloader, 0 more after it") != nullptr,
+    "memory change: {0x81, 0} reads 'found by the bootloader, 0 more after it'");
+  const uint8_t unknown_firmware[] = {0x79, 0};
+  describeEvent(0x0005, unknown_firmware, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x79, found by the firmware") == 0,
+    "memory change: {0x79, 0}, a location in no table, prints 'unknown code 0x79'");
+  const uint8_t unknown_boot[] = {0x99, 255};
+  describeEvent(0x0005, unknown_boot, 2, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x19, found by the bootloader, 255 more after it") == 0,
+    "memory change: {0x99, 255}, bit 7 set and 0x19 in no table, prints 'unknown code 0x19' and 255 more");
+  const uint8_t one_byte[] = {0x90};
+  describeEvent(0x0005, one_byte, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x90") == 0,
+    "memory change: a 1-byte detail prints as before (the byte as a location, no word on who found it)");
+  const uint8_t longest[] = {0x2E | FAULT_FOUND_BY_BOOTLOADER, 255};
+  describeEvent(0x0005, longest, 2, text.data(), text.size());
+  report(std::strstr(text.data(), "255 more after it") != nullptr && std::strlen(text.data()) < text.size() - 1,
+    "memory change: the longest location with bit 7 and 255 later faults fits the log line whole");
+  std::array<char, 60> small{};
+  describeEvent(0x0005, example, 2, small.data(), small.size());
+  report(small[small.size() - 1] == '\0' && std::strlen(small.data()) < small.size(),
+    "memory change: a too-small buffer gets cut text, terminated");
 }
 
 /**
@@ -3415,6 +3541,8 @@ int main(int argc, char ** argv)
   testArmNoAnswer(argv[4]);
   testNamesAndFallbackDetail();
   testFaultCodes();
+  testCheckResultCodes();
+  testMemoryChangeDetail();
   testRestoreScriptOption();
   testCheckImageFile(argv[2], argv[3], argv[4]);
   testSeverity3(argv[1], argv[4]);

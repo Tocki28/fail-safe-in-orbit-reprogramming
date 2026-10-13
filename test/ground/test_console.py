@@ -19,6 +19,7 @@ import console as c  # noqa: E402
 from fake_onboard import FakeOnboard  # noqa: E402
 
 FAULT_CODES_H = HERE.parents[1] / "src" / "controller" / "common" / "fault_codes.h"
+BACKUP_LAYOUT_H = HERE.parents[1] / "src" / "controller" / "common" / "backup_layout.h"
 IMAGES = HERE.parents[1] / "src" / "controller" / "build" / "images"
 FAST_S = "0.3"           # command timeout in tests; real value is 3 s
 SEQ_FILE = None          # sequence state file of the running test; set in setUp, never the user's ~/.fsir
@@ -466,10 +467,10 @@ class ConsoleTests(unittest.TestCase):
                          "fall-back to the last-resort firmware: slot A refused (signature B)")
         self.assertEqual(self.event_text(0x0002, b"\x03\x00"),
                          "fall-back to the previous copy: last-resort refused (passed)")
-        for result, text in c.CHECK_RESULT.items():
+        for result, (_, text) in c.CHECK_RESULT.items():
             self.assertTrue(self.event_text(0x0002, bytes([1, result])).endswith(f"({text})"))
-        self.assertEqual(len(c.CHECK_RESULT), 14)
-        self.assertEqual(c.CHECK_RESULT[0x07], "start address outside the region")
+        self.assertEqual(len(c.CHECK_RESULT), 17)
+        self.assertEqual(c.CHECK_RESULT[0x07][1], "start address outside the region")
 
     def test_new_check_results(self):
         """Check the check results 0x0B, 0x0C and 0x0D in events 0x0002 and 0x0003 (owner's
@@ -482,9 +483,25 @@ class ConsoleTests(unittest.TestCase):
                              f"fall-back to the previous copy: slot A refused ({text})")
             self.assertEqual(self.event_text(0x0003, bytes([2, result])),
                              f"fall-back to the last-resort firmware: slot B refused ({text})")
-        self.assertEqual(self.event_text(0x0002, b"\x01\x0e"),
-                         "fall-back to the previous copy: slot A refused (unknown code 0x0e)")
+        self.assertEqual(self.event_text(0x0002, b"\x01\x11"),
+                         "fall-back to the previous copy: slot A refused (unknown code 0x11)")
 
+    def test_passed_over_check_results(self):
+        """Check the check results 0x0E, 0x0F and 0x10 in events 0x0002 and 0x0003 (owner's
+        decisions of 13 Oct 2026, second round; backup_layout.h CHECK_*). Passes if each reads in
+        words, in both events, and 0x11 and 0xFF, in no table, read as "unknown code".
+        """
+        for result, text in ((0x0E, "not started: watchdog not confirmed running"),
+                             (0x0F, "not started: start count could not be saved"),
+                             (0x10, "boot state damaged, only the last-resort tried")):
+            self.assertEqual(self.event_text(0x0002, bytes([1, result])),
+                             f"fall-back to the previous copy: slot A refused ({text})")
+            self.assertEqual(self.event_text(0x0003, bytes([3, result])),
+                             f"fall-back to the last-resort firmware: last-resort refused ({text})")
+        for result in (0x11, 0xFF):
+            self.assertEqual(
+                self.event_text(0x0003, bytes([2, result])),
+                f"fall-back to the last-resort firmware: slot B refused (unknown code 0x{result:02x})")
     def test_fault_detected_event(self):
         """Check EVENT 0x0001 and its fault kind (owner's decision 2). Passes if 0x01 reads "core
         clock failed, running at 16 MHz", a kind in no table is "unknown code", and a missing
@@ -515,6 +532,37 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(self.event_text(0x0005), base + ": location not given")
         r = c.decode_report(c.struct.pack("<IBH", 5, c.REPORT_EVENT, 0x0005) + b"\x99")
         self.assertIn("0x0005 change in memory detected at unknown code 0x99", c.format_report(r))
+
+    def test_memory_change_found_by(self):
+        """Check the 2-byte detail of EVENT 0x0005, where (1) and later faults (1), and bit 7 of
+        where (FAULT_FOUND_BY_BOOTLOADER, fault_codes.h; Sec. 5.4). Passes if bit 7 set reads
+        "found by the bootloader" with the later count, bit 7 clear "found by the firmware", a
+        location in no table "unknown code" (the number without bit 7), and a 1-byte detail as
+        before.
+        """
+        base = "change in memory detected"
+        loc10 = "image check (both programs): image check result outside its list"
+        self.assertEqual(
+            self.event_text(0x0005, b"\x90\x03"),
+            f"{base} at 0x10 ({loc10}), found by the bootloader, 3 more after it")
+        text = self.event_text(0x0005, b"\x81\x00")
+        self.assertTrue(text.startswith(f"{base} at 0x01 (bootloader backup: "), text)
+        self.assertTrue(text.endswith(", found by the bootloader, 0 more after it"), text)
+        self.assertEqual(
+            self.event_text(0x0005, b"\x27\x00"),
+            f"{base} at 0x27 (update receiver: image check result outside its list),"
+            " found by the firmware")
+        self.assertTrue(self.event_text(0x0005, b"\x27\x02").endswith(
+            ", found by the firmware, 2 more after it"))
+        self.assertEqual(self.event_text(0x0005, b"\x79\x00"),
+                         f"{base} at unknown code 0x79, found by the firmware")
+        self.assertEqual(self.event_text(0x0005, b"\x99\xff"),
+                         f"{base} at unknown code 0x19, found by the bootloader, 255 more after it")
+        self.assertEqual(self.event_text(0x0005, b"\x90"), f"{base} at unknown code 0x90")
+        self.assertEqual(self.event_text(0x0005, b"\x27"),
+                         f"{base} at 0x27 (update receiver: image check result outside its list)")
+        r = c.decode_report(c.struct.pack("<IBH", 5, c.REPORT_EVENT, 0x0005) + b"\xa7\x01")
+        self.assertIn("found by the bootloader, 1 more after it", c.format_report(r))
 
 
     def test_fallback_event_unknown_and_short_detail(self):
@@ -598,6 +646,17 @@ class FaultCodesHeaderTests(unittest.TestCase):
         self.assertGreaterEqual(len(header), 1)
         self.assertEqual({k: v[0] for k, v in c.FAULT_LOCATION.items()}, header)
 
+    def test_found_by_bootloader_flag_matches_header(self):
+        """Check FOUND_BY_BOOTLOADER against FAULT_FOUND_BY_BOOTLOADER in fault_codes.h. Passes
+        if the header defines the flag and it has the console's value, and no location code
+        uses bit 7 (a location with bit 7 set could not be told from the flag).
+        """
+        flag = re.search(r"^#define\s+FAULT_FOUND_BY_BOOTLOADER\s+0x([0-9A-Fa-f]+)U\b",
+                         FAULT_CODES_H.read_text(), re.MULTILINE)
+        self.assertIsNotNone(flag)
+        self.assertEqual(int(flag.group(1), 16), c.FOUND_BY_BOOTLOADER)
+        self.assertTrue(all(code & c.FOUND_BY_BOOTLOADER == 0 for code in c.FAULT_LOCATION))
+
     def test_fault_location_codes_in_the_header_ranges(self):
         """Check that every location code lies in a range of the header and has words. Passes if
         each code is inside FAULT_RANGE_BOOTLOADER, _COMMON or _FIRMWARE and its text is not empty.
@@ -610,6 +669,47 @@ class FaultCodesHeaderTests(unittest.TestCase):
         for code, (_, words) in c.FAULT_LOCATION.items():
             self.assertTrue(any(lo <= code <= hi for lo, hi in spans), hex(code))
             self.assertTrue(words)
+
+
+class CheckResultHeaderTests(unittest.TestCase):
+    """The console's check-result table against src/controller/common/backup_layout.h."""
+
+    @staticmethod
+    def header_codes():
+        """Read the CHECK_* codes from the controller's backup_layout.h.
+
+        The regex runs over the #define lines that give a number, so a code added to the header
+        shows up here without any change to the test; CHECK_LAST, an alias of the highest code,
+        has no number of its own and is read separately by the caller.
+
+        Returns:
+            dict from the number (int) to the macro name without "CHECK_".
+        """
+        found = {}
+        pattern = re.compile(r"^#define\s+CHECK_(\w+)\s+0x([0-9A-Fa-f]+)U\b", re.MULTILINE)
+        for name, number in pattern.findall(BACKUP_LAYOUT_H.read_text()):
+            found[int(number, 16)] = name
+        return found
+
+    def test_check_result_table_matches_header(self):
+        """Check CHECK_RESULT against the CHECK_* lines of backup_layout.h. Passes if the same
+        numbers are in both, each with the header's name, and the header's CHECK_LAST is the
+        highest number; a new CHECK_ code in the header fails it until the table has it.
+        """
+        header = self.header_codes()
+        self.assertGreaterEqual(len(header), 1)
+        self.assertEqual({k: v[0] for k, v in c.CHECK_RESULT.items()}, header)
+        last = re.search(r"^#define\s+CHECK_LAST\s+CHECK_(\w+)", BACKUP_LAYOUT_H.read_text(),
+                         re.MULTILINE)
+        self.assertIsNotNone(last)
+        self.assertEqual(header[max(header)], last.group(1))
+
+    def test_check_result_words_are_given(self):
+        """Check that every check result has words and that the codes run 0x00 upward without a
+        gap. Passes if each entry has a non-empty text and the numbers are 0 to len - 1.
+        """
+        self.assertEqual(sorted(c.CHECK_RESULT), list(range(len(c.CHECK_RESULT))))
+        self.assertTrue(all(text for _, text in c.CHECK_RESULT.values()))
 
 
 if __name__ == "__main__":

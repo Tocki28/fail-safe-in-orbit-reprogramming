@@ -94,8 +94,15 @@ const char * refusalName(uint8_t code)
 /**
  * @brief Names a check result of events 0x0002 and 0x0003 as the Interfaces Sec. 5.4 check-result table does.
  *
+ * The table is a copy of the CHECK_* codes of src/controller/common/backup_layout.h, where the
+ * bootloader that writes them defines them; the unit test (testCheckResultCodes) reads the header
+ * and fails when a code is missing here. 0x0E to 0x10 are a trial or copy passed over without a
+ * check of its image (owner's decisions of 13 Oct 2026, second round). A value in no row is
+ * returned as null, as faultKindName() does, so the caller prints "unknown code 0x.." with the
+ * number and never a bare "unknown".
+ *
  * @param[in]     result  the check-result byte of the detail
- * @return the check that failed ("none: the copy passed" for 0x00); "unknown" for a value not in the table
+ * @return the check that failed ("none: the copy passed" for 0x00); null for a value not in the table
  */
 const char * checkResultName(uint8_t result)
 {
@@ -114,7 +121,10 @@ const char * checkResultName(uint8_t result)
     case 0x0B: return "flash read error";   // Sec. 5.4 check-result table, decision 4 (13 Oct 2026)
     case 0x0C: return "trial started too often";
     case 0x0D: return "restarted too often";
-    default:   return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
+    case 0x0E: return "not started: watchdog not confirmed running";   // CHECK_WATCHDOG_NOT_RUNNING
+    case 0x0F: return "not started: start count could not be saved";   // CHECK_START_NOT_COUNTED
+    case 0x10: return "boot state damaged, only the last-resort tried";   // CHECK_STATE_DAMAGED
+    default:   return nullptr;   // input from the link: a raw byte off the wire; any other value is not listed
   }
 }
 
@@ -216,15 +226,91 @@ const char * faultLocationName(uint8_t where)
 }
 
 /**
+ * @brief Writes the log text of an EVENT 0x0002 or 0x0003: refused copy and check result.
+ *
+ * A helper of describeEvent(), split out to keep that function short (A9). The check result is
+ * decoded with checkResultName(); one in no table prints as "unknown code 0x.." with the number
+ * (Interfaces Sec. 5.4 check-result table; REQ-040).
+ *
+ * @param[in]     code           the event code, 0x0002 or 0x0003
+ * @param[in]     detail         the detail bytes
+ * @param[in]     detail_length  number of detail bytes
+ * @param[out]    out            receives the text, always terminated by snprintf
+ * @param[in]     room           size of out, in bytes (at least 1)
+ * @return the snprintf result: characters that would be written, or negative on failure
+ */
+static int describeFallback(uint16_t code, const uint8_t * detail, size_t detail_length, char * out,
+  size_t room)
+{
+  if (detail_length < report::kFallbackDetailBytes) {
+    return std::snprintf(out, room, "EVENT 0x%04x (%s), detail of %zu byte(s) instead of the 2 of Sec. 5.4%s",
+      code, eventName(code), detail_length, (detail_length == 1) ? ": refused copy only, no check result" : "");
+  }
+  const char * result = checkResultName(detail[1]);
+  if (result != nullptr) {
+    return std::snprintf(out, room, "EVENT 0x%04x (%s), refused copy 0x%02x (%s), check result 0x%02x (%s)",
+      code, eventName(code), detail[0], slotName(detail[0]), detail[1], result);
+  }
+  return std::snprintf(out, room, "EVENT 0x%04x (%s), refused copy 0x%02x (%s), check result unknown code 0x%02x",
+    code, eventName(code), detail[0], slotName(detail[0]), detail[1]);
+}
+
+/**
+ * @brief Writes the log text of an EVENT 0x0005 "change in memory detected" with its detail.
+ *
+ * The detail is where (1) and later faults (1) (Interfaces Sec. 5.4 event table; fault_codes.h,
+ * FAULT_FOUND_BY_BOOTLOADER). With both bytes, bit 7 of where says who found the fault: set, the
+ * bootloader at the last start ("found by the bootloader", then "N more after it", N being the
+ * second byte); clear, the firmware ("found by the firmware"; a second byte other than 0 is shown
+ * too, never dropped). The location is the lower seven bits, named with faultLocationName(); one
+ * in no table prints as "unknown code 0x.." with the number. With one byte only the text is as
+ * before the second byte existed: the byte as a location, nothing about who found it.
+ *
+ * @param[in]     code           the event code, 0x0005
+ * @param[in]     detail         the detail bytes, at least one
+ * @param[in]     detail_length  number of detail bytes, at least 1
+ * @param[out]    out            receives the text, always terminated by snprintf
+ * @param[in]     room           size of out, in bytes (at least 1)
+ * @return the snprintf result: characters that would be written, or negative on failure
+ */
+static int describeMemoryChange(uint16_t code, const uint8_t * detail, size_t detail_length,
+  char * out, size_t room)
+{
+  const bool two_bytes = detail_length >= report::kMemoryChangeDetailBytes;
+  const bool bootloader = two_bytes && (detail[0] & report::kFoundByBootloader) != 0U;
+  const uint8_t where = two_bytes ? static_cast<uint8_t>(detail[0] & ~report::kFoundByBootloader) : detail[0];
+  const char * words = faultLocationName(where);
+  int n = 0;
+  if (words != nullptr) {
+    n = std::snprintf(out, room, "EVENT 0x%04x (%s) at 0x%02x (%s)", code, eventName(code), where, words);
+  } else {
+    n = std::snprintf(out, room, "EVENT 0x%04x (%s) at unknown code 0x%02x", code, eventName(code), where);
+  }
+  if (!two_bytes || n < 0 || static_cast<size_t>(n) >= room) {
+    return n;
+  }
+  const uint8_t later = detail[1];
+  char * tail = out + n;
+  const size_t tail_room = room - static_cast<size_t>(n);
+  if (bootloader || later != 0U) {
+    return std::snprintf(tail, tail_room, ", found by the %s, %u more after it",
+      bootloader ? "bootloader" : "firmware", static_cast<unsigned>(later));
+  }
+  return std::snprintf(tail, tail_room, ", found by the firmware");
+}
+
+/**
  * @brief Writes the log text of one EVENT report: its code, its name and its decoded detail.
  *
  * Events 0x0002 and 0x0003 carry a 2-byte detail, refused copy (1) and check result (1), which
  * are decoded with slotName() and checkResultName() so the operator reads which copy failed which
- * check (Interfaces Sec. 5.4 event table and check-result table; REQ-040). A detail of another
- * length is shown as what it is, never padded. Event 0x000B shows its detail byte (which test).
+ * check (Interfaces Sec. 5.4 event table and check-result table; REQ-040); describeFallback()
+ * writes it. A detail of another length is shown as what it is, never padded. Event 0x000B shows its
+ * detail byte (which test).
  * Event 0x0106 shows its reason byte (decision H, accepted by the owner, 13 Oct 2026). Event
  * 0x0001 shows its fault kind and event 0x0005 its fault location in words (owner's decisions 2
- * and 3, 13 Oct 2026; faultKindName(), faultLocationName()); a value in no table prints as
+ * and 3, 13 Oct 2026; faultKindName(), faultLocationName()). Event 0x0005 has a second detail
+ * byte and a bit 7 in the first, decoded by describeMemoryChange(). A value in no table prints as
  * "unknown code 0x.." with the number, never left out.
  *
  * @param[in]     code           the event code
@@ -243,12 +329,8 @@ void describeEvent(uint16_t code, const uint8_t * detail, size_t detail_length, 
   out[0] = '\0';
   int n = 0;
   bool fallback = code == report::kEventFallbackPrevious || code == report::kEventFallbackLastResort;
-  if (fallback && detail_length >= report::kFallbackDetailBytes) {
-    n = std::snprintf(out, room, "EVENT 0x%04x (%s), refused copy 0x%02x (%s), check result 0x%02x (%s)",
-      code, eventName(code), detail[0], slotName(detail[0]), detail[1], checkResultName(detail[1]));
-  } else if (fallback) {
-    n = std::snprintf(out, room, "EVENT 0x%04x (%s), detail of %zu byte(s) instead of the 2 of Sec. 5.4%s",
-      code, eventName(code), detail_length, (detail_length == 1) ? ": refused copy only, no check result" : "");
+  if (fallback) {
+    n = describeFallback(code, detail, detail_length, out, room);
   } else if (code == report::kEventFaultDetected && detail_length >= 1) {
     const char * kind = faultKindName(detail[0]);
     if (kind != nullptr) {
@@ -259,14 +341,7 @@ void describeEvent(uint16_t code, const uint8_t * detail, size_t detail_length, 
         eventName(code), detail[0]);
     }
   } else if (code == report::kEventMemoryChange && detail_length >= 1) {
-    const char * where = faultLocationName(detail[0]);
-    if (where != nullptr) {
-      n = std::snprintf(out, room, "EVENT 0x%04x (%s) at 0x%02x (%s)", code, eventName(code),
-        detail[0], where);
-    } else {
-      n = std::snprintf(out, room, "EVENT 0x%04x (%s) at unknown code 0x%02x", code, eventName(code),
-        detail[0]);
-    }
+    n = describeMemoryChange(code, detail, detail_length, out, room);
   } else if ((code == report::kEventTrialTestsFailed || code == report::kEventControllerRestarted) &&
              detail_length >= 1) {
     n = std::snprintf(out, room, "EVENT 0x%04x (%s), detail 0x%02x", code, eventName(code), detail[0]);

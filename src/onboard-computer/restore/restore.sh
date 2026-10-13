@@ -381,20 +381,25 @@ cut_bootloader() {
 #  verify_image of an all-0xFF file          (reads the erased region back and compares)
 #  reset run                                 (start the program)
 #  shutdown                                  (leave OpenOCD; "shutdown error" = exit non-zero)
-# Each command is wrapped in "step" so the log names the step that failed.
+# Each command is wrapped in "fsir_step" so the log names the step that failed. The name carries a
+# prefix because OpenOCD registers its own command "step [address]" (single-step the CPU) when
+# "init" runs; a procedure named "step" is replaced by it and the next call fails (measured on the
+# MP257 with OpenOCD 0.12.0).
 
 # Tcl procedure put at the head of the generated OpenOCD script (the block below is Tcl text).
 TCL_HEAD='
 # @brief  Run one OpenOCD command block under a step name and stop with an error if it fails.
 #
-# The log then names the step: "STEP: <name>" before, "STEPFAIL: <name>: <error>" on failure,
+# Named fsir_step, not step: "init" registers the OpenOCD built-in "step [address]", which would
+# replace a procedure of that name. The log then names the step: "STEP: <name>" before,
+# "STEPFAIL: <name>: <error>" on failure,
 # "STEPDONE: <name>" on success (failed_step and reset_ran read them). "shutdown error" makes
 # OpenOCD exit non-zero.
 #
 # @param name  step name shown in the log and in the RESTORE FAILED line
 # @param body  Tcl commands to run in the calling scope
 # @return nothing; on an error OpenOCD shuts down with a non-zero exit status
-proc step {name body} {
+proc fsir_step {name body} {
     puts "STEP: $name"
     if {[catch {uplevel 1 $body} err]} {
         puts "STEPFAIL: $name: $err"
@@ -564,8 +569,8 @@ if [ "$mode" = reset ]; then
     {
         printf '%s\n' "$TCL_HEAD"
         cat <<EOT
-step "connect" { init }
-step "reset and run" { reset run }
+fsir_step "connect" { init }
+fsir_step "reset and run" { reset run }
 shutdown
 EOT
     } > "$WORK/steps.tcl" || fail "step file" "cannot write $WORK/steps.tcl" 2
@@ -573,29 +578,29 @@ else
     {
         printf '%s\n' "$TCL_HEAD"
         cat <<EOT
-step "connect" { init }
-step "halt under reset" { reset halt }
-step "erase last-resort region" { flash erase_address $LAST_RESORT_START $LAST_RESORT_BYTES }
-step "write last-resort" { flash write_image {$LR_FILE} $LAST_RESORT_START bin }
-step "verify last-resort" { flash verify_image {$LR_FILE} $LAST_RESORT_START bin }
-step "erase bootloader region" { flash erase_address $BOOTLOADER_START $BOOTLOADER_BYTES }
-step "write bootloader" { flash write_image {$BL_FILE} $BOOTLOADER_START bin }
-step "verify bootloader" { flash verify_image {$BL_FILE} $BOOTLOADER_START bin }
-step "erase slot B" { flash erase_address $SLOT_B_START $SLOT_BYTES }
-step "read back slot B erased" { flash verify_image {$WORK/ff-slot.bin} $SLOT_B_START bin }
-step "erase slot A" { flash erase_address $SLOT_A_START $SLOT_BYTES }
-step "read back slot A erased" { flash verify_image {$WORK/ff-slot.bin} $SLOT_A_START bin }
-step "erase boot state (REQ-057)" { flash erase_address $BOOT_STATE_START $BOOT_STATE_BYTES }
-step "read back boot state erased" { flash verify_image {$WORK/ff-state.bin} $BOOT_STATE_START bin }
+fsir_step "connect" { init }
+fsir_step "halt under reset" { reset halt }
+fsir_step "erase last-resort region" { flash erase_address $LAST_RESORT_START $LAST_RESORT_BYTES }
+fsir_step "write last-resort" { flash write_image {$LR_FILE} $LAST_RESORT_START bin }
+fsir_step "verify last-resort" { flash verify_image {$LR_FILE} $LAST_RESORT_START bin }
+fsir_step "erase bootloader region" { flash erase_address $BOOTLOADER_START $BOOTLOADER_BYTES }
+fsir_step "write bootloader" { flash write_image {$BL_FILE} $BOOTLOADER_START bin }
+fsir_step "verify bootloader" { flash verify_image {$BL_FILE} $BOOTLOADER_START bin }
+fsir_step "erase slot B" { flash erase_address $SLOT_B_START $SLOT_BYTES }
+fsir_step "read back slot B erased" { flash verify_image {$WORK/ff-slot.bin} $SLOT_B_START bin }
+fsir_step "erase slot A" { flash erase_address $SLOT_A_START $SLOT_BYTES }
+fsir_step "read back slot A erased" { flash verify_image {$WORK/ff-slot.bin} $SLOT_A_START bin }
+fsir_step "erase boot state (REQ-057)" { flash erase_address $BOOT_STATE_START $BOOT_STATE_BYTES }
+fsir_step "read back boot state erased" { flash verify_image {$WORK/ff-state.bin} $BOOT_STATE_START bin }
 EOT
         if [ "$mode" = full ]; then
             cat <<EOT
-step "write main firmware (REQ-121)" { flash write_image {$MAIN_FILE} $SLOT_A_START bin }
-step "verify main firmware" { flash verify_image {$MAIN_FILE} $SLOT_A_START bin }
+fsir_step "write main firmware (REQ-121)" { flash write_image {$MAIN_FILE} $SLOT_A_START bin }
+fsir_step "verify main firmware" { flash verify_image {$MAIN_FILE} $SLOT_A_START bin }
 EOT
         fi
         cat <<EOT
-step "reset and run" { reset run }
+fsir_step "reset and run" { reset run }
 shutdown
 EOT
     } > "$WORK/steps.tcl" || fail "step file" "cannot write $WORK/steps.tcl" 2

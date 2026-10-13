@@ -36,23 +36,26 @@ trap 'echo "BRICK FAILED: interrupted"; exit 1' INT TERM HUP
 cat > "$tcl" <<'EOT'
 # @brief  Run one OpenOCD command block under a step name and stop with an error if it fails.
 #
+# Named fsir_step, not step: "init" registers OpenOCD's own "step [address]", which would replace
+# a procedure of that name (measured on the MP257, OpenOCD 0.12.0).
+#
 # The log then names the step: "STEP: <name>" before, "STEPFAIL: <name>: <error>" on failure
 # (read below to build the result line). "shutdown error" makes OpenOCD exit non-zero.
 #
 # @param name  step name shown in the log and in the BRICK FAILED line
 # @param body  Tcl commands to run in the calling scope
 # @return nothing; on an error OpenOCD shuts down with a non-zero exit status
-proc step {name body} {
+proc fsir_step {name body} {
     puts "STEP: $name"
     if {[catch {uplevel 1 $body} err]} { puts "STEPFAIL: $name: $err"; shutdown error }
 }
-step "connect" { init }
-step "halt under reset" { reset halt }
-step "mass erase" { stm32l4x mass_erase 0 }
+fsir_step "connect" { init }
+fsir_step "halt under reset" { reset halt }
+fsir_step "mass erase" { stm32l4x mass_erase 0 }
 # A mass erase leaves every word 0xFFFFFFFF; any other value at the start of flash means the
 # erase did not happen (audit item 18). read_memory returns a list of words [OpenOCD User's
 # Guide 0.12.0, chapter "General Commands", read_memory].
-step "check flash start is erased" {
+fsir_step "check flash start is erased" {
     if {[lindex [read_memory 0x08000000 32 1] 0] != 0xFFFFFFFF} { error "flash start not erased" }
 }
 shutdown

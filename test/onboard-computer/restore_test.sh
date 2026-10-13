@@ -143,16 +143,22 @@ mkdir -p "$T/mock/tcl" "$T/in"
 cat > "$T/mock/openocd" <<'EOT'
 #!/bin/sh
 # mock OpenOCD: records, prints STEP lines, fails or hangs at a named step.
+# Like the real OpenOCD 0.12.0 (measured on the MP257): after "init" it has a built-in command
+# "step [address]", so a bare "step" line fails with that usage text and exit 1.
 echo "$*" >> "$MOCK_DIR/calls"
 tcl=; prev=
 for a in "$@"; do if [ "$prev" = -f ]; then tcl=$a; fi; prev=$a; done
 cp "$tcl" "$MOCK_DIR/steps.tcl"
+inited=0
 while IFS= read -r line; do
     case $line in
-        'step "'*) ;;
+        'step '*)
+            if [ "$inited" -eq 1 ]; then echo "gdb_sync"; echo "step [address]"; exit 1; fi
+            echo "invalid command name \"step\""; exit 1 ;;
+        'fsir_step "'*) ;;
         *) continue ;;
     esac
-    name=$(printf '%s\n' "$line" | sed -n 's/^step "\([^"]*\)".*/\1/p')
+    name=$(printf '%s\n' "$line" | sed -n 's/^fsir_step "\([^"]*\)".*/\1/p')
     case $line in
         *'flash write_image {'*)
             f=$(printf '%s\n' "$line" | sed -n 's/.*flash write_image {\([^}]*\)} \(0x[0-9A-Fa-f]*\) bin.*/\1/p')
@@ -164,7 +170,8 @@ while IFS= read -r line; do
     echo "STEP: $name"
     if [ "${MOCK_FAIL_STEP:-}" = "$name" ]; then echo "STEPFAIL: $name: mock failure"; exit 1; fi
     if [ "${MOCK_HANG_STEP:-}" = "$name" ]; then echo $$ > "$MOCK_DIR/pid"; exec sleep 100; fi
-    echo "STEPDONE: $name"   # as the step procedure of the Tcl head does on success
+    echo "STEPDONE: $name"   # as the fsir_step procedure of the Tcl head does on success
+    case $line in *'{ init }'*) inited=1 ;; *) ;; esac
     if [ "${MOCK_FAIL_AFTER:-}" = "$name" ]; then echo "mock: OpenOCD exits 1 after the step"; exit 1; fi
     if [ "${MOCK_HANG_AFTER:-}" = "$name" ]; then echo $$ > "$MOCK_DIR/pid"; exec sleep 100; fi
 done < "$tcl"
@@ -230,6 +237,11 @@ for SH in $SHELLS; do
     grep -q 'write_image {' "$R_MOCK/steps.tcl" && ! grep 'write_image' "$R_MOCK/steps.tcl" | grep -qv 'write_image {' \
         && verdict 1 "good restore: every path in the Tcl is in braces" || verdict 0 "good restore: unbraced path in the Tcl"
     [ "$(grep -v '^[[:space:]]*$' "$R_MOCK/steps.tcl" | tail -n 1)" = shutdown ] && verdict 1 "good restore: Tcl ends with shutdown" || verdict 0 "good restore: Tcl does not end with shutdown"
+
+    # OpenOCD's own "step [address]" replaces a Tcl procedure named step once init has run (measured
+    # on the MP257, OpenOCD 0.12.0); the generated file must therefore never call a bare step.
+    ! grep -Eq '^[[:space:]]*step([[:space:]]|$)' "$R_MOCK/steps.tcl" && grep -q '^fsir_step ' "$R_MOCK/steps.tcl" \
+        && verdict 1 "good restore: the Tcl never calls a bare step (OpenOCD's built-in after init)" || verdict 0 "good restore: bare step in the Tcl"
 
     run_restore full --bootloader "$T/in/bl.img" --last-resort "$LR_IMG" --main "$MAIN_IMG"
     check_common "good full" 1
@@ -328,8 +340,8 @@ for SH in $SHELLS; do
     run_restore reset
     check_common "good reset" 1
     [ "$(cat "$R_OUT")" = "RESTORE DONE: reset" ] && [ "$R_RC" -eq 0 ] && verdict 1 "good reset: the line is exactly RESTORE DONE: reset, exit 0" || verdict 0 "good reset: rc $R_RC: $(cat "$R_OUT")"
-    [ "$(grep -c '^step ' "$R_MOCK/steps.tcl")" -eq 2 ] && grep -q '^step "connect" { init }$' "$R_MOCK/steps.tcl" \
-        && grep -q '^step "reset and run" { reset run }$' "$R_MOCK/steps.tcl" \
+    [ "$(grep -c '^fsir_step ' "$R_MOCK/steps.tcl")" -eq 2 ] && grep -q '^fsir_step "connect" { init }$' "$R_MOCK/steps.tcl" \
+        && grep -q '^fsir_step "reset and run" { reset run }$' "$R_MOCK/steps.tcl" \
         && [ "$(grep -v '^[[:space:]]*$' "$R_MOCK/steps.tcl" | tail -n 1)" = shutdown ] \
         && verdict 1 "good reset: the Tcl is init, reset run, shutdown, and nothing else" || verdict 0 "good reset: unexpected Tcl: $(cat "$R_MOCK/steps.tcl")"
     ! grep -q 'flash' "$R_MOCK/steps.tcl" && ! ls "$R_MOCK"/written.* > /dev/null 2>&1 && verdict 1 "good reset: nothing erased or written" || verdict 0 "good reset: flash command or written file"
@@ -395,7 +407,9 @@ for SH in $SHELLS; do
     command -v tclsh > /dev/null 2>&1 || { verdict 0 "brick: tclsh not installed (the mock needs it)"; continue; }
     cat > "$T/mock/prelude.tcl" <<'EOT'
 # Minimal OpenOCD for brick.sh: the commands brick.sh uses, read_memory driven by MOCK_WORD.
-proc init {} {}
+# init defines step as the real OpenOCD 0.12.0 does (measured on the MP257), replacing any procedure
+# of that name; brick.sh must not depend on one.
+proc init {} { proc step {args} { puts "step \[address\]"; exit 1 } }
 proc reset {args} {}
 proc stm32l4x {args} {}
 proc mdw {args} { puts "mdw (not a check: it never fails)" }
@@ -410,6 +424,8 @@ for a in "$@"; do if [ "$prev" = -f ]; then tcl=$a; fi; prev=$a; done
 exec tclsh "$MOCK_DIR/prelude.tcl" "$tcl"
 EOT
     chmod +x "$T/mock/openocd-tcl"
+    ! grep -Eq '^[[:space:]]*step([[:space:]]|$)' "$BRICK" && grep -q '^fsir_step "mass erase"' "$BRICK" \
+        && verdict 1 "brick: the Tcl never calls a bare step (OpenOCD's built-in after init)" || verdict 0 "brick: bare step in the Tcl"
     for word in 305419896 0; do
         runno=$((runno + 1)); R_TMP=$T/run$runno/tmp; mkdir -p "$R_TMP"
         TMPDIR=$R_TMP MOCK_DIR=$T/mock MOCK_WORD=$word OPENOCD=$T/mock/openocd-tcl OCD_SCRIPTS=$T/mock/tcl \

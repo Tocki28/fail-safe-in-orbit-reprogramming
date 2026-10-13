@@ -1141,11 +1141,15 @@ public:
    * @param[in]     beat_ms  the Updater's beat period, ms
    * @param[in]     restart_script  path of the restart script the Updater runs on a trial overrun
    *                                (decision H); empty: none configured
+   * @param[in]     restart_deadline_ms  run time after which the Updater sends TERM to the restart
+   *                                script, ms; default: config::kRestartScriptMs, as in the program
    */
-  UpdaterRig(const std::string & dir, uint32_t beat_ms, const std::string & restart_script = "")
+  UpdaterRig(const std::string & dir, uint32_t beat_ms, const std::string & restart_script = "",
+    uint64_t restart_deadline_ms = config::kRestartScriptMs)
   : transport_(), link_(transport_), gate_(kPort), store_(dir.c_str()),
     checker_(PUBLIC_KEY_A, PUBLIC_KEY_B), reports_(), watch_(5000, 0), script_(restart_script),
-    updater_(gate_, link_, store_, checker_, reports_, watch_, beat_ms, script_.c_str()), client_(-1), now_(1000),
+    updater_(gate_, link_, store_, checker_, reports_, watch_, beat_ms, script_.c_str(),
+      restart_deadline_ms), client_(-1), now_(1000),
     listen_(0), next_sequence_(1), parser_(), pending_()
   {
   }
@@ -2718,7 +2722,12 @@ void testTrialOverrunRestart(const std::string & scratch)
     bool made = writeScript(dir + "/restore.sh", "echo x >> " + dir + "/calls\nsleep 1\necho 'RESTORE DONE: reset'\ntouch " + dir + "/finished\n", 0755);
     std::string data = dir + "/data";   // a named string: the store keeps the pointer
     std::string script = dir + "/restore.sh";
-    UpdaterRig rig(data, 0, script);
+    // Deadline 310 s (the value before 13 Oct 2026): longer than a trial plus margin (150 s), so the
+    // script still runs when the second overrun comes, which is the case this guard is for.
+    constexpr uint64_t kLongDeadlineMs = 310000;
+    static_assert(kLongDeadlineMs > config::kTrialMs + config::kTrialMarginMs,
+      "the deadline must outlast one trial plus margin");
+    UpdaterRig rig(data, 0, script, kLongDeadlineMs);
     if (!made || !rig.open()) {
       report(false, "trial overrun twice: rig or script did not open");
       return;

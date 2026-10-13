@@ -77,6 +77,12 @@ constexpr const char * kRestoreScriptName = "restore.sh";
 // (KILL_GRACE_S 5 s) plus 5 s, so that the script's own time-out line arrives before the updater
 // steps in.
 constexpr uint64_t kRestartScriptMs = 40000;
+// With these values a second trial overrun cannot arrive while a restart script still runs: the
+// updater stops the script at kRestartScriptMs, before a new trial plus its margin can pass. The
+// guard "no second restart script while one runs" (updater.cpp) covers a clock jump or a later
+// change of these values; this check says when the guard is the only thing left in the way.
+static_assert(kRestartScriptMs < kTrialMs + kTrialMarginMs,
+  "a restart script must be stopped before a second overrun can be due");
 // After TERM, the wait before the updater sends KILL to the script's whole process group. TBD,
 // a PLACEHOLDER (the script's KILL_GRACE_S default is 5 s); not measured.
 constexpr uint64_t kRestartKillGraceMs = 5000;

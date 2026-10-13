@@ -195,7 +195,7 @@ int main(int argc, char ** argv)
   ReportStore reports;
   ControllerWatch watch(config::kSilenceMs, clocks::nowMs());
   Updater updater(gate, link, store, checker, reports, watch, options.beat_s * 1000U,
-    restart_script);
+    restart_script, config::kRestartScriptMs);
 
   logging::line("fsir-updater: ground on UDP port %u (all interfaces); data link A on %s; "
     "images in %s; keys %s; beat %s; restart script %s", options.udp_port, options.device,

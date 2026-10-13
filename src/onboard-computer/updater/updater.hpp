@@ -118,7 +118,8 @@ class Updater final : public ControllerFrameHandler
 {
 public:
   Updater(CommandGate & gate, DataLink & link, UploadStore & store, const ImageChecker & checker,
-    ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms, const char * restart_script);
+    ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms, const char * restart_script,
+    uint64_t restart_deadline_ms);
 
   // The ground link's socket is readable.
   void onGroundReadable(uint64_t now_ms);

@@ -151,15 +151,17 @@ uint16_t imageNumber(const frame::Frame & c)
  * @param[in]     beat_ms  period of the idle GET STATUS to the controller, in ms; 0: off
  * @param[in]     restart_script  path of restore.sh, run as "restore.sh reset" when a trial overruns
  *                                (decision H), copied; null or empty: no restart path, the overrun is only logged
+ * @param[in]     restart_deadline_ms  run time after which the restart script gets TERM, in ms;
+ *                                the program passes config::kRestartScriptMs
  * @return nothing (constructor)
  */
 Updater::Updater(CommandGate & gate, DataLink & link, UploadStore & store,
   const ImageChecker & checker, ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms,
-  const char * restart_script)
+  const char * restart_script, uint64_t restart_deadline_ms)
 : gate_(gate), link_(link), store_(store), checker_(checker), reports_(reports), watch_(watch),
   beat_ms_(beat_ms), next_beat_ms_(0), now_ms_(0), sender_(Sender::kNone), reports_dropped_(0),
   queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), trial_watch_(config::kTrialMs, config::kTrialMarginMs),
-  restart_(restart_script, config::kRestartScriptMs, config::kRestartKillGraceMs), used_(),
+  restart_(restart_script, restart_deadline_ms, config::kRestartKillGraceMs), used_(),
   test_image_running_(false), payload_{},
   report_{}
 {

@@ -30,7 +30,7 @@ it sends nothing and the log says which step failed.
 
 `restore.sh` finds `openocd` and `tcl/` next to itself (or via `OPENOCD`, `OCD_SCRIPTS`), so deploy them
 together, or give `--restore-script` the path of the restore folder's script. The updater sends the script TERM
-after `kRestartScriptMs` (310 s) and KILL to its process group 5 s later; both numbers are TBD placeholders,
+after `kRestartScriptMs` (40 s) and KILL to its process group 5 s later; both numbers are TBD placeholders,
 not measured (`config.hpp`).
 
 ## Install as a service (systemd, journald)

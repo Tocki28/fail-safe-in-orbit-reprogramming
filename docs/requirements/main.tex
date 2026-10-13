@@ -278,6 +278,7 @@ REQ-121 & The onboard computer software shall put back the bootloader and the ma
 REQ-122 & The reprogramming link shall have two connections, independent of each other: the controller's debug port and its factory loader, each able to load the controller's memory whatever that memory holds. & Architecture 5.2 & TEST \\
 REQ-123 & The onboard computer software shall drive the debug port and the factory loader with separate drivers that share no code. & Architecture 5.2 & INSPECTION \\
 REQ-124 & The onboard computer software shall be able to restart the controller. & Architecture 5.2 & TEST \\
+REQ-141 & The onboard computer software shall drive the reprogramming link only with code developed and verified to these requirements; no general-purpose debug tool shall be part of the flight software. & Architecture 5.2 & INSPECTION \\
 REQ-126 & The restore program shall share no code or stored data with the update manager. & Architecture 5.3 & INSPECTION \\
 REQ-129 & The onboard computer software shall act on a command or firmware image only when it decrypts and both signatures are valid. & Architecture 5.4 & TEST \\
 \bottomrule
@@ -538,7 +539,7 @@ Item & Requirements \\
 \midrule
 \endhead
 Architecture 5.1 & REQ-119, REQ-120, REQ-121 \\
-Architecture 5.2 & REQ-122, REQ-123, REQ-124, REQ-125 \\
+Architecture 5.2 & REQ-122, REQ-123, REQ-124, REQ-125, REQ-141 \\
 Architecture 5.3 & REQ-126 \\
 Architecture 5.4 & REQ-127, REQ-128, REQ-129, REQ-130 \\
 Architecture 5.5 & REQ-131, REQ-132, REQ-133, REQ-134, REQ-135 \\

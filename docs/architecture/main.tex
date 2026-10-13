@@ -468,11 +468,20 @@ have passed the same checks as an update, the bootloader included
 already checked. Before launch the hardware can be reached during integration
 and testing; protecting it then is a ground procedure outside this System.
 
+The two drivers are written for this System and do only what a restore needs.
+On the debug port, a driver stops the processor, erases and writes the memory,
+reads it back and restarts the controller. On the factory loader, a driver uses
+the loader's own command set. No general-purpose debug tool runs on the
+onboard computer in flight: such a tool supports many processors and probes,
+and every line of it would have to be verified like the rest of the flight
+software, while the restore uses a small part of it.
+
 \field{Adds}
 \begin{itemize}
 \item REQ-122: The reprogramming link shall have two connections, independent of each other: the controller's debug port and its factory loader, each able to load the controller's memory whatever that memory holds.
 \item REQ-123: The onboard computer software shall drive the debug port and the factory loader with separate drivers that share no code.
 \item REQ-124: The onboard computer software shall be able to restart the controller.
+\item REQ-141: The onboard computer software shall drive the reprogramming link only with code developed and verified to these requirements; no general-purpose debug tool shall be part of the flight software.
 \item REQ-125: No controller firmware shall be able to disable the debug port or the factory loader.
 \end{itemize}
 
@@ -761,7 +770,7 @@ Clock keeper & Compares the onboard clock with ground time and applies correctio
 Controller watch & Notices a silent controller, restarts it, and calls the restore when no firmware runs. & REQ-061, REQ-124 \\
 Supervisor & Restarts any program of the onboard computer software that crashes. & REQ-062 \\
 Data-link drivers & One driver for each data-link connection, sharing no code. & REQ-080~to~082, REQ-099, REQ-138 \\
-Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083, REQ-120, REQ-122~to~124 \\
+Reprogramming drivers & One driver for the controller's debug port and one for its factory loader, sharing no code. & REQ-054, REQ-058, REQ-059, REQ-083, REQ-120, REQ-122~to~124, REQ-141 \\
 Restore program & A separate program with its own firmware store. Has every image checked before writing it, restores the controller through the reprogramming drivers, loads firmware from the ground through them, and checks its store and both ways in between uses. & REQ-054~to~060, REQ-083, REQ-118, REQ-120, REQ-121, REQ-126 \\
 \multicolumn{3}{@{}l}{\textit{Ground software}} \\
 Operator console & Lets only the operator in, and shows reports, unanswered commands and the running firmware. & REQ-091, REQ-094, REQ-095 \\

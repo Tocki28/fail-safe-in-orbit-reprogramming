@@ -74,7 +74,7 @@ Issue & Rev. & Date & Change \\
 
 % ===========================================================================
 \section{Purpose and Scope}
-This plan states how each of the 140 software requirements
+This plan states how each of the 141 software requirements
 [3,~Secs.~4.0--7.0] is verified:
 by which method, in which activity, and against which success criterion. It
 also runs every ConOps scenario from start to end, to show that the System
@@ -406,6 +406,7 @@ Activity & Success criterion & Requirements \\
 \textbf{Analysis-2}\newline Response times & For each off-nominal condition, the response time measured in Test-27 is shorter than the time to the hazard. & REQ-104 \\
 \textbf{Analysis-3}\newline Restore independence & The restore sequences of the Interface Design use no controller software: the core is held stopped, or the factory loader runs from read-only memory. & REQ-056 \\
 \textbf{Analysis-4}\newline Coverage & The coverage tool reports 100\,\% modified condition/decision coverage of the safety-critical software over all tests. & REQ-108 \\
+\textbf{Inspection-9}\newline Flight reprogramming code & The onboard computer's flight software holds no general-purpose debug tool: the reprogramming drivers are this project's own code, with its requirements, tests and rules. & REQ-141 \\
 \bottomrule
 \end{xltabular}}
 \addtocounter{table}{-1}
@@ -447,7 +448,7 @@ REQ-064, REQ-129 & Forged and changed frames are refused & Resistance to every p
 REQ-098, REQ-103 & Nothing; Analysis-1 shows it & That the analysis found every combination of failures \\
 REQ-080, REQ-138 & Failover between two data links over bench wires; the second is a UART & The CAN link; two links of different kinds; the length and electrical noise of a spacecraft harness \\
 REQ-016, REQ-077 & A reset at a chosen moment, in place of a power cut & A true loss of power \\
-REQ-123 & A restore through SWD driven by the ST-LINK & SWD driven by the onboard computer's own driver and pins \\
+REQ-123, REQ-141 & A restore through SWD driven by the ST-LINK with OpenOCD, a general-purpose debug tool & SWD driven by the onboard computer's own driver and pins, written to these requirements \\
 REQ-067 & Contact windows and losses made by the radio simulator & The real radio equipment, which lies outside the System \\
 All & Behaviour at room temperature and pressure & Temperature, vacuum, vibration and launch \\
 \bottomrule
@@ -469,76 +470,77 @@ activities that verify it [1,~App.~D, p.~201].
 Req. & Method & Activities & Req. & Method & Activities \\
 \midrule
 \endhead
-REQ-001 & TEST & Test-1 & REQ-071 & TEST & Test-18 \\
-REQ-002 & TEST & Test-1 & REQ-072 & TEST & Test-18 \\
-REQ-003 & TEST & Test-1 & REQ-073 & TEST & Test-18 \\
-REQ-004 & TEST & Test-2 & REQ-074 & TEST & Test-18 \\
-REQ-005 & TEST & Test-3 & REQ-075 & TEST & Test-18 \\
-REQ-006 & TEST & Test-3 & REQ-076 & TEST & Test-18 \\
-REQ-007 & TEST & Test-6 & REQ-077 & TEST & Test-18 \\
-REQ-008 & TEST & Test-6 & REQ-078 & TEST & Test-18 \\
-REQ-009 & INSPECTION & Inspection-1 & REQ-079 & TEST & Test-18 \\
-REQ-010 & TEST & Test-6 & REQ-080 & TEST & Test-19 \\
-REQ-011 & TEST & Test-4 & REQ-081 & TEST & Test-19 \\
-REQ-012 & TEST & Test-4 & REQ-082 & TEST & Test-19 \\
-REQ-013 & TEST & Test-4 & REQ-083 & TEST & Test-19 \\
-REQ-014 & TEST & Test-4 & REQ-084 & TEST & Test-20 \\
-REQ-015 & TEST & Test-5 & REQ-085 & TEST & Test-20 \\
-REQ-016 & TEST & Test-5 & REQ-086 & TEST & Test-20 \\
-REQ-017 & TEST & Test-5 & REQ-087 & TEST & Test-21 \\
-REQ-018 & TEST & Test-6 & REQ-088 & TEST & Test-23 \\
-REQ-019 & TEST & Test-5 & REQ-089 & TEST & Test-23 \\
-REQ-020 & TEST & Test-4 & REQ-090 & TEST & Test-23 \\
-REQ-021 & TEST & Test-4 & REQ-091 & DEMONSTRATION & Demonstration-1 \\
-REQ-022 & TEST & Test-7 & REQ-092 & INSPECTION & Inspection-2 \\
-REQ-023 & TEST & Test-7 & REQ-093 & TEST & Test-24 \\
-REQ-024 & TEST & Test-8 & REQ-094 & TEST & Test-24 \\
-REQ-025 & TEST & Test-8 & REQ-095 & TEST & Test-24 \\
-REQ-026 & TEST & Test-8 & REQ-096 & INSPECTION & Inspection-2 \\
-REQ-027 & TEST & Test-9 & REQ-097 & DEMONSTRATION & Demonstration-2 \\
-REQ-028 & TEST & Test-9 & REQ-098 & ANALYSIS & Analysis-1 \\
-REQ-029 & TEST & Test-9 & REQ-099 & INSPECTION & Inspection-1 \\
-REQ-030 & TEST & Test-9 & REQ-100 & INSPECTION & Inspection-3 \\
-REQ-031 & TEST & Test-9 & REQ-101 & INSPECTION & Inspection-4 \\
-REQ-032 & TEST & Test-9 & REQ-102 & TEST & Test-2 \\
-REQ-033 & TEST & Test-10 & REQ-103 & ANALYSIS & Analysis-1 \\
-REQ-034 & TEST & Test-10 & REQ-104 & ANALYSIS & Analysis-2 \\
-REQ-035 & TEST & Test-10 & REQ-105 & TEST & Test-27 \\
-REQ-036 & INSPECTION & Inspection-2 & REQ-106 & TEST & Test-2 \\
-REQ-037 & TEST & Test-11 & REQ-107 & TEST & Test-26 \\
-REQ-038 & TEST & Test-11 & REQ-108 & ANALYSIS & Analysis-4 \\
-REQ-039 & TEST & Test-11 & REQ-109 & INSPECTION & Inspection-5 \\
-REQ-040 & TEST & Test-11 & REQ-110 & INSPECTION & Inspection-5 \\
-REQ-041 & TEST & Test-11 & REQ-111 & INSPECTION & Inspection-5 \\
-REQ-042 & TEST & Test-11 & REQ-112 & TEST & Test-16 \\
-REQ-043 & TEST & Test-13 & REQ-113 & TEST & Test-4 \\
-REQ-044 & TEST & Test-13 & REQ-114 & TEST & Test-23 \\
-REQ-045 & TEST & Test-13 & REQ-115 & TEST & Test-23 \\
-REQ-046 & TEST & Test-13 & REQ-116 & TEST & Test-23 \\
-REQ-047 & TEST & Test-13 & REQ-117 & TEST & Test-6 \\
-REQ-048 & TEST & Test-14 & REQ-118 & TEST & Test-25 \\
-REQ-049 & TEST & Test-14 & REQ-119 & INSPECTION & Inspection-1 \\
-REQ-050 & TEST & Test-14 & REQ-120 & TEST & Test-25 \\
-REQ-051 & TEST & Test-14 & REQ-121 & TEST & Test-25 \\
-REQ-052 & TEST & Test-14 & REQ-122 & TEST & Test-25 \\
-REQ-053 & TEST & Test-15 & REQ-123 & INSPECTION & Inspection-1 \\
-REQ-054 & TEST & Test-25 & REQ-124 & TEST & Test-25 \\
-REQ-055 & DEMONSTRATION & Demonstration-3 & REQ-125 & INSPECTION & Inspection-6 \\
-REQ-056 & ANALYSIS & Analysis-3 & REQ-126 & INSPECTION & Inspection-1 \\
-REQ-057 & TEST & Test-25 & REQ-127 & TEST & Test-16 \\
-REQ-058 & TEST & Test-25 & REQ-128 & INSPECTION & Inspection-7 \\
-REQ-059 & TEST & Test-25 & REQ-129 & TEST & Test-16 \\
-REQ-060 & TEST & Test-25 & REQ-130 & INSPECTION & Inspection-1 \\
-REQ-061 & TEST & Test-22 & REQ-131 & TEST & Test-12 \\
-REQ-062 & TEST & Test-22 & REQ-132 & TEST & Test-12 \\
-REQ-063 & TEST & Test-22 & REQ-133 & TEST & Test-9 \\
-REQ-064 & TEST & Test-16 & REQ-134 & TEST & Test-9 \\
-REQ-065 & TEST & Test-16 & REQ-135 & TEST & Test-12 \\
-REQ-066 & TEST & Test-16 & REQ-136 & TEST & Test-17 \\
-REQ-067 & TEST & Test-16 & REQ-137 & TEST & Test-9 \\
-REQ-068 & TEST & Test-17 & REQ-138 & INSPECTION & Inspection-7 \\
-REQ-069 & TEST & Test-17 & REQ-139 & TEST & Test-4 \\
-REQ-070 & TEST & Test-18 & REQ-140 & TEST & Test-4 \\
+REQ-001 & TEST & Test-1 & REQ-072 & TEST & Test-18 \\
+REQ-002 & TEST & Test-1 & REQ-073 & TEST & Test-18 \\
+REQ-003 & TEST & Test-1 & REQ-074 & TEST & Test-18 \\
+REQ-004 & TEST & Test-2 & REQ-075 & TEST & Test-18 \\
+REQ-005 & TEST & Test-3 & REQ-076 & TEST & Test-18 \\
+REQ-006 & TEST & Test-3 & REQ-077 & TEST & Test-18 \\
+REQ-007 & TEST & Test-6 & REQ-078 & TEST & Test-18 \\
+REQ-008 & TEST & Test-6 & REQ-079 & TEST & Test-18 \\
+REQ-009 & INSPECTION & Inspection-1 & REQ-080 & TEST & Test-19 \\
+REQ-010 & TEST & Test-6 & REQ-081 & TEST & Test-19 \\
+REQ-011 & TEST & Test-4 & REQ-082 & TEST & Test-19 \\
+REQ-012 & TEST & Test-4 & REQ-083 & TEST & Test-19 \\
+REQ-013 & TEST & Test-4 & REQ-084 & TEST & Test-20 \\
+REQ-014 & TEST & Test-4 & REQ-085 & TEST & Test-20 \\
+REQ-015 & TEST & Test-5 & REQ-086 & TEST & Test-20 \\
+REQ-016 & TEST & Test-5 & REQ-087 & TEST & Test-21 \\
+REQ-017 & TEST & Test-5 & REQ-088 & TEST & Test-23 \\
+REQ-018 & TEST & Test-6 & REQ-089 & TEST & Test-23 \\
+REQ-019 & TEST & Test-5 & REQ-090 & TEST & Test-23 \\
+REQ-020 & TEST & Test-4 & REQ-091 & DEMONSTRATION & Demonstration-1 \\
+REQ-021 & TEST & Test-4 & REQ-092 & INSPECTION & Inspection-2 \\
+REQ-022 & TEST & Test-7 & REQ-093 & TEST & Test-24 \\
+REQ-023 & TEST & Test-7 & REQ-094 & TEST & Test-24 \\
+REQ-024 & TEST & Test-8 & REQ-095 & TEST & Test-24 \\
+REQ-025 & TEST & Test-8 & REQ-096 & INSPECTION & Inspection-2 \\
+REQ-026 & TEST & Test-8 & REQ-097 & DEMONSTRATION & Demonstration-2 \\
+REQ-027 & TEST & Test-9 & REQ-098 & ANALYSIS & Analysis-1 \\
+REQ-028 & TEST & Test-9 & REQ-099 & INSPECTION & Inspection-1 \\
+REQ-029 & TEST & Test-9 & REQ-100 & INSPECTION & Inspection-3 \\
+REQ-030 & TEST & Test-9 & REQ-101 & INSPECTION & Inspection-4 \\
+REQ-031 & TEST & Test-9 & REQ-102 & TEST & Test-2 \\
+REQ-032 & TEST & Test-9 & REQ-103 & ANALYSIS & Analysis-1 \\
+REQ-033 & TEST & Test-10 & REQ-104 & ANALYSIS & Analysis-2 \\
+REQ-034 & TEST & Test-10 & REQ-105 & TEST & Test-27 \\
+REQ-035 & TEST & Test-10 & REQ-106 & TEST & Test-2 \\
+REQ-036 & INSPECTION & Inspection-2 & REQ-107 & TEST & Test-26 \\
+REQ-037 & TEST & Test-11 & REQ-108 & ANALYSIS & Analysis-4 \\
+REQ-038 & TEST & Test-11 & REQ-109 & INSPECTION & Inspection-5 \\
+REQ-039 & TEST & Test-11 & REQ-110 & INSPECTION & Inspection-5 \\
+REQ-040 & TEST & Test-11 & REQ-111 & INSPECTION & Inspection-5 \\
+REQ-041 & TEST & Test-11 & REQ-112 & TEST & Test-16 \\
+REQ-042 & TEST & Test-11 & REQ-113 & TEST & Test-4 \\
+REQ-043 & TEST & Test-13 & REQ-114 & TEST & Test-23 \\
+REQ-044 & TEST & Test-13 & REQ-115 & TEST & Test-23 \\
+REQ-045 & TEST & Test-13 & REQ-116 & TEST & Test-23 \\
+REQ-046 & TEST & Test-13 & REQ-117 & TEST & Test-6 \\
+REQ-047 & TEST & Test-13 & REQ-118 & TEST & Test-25 \\
+REQ-048 & TEST & Test-14 & REQ-119 & INSPECTION & Inspection-1 \\
+REQ-049 & TEST & Test-14 & REQ-120 & TEST & Test-25 \\
+REQ-050 & TEST & Test-14 & REQ-121 & TEST & Test-25 \\
+REQ-051 & TEST & Test-14 & REQ-122 & TEST & Test-25 \\
+REQ-052 & TEST & Test-14 & REQ-123 & INSPECTION & Inspection-1 \\
+REQ-053 & TEST & Test-15 & REQ-124 & TEST & Test-25 \\
+REQ-054 & TEST & Test-25 & REQ-125 & INSPECTION & Inspection-6 \\
+REQ-055 & DEMONSTRATION & Demonstration-3 & REQ-126 & INSPECTION & Inspection-1 \\
+REQ-056 & ANALYSIS & Analysis-3 & REQ-127 & TEST & Test-16 \\
+REQ-057 & TEST & Test-25 & REQ-128 & INSPECTION & Inspection-7 \\
+REQ-058 & TEST & Test-25 & REQ-129 & TEST & Test-16 \\
+REQ-059 & TEST & Test-25 & REQ-130 & INSPECTION & Inspection-1 \\
+REQ-060 & TEST & Test-25 & REQ-131 & TEST & Test-12 \\
+REQ-061 & TEST & Test-22 & REQ-132 & TEST & Test-12 \\
+REQ-062 & TEST & Test-22 & REQ-133 & TEST & Test-9 \\
+REQ-063 & TEST & Test-22 & REQ-134 & TEST & Test-9 \\
+REQ-064 & TEST & Test-16 & REQ-135 & TEST & Test-12 \\
+REQ-065 & TEST & Test-16 & REQ-136 & TEST & Test-17 \\
+REQ-066 & TEST & Test-16 & REQ-137 & TEST & Test-9 \\
+REQ-067 & TEST & Test-16 & REQ-138 & INSPECTION & Inspection-7 \\
+REQ-068 & TEST & Test-17 & REQ-139 & TEST & Test-4 \\
+REQ-069 & TEST & Test-17 & REQ-140 & TEST & Test-4 \\
+REQ-070 & TEST & Test-18 & REQ-141 & INSPECTION & Inspection-9 \\
+REQ-071 & TEST & Test-18 &  & &  \\
 \bottomrule
 \end{xltabular}}
 \addtocounter{table}{-1}

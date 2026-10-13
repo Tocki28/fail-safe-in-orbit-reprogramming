@@ -66,9 +66,14 @@ OFFSET_LENGTH=12
 MIN_IMAGE_EXCLUSIVE=$(( HDR + SIGS ))
 
 # ---- Time limits -------------------------------------------------------------------
-# TBD: to be set from a measured full restore on the bench; 300 s is a generous PLACEHOLDER
-# until then, not a measured value. Overridable by the environment (the tests set it small).
-OPENOCD_TIMEOUT_S=${OPENOCD_TIMEOUT_S:-300}
+# The longest OpenOCD may run before it is stopped and the restore reported failed. Measured on
+# the bench, 13 Oct 2026: a full restore (bootloader 21 KB, last-resort 2 KB, main firmware 20 KB,
+# each written and verified; slot B and boot state erased) took 4.0 s
+# (test/onboard-computer/results/2026-10-13/install-restore-full.log). With every region full
+# (24 + 16 + 40 KB, about twice as much) it scales to about 8 s. 30 s is about 4 times that worst
+# case: a slow but healthy restore is never cut, a hung one is caught in half a minute (owner
+# accepted 30 s, 13 Oct 2026). Overridable by the environment (the tests set it small).
+OPENOCD_TIMEOUT_S=${OPENOCD_TIMEOUT_S:-30}
 # TBD: placeholder bound for one image check (a local file read and two signature checks);
 # not a measured value. Overridable by the environment.
 CHECK_TIMEOUT_S=${CHECK_TIMEOUT_S:-30}

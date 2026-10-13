@@ -71,11 +71,12 @@ constexpr uint64_t kTrialMarginMs = 30000;
 // The restart script: restore.sh in mode "reset" (restore.sh header), looked for next to the
 // updater's own program file unless --restore-script names another (options.hpp).
 constexpr const char * kRestoreScriptName = "restore.sh";
-// The longest the updater lets the restart script run before it sends it TERM. TBD, a PLACEHOLDER
-// and not a measured value: it is the script's own default limit for OpenOCD (OPENOCD_TIMEOUT_S
-// 300 s) plus its wait between TERM and KILL (KILL_GRACE_S 5 s) plus 5 s, so that the script's own
-// time-out line arrives before the updater steps in. To be set from a measured reset on the bench.
-constexpr uint64_t kRestartScriptMs = 310000;
+// The longest the updater lets the restart script run before it sends it TERM: the script's own
+// limit for OpenOCD (OPENOCD_TIMEOUT_S, 30 s, set from a full restore measured at 4.0 s on the
+// bench and accepted by the owner, 13 Oct 2026; restore.sh) plus its wait between TERM and KILL
+// (KILL_GRACE_S 5 s) plus 5 s, so that the script's own time-out line arrives before the updater
+// steps in.
+constexpr uint64_t kRestartScriptMs = 40000;
 // After TERM, the wait before the updater sends KILL to the script's whole process group. TBD,
 // a PLACEHOLDER (the script's KILL_GRACE_S default is 5 s); not measured.
 constexpr uint64_t kRestartKillGraceMs = 5000;

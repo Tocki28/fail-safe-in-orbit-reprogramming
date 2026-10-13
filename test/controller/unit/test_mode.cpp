@@ -840,6 +840,31 @@ void testSelfTestFailure()
            "OPERATE, self-test fails: reported in HEALTH only (no event, no write, no restart)");
 }
 
+/**
+ * @brief The test-image rules for an identifier outside UploadId: accept() and run() refuse.
+ *
+ * parse() never produces such a command; a corrupted UpdateCommand could. Passes if both
+ * answer 0x06 (Interfaces Sec. 4.2) and the transfer state is not changed (a following
+ * BEGIN is still accepted).
+ */
+void testTestImageOutsideEnum()
+{
+    Rig rig;
+    UpdateCommand cmd{};
+
+    startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    rig.mm.poll(0U);
+    cmd.id = static_cast<UploadId>(0x7FU);
+    cmd.image_number = kTestImageNumber;
+    cmd.value = 40U;
+    bool refused = (rig.mm.acceptTestImage(cmd) == AnswerCode::kImpossible) &&
+                   (rig.mm.runTestImage(cmd) == AnswerCode::kImpossible);
+    cmd.id = UploadId::kBegin;
+    report(refused && (rig.mm.acceptTestImage(cmd) == AnswerCode::kSuccess),
+           "test image: an identifier outside UploadId (0x7F): accept and run give 0x06, "
+           "state unchanged");
+}
+
 /* ---- Data-link test ----------------------------------------------------------------------- */
 
 /**
@@ -1228,6 +1253,7 @@ int main(int argc, char **argv)
     testSelfTestFailure();
     testDataLink();
     testTestImageRules();
+    testTestImageOutsideEnum();
     testTestImageFails();
     testPassedAndTimeout();
     testConfirmRefusals();

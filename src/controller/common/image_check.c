@@ -146,8 +146,13 @@ image_result_t image_check_signatures(const uint8_t *image, uint32_t signed_byte
 /**
  * @brief Returns the short text for a check result, for the log.
  *
+ * Every image_result_t value has its own case, so -Wswitch-enum (common/build.mk) stops the
+ * build when a value is added and this table is not. The default is only for a value outside the
+ * enum (a corrupted variable; MISRA C:2012 Rule 16.4 asks for a default in every switch): it
+ * logs "unknown" and stands for no real result.
+ *
  * @param[in]     result  result of a check
- * @return text for the result; "unknown" for other values
+ * @return text for the result; "unknown" for a value outside image_result_t
  */
 const char *image_result_text(image_result_t result)
 {
@@ -163,6 +168,6 @@ const char *image_result_text(image_result_t result)
     case IMAGE_BAD_BODY_CHECK:  return "body check value";
     case IMAGE_BAD_SIGNATURE_A: return "signature A";
     case IMAGE_BAD_SIGNATURE_B: return "signature B";
-    default:                    return "unknown";
+    default:                    return "unknown";   /* outside the enum only: see above */
     }
 }

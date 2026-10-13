@@ -146,12 +146,23 @@ bool boot_state_write(boot_state_t *state)
 }
 
 /**
- * @brief Returns slot B for slot A, and slot A for any other value.
+ * @brief Returns slot B for slot A, slot A for slot B, and BOOT_SLOT_NONE for any other value.
+ *
+ * Before, every value that was not A answered A, so a damaged or empty code named a real slot
+ * (the same lumping as bootloader/main.c, slot_region). An unknown code now has no other slot.
+ * Caller: fields_valid, which also demands that confirmed is A or B, so an unknown code still
+ * makes the record invalid.
  *
  * @param[in]     slot  BOOT_SLOT_A or BOOT_SLOT_B
- * @return the other slot code
+ * @return the other slot code; BOOT_SLOT_NONE if slot is neither A nor B
  */
 uint8_t boot_state_other_slot(uint8_t slot)
 {
-    return (slot == BOOT_SLOT_A) ? BOOT_SLOT_B : BOOT_SLOT_A;
+    if (slot == BOOT_SLOT_A) {
+        return BOOT_SLOT_B;
+    }
+    if (slot == BOOT_SLOT_B) {
+        return BOOT_SLOT_A;
+    }
+    return BOOT_SLOT_NONE;
 }

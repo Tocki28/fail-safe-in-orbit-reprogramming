@@ -13,6 +13,7 @@
  * Every line on USART2 starts with "BL: ".
  */
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "boot_state.h"
@@ -67,12 +68,25 @@ static void log_text(const char *a, const char *b, const char *c)
 /**
  * @brief Returns the text for a slot code.
  *
+ * Each of the three codes has its own case. The default is only for a value that is none of
+ * them (a corrupted variable; MISRA C:2012 Rule 16.4): it logs "unknown", and no longer "none",
+ * so a damaged code is not read as "no trial".
+ *
  * @param[in]     slot  BOOT_SLOT_A, BOOT_SLOT_B or BOOT_SLOT_NONE
- * @return "A", "B" or "none"
+ * @return "A", "B", "none", or "unknown" for any other value
  */
 static const char *slot_letter(uint8_t slot)
 {
-    return (slot == BOOT_SLOT_A) ? "A" : ((slot == BOOT_SLOT_B) ? "B" : "none");
+    switch (slot) {
+    case BOOT_SLOT_A:
+        return "A";
+    case BOOT_SLOT_B:
+        return "B";
+    case BOOT_SLOT_NONE:
+        return "none";
+    default:
+        return "unknown";   /* outside the three codes only: see above */
+    }
 }
 
 /**
@@ -275,14 +289,26 @@ static void count_trial_start(boot_state_t *state)
 /* ---- Candidates ------------------------------------------------------------------- */
 
 /**
- * @brief Returns the region of slot A, or the region of slot B for any other slot code.
+ * @brief Returns the region of slot A or of slot B; NULL for any other slot code.
+ *
+ * Before, every code that was not A answered the region of slot B, so a damaged or empty code
+ * started slot B. The caller (candidates) leaves a NULL out of the list, so a code that names
+ * no slot is never started. A valid boot state never holds such a code (common/boot_state.c,
+ * fields_valid); this is the second barrier if the variable is corrupted after the read.
  *
  * @param[in]     slot  BOOT_SLOT_A or BOOT_SLOT_B
- * @return region of the slot
+ * @return region of the slot; NULL if slot is neither A nor B
  */
 static const region_t *slot_region(uint8_t slot)
 {
-    return (slot == BOOT_SLOT_A) ? &REGION_A : &REGION_B;
+    switch (slot) {
+    case BOOT_SLOT_A:
+        return &REGION_A;
+    case BOOT_SLOT_B:
+        return &REGION_B;
+    default:
+        return NULL;   /* BOOT_SLOT_NONE has no slot region, and no other code is a slot */
+    }
 }
 
 /**
@@ -304,21 +330,33 @@ static const char *role(const region_t *region, const boot_state_t *state)
  * @brief The regions to try, in order; returns how many.
  *
  * The order is the trial slot (if a trial is set), the confirmed slot, the last-resort firmware.
+ * A slot code that names no slot (slot_region gives NULL) is logged and left out, so it is never
+ * started; the last-resort firmware is always the last entry.
  *
  * @param[in]     state  boot state
  * @param[out]    order  regions to try, first to last; room for MAX_CANDIDATES
- * @return number of regions written to order
+ * @return number of regions written to order (1 to MAX_CANDIDATES)
  */
 static uint32_t candidates(const boot_state_t *state, const region_t *order[MAX_CANDIDATES])
 {
     uint32_t count = 0U;
 
     if (state->trial != BOOT_SLOT_NONE) {
-        order[count] = slot_region(state->trial);
-        count++;
+        const region_t *trial = slot_region(state->trial);
+        if (trial != NULL) {
+            order[count] = trial;
+            count++;
+        } else {
+            log_text("trial slot code names no slot: left out", "", "");
+        }
     }
-    order[count] = slot_region(state->confirmed);
-    count++;
+    const region_t *confirmed = slot_region(state->confirmed);
+    if (confirmed != NULL) {
+        order[count] = confirmed;
+        count++;
+    } else {
+        log_text("confirmed slot code names no slot: left out", "", "");
+    }
     order[count] = &REGION_LAST_RESORT;
     count++;
     return count;

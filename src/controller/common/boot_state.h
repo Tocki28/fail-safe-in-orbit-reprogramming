@@ -44,7 +44,7 @@ bool boot_state_read(boot_state_t *state);
  * read-back did not match. */
 bool boot_state_write(boot_state_t *state);
 
-/* The other slot of the pair: A for B, B for A. */
+/* The other slot of the pair: A for B, B for A, BOOT_SLOT_NONE for any other code. */
 uint8_t boot_state_other_slot(uint8_t slot);
 
 #ifdef __cplusplus

@@ -35,7 +35,8 @@ CPU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 # -fstack-usage: writes each function's stack use to a .su file next to its object.
 CFLAGS = $(CPU) $(OPT) -g3 -std=c11 -DSTM32G431xx $(DEFS) \
          -I$(DEV)/Include -I$(CUBE)/Drivers/CMSIS/Include -I$(COMMON) $(INCLUDES) \
-         -ffunction-sections -fdata-sections -fstack-usage -Wall -Wextra
+         -ffunction-sections -fdata-sections -fstack-usage -Wall -Wextra \
+         -Wswitch-enum
 # C++17 for the main firmware, with what a small controller cannot afford switched off:
 #   -fno-exceptions         no throw, no unwinding code; failures are return values, as in C
 #   -fno-rtti               no type information tables (no dynamic_cast, no typeid)
@@ -45,8 +46,13 @@ CFLAGS = $(CPU) $(OPT) -g3 -std=c11 -DSTM32G431xx $(DEFS) \
 #                           returns, and the objects have none
 # ST's and Arm's headers come in through -isystem: their C-style casts and macros are theirs,
 # so the stricter C++ warnings below apply to our code only.
+#
+# -Wswitch-enum (C and C++): a switch over an enum must name every enumerator as its own case,
+# even when it has a default. -Wswitch alone is silent once a default exists, so a forgotten
+# case would fall into the default unnoticed. With -Werror a missing case fails the build. The
+# default stays only for a value outside the enum (MISRA C:2012 Rule 16.4).
 CXXWARNINGS = -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow \
-              -Wold-style-cast -Wcast-align -Wnull-dereference -Wformat=2
+              -Wold-style-cast -Wcast-align -Wnull-dereference -Wformat=2 -Wswitch-enum
 CXXFLAGS = $(CPU) $(OPT) -g3 -std=c++17 -DSTM32G431xx $(DEFS) \
            -isystem $(DEV)/Include -isystem $(CUBE)/Drivers/CMSIS/Include -I$(COMMON) $(INCLUDES) \
            -ffunction-sections -fdata-sections -fstack-usage \

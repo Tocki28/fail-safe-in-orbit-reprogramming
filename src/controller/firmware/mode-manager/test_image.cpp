@@ -34,6 +34,9 @@ bool TestImage::isTestImage(const UpdateCommand &cmd)
  * the data stays inside the length. END: a transfer is open and every byte has arrived.
  * CANCEL: a transfer was begun (open or closed by END).
  *
+ * All four UploadId values have their own case (-Wswitch-enum, common/build.mk). The default is
+ * for a value outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): refused 0x06.
+ *
  * @param[in]     cmd  the command, read by UpdateReceiver::parse
  * @return kUpdateOk if accepted; AnswerCode::kImpossible (0x06) otherwise
  */
@@ -60,7 +63,7 @@ AnswerCode TestImage::accept(const UpdateCommand &cmd) const
     case UploadId::kCancel:
         return (phase_ != UpdatePhase::kIdle) ? kUpdateOk : AnswerCode::kImpossible;
     default:
-        return AnswerCode::kImpossible;
+        return AnswerCode::kImpossible;   /* outside the enum only: refuse */
     }
 }
 
@@ -96,6 +99,9 @@ AnswerCode TestImage::runEnd()
  * END's result as it is: only END sets it. The CHUNK bound is checked again here, against the
  * buffer itself, so no command can write past it even if a caller skipped accept().
  *
+ * All four UploadId values have their own case (-Wswitch-enum). The default is for a value
+ * outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): nothing runs, 0x06.
+ *
  * @param[in]     cmd  the command
  * @return kUpdateOk; at END, AnswerCode::kDamaged (0x08) on a wrong check value; 0x06 for a
  *         command accept() would have refused
@@ -122,6 +128,6 @@ AnswerCode TestImage::run(const UpdateCommand &cmd)
         received_ = 0U;
         return kUpdateOk;
     default:
-        return AnswerCode::kImpossible;   /* not reached: accept() takes only these four */
+        return AnswerCode::kImpossible;   /* outside the enum only: accept() takes these four */
     }
 }

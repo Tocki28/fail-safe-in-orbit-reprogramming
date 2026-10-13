@@ -9,7 +9,8 @@
 #                     layer (unit/test_frame.cpp), HEALTH and EVENT payloads
 #                     (unit/test_health.cpp), update receiver with a fake flash and the build's
 #                     signed images (unit/test_update.cpp), arm state (unit/test_arm.cpp), mode
-#                     manager, trial tests, SWITCH and CONFIRM (unit/test_mode.cpp)
+#                     manager, trial tests, SWITCH and CONFIRM (unit/test_mode.cpp), the
+#                     bootloader's slot handling with the chip replaced (unit/test_boot.c)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
@@ -81,10 +82,12 @@ check: images unit
 # RTTI, the same warnings), the same sanitizer. That sanitizer does not see an index into a
 # std::array; libc++'s debug hardening checks those, and stops the run with the failed bound
 # printed.
-HOST_CC    = cc -std=c11 -O1 -g -Wall -Wextra -Werror -fsanitize=undefined -fno-sanitize-recover=undefined
+# -Wswitch-enum on every host build, as on the board (common/build.mk): a switch over an enum
+# must name every enumerator, even with a default.
+HOST_CC    = cc -std=c11 -O1 -g -Wall -Wextra -Wswitch-enum -Werror -fsanitize=undefined -fno-sanitize-recover=undefined
 HOST_CXX   = clang++ -std=c++17 -O1 -g -fno-exceptions -fno-rtti \
              -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow -Wold-style-cast \
-             -Wcast-align -Wnull-dereference -Wformat=2 -Werror \
+             -Wcast-align -Wnull-dereference -Wformat=2 -Wswitch-enum -Werror \
              -fsanitize=undefined -fno-sanitize-recover=undefined \
              -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG
 MONO       = $(REPO)/third_party/monocypher
@@ -111,6 +114,9 @@ MODE_SRCS   = unit/test_mode.cpp unit/fake_port.cpp unit/fake_mode_port.cpp \
               $(CMD_SRC)/arm_state.cpp $(LINK_SRC)/frame_sender.cpp $(LINK_SRC)/frame.cpp \
               $(HEALTH_SRC)/health_monitor.cpp $(UPD_SRC)/update_receiver.cpp
 COMMON_OBJS = build/host/crc32.o build/host/image_check.o
+# The bootloader's own main.c with the chip replaced (unit/boot_stubs), and boot_state.c as built.
+BOOT_SRCS   = unit/test_boot.c unit/boot_stubs/boot_stubs.c $(COMMON)/boot_state.c
+BOOT_HDRS   = $(wildcard $(SRC)/bootloader/*.h unit/boot_stubs/*.h)
 MONO_OBJS   = build/host/monocypher.o build/host/monocypher-ed25519.o
 
 build/host/%.o: $(MONO)/%.c $(MONO)/%.h
@@ -130,6 +136,12 @@ build/host/test_update: $(UPDATE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 build/host/test_health: $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 	$(HOST_CXX) $(CXX_INCLUDES) $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
 
+build/host/test_boot: $(BOOT_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(BOOT_HDRS) $(FW_HEADERS) \
+                      $(SRC)/bootloader/main.c
+	mkdir -p build/host
+	$(HOST_CC) -Iunit/boot_stubs -I$(SRC)/bootloader -I$(COMMON) -I$(MONO) $(BOOT_SRCS) \
+	    $(COMMON_OBJS) $(MONO_OBJS) -o $@
+
 build/host/test_arm: $(ARM_SRCS) $(FW_HEADERS)
 	mkdir -p build/host
 	$(HOST_CXX) $(CXX_INCLUDES) $(ARM_SRCS) -o $@
@@ -142,12 +154,13 @@ src-images:
 	$(MAKE) -C $(SRC) images
 
 unit: build/host/test_frame build/host/test_health build/host/test_update build/host/test_arm \
-      build/host/test_mode images src-images
+      build/host/test_mode build/host/test_boot images src-images
 	build/host/test_frame
 	build/host/test_health
 	build/host/test_update $(SRC)/build/images $(OUT)
 	build/host/test_arm
 	build/host/test_mode $(SRC)/build/images
+	build/host/test_boot
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
 # PROBE_ARGS="--listen 4": listen first, and reset the board meanwhile to see its BL: lines.

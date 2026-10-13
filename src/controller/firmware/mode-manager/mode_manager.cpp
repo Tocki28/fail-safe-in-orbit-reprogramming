@@ -42,17 +42,6 @@ uint8_t stateCode(Slot slot)
     return static_cast<uint8_t>(slot);
 }
 
-/**
- * @brief Returns the other slot of the pair: B for A, A for B.
- *
- * @param[in]     slot  Slot::kA or Slot::kB
- * @return Slot::kB for Slot::kA; Slot::kA for any other value
- */
-Slot otherSlot(Slot slot)
-{
-    return (slot == Slot::kA) ? Slot::kB : Slot::kA;
-}
-
 }  // namespace
 
 /**
@@ -226,6 +215,11 @@ void ModeManager::restartWhenSent()
  * (common/boot_state.c, fields_valid). After the restart the bootloader starts the confirmed
  * slot, and never the given-up one again unless the operator orders it (bootloader/main.c,
  * REQ-019).
+ *
+ * If the running slot is not A or B, otherSlot() gives Slot::kNone (it used to give A), the
+ * confirmed slot of the record is then none, and the boot-state write refuses the record
+ * (common/boot_state.c, fields_valid): no EVENT, the chip restarts, the bootloader decides. Not
+ * reachable through start(): TRIAL needs a running slot of A or B.
  *
  * Open: if the write fails, no EVENT 0x0008 is sent (the trial is not given up in the boot
  * state) and the chip restarts anyway. The bootloader counted this start before it ran

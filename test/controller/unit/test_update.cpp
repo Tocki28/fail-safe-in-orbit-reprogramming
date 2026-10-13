@@ -543,6 +543,123 @@ void testResultCodes()
                "target 0x0B, start address 0x0E (all 11 results)");
 }
 
+/* Values that are no image_result_t enumerator. The enum's enumerators are 0 to 10; a C++ enum
+ * may hold any value up to 15 (the bits its enumerators need), and the undefined-behaviour
+ * sanitizer stops the run on a load of a value beyond that, so 11 and 15 are the outside
+ * values a test can hand over. */
+constexpr int kOutsideA = 11;
+constexpr int kOutsideB = 15;
+
+/**
+ * @brief Checks refusalFor() one image_result_t value at a time, and a value outside the enum.
+ *
+ * One report per enumerator, so a failure names the result. The mapping is Interfaces Sec. 4.2:
+ * signatures 0x09, target 0x0B, start address 0x0E, damage-type results 0x08. IMAGE_BAD_KIND has
+ * no code of its own in Sec. 4.2; 0x08 is the nearest refusal and is what the receiver gave
+ * before (open gap, reported to the owner). A value outside the enum refuses the image (0x08).
+ */
+void testResultCodeEach()
+{
+    struct Case {
+        image_result_t result;
+        AnswerCode code;
+        const char *name;
+    };
+    const Case cases[] = {
+        {IMAGE_OK, kUpdateOk, "IMAGE_OK -> DONE code 0x00"},
+        {IMAGE_EMPTY, AnswerCode::kDamaged, "IMAGE_EMPTY -> 0x08"},
+        {IMAGE_BAD_MAGIC, AnswerCode::kDamaged, "IMAGE_BAD_MAGIC -> 0x08"},
+        {IMAGE_BAD_FORMAT, AnswerCode::kDamaged, "IMAGE_BAD_FORMAT -> 0x08"},
+        {IMAGE_BAD_KIND, AnswerCode::kDamaged, "IMAGE_BAD_KIND -> 0x08 (no code for a wrong kind)"},
+        {IMAGE_BAD_TARGET, AnswerCode::kOtherController, "IMAGE_BAD_TARGET -> 0x0B"},
+        {IMAGE_BAD_LENGTH, AnswerCode::kDamaged, "IMAGE_BAD_LENGTH -> 0x08"},
+        {IMAGE_BAD_START, AnswerCode::kOtherSlot, "IMAGE_BAD_START -> 0x0E"},
+        {IMAGE_BAD_BODY_CHECK, AnswerCode::kDamaged, "IMAGE_BAD_BODY_CHECK -> 0x08"},
+        {IMAGE_BAD_SIGNATURE_A, AnswerCode::kNotOperator, "IMAGE_BAD_SIGNATURE_A -> 0x09"},
+        {IMAGE_BAD_SIGNATURE_B, AnswerCode::kNotOperator, "IMAGE_BAD_SIGNATURE_B -> 0x09"},
+    };
+    char line[96];
+
+    for (const Case &c : cases) {
+        std::snprintf(line, sizeof line, "refusalFor: %s", c.name);
+        report(UpdateReceiver::refusalFor(c.result) == c.code, line);
+    }
+    report((UpdateReceiver::refusalFor(static_cast<image_result_t>(kOutsideA)) == AnswerCode::kDamaged) &&
+               (UpdateReceiver::refusalFor(static_cast<image_result_t>(kOutsideB)) == AnswerCode::kDamaged),
+           "refusalFor: a value outside image_result_t (11, 15) refuses the image, 0x08");
+}
+
+/**
+ * @brief Checks image_result_text() for every image_result_t value and a value outside the enum.
+ *
+ * The text is for the bootloader's log (common/image_check.c). A value outside the enum gives
+ * "unknown", never the text of a real result.
+ */
+void testResultText()
+{
+    struct Case {
+        image_result_t result;
+        const char *text;
+    };
+    const Case cases[] = {
+        {IMAGE_OK, "passed"},
+        {IMAGE_EMPTY, "empty"},
+        {IMAGE_BAD_MAGIC, "proprietary string"},
+        {IMAGE_BAD_FORMAT, "format"},
+        {IMAGE_BAD_KIND, "kind"},
+        {IMAGE_BAD_TARGET, "target"},
+        {IMAGE_BAD_LENGTH, "length"},
+        {IMAGE_BAD_START, "start address outside the region"},
+        {IMAGE_BAD_BODY_CHECK, "body check value"},
+        {IMAGE_BAD_SIGNATURE_A, "signature A"},
+        {IMAGE_BAD_SIGNATURE_B, "signature B"},
+    };
+    bool ok = true;
+
+    for (const Case &c : cases) {
+        ok = ok && (std::strcmp(image_result_text(c.result), c.text) == 0);
+    }
+    report(ok, "image_result_text: all 11 results have their own text");
+    report((std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideA)), "unknown") == 0) &&
+               (std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideB)), "unknown") == 0),
+           "image_result_text: a value outside image_result_t (11, 15) gives \"unknown\"");
+}
+
+/**
+ * @brief Checks otherSlot() (boot_slot.hpp) on A, B, none and values outside the enum.
+ *
+ * A gives B and B gives A. None, and any code that names no slot, gives none: before, they gave
+ * slot A, a real slot, so a damaged code could be taken for the other slot of a pair.
+ */
+void testOtherSlot()
+{
+    report((otherSlot(Slot::kA) == Slot::kB) && (otherSlot(Slot::kB) == Slot::kA),
+           "otherSlot: A -> B, B -> A");
+    report((otherSlot(Slot::kNone) == Slot::kNone) && (otherSlot(toSlot(3U)) == Slot::kNone) &&
+               (otherSlot(toSlot(0xEEU)) == Slot::kNone) && (otherSlot(toSlot(0xFFU)) == Slot::kNone),
+           "otherSlot: none, 3, 0xEE and 0xFF -> none (not slot A)");
+}
+
+/**
+ * @brief Checks that run() refuses an identifier outside UploadId and touches nothing.
+ *
+ * accept() cannot produce such a command (parse takes only 0x01 to 0x04), so this is the second
+ * barrier, for a corrupted UpdateCommand. Passes if run() answers 0x06 and no page is erased
+ * and nothing is programmed.
+ */
+void testRunOutsideEnum()
+{
+    UpdateReceiver rx;
+    UpdateCommand cmd{};
+
+    startRunningA(rx);
+    cmd.id = static_cast<UploadId>(0x7FU);
+    cmd.target = Slot::kB;
+    report((rx.run(cmd) == AnswerCode::kImpossible) && (fake.erases == 0U) &&
+               (fake.programs == 0U),
+           "run: an identifier outside UploadId (0x7F) -> 0x06, flash untouched");
+}
+
 /* ---- Payload sizes and length bounds ------------------------------------------------- */
 
 /**
@@ -913,6 +1030,10 @@ int main(int argc, char **argv)
     testSlotOf();
     testAddressBarrier();
     testResultCodes();
+    testResultCodeEach();
+    testResultText();
+    testOtherSlot();
+    testRunOutsideEnum();
     testPayloadSizes();
     testLengthBounds();
     testOffsets();

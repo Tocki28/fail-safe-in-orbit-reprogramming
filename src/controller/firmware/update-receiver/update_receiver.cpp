@@ -69,6 +69,10 @@ uint16_t readU16(const uint8_t *bytes)
  * BEGIN is exactly 7 bytes, CHUNK is 7 bytes plus 1 to 256 data bytes, END and CANCEL are
  * exactly 3 bytes. Any other identifier does not fit.
  *
+ * All four UploadId values have their own case (-Wswitch-enum, common/build.mk). The default is
+ * for a byte that is none of them: `id` arrives from the wire as a plain byte, so a value outside
+ * the enum is the normal case here, not a corruption. It answers false: refused.
+ *
  * @param[in] id      command identifier, first payload byte
  * @param[in] length  payload bytes
  * @return true if the length fits the command, false otherwise
@@ -84,7 +88,7 @@ bool sizeFits(uint8_t id, uint32_t length)
     case UploadId::kCancel:
         return length == kShortPayload;
     default:
-        return false;
+        return false;   /* a byte that is no upload identifier: see above */
     }
 }
 
@@ -184,7 +188,7 @@ AnswerCode UpdateReceiver::chooseTarget(bool state_valid, const boot_state_t &st
     if (((running != Slot::kA) && (running != Slot::kB)) || (toSlot(state.confirmed) != running)) {
         return AnswerCode::kImpossible;
     }
-    target = (running == Slot::kA) ? Slot::kB : Slot::kA;
+    target = otherSlot(running);   /* running is A or B here: checked just above */
     return kUpdateOk;
 }
 
@@ -213,11 +217,25 @@ bool UpdateReceiver::writeAllowed(Slot target, Slot running, uint32_t address, u
 }
 
 /**
- * @brief Maps a result of the image checks to an answer code.
+ * @brief Maps a result of the image checks to an answer code (Interfaces Sec. 4.2).
+ *
+ * Every image_result_t value has its own case, so -Wswitch-enum (common/build.mk) stops the
+ * build when a check result is added and not mapped here. Before, a `default` lumped the damage
+ * results together and also took any result added later. The mapping:
+ *   IMAGE_OK                                  -> kUpdateOk
+ *   IMAGE_BAD_SIGNATURE_A, _B                 -> kNotOperator (0x09)
+ *   IMAGE_BAD_TARGET                          -> kOtherController (0x0B)
+ *   IMAGE_BAD_START                           -> kOtherSlot (0x0E)
+ *   IMAGE_EMPTY, _BAD_MAGIC, _BAD_FORMAT, _BAD_LENGTH, _BAD_BODY_CHECK -> kDamaged (0x08)
+ *   IMAGE_BAD_KIND                            -> kDamaged (0x08), see below
+ * Open (Interfaces gap): IMAGE_BAD_KIND (a bootloader or last-resort image sent for a main
+ * slot) has no code in Sec. 4.2 that says "wrong kind". 0x08 "image damaged" is the nearest
+ * refusal and is what this function gave before; no code is invented.
+ * The default is only for a value outside the enum (a corrupted variable; MISRA C:2012
+ * Rule 16.4): the image is refused, kDamaged.
  *
  * @param[in] result  result of image_check_contents or image_check_signatures
- * @return kUpdateOk for IMAGE_OK; kNotOperator for a bad signature; kOtherController for a bad
- *         target; kOtherSlot for a bad start; kDamaged for every other fault
+ * @return the answer code of the table above
  */
 AnswerCode UpdateReceiver::refusalFor(image_result_t result)
 {
@@ -231,10 +249,16 @@ AnswerCode UpdateReceiver::refusalFor(image_result_t result)
         return AnswerCode::kOtherController;
     case IMAGE_BAD_START:
         return AnswerCode::kOtherSlot;   /* reset handler outside this slot: linked for the other */
-    default:
-        /* Body check value, and every other fault of the image's structure: empty, proprietary
-         * string, format, kind, length. */
+    case IMAGE_EMPTY:
+    case IMAGE_BAD_MAGIC:
+    case IMAGE_BAD_FORMAT:
+    case IMAGE_BAD_LENGTH:
+    case IMAGE_BAD_BODY_CHECK:
         return AnswerCode::kDamaged;
+    case IMAGE_BAD_KIND:
+        return AnswerCode::kDamaged;   /* no code for "wrong kind": nearest is 0x08 (see above) */
+    default:
+        return AnswerCode::kDamaged;   /* outside the enum only: refuse the image */
     }
 }
 
@@ -327,6 +351,9 @@ bool UpdateReceiver::chunkFits(const UpdateCommand &cmd) const
  * receiving, same transfer, chunk fits. END: phase receiving, same transfer, all bytes
  * written. CANCEL: same transfer.
  *
+ * All four UploadId values have their own case (-Wswitch-enum). The default is for a value
+ * outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): the values do not fit.
+ *
  * @param[in] cmd  the command
  * @return true if the values fit, false otherwise
  */
@@ -343,7 +370,7 @@ bool UpdateReceiver::valuesFit(const UpdateCommand &cmd) const
     case UploadId::kCancel:
         return sameTransfer(cmd);
     default:
-        return false;
+        return false;   /* outside the enum only: refuse */
     }
 }
 
@@ -520,6 +547,9 @@ void UpdateReceiver::init(Slot running_slot)
 /**
  * @brief Runs a command that accept() accepted.
  *
+ * All four UploadId values have their own case (-Wswitch-enum). The default is for a value
+ * outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): nothing runs, kImpossible.
+ *
  * @param[in] cmd  the accepted command
  * @return kUpdateOk, or the refusal code of the command's work (kDamaged or the END checks);
  *         AnswerCode::kImpossible for an identifier that is not an upload command
@@ -536,6 +566,6 @@ AnswerCode UpdateReceiver::run(const UpdateCommand &cmd)
     case UploadId::kCancel:
         return runCancel();
     default:
-        return AnswerCode::kImpossible;   /* not reached: accept() takes only these four */
+        return AnswerCode::kImpossible;   /* outside the enum only: accept() takes these four */
     }
 }

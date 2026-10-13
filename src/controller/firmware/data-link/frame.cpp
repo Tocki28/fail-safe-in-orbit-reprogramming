@@ -108,6 +108,10 @@ void FrameParser::startOver(uint8_t byte)
  * The fields checked are Sync byte 0, Sync byte 1, Version and Length (not above the payload
  * maximum). Any other byte position passes.
  *
+ * This switch is on a byte count, not on an enum, so -Wswitch-enum does not apply and the
+ * default is intended: it stands for every byte position that has no header check (most of
+ * them), not for a forgotten case. No enumerator list exists to complete.
+ *
  * @return true if the header is still acceptable; false if the last byte broke it
  */
 bool FrameParser::headerSoFarOk() const
@@ -122,7 +126,7 @@ bool FrameParser::headerSoFarOk() const
     case kFrameOffsetLength + 2U:
         return readU16(&bytes_[kFrameOffsetLength]) <= kFramePayloadMax;
     default:
-        return true;
+        return true;   /* intended: a byte position with no header check passes (see above) */
     }
 }
 

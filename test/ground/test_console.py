@@ -19,6 +19,7 @@ from fake_onboard import FakeOnboard  # noqa: E402
 
 IMAGES = HERE.parents[1] / "src" / "controller" / "build" / "images"
 FAST_S = "0.3"           # command timeout in tests; real value is 3 s
+SEQ_FILE = None          # sequence state file of the running test; set in setUp, never the user's ~/.fsir
 
 
 def run_console(fake, *args):
@@ -29,17 +30,24 @@ def run_console(fake, *args):
         *args: console arguments after the common --host, --port and --timeout.
 
     Returns:
-        (exit code, text printed to stdout).
+        (exit code, text printed to stdout). The sequence state file is the test's own (SEQ_FILE),
+        unless the arguments give --seq-file themselves.
     """
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
-        code = c.main(["--host", "127.0.0.1", "--port", str(fake.port), "--timeout", FAST_S, *args])
+        code = c.main(["--host", "127.0.0.1", "--port", str(fake.port), "--timeout", FAST_S,
+                       "--seq-file", SEQ_FILE, *args])
     return code, out.getvalue()
 
 
 class ConsoleTests(unittest.TestCase):
     def setUp(self):
         """Start a fake onboard computer and find the slot B image; fails if the image is not built."""
+        global SEQ_FILE
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        SEQ_FILE = str(self.tmp / "state" / "console-seq")
         self.fake = FakeOnboard()
         self.addCleanup(self.fake.close)
         self.image = IMAGES / "firmware-B.img"
@@ -264,6 +272,143 @@ class ConsoleTests(unittest.TestCase):
         with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
             c.main(["--help"])
         self.assertIn("no envelope encryption", out.getvalue())
+
+    def seqs_since(self, index):
+        """Sequence numbers of the datagrams the fake received from position `index` on.
+
+        Args:
+            index: position in fake.arrivals to start from.
+
+        Returns:
+            List of sequence numbers.
+        """
+        return [a[1] for a in self.fake.arrivals[index:]]
+
+    def test_two_runs_use_increasing_numbers(self):
+        """Check that a second console run continues above the first (Sec. 4.0, REQ-065). Passes if
+        every number of run 2 is higher than every number of run 1, the numbers run without a gap
+        and the state file holds the last number.
+        """
+        self.assertEqual(run_console(self.fake, "status", "--seconds", "0.1")[0], 0)
+        n1 = len(self.fake.arrivals)
+        first_run = self.seqs_since(0)
+        self.assertEqual(run_console(self.fake, "status", "--seconds", "0.1")[0], 0)
+        second_run = self.seqs_since(n1)
+        self.assertGreater(min(second_run), max(first_run))
+        self.assertEqual(min(second_run), max(first_run) + 1)
+        self.assertEqual(int(Path(SEQ_FILE).read_text()), max(second_run))
+        self.assertEqual([p.name for p in Path(SEQ_FILE).parent.iterdir()], ["console-seq"])   # no temp file left
+
+    def test_second_confirm_run_gets_new_numbers(self):
+        """Check that `switch` run twice in one onboard session sends ARM and SWITCH with fresh
+        numbers each time (Sec. 4.0, REQ-065). Passes if the four numbers of the two runs are all
+        different and rise.
+        """
+        self.fake.delivered = True
+        self.assertEqual(run_console(self.fake, "switch")[0], 0)
+        self.assertEqual(run_console(self.fake, "switch")[0], 0)
+        seqs = self.seqs_since(0)
+        self.assertEqual(seqs, sorted(set(seqs)))
+        self.assertGreaterEqual(len(seqs), 4)
+
+    def test_damaged_state_file_starts_from_the_clock(self):
+        """Check that an absent, empty, garbage, zero and too-large state file each make the run
+        start from the clock, say so, and rewrite the file (Sec. 4.0). Passes if the first number is
+        at least the clock time read before the run, and the note is printed.
+        """
+        state = Path(SEQ_FILE)
+        state.parent.mkdir(parents=True)
+        for damage in (None, b"", b"garbage\n", b"0\n", b"99999999999\n", b"\xff\xfe", b"-5\n"):
+            if damage is None:
+                state.unlink(missing_ok=True)
+            else:
+                state.write_bytes(damage)
+            before = int(time.time())
+            index = len(self.fake.arrivals)
+            code, out = run_console(self.fake, "status", "--seconds", "0.1")
+            self.assertEqual(code, 0, (damage, out))
+            self.assertRegex(out, r"seq +.*(no sequence state file|unreadable).*starting from clock time")
+            first = self.seqs_since(index)[0]
+            self.assertGreaterEqual(first, before, damage)
+            self.assertLessEqual(first, int(time.time()), damage)
+            self.assertEqual(int(state.read_text()), self.seqs_since(index)[-1])
+
+    def test_load_first_seq_reads_last_plus_one(self):
+        """Check load_first_seq on a good file and on the largest value (Sec. 4.0). Passes if a file
+        holding N gives N+1 with no note, and 2^32-1 in the file is treated as used up (clock).
+        """
+        state = self.tmp / "s"
+        state.write_text("41\n")
+        self.assertEqual(c.load_first_seq(str(state), now=1000), (42, None))
+        state.write_text(f"{c.SEQ_MAX}\n")
+        first, note = c.load_first_seq(str(state), now=1000)
+        self.assertEqual(first, 1000)
+        self.assertIsNotNone(note)
+
+    def test_first_seq_overrides_the_state_file(self):
+        """Check that --first-seq wins over the state file and the file then follows the run
+        (Sec. 4.0). Passes if the first number is the one given and the file holds the last one.
+        """
+        Path(SEQ_FILE).parent.mkdir(parents=True)
+        Path(SEQ_FILE).write_text("5000\n")
+        code, out = run_console(self.fake, "--first-seq", "7", "status", "--seconds", "0.1")
+        self.assertEqual(code, 0, out)
+        seqs = self.seqs_since(0)
+        self.assertEqual(seqs[0], 7)
+        self.assertEqual(int(Path(SEQ_FILE).read_text()), max(seqs))
+
+    def test_number_is_saved_before_the_frame_goes_out(self):
+        """Check that the state file holds a number before its frame is sent (REQ-065), so a crash
+        cannot reuse it. Passes if, when transmit() runs, the file already holds the frame's number.
+        """
+        seen = []
+        original = c.Console.transmit
+
+        def spy(con, frame):
+            """Record the file content next to the frame's sequence number, then send."""
+            seen.append((int(Path(SEQ_FILE).read_text()), c.parse(frame)["seq"]))
+            original(con, frame)
+
+        with mock.patch.object(c.Console, "transmit", spy):
+            run_console(self.fake, "--first-seq", "10", "status", "--seconds", "0.1")
+        self.assertTrue(seen)
+        for saved, seq in seen:
+            self.assertEqual(saved, seq)
+
+    def test_unwritable_state_file_stops_the_run(self):
+        """Check that a state file that cannot be written stops the run before any frame is sent
+        (REQ-065: an unsaved number could be reused). Passes if exit code is 1, FAILED names the
+        file and the fake saw nothing.
+        """
+        blocker = self.tmp / "blocker"
+        blocker.write_text("a file, not a directory")
+        code, out = run_console(self.fake, "--seq-file", str(blocker / "console-seq"), "status")
+        self.assertEqual(code, 1)
+        self.assertIn("FAILED: cannot save the sequence number", out)
+        self.assertEqual(self.fake.arrivals, [])
+
+    def test_resume_hint_names_the_failed_stage(self):
+        """Check the resume advice after a refusal (Sec. 5.1). Passes if a refused BEGIN says nothing
+        is stored and gives no --offset, a refused END says all bytes were accepted and gives
+        --offset = image size, and a refused CHUNK names its own offset.
+        """
+        image = str(self.image)
+        size = self.image.stat().st_size
+        self.fake.refuse = {c.UPLOAD_BEGIN: 0x06}
+        code, out = run_console(self.fake, "upload", image, "--number", "1")
+        self.assertEqual(code, 1)
+        self.assertIn("nothing is stored", out)
+        self.assertNotIn("--offset", out.split("nothing is stored")[1].split("(no --offset)")[0])
+        self.assertNotIn("has bytes up to", out)
+        self.fake.refuse = {c.UPLOAD_END: 0x08}
+        code, out = run_console(self.fake, "upload", image, "--number", "1")
+        self.assertIn(f"all {size} bytes were accepted", out)
+        self.assertIn(f"--offset {size}`", out)
+        self.fake.refuse = {c.UPLOAD_CHUNK: 0x06}
+        code, out = run_console(self.fake, "upload", image, "--number", "1")
+        self.assertIn("UPLOAD CHUNK offset 0 (seq", out)
+        self.assertIn("bytes before offset 0 were accepted", out)
+        self.assertIn("`upload IMAGE --number 1 --offset 0`", out)
 
     def test_health_decoding(self):
         """Check that a HEALTH payload decodes, with and without the added fields (Sec. 5.4). Passes

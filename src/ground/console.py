@@ -14,10 +14,16 @@ them twice (Sec. 4.2, REQ-031).
 
 Subcommands:  status | upload IMAGE --number N | deliver --number N | switch | update [--yes] | confirm
 
+Sequence numbers are kept across runs in a state file (default ~/.fsir/console-seq, option
+--seq-file), because the onboard computer refuses an ARM or a dangerous command whose ground
+sequence number it has already seen since it started (REFUSED 0x04, Sec. 4.0, REQ-065). See
+load_first_seq() for the numbering rule.
+
 `update` ends with the operator's decision: after the controller reports "trial tests passed"
 the console shows the trial report and asks "Confirm? [y/N]"; only y sends CONFIRM (Sec. 5.1, REQ-012).
 """
 import argparse
+import os
 import random
 import socket
 import struct
@@ -106,6 +112,7 @@ UPDATE_WATCH_S = TRIAL_TIME_S + TRIAL_MARGIN_S   # how long `update` watches rep
 CONFIRM_WAIT_S = 10.0       # how long to wait for EVENT 0x0007 and HEALTH OPERATE after CONFIRM is DONE
 STATUS_SECONDS = 10.0       # default listening time of `status`
 RECV_BYTES = 2048           # larger than the biggest frame (16 + 1024 + 4)
+DEFAULT_SEQ_FILE = os.path.join("~", ".fsir", "console-seq")   # bench choice: per-user state file
 
 
 class Refused(Exception):
@@ -208,11 +215,90 @@ def format_report(r):
             f"self-test {r['self_test']}")
 
 
+def load_first_seq(path, now=None):
+    """Choose the first sequence number of this run (Sec. 4.0, REQ-065).
+
+    The onboard computer refuses an ARM or a dangerous command whose ground sequence number it
+    has seen since it started, so a run must never reuse a number of an earlier run. The state
+    file holds the last number the previous run used; this run starts one above it.
+
+    Numbering rule when the file is missing or unreadable (absent, empty, not a decimal
+    integer, or outside 1 to 2^32-1): start from the clock, seconds since the Unix epoch.
+    Why: the clock only grows, so a run that starts later starts higher than the runs
+    before it, with no memory needed. The rule is sound only while an earlier run sent fewer
+    frames than the seconds that have passed since it started (a frame needs at least a
+    round trip, so at the bench rates a run is far below one frame per second on average;
+    ASSUMPTION, owner to accept); it also stays inside 2^32-1 until the year 2106.
+
+    Args:
+        path: state file path.
+        now: current time, seconds since the Unix epoch; the clock if None.
+
+    Returns:
+        (first, note): first is the first sequence number to use, 1 to 2^32-1; note is a text
+        for the operator when the file could not be used, else None.
+    """
+    now = int(time.time()) if now is None else int(now)
+    try:
+        with open(path, "r", encoding="ascii") as f:
+            text = f.read().strip()
+        last = int(text, 10)
+        if not 1 <= last < SEQ_MAX:
+            raise ValueError(f"value {last} is outside 1 to {SEQ_MAX - 1}")
+        return last + 1, None
+    except FileNotFoundError:
+        return now, f"no sequence state file {path}: starting from clock time {now}"
+    except (OSError, ValueError, UnicodeDecodeError) as e:
+        return now, f"sequence state file {path} unreadable ({e}): starting from clock time {now}"
+
+
+def save_seq(path, seq):
+    """Write the last-used sequence number to the state file, atomically (Sec. 4.0, REQ-065).
+
+    A crash must never lead to a reused number, and a half-written file would be read as
+    damaged. So the number goes to a temporary file in the same directory, is forced to disk
+    (fsync), and then replaces the state file in one rename; the directory is synced as well so
+    the rename survives a power loss.
+
+    Args:
+        path: state file path; its directory is created if missing.
+        seq: the sequence number just taken, 1 to 2^32-1.
+
+    Raises:
+        Refused: the file could not be written (a number that is not saved could be reused).
+    """
+    folder = os.path.dirname(path) or "."
+    tmp = f"{path}.tmp{os.getpid()}"
+    try:
+        os.makedirs(folder, exist_ok=True)
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            os.write(fd, f"{seq}\n".encode("ascii"))
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(tmp, path)
+        try:
+            dfd = os.open(folder, os.O_RDONLY)
+            try:
+                os.fsync(dfd)
+            finally:
+                os.close(dfd)
+        except OSError:
+            pass                        # directory sync is not supported everywhere; the file is already synced
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise Refused(f"cannot save the sequence number to {path}: {e}") from None
+
+
 class Console:
     """One UDP socket to the onboard computer; stop-and-wait commands; collects reports."""
 
     def __init__(self, host, port, loss=0.0, timeout=TIMEOUT_S, first_seq=1, local_port=0,
-                 quiet=False, rng=None):
+                 quiet=False, rng=None, state_file=None):
         """Open the UDP socket to the onboard computer and set the sequence counter.
 
         The socket is bound to a local port because the onboard computer reports to the source
@@ -227,7 +313,10 @@ class Console:
             local_port: local UDP port to bind; 0 for any.
             quiet: True to print nothing from say().
             rng: random.Random for the radio simulator; a fresh one if None.
+            state_file: path where every number taken is saved (save_seq), so the next run
+                continues above it; None to keep no state.
         """
+        self.state_file = state_file
         self.addr = (host, port)
         self.loss = loss
         self.timeout = timeout
@@ -254,15 +343,21 @@ class Console:
     def next_seq(self):
         """Take the next sequence number (Sec. 4.0: numbers run 1 to 2^32-1, never reused).
 
+        The number is saved to the state file before it is used, so a crash after the frame has
+        gone out can never lead to the same number again (the onboard computer would refuse it,
+        0x04, REQ-065). A resend of the same command reuses its number and needs no new save.
+
         Returns:
             The new sequence number.
 
         Raises:
-            Refused: the numbers are used up.
+            Refused: the numbers are used up, or the state file could not be written.
         """
-        self.seq += 1
-        if self.seq > SEQ_MAX:
+        if self.seq + 1 > SEQ_MAX:
             raise Refused("sequence numbers used up")
+        if self.state_file:
+            save_seq(self.state_file, self.seq + 1)
+        self.seq += 1
         return self.seq
 
     def transmit(self, frame):
@@ -321,23 +416,48 @@ class Console:
 
 # ---- Commands ------------------------------------------------------------------------
 def upload(con, data, number, start=0):
-    """UPLOAD BEGIN, CHUNK..., END (Sec. 5.1). `start` > 0 resumes: BEGIN is skipped."""
+    """UPLOAD BEGIN, CHUNK..., END (Sec. 5.1). `start` > 0 resumes: BEGIN is skipped.
+
+    When a command is refused or goes unanswered, the error says which stage failed and how to
+    go on, because the right restart differs: a failed BEGIN stored nothing; a failed CHUNK
+    leaves the chunks before its offset stored but not that chunk itself (an unanswered chunk
+    may or may not have been stored); a failed END leaves every byte stored.
+
+    Args:
+        con: the Console.
+        data: image bytes.
+        number: image number, 0 to 65535.
+        start: byte offset to resume from, 0 to len(data); 0 sends BEGIN too.
+
+    Raises:
+        Refused: a command was refused or never answered; the text carries the resume advice.
+    """
     t0 = time.monotonic()
     total = len(data)
-    if start == 0:
-        con.command(DEST_ONBOARD, struct.pack("<BHI", UPLOAD_BEGIN, number, total), what="UPLOAD BEGIN")
+    stage = "UPLOAD BEGIN"
     offset = start
     try:
+        if start == 0:
+            con.command(DEST_ONBOARD, struct.pack("<BHI", UPLOAD_BEGIN, number, total), what="UPLOAD BEGIN")
         while offset < total:
+            stage = f"UPLOAD CHUNK offset {offset}"
             chunk = data[offset:offset + CHUNK_MAX]
-            con.command(DEST_ONBOARD, struct.pack("<BHI", UPLOAD_CHUNK, number, offset) + chunk,
-                        what=f"UPLOAD CHUNK offset {offset}")
+            con.command(DEST_ONBOARD, struct.pack("<BHI", UPLOAD_CHUNK, number, offset) + chunk, what=stage)
             offset += len(chunk)
             con.say(f"upload  {offset}/{total} bytes ({100 * offset // max(total, 1)} %)   ", end="\r")
+        stage = "UPLOAD END"
         con.command(DEST_ONBOARD, struct.pack("<BH", UPLOAD_END, number), what="UPLOAD END")
     except Refused as e:
-        raise Refused(f"{e}; the onboard computer has bytes up to offset {offset}: "
-                      f"resume with --offset {offset}") from None
+        again = f"upload IMAGE --number {number}"
+        if stage == "UPLOAD BEGIN":
+            advice = f"nothing is stored; run `{again}` again from the start (no --offset)"
+        elif stage == "UPLOAD END":
+            advice = (f"all {total} bytes were accepted; send only the END with `{again} --offset {total}`")
+        else:
+            advice = (f"bytes before offset {offset} were accepted; the chunk at {offset} is not "
+                      f"confirmed (an unanswered chunk may be stored): `{again} --offset {offset}`; "
+                      f"if that is refused 0x06, run `{again}` from the start (no --offset)")
+        raise Refused(f"{e}; {advice}") from None
     con.say(f"\nupload  complete, {total} bytes in {time.monotonic() - t0:.2f} s")
 
 
@@ -728,6 +848,10 @@ def cmd_status(con, args):
 def main(argv=None):
     """Parse the command line, run one subcommand, print FAILED on a refusal.
 
+    The first sequence number is --first-seq if given, else the one after the last number of
+    the earlier run, kept in --seq-file (load_first_seq), because the onboard computer refuses
+    a ground sequence number it has seen since it started (Sec. 4.0, REQ-065).
+
     Args:
         argv: argument list, or None for sys.argv.
 
@@ -741,8 +865,12 @@ def main(argv=None):
     p.add_argument("--radio-loss", type=float, default=0.0, metavar="P",
                    help="drop each outgoing datagram with probability P (0..1), resend after the timeout")
     p.add_argument("--timeout", type=float, default=TIMEOUT_S, help="seconds before a command is sent again")
-    p.add_argument("--first-seq", type=int, default=1,
-                   help="first sequence number (1; raise it when the onboard computer remembers an earlier run, REQ-065)")
+    p.add_argument("--first-seq", type=int, default=None,
+                   help="first sequence number, 1 or more; wins over the state file when given "
+                        "(default: continue from the state file, REQ-065)")
+    p.add_argument("--seq-file", default=DEFAULT_SEQ_FILE,
+                   help="file that keeps the last sequence number between runs (default %(default)s); "
+                        "the onboard computer refuses a number it has seen since it started")
     p.add_argument("--seed", type=int, default=None, help="seed of the radio-loss random numbers")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("status", help="print HEALTH reports for N seconds")
@@ -764,8 +892,17 @@ def main(argv=None):
     if not 0.0 <= a.radio_loss <= 1.0:
         p.error("--radio-loss must be between 0 and 1")
 
-    con = Console(a.host, a.port, a.radio_loss, a.timeout, a.first_seq, a.local_port,
-                  rng=random.Random(a.seed))
+    if a.first_seq is not None and not 1 <= a.first_seq <= SEQ_MAX:
+        p.error(f"--first-seq must be between 1 and {SEQ_MAX}")
+    seq_file = os.path.expanduser(a.seq_file)
+    if a.first_seq is not None:
+        first = a.first_seq
+    else:
+        first, note = load_first_seq(seq_file)
+        if note:
+            print(f"seq     {note}")
+    con = Console(a.host, a.port, a.radio_loss, a.timeout, first, a.local_port,
+                  rng=random.Random(a.seed), state_file=seq_file)
     try:
         if a.cmd == "status":
             code = cmd_status(con, a)

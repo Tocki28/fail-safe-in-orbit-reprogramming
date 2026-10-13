@@ -12,9 +12,10 @@
  *   - no radio envelope (Interfaces Sec. 4.1): commands are neither encrypted nor signed, so
  *     REQ-064, REQ-127 and REQ-129 are not met for commands. Firmware images are still checked
  *     for both signatures (image_checker.hpp);
- *   - no check for old commands sent again (REQ-065, ALREADY DONE REQ-031), expiry (REQ-066)
- *     or arming (REQ-112) here: the ground console restarts its counter at 1 and the board's
- *     clock is not set from ground time;
+ *   - old commands sent again (REQ-065) are caught for ARMs and dangerous commands only, and
+ *     only the last 64 (UsedSequences); no ALREADY DONE (REQ-031), no expiry check (REQ-066):
+ *     the ground console restarts its counter at 1 and the board's clock is not set from
+ *     ground time;
  *   - REQ-067 (commands only from the radio link) stands only as "only from this UDP port".
  */
 #ifndef FSIR_UPDATER_COMMAND_GATE_HPP
@@ -36,7 +37,7 @@ public:
   CommandGate(const CommandGate &) = delete;
   CommandGate & operator=(const CommandGate &) = delete;
 
-  // Opens the UDP socket on all interfaces. False if that failed; errno tells why.
+  // Opens the UDP socket on all interfaces, non-blocking and close-on-exec. False if that failed; errno tells why.
   bool open();
 
   int fd() const;
@@ -55,7 +56,13 @@ public:
 
   bool haveGround() const;
 
+  // Datagrams dropped since start, and how many of those got a log line (the rest were
+  // suppressed by the rate limit, config::kDropLogEveryMs).
+  uint32_t droppedCount() const;
+  uint32_t droppedLogged() const;
+
 private:
+  bool dropLogDue();
   bool sendToGround(uint8_t type, const uint8_t * payload, uint16_t length);
 
   uint16_t port_;
@@ -66,6 +73,10 @@ private:
   // Sec. 4.0). The ground link's own counter, apart from data link A's, so that each receiver
   // sees its numbers go up by one.
   uint32_t next_sequence_;
+  uint32_t dropped_;          // datagrams dropped since start
+  uint32_t dropped_logged_;   // of them, logged
+  uint32_t suppressed_;       // dropped since the last logged one
+  uint64_t last_drop_log_ms_;
   std::array<uint8_t, 2048> rx_;   // larger than any frame, so a longer datagram shows
   std::array<uint8_t, frame::kMaxBytes> tx_;
 };
@@ -77,6 +88,7 @@ struct ForwardedCommand
   uint32_t expiry;
   uint16_t length;
   bool armed;   // a dangerous command whose held ARM was checked and used up on arrival
+  uint64_t arm_at_ms;   // when that ARM arrived; checked again just before the ARM is sent on
   std::array<uint8_t, frame::kPayloadMax> payload;
 };
 
@@ -88,7 +100,7 @@ public:
   bool empty() const;
   bool full() const;
   // False if full. armed: the command is dangerous and its ARM was used up (updater.hpp).
-  bool push(const frame::Frame & command, bool armed);
+  bool push(const frame::Frame & command, bool armed, uint64_t arm_at_ms);
   // The oldest; only when !empty().
   const ForwardedCommand & front() const;
   void pop();
@@ -118,6 +130,26 @@ private:
     uint32_t ground_sequence;
   };
   std::array<Entry, config::kForwardTableSize> entries_;
+  size_t next_;
+};
+
+// The ground sequence numbers of the ARMs and dangerous commands accepted since start, the last
+// config::kUsedSequenceCount of them. A repeat is refused 0x04 (REQ-065).
+class UsedSequences
+{
+public:
+  UsedSequences();
+  bool contains(uint32_t sequence) const;
+  // Replaces the oldest when full.
+  void add(uint32_t sequence);
+
+private:
+  struct Entry
+  {
+    bool used;
+    uint32_t sequence;
+  };
+  std::array<Entry, config::kUsedSequenceCount> entries_;
   size_t next_;
 };
 

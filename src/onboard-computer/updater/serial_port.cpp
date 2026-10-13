@@ -53,7 +53,8 @@ bool SerialPort::open()
   close();
   // O_NONBLOCK: reads return at once with what has arrived; the main loop waits in poll().
   // O_NOCTTY: the device does not become this program's controlling terminal.
-  fd_ = ::open(path_, O_RDWR | O_NOCTTY | O_NONBLOCK);
+  // O_CLOEXEC: no child process inherits the device (audit finding #10).
+  fd_ = ::open(path_, O_RDWR | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
   if (fd_ < 0) {
     return false;
   }

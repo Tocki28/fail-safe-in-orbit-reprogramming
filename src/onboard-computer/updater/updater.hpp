@@ -11,7 +11,11 @@
  *     RECEIVED, then DONE or
  *     REFUSED (Interfaces Sec. 4.2, REQ-033). Commands 0x06 to 0x0D (SET LIMITS to ARM) are
  *     not built on the bench: REFUSED 0x06.
- *   Destination 0x02 (controller): passed on over data link A with the onboard computer's own
+ *   Destination 0x02 (controller): only the controller's own commands, 0x20 to 0x26 with the
+ *     payload length each needs (Interfaces Sec. 5.1 table), plus the ARM above; every other
+ *     identifier, including UPLOAD BEGIN, CHUNK, END and CANCEL (0x01 to 0x04), is refused 0x06:
+ *     only DELIVER produces UPLOAD commands to the controller, after the image checks (REQ-047).
+ *     Passed on over data link A with the onboard computer's own
  *     sequence number; the controller's answers come back to the ground with the ground's
  *     sequence number (why: data_link.hpp). No answer from the controller in time: nothing is
  *     made up for the ground, which sees an unanswered command; a late answer is still passed
@@ -47,6 +51,14 @@
  *     ground sequence number -> REFUSED 0x01 (the ARM stays held; it allows that one command
  *     only); the ARM older than kArmExpiryMs -> REFUSED 0x02 (it is dropped). Otherwise the ARM
  *     is used up and the command joins the queue marked armed.
+ *   - A dangerous command that arrives while a delivery or the test image runs, or the test image
+ *     is due, is refused 0x05 (bench choice, as for a full queue) and does not use up the ARM: the
+ *     pair would otherwise wait behind up to 40 KB of stop-and-wait.
+ *   - The ARM's age is checked again when the pair is about to go out (sendNext, just before
+ *     sendArm), against the time its ARM arrived: older than kArmExpiryMs -> REFUSED 0x02 and the
+ *     command is dropped (REQ-030).
+ *   - A ground sequence number that an accepted ARM or dangerous command used before (the last 64)
+ *     is refused 0x04 (REQ-065).
  *   - When an armed command's turn comes (sendNext), the pair goes out: an ARM naming the
  *     sequence number the command will carry on data link A, then the command. The ARM's
  *     answers are the onboard computer's own and do not go to the ground; if the controller
@@ -81,6 +93,7 @@
 #include "protocol.hpp"
 #include "report_store.hpp"
 #include "test_image.hpp"
+#include "trial_watch.hpp"
 #include "update_manager.hpp"
 
 class Updater final : public ControllerFrameHandler
@@ -131,6 +144,7 @@ private:
   void onGroundCommand(const frame::Frame & c);
   void onGroundArm(const frame::Frame & c);
   uint8_t armCheck(const frame::Frame & c);
+  bool dangerousBusy() const;
   void sendArm();
   void sendQueued();
   void onOnboardCommand(const frame::Frame & c);
@@ -146,6 +160,8 @@ private:
   uint8_t deliveryModeCheck() const;
   void finishDelivery(Delivery::Step step, uint8_t code);
   void startTestImage();
+  void trialWatch(const frame::Frame * report);   // decision H, separable
+  void onTrialOverrun();   // decision H
 
   void sendNext();
   void onTimeout();
@@ -171,6 +187,8 @@ private:
   HeldArm arm_;
   PairStage pair_;
   TestImageTrigger test_trigger_;
+  TrialWatch trial_watch_;   // decision H, separable
+  UsedSequences used_;
   bool test_image_running_;   // delivery_ carries the test image, not a ground DELIVER
   std::array<uint8_t, frame::kPayloadMax> payload_;
   std::array<uint8_t, report::kEventMaxBytes> report_;

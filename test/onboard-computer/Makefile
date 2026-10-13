@@ -2,9 +2,12 @@
 # Bench only; nothing here is part of the operating software (REQ-101).
 #
 #   make check   unit tests, then the bench test (fake controller on a pseudo-terminal, fake
-#                ground on UDP, the real fsir-updater between them)
+#                ground on UDP, the real fsir-updater between them), then the restore tests
 #   make unit    unit tests only (unit/test_updater.cpp)
 #   make bench   bench test only (bench_test.py)
+#   make restore tests of restore.sh and brick.sh with a mock OpenOCD (restore_test.sh), and
+#                the regression test of tools/make_image.py (image_tool_test.sh); both need the
+#                host fsir-updater, built here, and the development keys (../keys-dev)
 #   make unit-arm  the unit tests on 64-bit ARM Linux, in Docker (not part of check: slow)
 #   make clean
 #
@@ -20,6 +23,8 @@ IMAGES       = $(CTRL)/build/images
 TEST_IMAGES  = $(REPO)/test/controller/build/images
 TOOLS        = $(REPO)/tools
 PY          ?= python3
+# The Python that has `cryptography` (signing), next to the repository as in src/controller/bench.mk.
+PYSIGN      ?= $(abspath $(REPO)/../.venv/bin/python)
 OPENSSL     ?= $(shell brew --prefix openssl@3 2>/dev/null)
 
 NEEDED = $(IMAGES)/firmware-A.img $(IMAGES)/firmware-B.img \
@@ -40,13 +45,13 @@ REF_FILES  = $(REF)/frame.c $(REF)/frame.h $(REF)/crc32.c $(REF)/crc32.h
 # Every updater file except main.cpp.
 UPD_SOURCES = $(filter-out $(UPD)/main.cpp,$(wildcard $(UPD)/*.cpp))
 UPD_HEADERS = $(wildcard $(UPD)/*.hpp)
-WARNINGS = -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow -Wformat=2 -Werror
+WARNINGS = -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow -Wformat=2 -Wswitch-enum -Werror
 # The undefined-behaviour sanitizer stops the run on any index out of bounds or overflow (the
 # address sanitizer does not run on this Mac; see test/controller/Makefile).
 SANITIZE = -fsanitize=undefined -fno-sanitize-recover=undefined
 FLIPPED  = build/firmware-B-flipped.img
 
-check: unit bench
+check: unit bench restore
 
 images-present:
 	@for f in $(NEEDED); do test -f $$f || { echo "missing $$f: run make -C src/controller and make -C test/controller first"; exit 1; }; done
@@ -104,7 +109,15 @@ bench: images-present $(FLIPPED)
 	$(PY) bench_test.py $(UPD)/build/host/fsir-updater $(IMAGES)/firmware-B.img $(FLIPPED) \
 	  $(TEST_IMAGES)/firmware-B-wrong-key-a.img build/bench
 
+# restore.sh and brick.sh against a mock OpenOCD, with the real host fsir-updater and the real
+# signed images; and make_image.py against the committed images. The PY and KEYS defaults are
+# those of src/controller/bench.mk (next to the repository, outside it).
+restore: images-present
+	$(MAKE) -C $(UPD)
+	PY=$(PYSIGN) FSIR_UPDATER=$(UPD)/build/host/fsir-updater sh image_tool_test.sh
+	PY=$(PYSIGN) FSIR_UPDATER=$(UPD)/build/host/fsir-updater sh restore_test.sh
+
 clean:
 	rm -rf build
 
-.PHONY: check images-present unit unit-arm bench clean
+.PHONY: check images-present unit unit-arm bench restore clean

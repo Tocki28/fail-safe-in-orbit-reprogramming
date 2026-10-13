@@ -18,7 +18,7 @@ const char * modeName(uint8_t mode)
     case report::kModeOperate:  return "OPERATE";
     case report::kModeTrial:    return "TRIAL";
     case report::kModeFallback: return "FALLBACK";
-    default:                    return "unknown";
+    default:                    return "unknown";   // raw byte off the wire: any other value is unknown
   }
 }
 
@@ -47,7 +47,7 @@ const char * eventName(uint16_t code)
     case 0x0103: return "restore done";
     case 0x0104: return "health reports dropped";
     case 0x0105: return "onboard computer clock differs from ground time";
-    default:     return "unknown";
+    default:     return "unknown";   // raw byte off the wire: any other value is unknown
   }
 }
 
@@ -63,7 +63,7 @@ const char * slotName(uint8_t slot)
     case 0x01: return "A";
     case 0x02: return "B";
     case 0x03: return "last-resort";
-    default:   return "unknown";
+    default:   return "unknown";   // raw byte off the wire: any other value is unknown
   }
 }
 

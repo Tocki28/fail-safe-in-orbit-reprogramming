@@ -19,6 +19,7 @@
 #include <array>
 #include <cerrno>
 #include <csignal>
+#include <cstdio>
 #include <cstring>
 #include <poll.h>
 
@@ -28,6 +29,7 @@
 #include "controller_watch.hpp"
 #include "data_link.hpp"
 #include "image_checker.hpp"
+#include "image_file_check.hpp"
 #include "keys.h"
 #include "log.hpp"
 #include "options.hpp"
@@ -39,7 +41,8 @@
 namespace
 {
 
-constexpr int kExitStopped = 0;     // stopped by SIGINT or SIGTERM
+constexpr int kExitStopped = 0;     // stopped by SIGINT or SIGTERM; in check-only mode: image passed
+constexpr int kExitImageRefused = 1;   // check-only mode: the image did not pass
 constexpr int kExitUsage = 2;       // bad command line
 constexpr int kExitCannotRun = 3;   // keys, data directory or socket not usable
 constexpr int kExitLoopFailed = 4;  // poll() failed
@@ -52,9 +55,14 @@ extern "C" void onSignal(int)
 }
 
 /**
- * @brief Installs the handler that stops the loop on SIGINT and SIGTERM.
+ * @brief Installs the handler that stops the loop on SIGINT and SIGTERM, and ignores SIGPIPE.
  *
  * No SA_RESTART: poll() returns early with EINTR, and the loop sees g_stop at once.
+ * SIGPIPE is ignored so that a closed pipe (a log reader that went away, a socket peer that
+ * closed) makes write() return EPIPE, which every caller already checks, instead of killing
+ * the updater in the middle of an update (audit finding #8; REQ-063 asks for an update to
+ * survive what the environment does).
+ *
  * @return nothing
  */
 void catchSignals()
@@ -65,6 +73,11 @@ void catchSignals()
   action.sa_flags = 0;
   (void)sigaction(SIGINT, &action, nullptr);
   (void)sigaction(SIGTERM, &action, nullptr);
+  struct sigaction ignore{};
+  ignore.sa_handler = SIG_IGN;
+  sigemptyset(&ignore.sa_mask);
+  ignore.sa_flags = 0;
+  (void)sigaction(SIGPIPE, &ignore, nullptr);
 }
 
 /**
@@ -101,7 +114,7 @@ bool loadKey(const char * file, const uint8_t * built_in, std::array<uint8_t, 32
  *
  * @param[in]    argc  number of command-line arguments
  * @param[in]    argv  command-line arguments
- * @return 0: stopped by SIGINT or SIGTERM; 2: bad command line; 3: keys, data directory or socket not usable; 4: poll() failed
+ * @return 0: stopped by SIGINT or SIGTERM (check-only mode: the image passed); 1: check-only mode, the image did not pass; 2: bad command line; 3: keys, data directory or socket not usable; 4: poll() failed
  */
 int main(int argc, char ** argv)
 {
@@ -124,6 +137,20 @@ int main(int argc, char ** argv)
   if (!checker.ready()) {
     logging::line("OpenSSL did not accept the public keys as Ed25519 keys");
     return kExitCannotRun;
+  }
+
+  // Check-only mode (REQ-118): the checks of an upload on one file, one result line, no
+  // storage, no sockets. The restore script asks it about every image before it writes any.
+  if (options.check_image != nullptr) {
+    uint8_t kind = 0;
+    if (!parseKindName(options.check_kind, kind)) {
+      printUsage(argv[0]);
+      return kExitUsage;
+    }
+    std::array<char, 384> line{};
+    bool passed = checkImageFile(options.check_image, kind, checker, line.data(), line.size());
+    (void)std::printf("%s\n", line.data());
+    return passed ? kExitStopped : kExitImageRefused;
   }
 
   // 2. Image storage.

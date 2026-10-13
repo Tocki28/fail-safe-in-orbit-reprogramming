@@ -25,7 +25,7 @@ SOURCES = $(wildcard *.cpp)
 HEADERS = $(wildcard *.hpp) $(COMMON)/image_format.h $(COMMON)/layout.h $(COMMON)/keys.h
 
 WARNINGS = -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow \
-           -Wold-style-cast -Wcast-align -Wnull-dereference -Wformat=2 -Werror
+           -Wold-style-cast -Wcast-align -Wnull-dereference -Wformat=2 -Wswitch-enum -Werror
 FLAGS    = -std=c++17 -O2 -fno-exceptions -fno-rtti $(WARNINGS)
 INCLUDES = -I. -I$(COMMON)
 

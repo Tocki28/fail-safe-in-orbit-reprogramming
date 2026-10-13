@@ -1,0 +1,27 @@
+# fsir-updater.service - runs the onboard computer's updater under systemd on the board.
+#
+# Why each line (audit finding #8, REQ-063: an update must survive what the environment does):
+#   Restart=always      the updater is restarted whenever it ends, however it ends; an update in
+#                       progress resumes from its .part file (update_manager.hpp).
+#   RestartSec=1        one second between restarts, so a start that fails at once does not spin.
+#   StandardOutput/Error=journal   the updater logs to stderr only (log.hpp); journald keeps it.
+#   StateDirectory=fsir            systemd makes /var/lib/fsir (owner root) before the start.
+# Options as the bench runs them (Makefile header, README.md): serial device /dev/ttyACM0,
+# ground link UDP port 47001 on all interfaces (the updater has no --host option: it binds
+# 0.0.0.0, command_gate.hpp), images in /var/lib/fsir/images, a beat of 2 s.
+[Unit]
+Description=fsir-updater: onboard computer update manager (ground link UDP, data link A serial)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/fsir-updater --device /dev/ttyACM0 --udp-port 47001 --data-dir /var/lib/fsir/images --beat-s 2
+Restart=always
+RestartSec=1
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fsir-updater
+StateDirectory=fsir
+
+[Install]
+WantedBy=multi-user.target

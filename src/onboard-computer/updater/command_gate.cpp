@@ -2,10 +2,12 @@
 
 #include <arpa/inet.h>
 #include <cerrno>
+#include <fcntl.h>
 #include <cstring>
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "clock.hpp"
 #include "log.hpp"
 
 namespace
@@ -58,14 +60,15 @@ const char * destinationName(uint8_t destination)
     case frame::kDestOnboard:    return "onboard computer";
     case frame::kDestController: return "controller";
     case frame::kDestGround:     return "ground";
-    default:                     return "unknown";
+    default:                     return "unknown";   // raw Destination byte off the wire: any other value is unknown
   }
 }
 
 }  // namespace
 
 CommandGate::CommandGate(uint16_t port)
-: port_(port), fd_(-1), ground_{}, have_ground_(false), next_sequence_(1), rx_{}, tx_{}
+: port_(port), fd_(-1), ground_{}, have_ground_(false), next_sequence_(1), dropped_(0),
+  dropped_logged_(0), suppressed_(0), last_drop_log_ms_(0), rx_{}, tx_{}
 {
 }
 
@@ -85,16 +88,36 @@ CommandGate::~CommandGate()
 /**
  * @brief Opens the UDP socket on all interfaces.
  *
- * Opens the UDP socket on all interfaces. False if that failed; errno tells why.
- * Binds INADDR_ANY on the gate's port; on a bind failure the socket is closed again and errno is kept.
+ * Opens the UDP socket on all interfaces, non-blocking and close-on-exec. False if that failed;
+ * errno tells why. Binds INADDR_ANY on the gate's port; on a bind failure the socket is closed again and errno is kept.
  * @return true: socket open and bound; false: socket() or bind() failed, errno holds the cause
  */
 bool CommandGate::open()
 {
+  // Non-blocking, so a datagram that poll() reported and a checksum dropped cannot make
+  // recvfrom() wait; close-on-exec, so no child process ever inherits the ground socket
+  // (audit finding #10). On Linux both are set in the one call; elsewhere (the Mac that runs
+  // the tests) fcntl does the same after it.
+#if defined(SOCK_NONBLOCK) && defined(SOCK_CLOEXEC)
+  fd_ = ::socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+  if (fd_ < 0) {
+    return false;
+  }
+#else
   fd_ = ::socket(AF_INET, SOCK_DGRAM, 0);
   if (fd_ < 0) {
     return false;
   }
+  int flags = ::fcntl(fd_, F_GETFL);
+  if (flags < 0 || ::fcntl(fd_, F_SETFL, flags | O_NONBLOCK) != 0 ||
+      ::fcntl(fd_, F_SETFD, FD_CLOEXEC) != 0) {
+    int saved = errno;
+    (void)::close(fd_);
+    fd_ = -1;
+    errno = saved;
+    return false;
+  }
+#endif
   sockaddr_in address{};
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = 0;   // INADDR_ANY: every interface (0.0.0.0 in any byte order)
@@ -149,19 +172,25 @@ bool CommandGate::receive(frame::Frame & command)
   // Damaged, cut short, too long, wrong Sync or Version: dropped without an answer
   // (Interfaces Sec. 4.0 and 4.2; REQ-107).
   if (!frame::decode(rx_.data(), static_cast<size_t>(size), command)) {
-    logging::line("ground link: datagram of %zd bytes from %s:%u is not a good frame; dropped",
-      size, name.data(), getPort(source));
+    if (dropLogDue()) {
+      logging::line("ground link: datagram of %zd bytes from %s:%u is not a good frame; dropped",
+        size, name.data(), getPort(source));
+    }
     return false;
   }
   if (command.type != frame::kTypeCommand) {
-    logging::line("ground link: frame type 0x%02x from the ground is not a command; dropped",
-      command.type);
+    if (dropLogDue()) {
+      logging::line("ground link: frame type 0x%02x from the ground is not a command; dropped",
+        command.type);
+    }
     return false;
   }
   if (command.destination != frame::kDestOnboard &&
       command.destination != frame::kDestController) {
-    logging::line("ground link: command sequence %u for destination 0x%02x; dropped",
-      command.sequence, command.destination);
+    if (dropLogDue()) {
+      logging::line("ground link: command sequence %u for destination 0x%02x; dropped",
+        command.sequence, command.destination);
+    }
     return false;
   }
 
@@ -177,6 +206,57 @@ bool CommandGate::receive(frame::Frame & command)
     (command.length > 0) ? command.payload[0] : 0U, command.sequence,
     destinationName(command.destination), command.length);
   return true;
+}
+
+/**
+ * @brief Counts a dropped datagram and says whether its log line may be printed now.
+ *
+ * Anyone on the network can send bad datagrams as fast as the link takes them; one log line each
+ * would fill the log of an update in progress (audit finding #8). At most one line per
+ * config::kDropLogEveryMs is printed, and it is preceded by a line that says how many were
+ * suppressed since the last one.
+ *
+ * @return true: print the line for this datagram; false: suppressed
+ */
+bool CommandGate::dropLogDue()
+{
+  dropped_++;
+  uint64_t now = clocks::nowMs();
+  if (dropped_logged_ > 0 && now - last_drop_log_ms_ < config::kDropLogEveryMs) {
+    suppressed_++;
+    return false;
+  }
+  if (suppressed_ > 0) {
+    logging::line("ground link: %u more datagrams dropped since the last such line", suppressed_);
+    suppressed_ = 0;
+  }
+  dropped_logged_++;
+  last_drop_log_ms_ = now;
+  return true;
+}
+
+/**
+ * @brief Gives the number of datagrams dropped since start.
+ *
+ * Counted for every drop, logged or not (audit finding #8).
+ *
+ * @return count of dropped datagrams
+ */
+uint32_t CommandGate::droppedCount() const
+{
+  return dropped_;
+}
+
+/**
+ * @brief Gives how many of the dropped datagrams got a log line.
+ *
+ * The rest were suppressed by the rate limit (config::kDropLogEveryMs).
+ *
+ * @return count of logged drops
+ */
+uint32_t CommandGate::droppedLogged() const
+{
+  return dropped_logged_;
 }
 
 /**
@@ -277,9 +357,11 @@ bool ForwardQueue::full() const
  *
  * @param[in]     command  the ground command; its payload is copied
  * @param[in]     armed    true: a dangerous command whose ARM was checked and used up
+ * @param[in]     arm_at_ms  when that ARM arrived, ms; kept so that its age is checked again just
+ *                         before the ARM goes on to the controller (REQ-030); ignored if !armed
  * @return true: queued; false: the queue is full or the payload is too long
  */
-bool ForwardQueue::push(const frame::Frame & command, bool armed)
+bool ForwardQueue::push(const frame::Frame & command, bool armed, uint64_t arm_at_ms)
 {
   if (full() || command.length > frame::kPayloadMax) {
     return false;
@@ -289,6 +371,7 @@ bool ForwardQueue::push(const frame::Frame & command, bool armed)
   item.expiry = command.expiry;
   item.length = command.length;
   item.armed = armed;
+  item.arm_at_ms = arm_at_ms;
   std::memcpy(item.payload.data(), command.payload, command.length);
   count_++;
   return true;
@@ -359,4 +442,39 @@ void ForwardTable::remove(uint32_t link_sequence)
       entry.used = false;
     }
   }
+}
+
+UsedSequences::UsedSequences()
+: entries_{}, next_(0)
+{
+}
+
+/**
+ * @brief Tells whether a ground sequence number is among the last config::kUsedSequenceCount used.
+ *
+ * @param[in]     sequence  the ground sequence number of a command
+ * @return true: used before (a repeat, REFUSED 0x04, REQ-065); false: not in the ring
+ */
+bool UsedSequences::contains(uint32_t sequence) const
+{
+  for (const Entry & entry : entries_) {
+    if (entry.used && entry.sequence == sequence) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Remembers a ground sequence number as used.
+ *
+ * Replaces the oldest entry when the ring of config::kUsedSequenceCount is full (REQ-065).
+ *
+ * @param[in]     sequence  the ground sequence number of an accepted ARM or dangerous command
+ * @return nothing
+ */
+void UsedSequences::add(uint32_t sequence)
+{
+  entries_[next_] = Entry{true, sequence};
+  next_ = (next_ + 1) % entries_.size();
 }

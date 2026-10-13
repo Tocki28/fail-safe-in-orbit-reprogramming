@@ -16,6 +16,8 @@ struct Options
   const char * key_b_file;   // 32-byte public key B; nullptr: the key built in from keys.h
   uint32_t beat_s;           // GET STATUS to the controller every beat_s when idle; 0: off
   bool verbose;              // print every frame
+  const char * check_image;  // --check-image FILE: check-only mode (image_file_check.hpp); nullptr: run as the updater
+  const char * check_kind;   // --kind: bootloader, main or last-resort; used with --check-image
 };
 
 void printUsage(const char * program);

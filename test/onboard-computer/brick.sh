@@ -22,7 +22,17 @@ ser=
 [ "${1:-}" = "--serial" ] && ser=${2:-}
 [ -x "$OPENOCD" ] || { echo "BRICK FAILED: openocd not executable: $OPENOCD"; exit 2; }
 
-tcl=${TMPDIR:-/tmp}/brick.$$.tcl
+# Private temp file (mktemp: an unpredictable name), removed on every way out of the script.
+tcl=$(mktemp "${TMPDIR:-/tmp}/brick.XXXXXX") || { echo "BRICK FAILED: temp file (mktemp)"; exit 2; }
+
+# @brief  Remove the temporary OpenOCD script.
+#
+# Runs on every exit and on INT, TERM and HUP (EXIT trap), so an interrupt leaves no file behind.
+#
+# @return 0
+cleanup() { rm -f "$tcl"; }
+trap cleanup EXIT
+trap 'echo "BRICK FAILED: interrupted"; exit 1' INT TERM HUP
 cat > "$tcl" <<'EOT'
 # @brief  Run one OpenOCD command block under a step name and stop with an error if it fails.
 #
@@ -39,18 +49,21 @@ proc step {name body} {
 step "connect" { init }
 step "halt under reset" { reset halt }
 step "mass erase" { stm32l4x mass_erase 0 }
-step "check flash start is erased" { mdw 0x08000000 1 }
+# A mass erase leaves every word 0xFFFFFFFF; any other value at the start of flash means the
+# erase did not happen (audit item 18). read_memory returns a list of words [OpenOCD User's
+# Guide 0.12.0, chapter "General Commands", read_memory].
+step "check flash start is erased" {
+    if {[lindex [read_memory 0x08000000 32 1] 0] != 0xFFFFFFFF} { error "flash start not erased" }
+}
 shutdown
 EOT
 set -- -s "$OCD_SCRIPTS" -f interface/stlink.cfg
 [ -n "$ser" ] && set -- "$@" -c "adapter serial $ser"
 set -- "$@" -f target/stm32g4x.cfg -c "reset_config srst_only srst_nogate connect_assert_srst" -f "$tcl"
 if "$OPENOCD" "$@" > "$LOG" 2>&1; then
-    rm -f "$tcl"
     echo "BRICK DONE: flash mass-erased; no firmware can run"
     exit 0
 fi
 s=$(grep '^STEPFAIL: ' "$LOG" | tail -1 | sed 's/^STEPFAIL: //; s/: .*//')
-rm -f "$tcl"
 echo "BRICK FAILED: ${s:-connect} (log: $LOG)"
 exit 1

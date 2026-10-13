@@ -41,9 +41,66 @@ bool arrivalOk(uint8_t id, uint16_t length)
       return length == command::kImageNumberOnlyBytes;
     case command::kGetStatus:
       return length == command::kGetStatusBytes;
-    default:
+    case command::kArm:   // an ARM for the onboard computer's own commands: not built
       return false;
   }
+  // Every other identifier (0x06 to 0x0C are not built on the bench, the rest unknown).
+  return false;
+}
+
+/**
+ * @brief Tells whether a ground command for the controller is one of its commands, with the payload length its fields need.
+ *
+ * The allowed list is the controller rows of the Interfaces Sec. 5.1 table, 0x20 to 0x26, each
+ * with its exact payload length. Anything else sent to Destination 0x02 is refused: the UPLOAD
+ * commands (0x01 to 0x04) must never reach the controller from the ground, because they would
+ * carry an image past the onboard computer's checks (REQ-047, audit findings #1 and #12);
+ * 0x40 EQUIPMENT is TBD in the table and so is not allowed yet. The ARM (0x0D) is handled
+ * before this test.
+ *
+ * @param[in] id  the command identifier, payload byte 0
+ * @param[in] length  payload length of the command, in bytes
+ * @return true: a controller command with the right length; false: otherwise
+ */
+bool controllerCommandOk(uint8_t id, uint16_t length)
+{
+  switch (id) {
+    case command::kSwitch:
+    case command::kReturnToPrevious:
+    case command::kLeaveFallback:
+    case command::kGetStatus:
+    case command::kConfirm:
+      return length == command::kIdBytes;
+    case command::kStartFailed:
+      return length == command::kStartFailedBytes;
+    case command::kSetControllerTime:
+      return length == command::kSetControllerTimeBytes;
+  }
+  return false;   // every other identifier: not a command the ground may send to the controller
+}
+
+/**
+ * @brief Tells whether a command to the onboard computer names an image number.
+ *
+ * UPLOAD BEGIN, CHUNK, END, CANCEL and DELIVER carry the image number in payload bytes 1 and 2.
+ *
+ * @param[in] id  the command identifier, payload byte 0
+ * @return true: the command carries an image number; false: it does not
+ */
+bool carriesImageNumber(uint8_t id)
+{
+  switch (id) {
+    case command::kUploadBegin:
+    case command::kUploadChunk:
+    case command::kUploadEnd:
+    case command::kUploadCancel:
+    case command::kDeliver:
+      return true;
+    case command::kGetStatus:
+    case command::kArm:
+      return false;
+  }
+  return false;
 }
 
 /**
@@ -98,7 +155,8 @@ Updater::Updater(CommandGate & gate, DataLink & link, UploadStore & store,
   const ImageChecker & checker, ReportStore & reports, ControllerWatch & watch, uint32_t beat_ms)
 : gate_(gate), link_(link), store_(store), checker_(checker), reports_(reports), watch_(watch),
   beat_ms_(beat_ms), next_beat_ms_(0), now_ms_(0), sender_(Sender::kNone), reports_dropped_(0),
-  queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), test_image_running_(false), payload_{},
+  queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), trial_watch_(config::kTrialMs, config::kTrialMarginMs), used_(),
+  test_image_running_(false), payload_{},
   report_{}
 {
 }
@@ -171,7 +229,10 @@ void Updater::onGroundReadable(uint64_t now_ms)
  * A dangerous command for the controller is checked against the held ARM here, when it arrives
  * [Interfaces, Sec. 5.2: "when the named command arrives"], and queued marked armed; the pair
  * itself goes out when its turn comes (sendNext). The ARM is used up only once the command is
- * queued, so a full queue (REFUSED 0x05) does not waste it.
+ * queued, so a full queue (REFUSED 0x05) does not waste it. Before that: the controller's allowed
+ * list (REFUSED 0x06), a ground sequence number used before by an ARM or dangerous command
+ * (REFUSED 0x04, REQ-065), and a delivery or test image in the way (REFUSED 0x05, ARM kept).
+ * The ARM's arrival time travels with the command so that sendNext can check its age again.
  *
  * @param[in]     c  the command frame; c.payload is valid during the call
  * @return nothing
@@ -187,17 +248,39 @@ void Updater::onGroundCommand(const frame::Frame & c)
     onGroundArm(c);
     return;
   }
+  // Only the controller's own commands go on (audit findings #1, #12): an UPLOAD command or an
+  // unknown identifier or a wrong length is refused here and never reaches data link A.
+  if (c.length == 0 || !controllerCommandOk(id, c.length)) {
+    logging::line("ground: command 0x%02x with %u payload bytes for the controller is not on the "
+      "allowed list (Sec. 5.1, 0x20 to 0x26); refused 0x06", id, c.length);
+    refused(c.sequence, answer::kImpossible);
+    return;
+  }
   bool armed = false;
+  uint64_t arm_at_ms = 0;
   if (isDangerous(id)) {
+    if (used_.contains(c.sequence)) {
+      logging::line("ground: dangerous command 0x%02x sequence %u: that sequence number was used "
+        "before; refused 0x04", id, c.sequence);
+      refused(c.sequence, answer::kOldCommand);
+      return;
+    }
     uint8_t code = armCheck(c);
     if (code != answer::kSuccess) {
       refused(c.sequence, code);
       return;
     }
+    if (dangerousBusy()) {
+      logging::line("ground: dangerous command 0x%02x sequence %u refused 0x05: a delivery or the "
+        "test image runs or is due; the ARM stays held", id, c.sequence);
+      refused(c.sequence, answer::kNotInThisMode);
+      return;
+    }
     armed = true;
+    arm_at_ms = arm_.at_ms;
   }
   // For the controller: passed on in arrival order, when data link A is free (sendNext).
-  if (!queue_.push(c, armed)) {
+  if (!queue_.push(c, armed, arm_at_ms)) {
     logging::line("ground: command sequence %u for the controller refused 0x05: %zu commands "
       "already wait for data link A", c.sequence, config::kForwardQueueSize);
     refused(c.sequence, answer::kNotInThisMode);
@@ -205,8 +288,23 @@ void Updater::onGroundCommand(const frame::Frame & c)
   }
   if (armed) {
     arm_.held = false;
+    used_.add(c.sequence);
   }
   sendNext();
+}
+
+/**
+ * @brief Tells whether data link A is taken by something a dangerous command must not wait behind.
+ *
+ * A delivery (up to 40 KB in 256-byte steps) or the test image, running or due, would keep an
+ * armed command in the queue for far longer than the ARM's validity; the command is refused
+ * instead of queued (REQ-030, REQ-112; audit finding #1).
+ *
+ * @return true: a delivery or the test image runs, or the test image is due; false: link A is free of them
+ */
+bool Updater::dangerousBusy() const
+{
+  return delivery_.active() || test_trigger_.due();
 }
 
 /**
@@ -228,6 +326,13 @@ void Updater::onGroundArm(const frame::Frame & c)
     refused(c.sequence, answer::kImpossible);
     return;
   }
+  if (used_.contains(c.sequence)) {
+    logging::line("ground: ARM sequence %u: that sequence number was used before; refused 0x04",
+      c.sequence);
+    refused(c.sequence, answer::kOldCommand);
+    return;
+  }
+  used_.add(c.sequence);
   arm_.held = true;
   arm_.identifier = c.payload[1];
   arm_.command_sequence = bytes::readU32(&c.payload[2]);
@@ -272,7 +377,8 @@ uint8_t Updater::armCheck(const frame::Frame & c)
  * @brief Runs a ground command addressed to the onboard computer.
  *
  * A command that fails the arrival checks (arrivalOk) is answered REFUSED 0x06 only. Any other is
- * answered RECEIVED, then run, and ends in DONE or REFUSED (Interfaces Sec. 4.2, REQ-033).
+ * answered RECEIVED, then run, and ends in DONE or REFUSED (Interfaces Sec. 4.2, REQ-033). An
+ * image number 0xFFFF (the test image's) is refused 0x06 on arrival.
  *
  * @param[in] c  the command frame
  * @return nothing
@@ -286,16 +392,25 @@ void Updater::onOnboardCommand(const frame::Frame & c)
     refused(c.sequence, answer::kImpossible);
     return;
   }
+  // Image number 0xFFFF is the controller's test image, which only the onboard computer sends
+  // itself (Sec. 5.1); from the ground it is an impossible value (audit finding #11).
+  if (carriesImageNumber(id) && imageNumber(c) == command::kTestImageNumber) {
+    logging::line("ground: command 0x%02x names image number 0xFFFF, the test image's; refused "
+      "0x06", id);
+    refused(c.sequence, answer::kImpossible);
+    return;
+  }
   received(c.sequence);
   switch (id) {
-    case command::kUploadBegin:   uploadBegin(c);  break;
-    case command::kUploadChunk:   uploadChunk(c);  break;
-    case command::kUploadEnd:     uploadEnd(c);    break;
-    case command::kUploadCancel:  uploadCancel(c); break;
-    case command::kDeliver:       deliver(c);      break;
-    case command::kGetStatus:     getStatus(c);    break;
-    default:                      refused(c.sequence, answer::kImpossible); break;
+    case command::kUploadBegin:   uploadBegin(c);  return;
+    case command::kUploadChunk:   uploadChunk(c);  return;
+    case command::kUploadEnd:     uploadEnd(c);    return;
+    case command::kUploadCancel:  uploadCancel(c); return;
+    case command::kDeliver:       deliver(c);      return;
+    case command::kGetStatus:     getStatus(c);    return;
+    case command::kArm:           break;
   }
+  refused(c.sequence, answer::kImpossible);   // not reached: arrivalOk lets only the six above in
 }
 
 /**
@@ -502,7 +617,7 @@ void Updater::getStatus(const frame::Frame & c)
  * goes down: the result is logged, and the controller's EVENT reports tell the ground the rest.
  *
  * @param[in]     step  kDone or kRefused (Delivery::onFinalAnswer, or a timeout)
- * @param[in]     code  the refusal reason when step is kRefused (protocol.hpp; 0xFF: no answer)
+ * @param[in]     code  the refusal reason when step is kRefused (protocol.hpp; 0xFF: no answer, 0xFD: cannot send)
  * @return nothing
  */
 void Updater::finishDelivery(Delivery::Step step, uint8_t code)
@@ -513,6 +628,9 @@ void Updater::finishDelivery(Delivery::Step step, uint8_t code)
     } else if (code == answer::kNoAnswerBench) {
       logging::line("test image: no answer from the controller after %zu of %zu bytes; not "
         "retried", delivery_.sent(), delivery_.size());
+    } else if (code == answer::kCannotSendBench) {
+      logging::line("test image: data link A cannot send, after %zu of %zu bytes; not retried",
+        delivery_.sent(), delivery_.size());
     } else {
       logging::line("test image: refused 0x%02x after %zu of %zu bytes; not retried", code,
         delivery_.sent(), delivery_.size());
@@ -667,12 +785,15 @@ void Updater::onControllerAnswer(const frame::Answer & a)
       break;
     case Sender::kArm:
       if (final) {
-        if (a.kind == answer::kRefused) {
+        if (a.kind == answer::kRefused || a.kind == answer::kAlreadyDone) {
           // Do not send the command; the ground's dangerous command is refused with the
-          // controller's code.
-          logging::line("controller: ARM sequence %u refused 0x%02x; ground command sequence %u "
-            "refused with it and not sent", a.answered, a.code, queue_.front().ground_sequence);
-          refused(queue_.front().ground_sequence, a.code);
+          // controller's code. ALREADY DONE to an ARM can only mean a sequence-number clash
+          // (the updater sends each ARM once), so it counts as a refusal, 0x04 (REQ-065).
+          uint8_t code = (a.kind == answer::kRefused) ? a.code : answer::kOldCommand;
+          logging::line("controller: ARM sequence %u answered 0x%02x code 0x%02x; ground command "
+            "sequence %u refused 0x%02x and not sent", a.answered, a.kind, a.code,
+            queue_.front().ground_sequence, code);
+          refused(queue_.front().ground_sequence, code);
           queue_.pop();
           pair_ = PairStage::kNone;
         } else {
@@ -697,7 +818,8 @@ void Updater::onControllerAnswer(const frame::Answer & a)
  * The test image is due when a HEALTH report shows mode TRIAL, once per trial (test_image.hpp).
  * Only a report that passed the Sec. 5.4 checks counts, so a damaged one cannot start or end a
  * trial. The mode is read before the ground check below: the trial happens whether or not a
- * ground has spoken yet.
+ * ground has spoken yet. A restarted trial (EVENT 0x0006) makes the image due again, and the
+ * trial events and modes feed the trial watch (trial_watch.hpp).
  *
  * @param[in]     f  the report frame from data link A; f.payload is valid during the call
  * @return nothing
@@ -710,7 +832,13 @@ void Updater::onControllerReport(const frame::Frame & f)
   }
   if (f.payload[report::kOffsetKind] == report::kHealth) {
     test_trigger_.onHealthMode(f.payload[report::kOffsetMode]);
+  } else if (f.payload[report::kOffsetKind] == report::kEvent && f.length >= report::kEventMinBytes) {
+    uint16_t code = bytes::readU16(&f.payload[report::kOffsetEventCode]);
+    if (code == report::kEventTrialStarted) {
+      test_trigger_.onTrialStartedEvent();
+    }
   }
+  trialWatch(&f);   // decision H, separable: see trialWatch
   if (!gate_.haveGround()) {
     if (reports_dropped_ == 0) {
       logging::line("reports: no ground has spoken yet; reports are dropped until one does");
@@ -743,8 +871,13 @@ void Updater::sendQueued()
     logging::line("ground command 0x%02x sequence %u passed on to the controller as "
       "sequence %u", id, c.ground_sequence, sequence);
   } else {
+    // Refused rather than dropped in silence (audit finding #13): the ground then knows the
+    // command did not go. Bench code 0xFD "cannot send" (protocol.hpp) is used, not 0x05: the
+    // cause is the missing link, not the controller's mode, and a ground that read 0x05 would
+    // look for a mode problem.
     logging::line("ground command 0x%02x sequence %u not passed on: data link A cannot send; "
-      "the ground gets no answer", id, c.ground_sequence);
+      "refused 0xfd", id, c.ground_sequence);
+    refused(c.ground_sequence, answer::kCannotSendBench);
   }
   queue_.pop();
 }
@@ -777,7 +910,8 @@ void Updater::sendArm()
       "sequence %u", sequence, c.payload[0], c.ground_sequence, command_sequence);
   } else {
     logging::line("ARM for ground command 0x%02x sequence %u not sent: data link A cannot "
-      "send; the ground gets no answer", c.payload[0], c.ground_sequence);
+      "send; refused 0xfd", c.payload[0], c.ground_sequence);
+    refused(c.ground_sequence, answer::kCannotSendBench);
     queue_.pop();
   }
 }
@@ -824,15 +958,28 @@ void Updater::sendNext()
     if (length == 0 || !link_.sendCommand(payload_.data(), length, delivery_.expiry(),
                          timeout_ms, now_ms_, sequence)) {
       logging::line("DELIVER image %u: data link A cannot send", delivery_.number());
-      finishDelivery(Delivery::Step::kRefused, answer::kNoAnswerBench);
+      finishDelivery(Delivery::Step::kRefused, answer::kCannotSendBench);
       return;
     }
     sender_ = Sender::kDelivery;
     return;
   }
 
-  if (!queue_.empty()) {
-    if (queue_.front().armed) {
+  // Bounded by the queue's size: each pass sends, or removes an expired ARM pair and goes on.
+  for (size_t pass = 0; pass < config::kForwardQueueSize && !queue_.empty(); pass++) {
+    const ForwardedCommand & front = queue_.front();
+    if (front.armed && now_ms_ - front.arm_at_ms > config::kArmExpiryMs) {
+      // The ARM was valid on arrival but waited in the queue too long: REQ-030 holds at the
+      // moment the ARM goes to the controller, not only at arrival (audit finding #1).
+      logging::line("ground: ARM for command 0x%02x sequence %u is %llu ms old, past %llu ms, "
+        "when its turn came; refused 0x02 and dropped", front.payload[0], front.ground_sequence,
+        static_cast<unsigned long long>(now_ms_ - front.arm_at_ms),
+        static_cast<unsigned long long>(config::kArmExpiryMs));
+      refused(front.ground_sequence, answer::kArmExpired);
+      queue_.pop();
+      continue;
+    }
+    if (front.armed) {
       sendArm();
     } else {
       sendQueued();
@@ -887,6 +1034,61 @@ void Updater::onTimeout()
 }
 
 /**
+ * @brief The one wiring point of the trial-overrun watch (decision H, awaiting the owner's acceptance).
+ *
+ * Called with a good report from the controller (the HEALTH mode or the EVENT code is fed to the
+ * TrialWatch) and, with a null pointer, on every tick (the clock is checked). To drop decision H,
+ * delete this function, its two calls, onTrialOverrun, the member trial_watch_ and trial_watch.*;
+ * nothing else uses them.
+ *
+ * @param[in]     report  a report frame that passed the report store's checks, or nullptr on a tick
+ * @return nothing
+ */
+void Updater::trialWatch(const frame::Frame * report)
+{
+  if (report == nullptr) {
+    if (trial_watch_.expired(now_ms_)) {
+      onTrialOverrun();
+    }
+    return;
+  }
+  if (report->payload[report::kOffsetKind] == report::kHealth) {
+    trial_watch_.onHealthMode(report->payload[report::kOffsetMode], now_ms_);
+  } else if (report->payload[report::kOffsetKind] == report::kEvent &&
+             report->length >= report::kEventMinBytes) {
+    trial_watch_.onEvent(bytes::readU16(&report->payload[report::kOffsetEventCode]), now_ms_);
+  }
+}
+
+/**
+ * @brief Acts on a trial that ran past its time plus margin without EVENT 0x0007 or 0x0008.
+ *
+ * Decision H of the controller audit: the trial time is enforced by the firmware on trial, so
+ * the onboard computer times it too. The restart of the controller (REQ-061, REQ-124) is not
+ * built (controller_watch.hpp); no hardware mechanism is invented here. What it does: logs the
+ * overrun, and sends the ground an EVENT 0x0009 "restart" (Interfaces Sec. 5.4 table; the only
+ * row about a restart, and a proposal awaiting the owner, see protocol.hpp) numbered and stamped
+ * by the report store like any report. The event says a restart is due; none is carried out.
+ *
+ * @return nothing
+ */
+void Updater::onTrialOverrun()
+{
+  logging::line("trial: no EVENT 0x0007 or 0x0008 within %llu s + %llu s margin of the trial's "
+    "start (REQ-037); the controller should be restarted, but the restart path (REQ-061, "
+    "REQ-124) is not built: nothing restarted",
+    static_cast<unsigned long long>(config::kTrialMs / 1000),
+    static_cast<unsigned long long>(config::kTrialMarginMs / 1000));
+  std::array<uint8_t, report::kEventMinBytes> event{};
+  event[report::kOffsetKind] = report::kEvent;
+  bytes::writeU16(&event[report::kOffsetEventCode], report::kEventRestart);
+  if (reports_.accept(event.data(), event.size(), clocks::onboardTimeS(), now_ms_, report_.data(),
+        report_.size()) && gate_.haveGround()) {
+    (void)gate_.sendReport(report_.data(), static_cast<uint16_t>(event.size()));
+  }
+}
+
+/**
  * @brief Runs the timeouts, the controller watch, and sends the next frame on data link A.
  *
  * Timeouts, the controller watch, and the next frame for data link A. Every loop pass.
@@ -900,6 +1102,7 @@ void Updater::tick(uint64_t now_ms)
   if (link_.timedOut(now_ms)) {
     onTimeout();
   }
+  trialWatch(nullptr);   // decision H, separable: see trialWatch
   watch_.check(now_ms);
   sendNext();
 }

@@ -37,7 +37,7 @@ void build(std::array<uint8_t, kBytes> & out)
  * @return nothing (constructor)
  */
 TestImageTrigger::TestImageTrigger()
-: in_trial_(false), due_(false)
+: in_trial_(false), due_(false), event_seen_(false)
 {
 }
 
@@ -58,12 +58,35 @@ void TestImageTrigger::onHealthMode(uint8_t mode)
   if (mode != report::kModeTrial) {
     in_trial_ = false;
     due_ = false;
+    event_seen_ = false;
     return;
   }
   if (!in_trial_) {
     in_trial_ = true;
     due_ = true;
   }
+}
+
+/**
+ * @brief Takes an EVENT 0x0006 "trial started": a restarted trial gets its test image again.
+ *
+ * The controller sends HEALTH (mode TRIAL) and EVENT 0x0006 when a trial begins, in either
+ * order, and the HEALTH report already makes the image due; acting on that EVENT too would send
+ * the image twice. So the first EVENT 0x0006 of a trial only is remembered, and each further
+ * one, which can only be the controller starting its trial again while HEALTH shows TRIAL
+ * throughout, makes the image due (Interfaces Sec. 5.4, Sec. 5.5 step 7; REQ-139). This ordering
+ * rule is a decision of the coordinator for the owner to confirm.
+ *
+ * @return nothing
+ */
+void TestImageTrigger::onTrialStartedEvent()
+{
+  if (event_seen_) {
+    in_trial_ = true;
+    due_ = true;
+    return;
+  }
+  event_seen_ = true;
 }
 
 /**

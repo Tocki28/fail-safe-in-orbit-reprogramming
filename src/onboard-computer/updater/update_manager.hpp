@@ -5,8 +5,9 @@
  *
  * UploadStore — the ground's UPLOAD BEGIN, CHUNK, END and CANCEL (Interfaces Sec. 5.1).
  *   Files in the data directory, one set per image number n:
- *     image-n.part  an upload in progress: its declared image length (4 bytes, little-endian),
- *                   then the bytes stored so far
+ *     image-n.part  an upload in progress: a head of 40 bytes (tag "PRT2", the declared image
+ *                   length, 4 bytes little-endian, and the SHA-256 of the image's first 64 bytes,
+ *                   zero until 64 bytes are stored), then the bytes stored so far
  *     image-n.img   a whole image that passed its checks at UPLOAD END; DELIVER reads it
  *   Resume (REQ-049, REQ-063), kept simple:
  *     - UPLOAD BEGIN for an image number and length that match a .part file keeps the bytes
@@ -19,8 +20,11 @@
  *     So a ground that kept its DONE answers resumes at the first chunk without one; a ground
  *     that kept nothing sends BEGIN and starts again at offset 0, and loses only link time on
  *     the chunks already stored. The answer payload (6 bytes) has no room for the offset.
- *     A resent chunk is not compared with what is stored: if it differed, the image fails its
- *     CRC-32 or a signature at UPLOAD END, and the upload starts again.
+ *     A resent chunk is not compared with what is stored, except the chunk at offset 0: if its
+ *     header differs from the stored one it is another image under the same number and length,
+ *     and the stored bytes are dropped. A resumed upload that never resends chunk 0 is not
+ *     compared; if it differed, the image fails its CRC-32 or a signature at UPLOAD END, and the
+ *     upload starts again.
  *   One upload is open at a time (the last BEGIN); CHUNK and END must name its image number.
  *
  * Delivery — DELIVER sends a stored image to the controller (Destination 0x02) as UPLOAD BEGIN,
@@ -40,9 +44,14 @@
 #include "config.hpp"
 #include "image_checker.hpp"
 
+// Flushes a directory to storage; false if opening or flushing failed (REQ-063).
+[[nodiscard]] bool syncDirectory(const char * dir);
+
 class UploadStore
 {
 public:
+  using DirectorySync = bool (*)(const char * dir);
+
   // dir: the data directory; it is made, with its parents, by ready().
   explicit UploadStore(const char * dir);
   ~UploadStore();
@@ -62,11 +71,16 @@ public:
   // A whole image that passed its checks at UPLOAD END, read into out. False if there is none.
   bool load(uint16_t number, uint8_t * out, size_t room, size_t & size) const;
 
+  // Replaces the directory flush (tests only).
+  void setDirectorySync(DirectorySync sync);
+
   // The open upload, for the log and the tests.
   bool open() const;
   uint32_t stored() const;
 
 private:
+  bool sameHeader(const uint8_t * data, size_t size) const;
+  bool recordHeaderHash();
   bool path(std::array<char, 512> & out, uint16_t number, const char * suffix) const;
   void closeUpload();
   bool writeImage(uint16_t number, const uint8_t * image, size_t size);
@@ -76,6 +90,9 @@ private:
   uint16_t number_;
   uint32_t length_;   // declared at BEGIN
   uint32_t stored_;   // bytes stored so far
+  std::array<uint8_t, 32> hash_;   // SHA-256 of the first 64 bytes, valid when have_hash_
+  bool have_hash_;
+  DirectorySync sync_;   // flushes the data directory; syncDirectory unless a test replaced it
   std::array<uint8_t, config::kMaxImageBytes> image_;   // UPLOAD END reads the image here
 };
 
@@ -103,8 +120,8 @@ public:
   // The command to send now (payload, its length, its timeout). Only while active().
   uint16_t next(uint8_t * payload, size_t room, uint32_t & timeout_ms) const;
 
-  // The last answer to the command from next(): DONE or ALREADY DONE moves on, REFUSED stops
-  // with the controller's code.
+  // The last answer to the command from next(): DONE moves on, REFUSED stops with the
+  // controller's code, ALREADY DONE stops with 0x04 (the updater never resends a step).
   Step onFinalAnswer(uint8_t kind, uint8_t answer_code, uint8_t & code);
 
   void stop();

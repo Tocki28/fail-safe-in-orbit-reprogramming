@@ -26,6 +26,7 @@ constexpr uint8_t kArm = 0x0D;            // command identifier (1), its sequenc
 constexpr uint8_t kSwitch = 0x20;         // none; dangerous
 constexpr uint8_t kReturnToPrevious = 0x21;   // none; dangerous
 constexpr uint8_t kStartFailed = 0x22;    // which copy (1); dangerous
+constexpr uint8_t kLeaveFallback = 0x23;   // none; not dangerous
 constexpr uint8_t kSetControllerTime = 0x24;   // ground time (4); dangerous
 constexpr uint8_t kGetStatus = 0x25;      // none
 // CONFIRM (TRIAL only, dangerous, REQ-012, REQ-020) is a ground command for the controller:
@@ -45,6 +46,9 @@ constexpr size_t kUploadChunkHeadBytes = kIdBytes + 2 + 4;
 constexpr size_t kImageNumberOnlyBytes = kIdBytes + 2;   // UPLOAD END, UPLOAD CANCEL, DELIVER
 constexpr size_t kGetStatusBytes = kIdBytes;
 constexpr size_t kArmBytes = kIdBytes + 1 + 4;   // ARM: command identifier (1), sequence (4)
+// Controller commands (Interfaces Sec. 5.1 table, rows 0x20 to 0x26), identifier then fields.
+constexpr size_t kStartFailedBytes = kIdBytes + 1;          // which copy (1)
+constexpr size_t kSetControllerTimeBytes = kIdBytes + 4;    // ground time (4)
 
 }  // namespace command
 
@@ -66,6 +70,7 @@ constexpr uint8_t kReceivedCode = 0x00;
 // Refusal reasons used here (Sec. 4.2 table).
 constexpr uint8_t kNotArmed = 0x01;           // dangerous command without a valid ARM; REQ-029, REQ-112
 constexpr uint8_t kArmExpired = 0x02;         // REQ-030
+constexpr uint8_t kOldCommand = 0x04;         // "Old command sent again"; REQ-065
 constexpr uint8_t kNotInThisMode = 0x05;      // REQ-027
 constexpr uint8_t kImpossible = 0x06;         // impossible values, or an unknown command; REQ-028
 constexpr uint8_t kTrialRunning = 0x07;       // no new firmware during a trial; REQ-050
@@ -74,11 +79,17 @@ constexpr uint8_t kNotFromOperator = 0x09;    // REQ-006, REQ-043
 constexpr uint8_t kOtherController = 0x0B;    // REQ-046
 constexpr uint8_t kTrialTestsNotPassed = 0x0F;   // "Trial tests not passed"; REQ-012
 
-// BENCH ONLY, not in the Interfaces table: the controller did not answer a command of a
-// delivery within its timeout. Sec. 4.2 has no reason for "no answer", yet DELIVER must end
-// with DONE or REFUSED (REQ-033). 0xFF lies outside the table on purpose, so it cannot be
-// read as a real reason. Open item for the owner: add a reason to Sec. 4.2.
+// BENCH ONLY, not in the Interfaces table. Sec. 4.2 has no reason for "the onboard computer
+// could not do it", yet a delivery must end with DONE or REFUSED (REQ-033) and the ground
+// should be able to tell the causes apart. The three values lie outside the table on purpose
+// (0xFD to 0xFF), so none can be read as a real reason, and each names one cause. Open item
+// for the owner: add reasons to Sec. 4.2.
+//   0xFF  the controller did not answer a command of a delivery within its timeout;
+//   0xFE  the onboard computer's own storage failed (cannot open, write, flush or read back);
+//   0xFD  the onboard computer could not send on data link A (device missing or failed).
 constexpr uint8_t kNoAnswerBench = 0xFF;
+constexpr uint8_t kStorageBench = 0xFE;
+constexpr uint8_t kCannotSendBench = 0xFD;
 
 }  // namespace answer
 
@@ -131,8 +142,15 @@ constexpr size_t kOffsetSelfTest = 23;
 constexpr uint16_t kEventTrialStarted = 0x0006;
 constexpr uint16_t kEventFirmwareConfirmed = 0x0007;
 constexpr uint16_t kEventFirmwareGivenUp = 0x0008;
+// "restart" (Sec. 5.4 table; the controller's own event). The updater sends it to the ground
+// when the trial has overrun its time (updater.cpp, onTrialOverrun) because it is the one row of
+// the table about a restart; the onboard computer has no restart path built yet, so the event
+// says "a restart is due", not "a restart happened". Proposal (TBR), awaiting the owner's
+// acceptance; the table has no onboard-computer event for it.
+constexpr uint16_t kEventRestart = 0x0009;
 constexpr uint16_t kEventTrialTestsPassed = 0x000A;   // REQ-139
 constexpr uint16_t kEventTrialTestsFailed = 0x000B;   // REQ-139, REQ-140; detail (1): which test
+constexpr size_t kOffsetEventCode = 13;
 constexpr size_t kEventDetailOffset = 15;
 constexpr size_t kEventMinBytes = 15;
 constexpr size_t kEventMaxBytes = 15 + 32;

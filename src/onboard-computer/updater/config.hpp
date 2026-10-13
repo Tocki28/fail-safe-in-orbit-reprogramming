@@ -59,6 +59,17 @@ constexpr uint32_t kMaxBeatS = 3600;
 // standing for TBD-arm; the controller uses the same 30 s. A bench value.
 constexpr uint64_t kArmExpiryMs = 30000;
 
+// ---- Trial time: decision H, Proposal (TBR), awaiting the owner's acceptance -----------------------------------------------------------------------------
+// The controller enforces the trial time itself; the onboard computer checks that it did
+// (decision H of the controller audit). Trial time 120 s: bench value (TBD-trial in the
+// requirements). Margin 30 s: Proposal (TBR), awaiting the owner's acceptance. No EVENT 0x0007
+// (confirmed) or 0x0008 (given up) within trial time + margin after the trial began means the
+// controller's own limit did not work (trial_watch.hpp).
+// Proposal (TBR), awaiting the owner's acceptance.
+constexpr uint64_t kTrialMs = 120000;
+// Proposal (TBR), awaiting the owner's acceptance.
+constexpr uint64_t kTrialMarginMs = 30000;
+
 // ---- Controller watch ----------------------------------------------------------------------
 // REQ-061: notice a silent controller. Bench value 5 s from the build brief; the requirements
 // document has no value yet (TBD).
@@ -86,6 +97,14 @@ constexpr size_t kForwardQueueSize = 8;
 // Data-link sequence number -> ground sequence number, for answers to forwarded commands.
 // Kept after a timeout so that a late answer still reaches the ground; the oldest is replaced.
 constexpr size_t kForwardTableSize = 16;
+// Ground sequence numbers already used by an ARM or a dangerous command since start; a repeat
+// is refused 0x04 (REQ-065). Bench choice: a ring of the last 64; the oldest is forgotten, so
+// a replay older than 64 such commands is not caught (open: REQ-065 keeps the counter over
+// restarts).
+constexpr size_t kUsedSequenceCount = 64;
+// The "dropped datagram" log lines on the ground link: at most one per this many ms, so a
+// flood of bad datagrams cannot fill the log (audit finding #8).
+constexpr uint64_t kDropLogEveryMs = 1000;
 
 // ---- Main loop -----------------------------------------------------------------------------
 // poll() wakes at least this often to run the timers (answer timeouts, controller watch).

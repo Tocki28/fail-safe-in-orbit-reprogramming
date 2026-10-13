@@ -22,7 +22,10 @@
  * Usage: test_updater CONTROLLER_IMAGES TEST_IMAGES FLIPPED_IMAGE SCRATCH_DIR
  * Prints PASS or FAIL per test; exit status 1 on a failure.
  */
+#include <algorithm>
 #include <array>
+#include <fcntl.h>
+#include <stdlib.h>
 #include <arpa/inet.h>
 #include <cstdint>
 #include <cstdio>
@@ -45,12 +48,15 @@
 #include "data_link.hpp"
 #include "frame.hpp"
 #include "image_checker.hpp"
+#include "image_file_check.hpp"
 #include "keys.h"
 #include "log.hpp"
 #include "options.hpp"
 #include "protocol.hpp"
 #include "report_store.hpp"
+#include "serial_port.hpp"
 #include "test_image.hpp"
+#include "trial_watch.hpp"
 #include "update_manager.hpp"
 #include "updater.hpp"
 
@@ -696,8 +702,7 @@ void testDelivery()
     chunks_ok = chunks_ok && n == 7 + sizes[i] && p[0] == 0x02 && bytes::readU16(&p[1]) == 7 &&
                 bytes::readU32(&p[3]) == offsets[i] && timeout == 2000 &&
                 std::memcmp(&p[7], d.buffer() + offsets[i], sizes[i]) == 0;
-    uint8_t kind = (i == 1) ? answer::kAlreadyDone : answer::kDone;   // ALREADY DONE counts as done
-    chunks_ok = chunks_ok && d.onFinalAnswer(kind, 0, code) == Delivery::Step::kContinue;
+    chunks_ok = chunks_ok && d.onFinalAnswer(answer::kDone, 0, code) == Delivery::Step::kContinue;
   }
   report(chunks_ok, "delivery: CHUNKs at 0, 256, 512 of 256, 256, 88 bytes, 2 s timeout");
   n = d.next(p.data(), p.size(), timeout);
@@ -710,6 +715,18 @@ void testDelivery()
   report(d.onFinalAnswer(answer::kRefused, 0x0E, code) == Delivery::Step::kRefused &&
          code == 0x0E && !d.active() && d.groundSequence() == 43,
     "a CHUNK refused 0x0E: delivery refused with the controller's code");
+
+  // Owner's decision 4: ALREADY DONE to a step is not success. The updater never resends a
+  // step, so it can only mean a sequence-number clash; it ends the delivery, refused 0x04.
+  d.start(9, 600, 44, 0);
+  report(d.onFinalAnswer(answer::kAlreadyDone, 0, code) == Delivery::Step::kRefused &&
+         code == answer::kOldCommand && !d.active(),
+    "ALREADY DONE to UPLOAD BEGIN: delivery refused 0x04, not carried on");
+  d.start(9, 600, 44, 0);
+  (void)d.onFinalAnswer(answer::kDone, 0, code);
+  report(d.onFinalAnswer(answer::kAlreadyDone, 0, code) == Delivery::Step::kRefused &&
+         code == answer::kOldCommand,
+    "ALREADY DONE to a CHUNK: delivery refused 0x04");
 }
 
 // ---- Reports ---------------------------------------------------------------------------------
@@ -761,16 +778,20 @@ class FakeTransport final : public Transport
 public:
   std::vector<uint8_t> sent;
   std::vector<uint8_t> incoming;
+  bool fail_send = false;   // the device is missing: sendBytes fails
 
   /**
    * @brief Keeps the bytes the code under test sends.
    *
    * @param[in]     data  the bytes to send
    * @param[in]     size  number of bytes
-   * @return true, always (the bytes are appended to sent)
+   * @return true (the bytes are appended to sent), or false when fail_send is set
    */
   bool sendBytes(const uint8_t * data, size_t size) override
   {
+    if (fail_send) {
+      return false;
+    }
     sent.insert(sent.end(), data, data + size);
     return true;
   }
@@ -933,9 +954,9 @@ void testTables()
   bool pushed = true;
   for (size_t i = 0; i < config::kForwardQueueSize; i++) {
     c.sequence = 77 + static_cast<uint32_t>(i);
-    pushed = pushed && queue.push(c, false);
+    pushed = pushed && queue.push(c, false, 0);
   }
-  report(pushed && queue.full() && !queue.push(c, false), "forward queue: holds 8, refuses a ninth");
+  report(pushed && queue.full() && !queue.push(c, false, 0), "forward queue: holds 8, refuses a ninth");
   report(queue.front().ground_sequence == 77 && queue.front().payload[0] == 0x20 &&
          queue.front().expiry == 5, "forward queue: oldest first, fields kept");
   queue.pop();
@@ -1158,6 +1179,18 @@ public:
    */
   const ImageChecker & checker() const { return checker_; }
 
+  /** @brief Makes data link A's device fail (or work again). @param[in] fail true: sends fail @return nothing */
+  void failSending(bool fail) { transport_.fail_send = fail; }
+
+  /** @brief The reports the ground has received since the last call, payloads. @return the payloads */
+  std::vector<std::vector<uint8_t>> groundReports()
+  {
+    (void)groundAnswers();
+    std::vector<std::vector<uint8_t>> r;
+    r.swap(reports_seen_);
+    return r;
+  }
+
   /** @brief Moves the clock on. @param[in] ms time, ms @return nothing */
   void advance(uint64_t ms) { now_ += ms; }
 
@@ -1277,6 +1310,9 @@ public:
       if (n > 0 && frame::decode(buffer.data(), static_cast<size_t>(n), f) &&
           f.type == frame::kTypeAnswer && frame::decodeAnswer(f, a)) {
         result.push_back(GroundAnswer{a.answered, a.kind, a.code});
+      } else if (n > 0 && frame::decode(buffer.data(), static_cast<size_t>(n), f) &&
+                 f.type == frame::kTypeReport) {
+        reports_seen_.emplace_back(f.payload, f.payload + f.length);
       }
     }
     return result;
@@ -1314,6 +1350,7 @@ private:
   uint32_t next_sequence_;
   frame::Parser parser_;
   std::vector<SentFrame> pending_;
+  std::vector<std::vector<uint8_t>> reports_seen_;
 };
 
 /**
@@ -1571,8 +1608,8 @@ void testArmPairing(const std::string & scratch)
   // 3. The ARM is used up.
   ok = rig.fromGround(kDest, 7, {command::kSwitch});
   g = rig.groundAnswers();
-  report(ok && g.size() == 1 && has(g, 7, answer::kRefused, 0x01) && quiet(rig),
-    "arm: the same SWITCH again, ARM used up: REFUSED 0x01, nothing sent");
+  report(ok && g.size() == 1 && has(g, 7, answer::kRefused, 0x04) && quiet(rig),
+    "arm: the same SWITCH 7 again: REFUSED 0x04 (sequence number used before; owner's decision 5), nothing sent");
 
   // 4. Refusals 0x06.
   ok = rig.fromGround(kDest, 20, armPayload(0x23, 9)) && rig.fromGround(kDest, 21, armPayload(command::kArm, 9)) &&
@@ -1682,6 +1719,702 @@ void testArmPairing(const std::string & scratch)
   report(ok, "arm: with a test image due, a command waiting and the beat due, the frame after the ARM is still the SWITCH");
 }
 
+// ---- Safety-audit fixes ------------------------------------------------------------------------
+// One block per owner decision; each test failed on the code before the fix (see the report).
+
+/**
+ * @brief The payload of an ARM naming a dangerous command and its ground sequence number.
+ *
+ * @param[in]     id        the dangerous command's identifier
+ * @param[in]     sequence  that command's ground sequence number
+ * @return the ARM payload (Interfaces Sec. 5.1: 0x0D, identifier, sequence)
+ */
+std::vector<uint8_t> armOf(uint8_t id, uint32_t sequence)
+{
+  std::vector<uint8_t> p = {command::kArm, id, 0, 0, 0, 0};
+  bytes::writeU32(&p[2], sequence);
+  return p;
+}
+
+/**
+ * @brief Tells whether the ground got this answer.
+ *
+ * @param[in]     v         the answers read
+ * @param[in]     answered  ground sequence number
+ * @param[in]     kind      answer kind
+ * @param[in]     code      answer code
+ * @return true: found; false: not
+ */
+bool hasAnswer(const std::vector<GroundAnswer> & v, uint32_t answered, uint8_t kind, uint8_t code)
+{
+  for (const GroundAnswer & a : v) {
+    if (a.answered == answered && a.kind == kind && a.code == code) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Stores a whole image through the rig's store (BEGIN, CHUNKs, END).
+ *
+ * @param[in,out] rig     the updater under test
+ * @param[in]     number  image number
+ * @param[in]     image   the image bytes
+ * @return true: stored and checked
+ */
+bool storeThrough(UpdaterRig & rig, uint16_t number, const std::vector<uint8_t> & image)
+{
+  uint32_t resume = 0;
+  ImageVerdict verdict{};
+  return rig.store().begin(number, static_cast<uint32_t>(image.size()), resume) == 0 &&
+         sendChunks(rig.store(), number, image, 0, image.size()) &&
+         rig.store().end(number, rig.checker(), verdict) == 0;
+}
+
+/**
+ * @brief Decision 1: an ARM that waited in the queue past 30 s is not sent; a dangerous command is refused while a delivery or the test image is in the way.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testArmAge(const std::string & controller_images, const std::string & scratch)
+{
+  const uint32_t kDest = frame::kDestController;
+  SentFrame f{};
+  {
+    std::string dir = scratch + "/audit-age";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "arm age: rig did not open"); return; }
+    // A ground command occupies data link A; the ARM and SWITCH wait behind it.
+    bool ok = rig.fromGround(kDest, 1, {command::kGetStatus}) && rig.tick(f);
+    ok = ok && rig.fromGround(kDest, 2, armOf(command::kSwitch, 3)) &&
+         rig.fromGround(kDest, 3, {command::kSwitch});
+    (void)rig.groundAnswers();
+    rig.advance(config::kArmExpiryMs + 1000);   // the first command times out; the pair's turn comes late
+    bool sent_arm = rig.tick(f);
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(ok && !sent_arm && hasAnswer(g, 3, answer::kRefused, answer::kArmExpired),
+      "arm age: an ARM older than 30 s when its turn comes: REFUSED 0x02, nothing sent to the controller");
+    report(!rig.tick(f), "arm age: and the SWITCH is dropped, not sent later");
+  }
+  {
+    std::string dir = scratch + "/audit-busy";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "arm busy: rig did not open"); return; }
+    std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+    bool ok = storeThrough(rig, 3, image);
+    rig.health(report::kModeOperate);
+    ok = ok && rig.fromGround(frame::kDestOnboard, 1, {command::kDeliver, 3, 0}) && rig.tick(f);
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 10, armOf(command::kSwitch, 11));
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 11, {command::kSwitch});
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(ok && hasAnswer(g, 11, answer::kRefused, answer::kNotInThisMode),
+      "arm busy: SWITCH while a delivery runs: REFUSED 0x05, not queued");
+    // Finish the delivery; no ARM or SWITCH may follow it.
+    bool only_delivery = true;
+    for (int step = 0; step < 400; step++) {
+      uint8_t id = f.payload[0];
+      rig.answer(f.sequence, answer::kDone, 0);
+      if (id == command::kUploadEnd) { break; }
+      only_delivery = rig.tick(f) && only_delivery && f.payload[0] != command::kArm;
+    }
+    report(only_delivery && quiet(rig), "arm busy: nothing of the refused SWITCH goes to the controller after the delivery");
+  }
+  {
+    std::string dir = scratch + "/audit-busy2";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "arm busy test image: rig did not open"); return; }
+    rig.health(report::kModeTrial);   // the test image starts at the next tick
+    bool ok = rig.tick(f) && f.payload[0] == command::kUploadBegin;
+    ok = ok && rig.fromGround(kDest, 10, armOf(command::kSwitch, 11));
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 11, {command::kSwitch});
+    report(ok && hasAnswer(rig.groundAnswers(), 11, answer::kRefused, answer::kNotInThisMode),
+      "arm busy: SWITCH while the test image runs: REFUSED 0x05");
+  }
+}
+
+/**
+ * @brief Decision 2: the ground cannot send UPLOAD commands or unknown identifiers to the controller.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testControllerAllowedList(const std::string & scratch)
+{
+  std::string dir = scratch + "/audit-allow";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) { report(false, "allowed list: rig did not open"); return; }
+  const uint32_t kDest = frame::kDestController;
+  SentFrame f{};
+  const std::vector<std::vector<uint8_t>> refused_payloads = {
+    {command::kUploadBegin, 7, 0, 0, 0, 0, 0},
+    {command::kUploadChunk, 7, 0, 0, 0, 0, 0, 1},
+    {command::kUploadEnd, 7, 0},
+    {command::kUploadCancel, 7, 0},
+    {command::kDeliver, 7, 0},
+    {0x3F, 1, 2, 3},
+    {0x40},
+    {0x1F},
+    {},
+    {command::kGetStatus, 0},          // too long
+    {command::kSwitch, 0},             // too long
+    {command::kStartFailed},           // too short
+    {command::kSetControllerTime, 1, 2, 3},   // too short
+  };
+  bool all_refused = true;
+  bool none_sent = true;
+  uint32_t seq = 100;
+  for (const std::vector<uint8_t> & payload : refused_payloads) {
+    bool got = rig.fromGround(kDest, seq, payload);
+    all_refused = all_refused && got && hasAnswer(rig.groundAnswers(), seq, answer::kRefused, 0x06);
+    none_sent = none_sent && quiet(rig);
+    seq++;
+  }
+  report(all_refused, "allowed list: UPLOAD commands, unknown identifiers, an empty payload and wrong lengths to Destination 0x02: REFUSED 0x06");
+  report(none_sent, "allowed list: and none of them reaches data link A");
+  const std::vector<std::vector<uint8_t>> passed = {
+    {command::kLeaveFallback}, {command::kGetStatus}};
+  bool ok = true;
+  for (const std::vector<uint8_t> & payload : passed) {
+    ok = ok && rig.fromGround(kDest, seq++, payload) && rig.tick(f) && f.payload == payload;
+    rig.answer(f.sequence, answer::kDone, 0);
+  }
+  report(ok, "allowed list: LEAVE FALLBACK and GET STATUS with the right length are passed on");
+}
+
+/**
+ * @brief Decision 4: ALREADY DONE to a delivery step or an ARM is a refusal.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testAlreadyDone(const std::string & controller_images, const std::string & scratch)
+{
+  std::string dir = scratch + "/audit-already";
+  removeTree(dir);
+  bool ok = false;
+  {
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) { report(false, "already done: rig did not open"); return; }
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  ok = storeThrough(rig, 3, image);
+  rig.health(report::kModeOperate);
+  SentFrame f{};
+  ok = ok && rig.fromGround(frame::kDestOnboard, 1, {command::kDeliver, 3, 0}) && rig.tick(f);
+  (void)rig.groundAnswers();
+  rig.answer(f.sequence, answer::kAlreadyDone, 0);
+  std::vector<GroundAnswer> g = rig.groundAnswers();
+  report(ok && hasAnswer(g, 1, answer::kRefused, answer::kOldCommand) &&
+         !hasAnswer(g, 1, answer::kDone, 0) && quiet(rig),
+    "already done: ALREADY DONE to UPLOAD BEGIN of a delivery: the ground's DELIVER REFUSED 0x04, nothing more sent");
+  }
+
+  std::string dir2 = scratch + "/audit-already2";
+  removeTree(dir2);
+  UpdaterRig rig2(dir2, 0);
+  if (!rig2.open()) { report(false, "already done (ARM): rig did not open"); return; }
+  const uint32_t kDest = frame::kDestController;
+  ok = rig2.fromGround(kDest, 20, armOf(command::kSwitch, 21)) &&
+       rig2.fromGround(kDest, 21, {command::kSwitch});
+  (void)rig2.groundAnswers();
+  SentFrame arm{};
+  ok = ok && rig2.tick(arm) && arm.payload[0] == command::kArm;
+  rig2.answer(arm.sequence, answer::kAlreadyDone, 0);
+  report(ok && quiet(rig2) && hasAnswer(rig2.groundAnswers(), 21, answer::kRefused, answer::kOldCommand),
+    "already done: ALREADY DONE to the ARM: the SWITCH is not sent, the ground is refused 0x04");
+}
+
+/**
+ * @brief Decision 5: a ground sequence number used by an accepted ARM or dangerous command is refused 0x04; the memory is the last 64.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testUsedSequences(const std::string & scratch)
+{
+  std::string dir = scratch + "/audit-used";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) { report(false, "used sequences: rig did not open"); return; }
+  const uint32_t kDest = frame::kDestController;
+  SentFrame arm{};
+  SentFrame cmd{};
+  bool ok = rig.fromGround(kDest, 10, armOf(command::kSwitch, 11)) &&
+            rig.fromGround(kDest, 11, {command::kSwitch}) && rig.tick(arm);
+  rig.answer(arm.sequence, answer::kDone, 0);
+  ok = ok && rig.tick(cmd);
+  rig.answer(cmd.sequence, answer::kDone, 0);
+  (void)rig.groundAnswers();
+  report(ok, "used sequences: ARM 10 and SWITCH 11 go through once");
+  // The captured pair sent again.
+  ok = rig.fromGround(kDest, 10, armOf(command::kSwitch, 11));
+  std::vector<GroundAnswer> g = rig.groundAnswers();
+  report(ok && g.size() == 1 && hasAnswer(g, 10, answer::kRefused, answer::kOldCommand),
+    "used sequences: the same ARM sequence number again: REFUSED 0x04, not held");
+  ok = rig.fromGround(kDest, 11, {command::kSwitch});
+  g = rig.groundAnswers();
+  report(ok && hasAnswer(g, 11, answer::kRefused, answer::kOldCommand) && quiet(rig),
+    "used sequences: the replayed SWITCH: REFUSED 0x04, nothing sent");
+  // A fresh ARM for the old command's number does not bring it back.
+  ok = rig.fromGround(kDest, 12, armOf(command::kSwitch, 11)) &&
+       rig.fromGround(kDest, 11, {command::kSwitch});
+  report(ok && hasAnswer(rig.groundAnswers(), 11, answer::kRefused, answer::kOldCommand) && quiet(rig),
+    "used sequences: a new ARM naming the used sequence number 11 does not let SWITCH 11 run again");
+  // The ring holds 64: after 64 newer ones, number 10 is forgotten.
+  for (uint32_t i = 0; i < config::kUsedSequenceCount; i++) {
+    (void)rig.fromGround(kDest, 1000 + i, armOf(command::kSwitch, 5000 + i));
+  }
+  (void)rig.groundAnswers();
+  ok = rig.fromGround(kDest, 10, armOf(command::kSwitch, 11));
+  g = rig.groundAnswers();
+  report(ok && hasAnswer(g, 10, answer::kDone, 0),
+    "used sequences: the memory is the last 64 (bench choice): after 64 newer ones the oldest is forgotten");
+  UsedSequences ring;
+  for (uint32_t i = 0; i < 100; i++) { ring.add(i); }
+  report(!ring.contains(35) && ring.contains(36) && ring.contains(99) && !ring.contains(100),
+    "used sequences: ring keeps exactly the last 64 of 100");
+}
+
+/**
+ * @brief Decision 6: a restarted trial (a second EVENT 0x0006) gets the test image again; the first does not make it twice.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTestImageOnEvent(const std::string & scratch)
+{
+  TestImageTrigger t;
+  t.onHealthMode(report::kModeTrial);
+  t.markStarted();
+  t.onTrialStartedEvent();
+  report(!t.due(), "trial event: the first EVENT 0x0006 after the HEALTH that began the trial: not due again");
+  t.onTrialStartedEvent();
+  report(t.due(), "trial event: a second EVENT 0x0006 in the same trial (restarted): due");
+  t.markStarted();
+  t.onHealthMode(report::kModeOperate);
+  t.onTrialStartedEvent();
+  t.onHealthMode(report::kModeTrial);
+  t.markStarted();
+  t.onTrialStartedEvent();
+  report(t.due(), "trial event: EVENT before HEALTH in one trial, then a restart EVENT: due");
+
+  std::string dir = scratch + "/audit-event";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) { report(false, "trial event: rig did not open"); return; }
+  auto event = [&rig](uint16_t code) {
+    std::vector<uint8_t> p(report::kEventMinBytes, 0);
+    p[report::kOffsetKind] = report::kEvent;
+    bytes::writeU16(&p[report::kOffsetEventCode], code);
+    rig.fromController(frame::kTypeReport, p);
+  };
+  SentFrame f{};
+  rig.health(report::kModeTrial);
+  bool ok = rig.tick(f) && f.payload[0] == command::kUploadBegin;
+  for (int i = 0; i < 6 && ok; i++) {   // BEGIN, 4 CHUNKs, END
+    rig.answer(f.sequence, answer::kDone, 0);
+    if (i < 5) { ok = rig.tick(f); }
+  }
+  event(report::kEventTrialStarted);
+  report(ok && quiet(rig), "trial event: image sent for the trial; the first EVENT 0x0006 sends nothing more");
+  event(report::kEventTrialStarted);
+  report(rig.tick(f) && f.payload[0] == command::kUploadBegin,
+    "trial event: a restarted trial (second EVENT 0x0006): the test image is sent again");
+}
+
+/**
+ * @brief Decision H (separable, awaiting the owner): the trial watch and its wiring in the updater.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatch(const std::string & scratch)
+{
+  TrialWatch w(config::kTrialMs, config::kTrialMarginMs);
+  w.onHealthMode(report::kModeTrial, 1000);
+  report(!w.expired(1000 + 150000), "trial watch: exactly trial time + margin (150 s): not expired");
+  report(w.expired(1000 + 150001) && !w.expired(1000 + 160000), "trial watch: 150.001 s: expired, once");
+  w.onHealthMode(report::kModeTrial, 200000);
+  report(!w.expired(200000 + 999999), "trial watch: HEALTH reports still showing TRIAL do not start a new timing");
+  w.onHealthMode(report::kModeOperate, 300000);
+  w.onHealthMode(report::kModeTrial, 300000);
+  w.onEvent(report::kEventFirmwareConfirmed, 310000);
+  report(!w.expired(300000 + 400000), "trial watch: EVENT 0x0007 ends the timing");
+  w.onEvent(report::kEventTrialStarted, 1000000);
+  w.onEvent(report::kEventFirmwareGivenUp, 1010000);
+  report(!w.expired(1000000 + 400000), "trial watch: EVENT 0x0008 ends the timing");
+  w.onEvent(report::kEventTrialStarted, 2000000);
+  report(w.expired(2000000 + 150001), "trial watch: EVENT 0x0006 starts the timing");
+
+  std::string dir = scratch + "/audit-trial";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) { report(false, "trial watch: rig did not open"); return; }
+  SentFrame f{};
+  (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});   // a ground has spoken
+  (void)rig.tick(f);
+  rig.answer(f.sequence, answer::kDone, 0);
+  rig.health(report::kModeTrial);
+  (void)rig.groundReports();
+  rig.advance(config::kTrialMs + config::kTrialMarginMs);
+  (void)rig.tick(f);
+  std::vector<std::vector<uint8_t>> none = rig.groundReports();
+  rig.advance(2);
+  (void)rig.tick(f);
+  std::vector<std::vector<uint8_t>> sent = rig.groundReports();
+  bool is_event = !sent.empty() && sent[0].size() == report::kEventMinBytes &&
+                  sent[0][report::kOffsetKind] == report::kEvent &&
+                  bytes::readU16(&sent[0][report::kOffsetEventCode]) == report::kEventRestart;
+  report(none.empty() && is_event,
+    "trial watch: a trial with no 0x0007/0x0008 after 150 s: the ground gets EVENT 0x0009; nothing at 150 s exactly");
+}
+
+/**
+ * @brief Decision 3b and the checks of the check-only mode (image_file_check.hpp).
+ *
+ * @param[in]     test_images  directory with the signed test images
+ * @param[in]     flipped      path of a damaged image
+ * @param[in]     scratch      scratch directory
+ * @return nothing
+ */
+void testCheckImageFile(const std::string & test_images, const std::string & flipped,
+  const std::string & scratch)
+{
+  ImageChecker checker(PUBLIC_KEY_A, PUBLIC_KEY_B);
+  std::array<char, 384> line{};
+  uint8_t kind = 0;
+  report(parseKindName("bootloader", kind) && kind == 0x01 && parseKindName("main", kind) &&
+         kind == 0x02 && parseKindName("last-resort", kind) && kind == 0x03 &&
+         !parseKindName("slot", kind) && !parseKindName(nullptr, kind),
+    "check-image: the --kind words bootloader, main, last-resort; anything else not understood");
+  bool ok = checkImageFile((test_images + "/slotA-v1.img").c_str(), 0x02, checker, line.data(), line.size());
+  report(ok && std::strstr(line.data(), "passed") != nullptr, "check-image: a good main image passes");
+  ok = checkImageFile((test_images + "/last-resort-v1.img").c_str(), 0x03, checker, line.data(), line.size());
+  report(ok, "check-image: a good last-resort image passes as last-resort");
+  ok = checkImageFile((test_images + "/last-resort-v1.img").c_str(), 0x02, checker, line.data(), line.size());
+  report(!ok && std::strstr(line.data(), "kind is last-resort, expected main") != nullptr,
+    "check-image: a last-resort image given as main: refused, line says the kinds");
+  ok = checkImageFile((test_images + "/slotA-v1-wrong-key-a.img").c_str(), 0x02, checker, line.data(), line.size());
+  report(!ok && std::strstr(line.data(), "signature A") != nullptr, "check-image: wrong key A: refused, 'signature A'");
+  ok = checkImageFile((test_images + "/slotB-v2-wrong-key-b.img").c_str(), 0x02, checker, line.data(), line.size());
+  report(!ok && std::strstr(line.data(), "signature B") != nullptr, "check-image: wrong key B: refused, 'signature B'");
+  ok = checkImageFile(flipped.c_str(), 0x02, checker, line.data(), line.size());
+  report(!ok && std::strstr(line.data(), "refusal 0x") != nullptr, "check-image: a damaged image: refused with its code");
+  ok = checkImageFile((scratch + "/no-such-file").c_str(), 0x02, checker, line.data(), line.size());
+  report(!ok && std::strstr(line.data(), "cannot open") != nullptr, "check-image: a missing file: refused");
+  // Exactly the overhead (192 bytes): an image with an empty body must not pass.
+  std::string tiny = scratch + "/tiny.img";
+  std::vector<uint8_t> image = readFile(test_images + "/slotA-v1.img");
+  image.resize(config::kImageOverheadBytes);
+  std::FILE * out = std::fopen(tiny.c_str(), "wb");
+  if (out != nullptr) {
+    (void)std::fwrite(image.data(), 1, image.size(), out);
+    (void)std::fclose(out);
+  }
+  ok = checkImageFile(tiny.c_str(), 0x02, checker, line.data(), line.size());
+  report(!ok, "check-image: an image of 192 bytes (no body) is refused");
+  Options o{};
+  const char * a1[] = {"x", "--check-image", "f"};
+  const char * a2[] = {"x", "--check-image", "f", "--kind", "main"};
+  report(!parseOptions(3, a1, o) && parseOptions(5, a2, o) && o.check_image != nullptr &&
+         std::strcmp(o.check_kind, "main") == 0,
+    "check-image: options: --check-image needs --kind");
+}
+
+/**
+ * @brief Severity-3 fixes: image 0xFFFF, a missing device, the bench codes, the socket flags.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testSeverity3(const std::string & controller_images, const std::string & scratch)
+{
+  {
+    std::string dir = scratch + "/audit-s3a";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "image 0xFFFF: rig did not open"); return; }
+    const std::vector<std::vector<uint8_t>> cmds = {
+      {command::kUploadBegin, 0xFF, 0xFF, 0, 4, 0, 0}, {command::kUploadChunk, 0xFF, 0xFF, 0, 0, 0, 0, 1},
+      {command::kUploadEnd, 0xFF, 0xFF}, {command::kUploadCancel, 0xFF, 0xFF}, {command::kDeliver, 0xFF, 0xFF}};
+    bool ok = true;
+    uint32_t seq = 1;
+    for (const std::vector<uint8_t> & c : cmds) {
+      ok = rig.fromGround(frame::kDestOnboard, seq, c) && ok;
+      std::vector<GroundAnswer> g = rig.groundAnswers();
+      ok = ok && g.size() == 1 && hasAnswer(g, seq, answer::kRefused, 0x06);
+      seq++;
+    }
+    report(ok, "image 0xFFFF: every command naming it is REFUSED 0x06 only (no RECEIVED)");
+  }
+  {
+    std::string dir = scratch + "/audit-s3b";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "cannot send: rig did not open"); return; }
+    rig.failSending(true);
+    bool ok = rig.fromGround(frame::kDestController, 1, {command::kGetStatus});
+    report(ok && hasAnswer(rig.groundAnswers(), 1, answer::kRefused, answer::kCannotSendBench),
+      "cannot send: a ground command with data link A's device missing: REFUSED 0xFD (not silence)");
+    ok = rig.fromGround(frame::kDestController, 2, armOf(command::kSwitch, 3));
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(frame::kDestController, 3, {command::kSwitch});
+    report(ok && hasAnswer(rig.groundAnswers(), 3, answer::kRefused, answer::kCannotSendBench),
+      "cannot send: an ARM/command pair with the device missing: REFUSED 0xFD");
+    std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+    ok = storeThrough(rig, 3, image);
+    rig.health(report::kModeOperate);
+    ok = ok && rig.fromGround(frame::kDestOnboard, 4, {command::kDeliver, 3, 0});
+    report(ok && hasAnswer(rig.groundAnswers(), 4, answer::kRefused, answer::kCannotSendBench),
+      "cannot send: a delivery with the device missing: REFUSED 0xFD, not the 'no answer' code 0xFF");
+  }
+  {
+    std::string dir = scratch + "/audit-s3c";
+    removeTree(dir);
+    UploadStore store(dir.c_str());
+    bool ready = store.ready();
+    removeTree(dir);   // the storage goes away under the store
+    uint32_t resume = 0;
+    report(ready && store.begin(1, 1000, resume) == answer::kStorageBench &&
+           answer::kStorageBench != answer::kNoAnswerBench && answer::kCannotSendBench != answer::kNoAnswerBench,
+      "bench codes: a storage failure is 0xFE, apart from 'no answer' 0xFF and 'cannot send' 0xFD");
+  }
+  {
+    CommandGate gate(47934);
+    bool open = gate.open();
+    int flags = open ? ::fcntl(gate.fd(), F_GETFL) : 0;
+    int fdflags = open ? ::fcntl(gate.fd(), F_GETFD) : 0;
+    report(open && (flags & O_NONBLOCK) != 0 && (fdflags & FD_CLOEXEC) != 0,
+      "socket: the ground socket is non-blocking and close-on-exec");
+  }
+  {
+    // Every descriptor the store opens is close-on-exec.
+    std::string dir = scratch + "/audit-s3d";
+    removeTree(dir);
+    UploadStore store(dir.c_str());
+    bool ok = store.ready();
+    std::vector<int> before;
+    for (int fd = 3; fd < 256; fd++) {
+      if (::fcntl(fd, F_GETFD) >= 0) { before.push_back(fd); }
+    }
+    uint32_t resume = 0;
+    ok = ok && store.begin(1, 1000, resume) == 0;
+    bool all = true;
+    int fresh = 0;
+    for (int fd = 3; fd < 256; fd++) {
+      int fl = ::fcntl(fd, F_GETFD);
+      if (fl >= 0 && std::find(before.begin(), before.end(), fd) == before.end()) {
+        fresh++;
+        all = all && (fl & FD_CLOEXEC) != 0;
+      }
+    }
+    report(ok && fresh >= 1 && all, "O_CLOEXEC: the store's open .part file is close-on-exec");
+    int master = ::posix_openpt(O_RDWR | O_NOCTTY);
+    bool pty = master >= 0 && ::grantpt(master) == 0 && ::unlockpt(master) == 0;
+    const char * slave = pty ? ::ptsname(master) : nullptr;
+    if (slave != nullptr) {
+      SerialPort port(slave);
+      bool opened = port.open();
+      int fl = opened ? ::fcntl(port.pollFd(), F_GETFD) : 0;
+      report(opened && (fl & FD_CLOEXEC) != 0, "O_CLOEXEC: the serial device is close-on-exec");
+    } else {
+      report(false, "O_CLOEXEC: could not make a pseudo-terminal");
+    }
+    if (master >= 0) { (void)::close(master); }
+  }
+}
+
+/**
+ * @brief Decision 8: the dropped-datagram log line is rate limited.
+ *
+ * @return nothing
+ */
+void testDropLogLimit()
+{
+  CommandGate gate(47935);
+  int client = ::socket(AF_INET, SOCK_DGRAM, 0);
+  sockaddr_in to{};
+  to.sin_family = AF_INET;
+  to.sin_port = htons(47935);
+  to.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  bool ok = gate.open() && client >= 0;
+  const std::array<uint8_t, 8> junk = {1, 2, 3, 4, 5, 6, 7, 8};
+  for (int i = 0; ok && i < 200; i++) {
+    ok = ::sendto(client, junk.data(), junk.size(), 0, reinterpret_cast<const sockaddr *>(&to),
+           sizeof to) == static_cast<ssize_t>(junk.size());
+  }
+  frame::Frame f{};
+  pollfd p{};
+  p.fd = gate.fd();
+  p.events = POLLIN;
+  while (ok && ::poll(&p, 1, 50) == 1) {
+    (void)gate.receive(f);
+  }
+  report(ok && gate.droppedCount() == 200 && gate.droppedLogged() >= 1 && gate.droppedLogged() <= 3,
+    "drop log: 200 bad datagrams in a burst: all counted, at most 3 log lines");
+  if (client >= 0) { (void)::close(client); }
+}
+
+/**
+ * @brief Audit findings 15: the header hash in the .part file.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testStoreHardening(const std::string & scratch)
+{
+  std::string dir = scratch + "/audit-hash";
+  removeTree(dir);
+  const size_t kLength = 1000;
+  std::vector<uint8_t> a(kLength);
+  std::vector<uint8_t> b(kLength);
+  for (size_t i = 0; i < kLength; i++) {
+    a[i] = static_cast<uint8_t>(i * 3);
+    b[i] = static_cast<uint8_t>(i * 5 + 1);
+  }
+  {
+    UploadStore store(dir.c_str());
+    uint32_t resume = 9;
+    bool ok = store.ready() && store.begin(5, kLength, resume) == 0 &&
+              sendChunks(store, 5, a, 0, 512);
+    report(ok && store.stored() == 512, "header hash: 512 bytes of image A stored");
+  }
+  {
+    UploadStore store(dir.c_str());
+    uint32_t resume = 0;
+    bool ok = store.begin(5, kLength, resume) == 0 && resume == 512;
+    bool written = true;
+    // The same image A starts again from offset 0: a resend, nothing dropped.
+    ok = ok && store.chunk(5, 0, a.data(), 256, written) == 0 && !written && store.stored() == 512;
+    report(ok, "header hash: the same image's first chunk again: a resend, the 512 stored bytes kept");
+    // A different image B with the same number and length sends its first chunk.
+    ok = store.chunk(5, 0, b.data(), 256, written) == 0 && written && store.stored() == 256;
+    report(ok, "header hash: another image, same number and length, first chunk: stored bytes dropped, B starts afresh");
+    ok = sendChunks(store, 5, b, 256, kLength) && store.stored() == kLength;
+    report(ok, "header hash: and B then goes on to its full length");
+  }
+  {
+    // A .part whose bytes no longer match its hash is not resumed.
+    UploadStore store(dir.c_str());
+    uint32_t resume = 0;
+    (void)store.begin(6, kLength, resume);
+    (void)sendChunks(store, 6, a, 0, 512);
+    std::string part = dir + "/image-00006.part";
+    int fd = ::open(part.c_str(), O_RDWR | O_CLOEXEC);
+    const uint8_t flip = 0xEE;
+    bool ok = fd >= 0 && ::pwrite(fd, &flip, 1, 40 + 10) == 1;
+    if (fd >= 0) { (void)::close(fd); }
+    UploadStore again(dir.c_str());
+    ok = ok && again.begin(6, kLength, resume) == 0 && resume == 0;
+    report(ok, "header hash: a .part whose first 64 bytes changed on disk is not resumed");
+  }
+  {
+    // A .part of the older form (no tag) is not resumed either.
+    std::string part = dir + "/image-00007.part";
+    std::FILE * out = std::fopen(part.c_str(), "wb");
+    std::array<uint8_t, 4 + 300> old{};
+    bytes::writeU32(old.data(), static_cast<uint32_t>(kLength));
+    if (out != nullptr) {
+      (void)std::fwrite(old.data(), 1, old.size(), out);
+      (void)std::fclose(out);
+    }
+    UploadStore store(dir.c_str());
+    uint32_t resume = 5;
+    report(out != nullptr && store.begin(7, kLength, resume) == 0 && resume == 0,
+      "header hash: a .part of the earlier form (4-byte head) is not resumed");
+  }
+}
+
+// The flush hook of testFlushOrder: notes whether the .part file still existed at the second
+// call (the first flush after the rename), and can be made to fail.
+std::string g_hook_part;
+int g_hook_calls = 0;
+int g_hook_part_existed_at_call = -1;
+bool g_hook_fail_from = false;
+int g_hook_fail_at = 0;
+
+/**
+ * @brief The test's replacement for the directory flush.
+ *
+ * Counts the calls, notes if the .part file exists at call number 2 (the flush that must come
+ * before the .part file is deleted), and fails from call number g_hook_fail_at when
+ * g_hook_fail_from is set.
+ *
+ * @param[in]     dir  the directory (unused)
+ * @return true: pretend the flush worked; false: pretend it failed
+ */
+bool flushHook(const char * dir)
+{
+  (void)dir;
+  g_hook_calls++;
+  struct stat info{};
+  bool exists = ::stat(g_hook_part.c_str(), &info) == 0;
+  if (g_hook_calls == 1) {
+    g_hook_part_existed_at_call = exists ? 1 : 0;
+  }
+  return !(g_hook_fail_from && g_hook_calls >= g_hook_fail_at);
+}
+
+/**
+ * @brief Audit finding 16: the directory is flushed between the rename and the delete of the .part file; a failed flush keeps the .part file.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testFlushOrder(const std::string & controller_images, const std::string & scratch)
+{
+  std::string dir = scratch + "/audit-flush";
+  removeTree(dir);
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  ImageChecker checker(PUBLIC_KEY_A, PUBLIC_KEY_B);
+  UploadStore store(dir.c_str());
+  bool ok = store.ready();
+  store.setDirectorySync(flushHook);
+  g_hook_part = dir + "/image-00003.part";
+  g_hook_fail_from = false;
+  uint32_t resume = 0;
+  ImageVerdict verdict{};
+  ok = ok && store.begin(3, static_cast<uint32_t>(image.size()), resume) == 0 &&
+       sendChunks(store, 3, image, 0, image.size());
+  g_hook_calls = 0;   // from here on: the flushes of UPLOAD END
+  g_hook_part_existed_at_call = -1;
+  ok = ok && store.end(3, checker, verdict) == 0;
+  report(ok && g_hook_calls == 2 && g_hook_part_existed_at_call == 1,
+    "flush order: UPLOAD END flushes the folder after the rename while the .part file still exists, then again after deleting it");
+
+  std::string dir2 = scratch + "/audit-flush2";
+  removeTree(dir2);
+  UploadStore store2(dir2.c_str());
+  ok = store2.ready();
+  store2.setDirectorySync(flushHook);
+  g_hook_part = dir2 + "/image-00003.part";
+  g_hook_fail_from = false;
+  ok = ok && store2.begin(3, static_cast<uint32_t>(image.size()), resume) == 0 &&
+       sendChunks(store2, 3, image, 0, image.size());
+  g_hook_calls = 0;
+  g_hook_fail_from = true;
+  g_hook_fail_at = 1;
+  uint8_t code = store2.end(3, checker, verdict);
+  g_hook_fail_from = false;
+  struct stat info{};
+  report(ok && code == answer::kStorageBench && ::stat(g_hook_part.c_str(), &info) == 0,
+    "flush order: a failed flush after the rename: UPLOAD END fails 0xFE and the .part file is kept");
+  report(syncDirectory(scratch.c_str()) && !syncDirectory((scratch + "/no-such-dir").c_str()),
+    "flush: syncDirectory is true for a folder and false for one that cannot be opened");
+}
+
 }  // namespace
 
 /**
@@ -1720,6 +2453,17 @@ int main(int argc, char ** argv)
   testTables();
   testOptions();
   testKeyFile(argv[4]);
+  testArmAge(argv[1], argv[4]);
+  testControllerAllowedList(argv[4]);
+  testAlreadyDone(argv[1], argv[4]);
+  testUsedSequences(argv[4]);
+  testTestImageOnEvent(argv[4]);
+  testTrialWatch(argv[4]);
+  testCheckImageFile(argv[2], argv[3], argv[4]);
+  testSeverity3(argv[1], argv[4]);
+  testDropLogLimit();
+  testStoreHardening(argv[4]);
+  testFlushOrder(argv[1], argv[4]);
   std::printf("unit tests: %d of %d passed\n", g_tests - g_failures, g_tests);
   return g_failures == 0 ? 0 : 1;
 }

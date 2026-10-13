@@ -400,6 +400,31 @@ def beat_phase(updater, work, checks):
         bench.stop(checks)
 
 
+def sigpipe_phase(updater, work, checks):
+    """Audit finding #8: a log reader that goes away (closed pipe on stderr) must not kill the
+    updater with SIGPIPE; it keeps serving the ground."""
+    port = free_udp_port()
+    proc = subprocess.Popen([updater, "--device", os.path.join(work, "no-such-device"),
+                             "--udp-port", str(port), "--data-dir", os.path.join(work, "sigpipe-images")],
+                            stderr=subprocess.PIPE, text=True)
+    time.sleep(0.5)
+    proc.stderr.close()   # the reader is gone: the next log line writes to a closed pipe
+    ground = Ground(port)
+    try:
+        _, a = ground.command(ONBOARD, bytes([GET_STATUS]))
+        alive = proc.poll() is None
+        checks.report(alive and a == [(RECEIVED, 0), (DONE, 0)],
+                      f"stderr pipe closed: the updater is still alive and answers GET STATUS ({show(a)}, exit {proc.poll()})")
+    finally:
+        ground.stop = True
+        if proc.poll() is None:
+            proc.send_signal(signal.SIGTERM)
+            try:
+                proc.wait(5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+
+
 def main():
     if len(sys.argv) != 6:
         print(__doc__)
@@ -595,6 +620,7 @@ def main():
         bench.stop(checks)
 
     beat_phase(updater, work, checks)
+    sigpipe_phase(updater, work, checks)
     print("bench test:", "all passed" if checks.failed == 0 else f"{checks.failed} FAILED")
     return 1 if checks.failed else 0
 

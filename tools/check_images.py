@@ -25,11 +25,24 @@ assert (VERSION_OFFSET, TARGET_OFFSET, LENGTH_OFFSET) == (
 
 
 def build(out_dir: Path) -> ctypes.CDLL:
+    """Compiles the bootloader's image checks into a shared library and loads it.
+
+    Why: the host check runs the same C code the bootloader runs (common/image_check.c, crc32.c,
+    Monocypher), not a re-implementation. The library also holds tools/host_fault.c, the host's
+    fault reaction, which keeps host-only code out of src/ (code rule A10b).
+
+    Args:
+        out_dir: directory for libimagecheck.so, created if missing.
+
+    Returns:
+        The loaded library with argument and result types set for the three functions used.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     lib = out_dir / "libimagecheck.so"
     mono = fl.REPO / "third_party" / "monocypher"
     subprocess.run(["cc", "-O2", "-shared", "-fPIC", f"-I{fl.COMMON}", f"-I{mono}",
                     str(fl.COMMON / "image_check.c"), str(fl.COMMON / "crc32.c"),
+                    str(Path(__file__).resolve().parent / "host_fault.c"),
                     str(mono / "monocypher.c"), str(mono / "monocypher-ed25519.c"),
                     "-o", str(lib)], check=True)
     dll = ctypes.CDLL(str(lib))
@@ -44,6 +57,19 @@ def build(out_dir: Path) -> ctypes.CDLL:
 
 
 def check(dll: ctypes.CDLL, image: bytes, region: str) -> str:
+    """Runs the bootloader's contents and signature checks on one image in one region.
+
+    Why: the image is padded with 0xFF to the region size, as erased flash reads, and checked
+    with the region's chip address, so the check sees what the bootloader sees.
+
+    Args:
+        dll: the library from build().
+        image: image bytes, as signed.
+        region: region name in firmware_layout.REGIONS (A, B, last-resort).
+
+    Returns:
+        The check's result text (image_result_text), "passed" for a good image.
+    """
     start, size, kind = fl.REGIONS[region]
     flash = image + bytes([ERASED]) * (size - len(image))
     signed = ctypes.c_uint32(0)
@@ -54,10 +80,30 @@ def check(dll: ctypes.CDLL, image: bytes, region: str) -> str:
 
 
 def changed(image: bytes, offset: int, new: bytes) -> bytes:
+    """Returns a copy of an image with some bytes replaced.
+
+    Why: the cases that damage an image after signing need a changed copy, not the original.
+
+    Args:
+        image: image bytes.
+        offset: byte offset of the first replaced byte.
+        new: replacement bytes.
+
+    Returns:
+        The image with len(new) bytes at offset replaced.
+    """
     return image[:offset] + new + image[offset + len(new):]
 
 
 def main() -> int:
+    """Checks every test image against its expected result and prints one line per case.
+
+    Why: it shows that the bootloader's own checks accept the good images and refuse each kind
+    of damaged one, and that Monocypher accepts the signatures made with the cryptography package.
+
+    Returns:
+        0 if every case gave the expected result, 1 if one did not, 2 on a usage error.
+    """
     if len(sys.argv) != 3:
         print(__doc__, file=sys.stderr)
         return 2

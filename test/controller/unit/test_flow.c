@@ -217,6 +217,8 @@ static void reset_rig(void)
     fake_rcc.CSR = 0U;
     stub_cycles_counts = true;
     stub_watchdog_running = true;
+    stub_watchdog_sr = 0U;
+    stub_rcc_csr = 0x00000002U;
     started_vector = 0U;
     stub_backup_reset();
     stub_flash_reset();
@@ -563,17 +565,21 @@ static void test_d_boot_state(void)
 /**
  * @brief F(b): no trial start without a running watchdog; the start is not counted.
  *
- * Fails on the old code: the trial was counted and started whatever the watchdog's state.
+ * Fails on the old code: the trial was counted and started whatever the watchdog's state. The log
+ * line must also carry the raw IWDG_SR and RCC_CSR the decision was made on (bench, 13 Oct 2026:
+ * the hold-back was unexplained). Fails on the code before: the line named no values.
  */
 static void test_fb_watchdog(void)
 {
     reset_rig();
     stored.trial = BOOT_SLOT_B;
     stub_watchdog_running = false;
+    stub_watchdog_sr = 0x00000004U;
+    stub_rcc_csr = 0x0C000002U;
     int ended = run_boot();
     report((ended == RUN_STARTED) && (started_vector == VECTOR_A) && (write_count == 0U) &&
-               (strstr(uart_log, "trial slot B not started: watchdog not confirmed running") !=
-                NULL) &&
+               (strstr(uart_log, "BL: trial slot B not started: watchdog not confirmed running "
+                                 "(IWDG_SR 0x00000004, RCC_CSR 0x0C000002)\r\n") != NULL) &&
                (pair_value(BACKUP_PAIR_LAST_START) ==
                 start_of(BACKUP_ROLE_CONFIRMED, BOOT_SLOT_A)),
            "F(b): trial B, watchdog not confirmed running -> not counted, not started; "

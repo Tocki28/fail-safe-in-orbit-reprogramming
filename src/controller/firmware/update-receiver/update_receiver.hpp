@@ -121,12 +121,11 @@ public:
      * END, and SWITCH since decision F(a)). */
     static AnswerCode checkSlot(Slot slot);
 
-    /* The command's values against the transfer state (accept() asks it). Public since the
-     * owner's fault decision of 13 Oct 2026, so the unit tests can drive its fault path: accept()
-     * never hands it an identifier outside UploadId. */
-    bool valuesFit(const UpdateCommand &cmd) const;
-
 private:
+    /* The command's values against the transfer state (accept() asks it). Its fault path, an
+     * identifier outside UploadId, cannot be reached through the interface: parse() sets cmd.id
+     * only from a byte that sizeFits accepted. */
+    bool valuesFit(const UpdateCommand &cmd) const;
     bool sameTransfer(const UpdateCommand &cmd) const;
     bool chunkFits(const UpdateCommand &cmd) const;
     bool erasePage(uint32_t page) const;

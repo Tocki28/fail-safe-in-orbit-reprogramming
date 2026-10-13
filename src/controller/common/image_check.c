@@ -5,9 +5,6 @@
 #include "image_check.h"
 
 #include <stdbool.h>
-#if !defined(STM32G431xx)
-#include <stdlib.h>   /* abort(), for the host-only fallback at the end of this file */
-#endif
 
 #include "crc32.h"
 #include "fault.h"
@@ -186,27 +183,3 @@ const char *image_result_text(image_result_t result)
     }
     fault_impossible_value("image_result_text");   /* only a corrupted value reaches here */
 }
-
-#if !defined(STM32G431xx)
-/* Weak: a host test's own stand-in replaces this definition (see below). The attribute sits on
- * this declaration, which the compilers apply to the definition that follows. */
-__attribute__((weak)) void fault_impossible_value(const char *where);
-
-/**
- * @brief Host-only fallback of the fault reaction: stops the host process.
- *
- * Why it exists: tools/check_images.py compiles this file with crc32.c alone into a library
- * (libimagecheck.so) for the image host check, and a library with an undefined function does not
- * link on this computer. Every chip build defines STM32G431xx (common/build.mk, CFLAGS), so no
- * program on the board contains this; each defines its own fault_impossible_value
- * (common/fault.h). Weak, so a host test's own stand-in (test/controller/unit) replaces it.
- *
- * @param[in]     where  the function that found the impossible value (not used)
- * @note Does not return: abort() ends the process.
- */
-void fault_impossible_value(const char *where)
-{
-    (void)where;   /* nothing to report it to in a host library: the process stops */
-    abort();
-}
-#endif

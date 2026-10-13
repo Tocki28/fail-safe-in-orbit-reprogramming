@@ -716,32 +716,29 @@ void testOtherSlot()
 }
 
 /**
- * @brief run() and valuesFit() with an identifier outside UploadId: the fault reaction, and
- * nothing touched.
+ * @brief run() with an identifier outside UploadId: the fault reaction, and nothing touched.
  *
  * accept() cannot produce such a command (parse takes only 0x01 to 0x04), so it can only be a
- * corrupted UpdateCommand. Before, run() answered 0x06 and valuesFit() false (fails on the old
- * code: no fault reaction).
+ * corrupted UpdateCommand handed to run(). The same corruption in valuesFit() is not reachable
+ * through the class's interface (accept() fills cmd itself), so valuesFit() has no direct test.
+ * Before, run() answered 0x06 (fails on the old code: no fault reaction).
  */
 void testRunOutsideEnum()
 {
     UpdateReceiver rx;
     UpdateCommand cmd{};
     volatile AnswerCode code = AnswerCode::kSuccess;
-    volatile bool fits = true;
     bool run_fault = false;
-    bool fit_fault = false;
 
     startRunningA(rx);
     cmd.id = static_cast<UploadId>(0x7FU);
     cmd.target = Slot::kB;
     faultClear();
     FAULT_CATCH(run_fault, code = rx.run(cmd));
-    FAULT_CATCH(fit_fault, fits = rx.valuesFit(cmd));
-    report(run_fault && fit_fault && (code == AnswerCode::kSuccess) && fits &&
-               (fault_calls == 2U) && (fake.erases == 0U) && (fake.programs == 0U),
-           "run and valuesFit: an identifier outside UploadId (0x7F) -> fault reaction, flash "
-           "untouched (was: 0x06)");
+    report(run_fault && (code == AnswerCode::kSuccess) && (fault_calls == 1U) &&
+               (fake.erases == 0U) && (fake.programs == 0U),
+           "run: an identifier outside UploadId (0x7F) -> fault reaction, flash untouched "
+           "(was: 0x06)");
 }
 
 /**

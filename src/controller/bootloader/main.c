@@ -478,16 +478,30 @@ static void apply_give_up_request(boot_state_t *state)
  * the held-back start is not counted, and in RAM only: the stored boot state keeps the trial,
  * which the next start tries again.
  *
+ * The log line carries the raw IWDG_SR and RCC_CSR that the decision was made on (read once, by
+ * watchdog_running), because the bench held a trial back while both bits read as passing a
+ * moment later (13 Oct 2026, scenario 2) and the cause is open.
+ *
  * @param[in,out] state  boot state; trial is cleared in RAM if the watchdog is not running
  */
 static void hold_trial_without_watchdog(boot_state_t *state)
 {
-    if ((state->trial == BOOT_SLOT_NONE) || watchdog_running()) {
+    uint32_t iwdg_sr = 0U;
+    uint32_t rcc_csr = 0U;
+
+    if (state->trial == BOOT_SLOT_NONE) {
+        return;
+    }
+    if (watchdog_running(&iwdg_sr, &rcc_csr)) {
         return;
     }
     uart_put("BL: trial slot ");
     uart_put(slot_letter(state->trial));
-    uart_put(" not started: watchdog not confirmed running (IWDG_SR not 0 or LSIRDY 0)\r\n");
+    uart_put(" not started: watchdog not confirmed running (IWDG_SR ");
+    uart_put_hex32(iwdg_sr);
+    uart_put(", RCC_CSR ");
+    uart_put_hex32(rcc_csr);
+    uart_put(")\r\n");
     state->trial = BOOT_SLOT_NONE;
 }
 

@@ -13,7 +13,7 @@
  *                   bootloader (decision B);
  *   test firmware   test/controller/test-firmware/main.c (it links common/boot_state.c);
  *   host tests      test/controller/unit: records the call and leaves by longjmp;
- *   host tool       common/image_check.c holds a host-only fallback (see there).
+ *   host tool       tools/host_fault.c (outside src/): abort(), for tools/check_images.py.
  * The shared code in this directory calls it for its own impossible values (image_check.c,
  * boot_state.c), so each program gets the reaction it defines.
  *

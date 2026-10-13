@@ -196,7 +196,8 @@ static void test_firmware_timeout_bounded(void)
 }
 
 /**
- * @brief watchdog_running (decision F(b)): true only with IWDG_SR = 0 and LSIRDY = 1.
+ * @brief watchdog_running (decision F(b)): true only with IWDG_SR = 0 and LSIRDY = 1; it hands
+ * back the two raw values it read.
  *
  * Each of the three update bits (PVU, RVU, WVU [RM0440 Rev 9, Sec. 35.4.4, p. 1562]) left set, or
  * LSIRDY clear [RM0440 Rev 9, Sec. 7.4.28, p. 328], must answer false. Fails on the old code: the
@@ -207,17 +208,25 @@ static void test_running(void)
     const uint32_t update_bits[3] = {0x1U, 0x2U, 0x4U};
     bool any_true = false;
 
+    uint32_t sr = 0xFFFFFFFFU;
+    uint32_t csr = 0xFFFFFFFFU;
+
     reset_rig();
     fake_rcc.CSR = RCC_CSR_LSIRDY;
-    report(watchdog_running(), "watchdog_running: IWDG_SR = 0 and LSIRDY = 1 -> true");
+    report(watchdog_running(&sr, &csr) && (sr == 0U) && (csr == RCC_CSR_LSIRDY),
+           "watchdog_running: IWDG_SR = 0 and LSIRDY = 1 -> true, raw values handed back");
     for (uint32_t i = 0U; i < 3U; i++) {
         fake_iwdg.SR = update_bits[i];
-        any_true = any_true || watchdog_running();
+        any_true = any_true || watchdog_running(&sr, &csr);
     }
+    report(!any_true && (sr == update_bits[2]) && (csr == RCC_CSR_LSIRDY),
+           "watchdog_running: PVU, RVU or WVU set -> false, the raw values it decided on handed back");
     fake_iwdg.SR = 0U;
-    fake_rcc.CSR = 0U;
-    report(!any_true && !watchdog_running(),
-           "watchdog_running: PVU, RVU or WVU set, or LSIRDY = 0 -> false (trial not started)");
+    fake_rcc.CSR = 0x0C000000U;   /* LSIRDY clear, other flags set */
+    report(!watchdog_running(&sr, &csr) && (sr == 0U) && (csr == 0x0C000000U),
+           "watchdog_running: LSIRDY = 0 -> false (trial not started), raw values handed back");
+    report(!watchdog_running(NULL, &csr) && !watchdog_running(&sr, NULL),
+           "watchdog_running: a null pointer -> false, no register read through it");
 }
 
 /**

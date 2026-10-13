@@ -10,6 +10,7 @@
 #include "watchdog.h"
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "clock.h"
@@ -127,13 +128,23 @@ void watchdog_reload(void)
  *   - LSIRDY = 1 in RCC_CSR: the LSI oscillator is stable [RM0440 Rev 9, Sec. 7.4.28, p. 328]. A
  *     started IWDG forces the LSI on [RM0440 Rev 9, Sec. 7.2.14, p. 282].
  * Read once, without a wait: watchdog_start_long already waited (bounded) for the update, and
- * main() calls this after the clock, the UART and the boot-state read, far later.
+ * main() calls this after the clock, the UART and the boot-state read, far later. Each register
+ * is read once, and the two values read are handed back, so the caller can log exactly what the
+ * decision was made on (bench, 13 Oct 2026: scenario 2 held the trial back while both bits read
+ * as passing a moment later; the cause is not yet known, so the raw values are logged).
  *
- * @return true if both bits say the watchdog runs, false otherwise
+ * @param[out]    iwdg_sr  IWDG_SR as read; unchanged if a pointer is null
+ * @param[out]    rcc_csr  RCC_CSR as read; unchanged if a pointer is null
+ * @return true if both bits say the watchdog runs, false otherwise (also for a null pointer)
  */
-bool watchdog_running(void)
+bool watchdog_running(uint32_t *iwdg_sr, uint32_t *rcc_csr)
 {
-    return (IWDG->SR == 0U) && ((RCC->CSR & RCC_CSR_LSIRDY) != 0U);
+    if ((iwdg_sr == NULL) || (rcc_csr == NULL)) {
+        return false;
+    }
+    *iwdg_sr = IWDG->SR;
+    *rcc_csr = RCC->CSR;
+    return (*iwdg_sr == 0U) && ((*rcc_csr & RCC_CSR_LSIRDY) != 0U);
 }
 
 /**

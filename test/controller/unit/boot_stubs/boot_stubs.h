@@ -34,8 +34,12 @@ void ev_add(char event);
 /* cycles_start() answers this: false stands for a cycle counter that does not count. */
 extern bool stub_cycles_counts;
 
-/* watchdog_running() answers this (decision F(b)); true unless a test sets it false. */
+/* watchdog_running() answers this (decision F(b)); true unless a test sets it false. It also hands
+ * back stub_watchdog_sr and stub_rcc_csr as the register values it "read" (0 and LSIRDY, the
+ * values of a running watchdog, unless a test sets others). */
 extern bool stub_watchdog_running;
+extern uint32_t stub_watchdog_sr;
+extern uint32_t stub_rcc_csr;
 
 /* How a run under test ended. A test sets run_exit with setjmp and arms it (run_exit_armed);
  * the stand-ins leave by longjmp(run_exit, <one of these>):

@@ -20,6 +20,10 @@
 #define PA2_AF_USART2    7U
 #define GPIO_MODE_AF     2U
 #define DECIMAL_DIGITS   10U   /* 2^32 - 1 has 10 digits */
+/* One hexadecimal digit is four bits; a 32-bit value has eight of them. */
+#define HEX_DIGIT_BITS   4U
+#define HEX_DIGIT_MASK   0xFU
+#define HEX32_BITS       32U
 /* One byte needs 86.8 us at 115200 baud (10 bits). 1 ms of cycles at 170 MHz is over ten byte
  * times; at 16 MHz (clock fault) the same count lasts 10.6 ms. */
 #define BYTE_TIMEOUT_CYCLES  (CORE_CLOCK_HZ / 1000U)
@@ -146,6 +150,26 @@ void uart_put_decimal(uint32_t value)
     while (count > 0U) {
         count--;
         put_char(digits[count]);
+    }
+}
+
+/**
+ * @brief Sends a number on USART2 as "0x" and eight hexadecimal digits, upper case.
+ *
+ * Why: the bench log must show a register exactly as read (RCC_CSR, IWDG_SR), so every bit can
+ * be told apart; a fixed width keeps leading zeros and lines up between runs. No source: the
+ * format is this project's choice, with no technical reason beyond that.
+ *
+ * @param[in]     value  number to send
+ */
+void uart_put_hex32(uint32_t value)
+{
+    static const char digits[] = "0123456789ABCDEF";
+
+    put_char('0');
+    put_char('x');
+    for (uint32_t shift = HEX32_BITS; shift > 0U; shift -= HEX_DIGIT_BITS) {
+        put_char(digits[(value >> (shift - HEX_DIGIT_BITS)) & HEX_DIGIT_MASK]);
     }
 }
 

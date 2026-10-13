@@ -143,6 +143,11 @@ constexpr size_t kOffsetSelfTest = 23;
 // Event codes (Sec. 5.4 table), the ones the updater acts on or names in its log. The
 // controller sends the first group; the onboard computer's own events (0x0101 to 0x0105) are
 // not sent on the bench.
+// 0x0001 "fault detected" carries a 1-byte detail, the fault kind; 0x0005 "change in memory
+// detected" carries a 1-byte detail, the fault location (owner's decisions 2 and 3, 13 Oct 2026;
+// the code lists are src/controller/common/fault_codes.h, copied into report_store.cpp).
+constexpr uint16_t kEventFaultDetected = 0x0001;
+constexpr uint16_t kEventMemoryChange = 0x0005;
 constexpr uint16_t kEventTrialStarted = 0x0006;
 constexpr uint16_t kEventFirmwareConfirmed = 0x0007;
 constexpr uint16_t kEventFirmwareGivenUp = 0x0008;

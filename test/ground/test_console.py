@@ -3,6 +3,7 @@
 import contextlib
 import io
 import random
+import re
 import sys
 import tempfile
 import threading
@@ -17,6 +18,7 @@ sys.path.insert(0, str(HERE.parents[1] / "src" / "ground"))
 import console as c  # noqa: E402
 from fake_onboard import FakeOnboard  # noqa: E402
 
+FAULT_CODES_H = HERE.parents[1] / "src" / "controller" / "common" / "fault_codes.h"
 IMAGES = HERE.parents[1] / "src" / "controller" / "build" / "images"
 FAST_S = "0.3"           # command timeout in tests; real value is 3 s
 SEQ_FILE = None          # sequence state file of the running test; set in setUp, never the user's ~/.fsir
@@ -466,8 +468,54 @@ class ConsoleTests(unittest.TestCase):
                          "fall-back to the previous copy: last-resort refused (passed)")
         for result, text in c.CHECK_RESULT.items():
             self.assertTrue(self.event_text(0x0002, bytes([1, result])).endswith(f"({text})"))
-        self.assertEqual(len(c.CHECK_RESULT), 11)
+        self.assertEqual(len(c.CHECK_RESULT), 14)
         self.assertEqual(c.CHECK_RESULT[0x07], "start address outside the region")
+
+    def test_new_check_results(self):
+        """Check the check results 0x0B, 0x0C and 0x0D in events 0x0002 and 0x0003 (owner's
+        decision 4, 13 Oct 2026). Passes if each reads in words and 0x0E, in no table, reads as
+        "unknown code".
+        """
+        for result, text in ((0x0B, "flash read error"), (0x0C, "trial started too often"),
+                             (0x0D, "restarted too often")):
+            self.assertEqual(self.event_text(0x0002, bytes([1, result])),
+                             f"fall-back to the previous copy: slot A refused ({text})")
+            self.assertEqual(self.event_text(0x0003, bytes([2, result])),
+                             f"fall-back to the last-resort firmware: slot B refused ({text})")
+        self.assertEqual(self.event_text(0x0002, b"\x01\x0e"),
+                         "fall-back to the previous copy: slot A refused (unknown code 0x0e)")
+
+    def test_fault_detected_event(self):
+        """Check EVENT 0x0001 and its fault kind (owner's decision 2). Passes if 0x01 reads "core
+        clock failed, running at 16 MHz", a kind in no table is "unknown code", and a missing
+        detail is said so.
+        """
+        base = "fault detected"
+        self.assertEqual(self.event_text(0x0001, b"\x01"),
+                         base + ": core clock failed, running at 16 MHz")
+        self.assertEqual(self.event_text(0x0001, b"\x02"), base + ": unknown code 0x02")
+        self.assertEqual(self.event_text(0x0001, b"\x00"), base + ": unknown code 0x00")
+        self.assertEqual(self.event_text(0x0001), base + ": fault kind not given")
+
+    def test_memory_change_event(self):
+        """Check EVENT 0x0005 and its fault location (owner's decision 3). Passes if 0x27 reads as
+        in the brief's example, the first and last code of each range read in words, a location in
+        no table is "unknown code", and a missing detail is said so, also through format_report().
+        """
+        base = "change in memory detected"
+        self.assertEqual(
+            self.event_text(0x0005, b"\x27"),
+            base + " at 0x27 (update receiver: image check result outside its list)")
+        for where in (0x01, 0x07, 0x10, 0x11, 0x20, 0x2F):
+            text = self.event_text(0x0005, bytes([where]))
+            self.assertTrue(text.startswith(f"{base} at 0x{where:02x} ("), text)
+        for where in (0x00, 0x08, 0x0F, 0x12, 0x1F, 0x30, 0x4F, 0xFF):
+            self.assertEqual(self.event_text(0x0005, bytes([where])),
+                             f"{base} at unknown code 0x{where:02x}")
+        self.assertEqual(self.event_text(0x0005), base + ": location not given")
+        r = c.decode_report(c.struct.pack("<IBH", 5, c.REPORT_EVENT, 0x0005) + b"\x99")
+        self.assertIn("0x0005 change in memory detected at unknown code 0x99", c.format_report(r))
+
 
     def test_fallback_event_unknown_and_short_detail(self):
         """Check that an unlisted refused copy or check result, and a detail of the wrong length,
@@ -507,6 +555,61 @@ class ConsoleTests(unittest.TestCase):
         r = c.decode_report(c.HEALTH_BODY.pack(5, 1, 9, 1, 2, 8, 1, 42, 7))
         self.assertEqual((r["mode"], r["slot"], r["self_test"]),
                          ("unknown code 0x09", "unknown code 0x08", "unknown code 0x07"))
+
+
+
+class FaultCodesHeaderTests(unittest.TestCase):
+    """The console's fault tables against src/controller/common/fault_codes.h."""
+
+    @staticmethod
+    def header_codes(prefix):
+        """Read the codes of one family from the controller's fault_codes.h.
+
+        The regex runs over the #define lines only, so a code added to the header shows up here
+        without any change to the test.
+
+        Args:
+            prefix: the macro name prefix, "FAULT_KIND_" or "FAULT_AT_".
+
+        Returns:
+            dict from the number (int) to the macro name without the prefix.
+        """
+        found = {}
+        pattern = re.compile(rf"^#define\s+{prefix}(\w+)\s+0x([0-9A-Fa-f]+)U\b", re.MULTILINE)
+        for name, number in pattern.findall(FAULT_CODES_H.read_text()):
+            found[int(number, 16)] = name
+        return found
+
+    def test_fault_kind_table_matches_header(self):
+        """Check FAULT_KIND against the FAULT_KIND_* lines of fault_codes.h. Passes if the same
+        numbers are in both, each with the header's name; a new code in the header fails it until
+        the console's table has it.
+        """
+        header = self.header_codes("FAULT_KIND_")
+        self.assertGreaterEqual(len(header), 1)
+        self.assertEqual({k: v[0] for k, v in c.FAULT_KIND.items()}, header)
+
+    def test_fault_location_table_matches_header(self):
+        """Check FAULT_LOCATION against the FAULT_AT_* lines of fault_codes.h. Passes if the same
+        numbers are in both, each with the header's name; a new code in the header fails it until
+        the console's table has it.
+        """
+        header = self.header_codes("FAULT_AT_")
+        self.assertGreaterEqual(len(header), 1)
+        self.assertEqual({k: v[0] for k, v in c.FAULT_LOCATION.items()}, header)
+
+    def test_fault_location_codes_in_the_header_ranges(self):
+        """Check that every location code lies in a range of the header and has words. Passes if
+        each code is inside FAULT_RANGE_BOOTLOADER, _COMMON or _FIRMWARE and its text is not empty.
+        """
+        text = FAULT_CODES_H.read_text()
+        bounds = {name: int(num, 16) for name, num in
+                  re.findall(r"^#define\s+FAULT_RANGE_(\w+)\s+0x([0-9A-Fa-f]+)U\b", text, re.M)}
+        spans = [(bounds[f"{part}_FIRST"], bounds[f"{part}_LAST"])
+                 for part in ("BOOTLOADER", "COMMON", "FIRMWARE")]
+        for code, (_, words) in c.FAULT_LOCATION.items():
+            self.assertTrue(any(lo <= code <= hi for lo, hi in spans), hex(code))
+            self.assertTrue(words)
 
 
 if __name__ == "__main__":

@@ -65,5 +65,7 @@ const char * refusalName(uint8_t code);   // Sec. 4.2 refusal table (0x01 to 0x1
 void describeEvent(uint16_t code, const uint8_t * detail, size_t detail_length, char * out,
   size_t room);   // the log text of one EVENT, detail decoded
 const char * checkResultName(uint8_t result);   // Sec. 5.4 check-result table (events 0x0002, 0x0003), for the log
+const char * faultKindName(uint8_t kind);   // fault_codes.h FAULT_KIND_* (event 0x0001); null if not listed
+const char * faultLocationName(uint8_t where);   // fault_codes.h FAULT_AT_* (event 0x0005); null if not listed
 
 #endif  // FSIR_UPDATER_REPORT_STORE_HPP

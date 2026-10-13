@@ -93,12 +93,59 @@ EVENTS = {                                                           # Sec. 5.4:
 }
 EVENT_FALLBACK_PREVIOUS, EVENT_FALLBACK_LAST_RESORT = 0x0002, 0x0003   # Sec. 5.4: event codes
 EVENT_RESTARTED_BY_ONBOARD = 0x0106                                      # Sec. 5.4: event code
+EVENT_FAULT_DETECTED, EVENT_MEMORY_CHANGE = 0x0001, 0x0005              # Sec. 5.4: event codes
 # Check result in the detail of EVENTs 0x0002 and 0x0003 (Sec. 5.4, "Check result" table): the
 # first check the refused copy failed.
 CHECK_RESULT = {
     0x00: "passed", 0x01: "empty", 0x02: "proprietary string", 0x03: "format", 0x04: "kind",
     0x05: "target", 0x06: "length", 0x07: "start address outside the region",
     0x08: "body check value", 0x09: "signature A", 0x0A: "signature B",
+    # Added 13 Oct 2026 (owner's decision 4): a refusal or skip that is not an image check.
+    0x0B: "flash read error", 0x0C: "trial started too often", 0x0D: "restarted too often",
+}
+# Fault kind, the 1-byte detail of EVENT 0x0001 (owner's decision 2, 13 Oct 2026). COPIED from
+# src/controller/common/fault_codes.h (FAULT_KIND_*), where the controller defines the codes; keep
+# the two in step. Each value is (the header's name without FAULT_KIND_, the words). The console's
+# test parses the header and fails when a code or a name differs.
+FAULT_KIND = {
+    0x01: ("CORE_CLOCK", "core clock failed, running at 16 MHz"),
+}
+# Fault location, the 1-byte detail of EVENT 0x0005 (owner's decision 3, 13 Oct 2026). COPIED from
+# src/controller/common/fault_codes.h (FAULT_AT_*): one code per function that holds a fault site;
+# 0x01-0x0F bootloader, 0x10-0x1F common (both programs), 0x20-0x4F firmware. Each value is
+# (the header's name without FAULT_AT_, the words: the program and function, then what is
+# impossible there). Kept in step with the header by the console's test, as FAULT_KIND is.
+FAULT_LOCATION = {
+    0x01: ("VALUE_INDEX", "bootloader backup: pair number past the last pair"),
+    0x02: ("SLOT_LETTER", "bootloader: slot code is not A, B or none"),
+    0x03: ("RESET_CAUSE_TEXT", "bootloader: reset cause outside its list"),
+    0x04: ("LOAD_STATE", "bootloader: boot state load result outside its list"),
+    0x05: ("SLOT_REGION", "bootloader: slot code is not A or B"),
+    0x06: ("ROLE_TEXT", "bootloader: start role is not confirmed, trial or last resort"),
+    0x07: ("CHECK_RESULT_CODE", "bootloader: image check result outside its list"),
+    0x10: ("IMAGE_RESULT_TEXT", "image check (both programs): image check result outside its list"),
+    0x11: ("BOOT_STATE_OTHER_SLOT", "boot state (both programs): slot code is not A or B"),
+    0x20: ("TO_SLOT", "boot slot: stored slot code is not none, A or B"),
+    0x21: ("OTHER_SLOT", "boot slot: other slot of none, or of a value outside the slots"),
+    0x22: ("STATE_CODE", "boot slot: state code of a value outside the slots"),
+    0x23: ("CORE_CLOCK_START_TICK", "core clock: clock is not 170 MHz or 16 MHz (start tick)"),
+    0x24: ("UART_LINK_INIT", "UART link: clock is not 170 MHz or 16 MHz (init)"),
+    0x25: ("SLOT_CODE", "health monitor: slot code outside the slots"),
+    0x26: ("UPDATE_RECEIVER_SLOT_START",
+          "update receiver: slot start of a value outside the slots"),
+    0x27: ("UPDATE_RECEIVER_REFUSAL_FOR", "update receiver: image check result outside its list"),
+    0x28: ("UPDATE_RECEIVER_VALUES_FIT",
+          "update receiver: upload identifier outside its list (values fit)"),
+    0x29: ("UPDATE_RECEIVER_RUN", "update receiver: upload identifier outside its list (run)"),
+    0x2A: ("ARM_STATE_CHECK_INTACT",
+          "arm state: a word differs from its complement, or is no code word"),
+    0x2B: ("TEST_IMAGE_ACCEPT", "test image: upload identifier outside its list (accept)"),
+    0x2C: ("TEST_IMAGE_RUN", "test image: upload identifier outside its list (run)"),
+    0x2D: ("COPY_CODE", "mode manager: slot code outside the slots (copy code)"),
+    0x2E: ("MODE_MANAGER_POLL",
+          "mode manager: fall-back mode (never set) or a mode outside its list (poll)"),
+    0x2F: ("MODE_MANAGER_RUN_DANGEROUS",
+          "mode manager: dangerous command that is neither switch nor confirm"),
 }
 # Reason in the detail of EVENT 0x0106 (Sec. 5.4, event table).
 RESTART_REASON = {0x01: "trial past its time"}
@@ -222,7 +269,9 @@ def decode_event(code, detail):
 
     Sec. 5.4 gives a detail to some events: the refused copy and check result of 0x0002 and
     0x0003 (so the operator sees which copy was refused and which check failed), the failed test
-    of 0x000B, and the reason of 0x0106. Each detail byte is turned into the table's words; a
+    of 0x000B, and the reason of 0x0106. The fault kind of 0x0001 and the fault location of
+    0x0005 are decoded with FAULT_KIND and FAULT_LOCATION (fault_codes.h; owner's decisions 2
+    and 3, 13 Oct 2026). Each detail byte is turned into the table's words; a
     value outside the table, or a detail of the wrong length, is shown as such, never left out.
 
     Args:
@@ -230,8 +279,10 @@ def decode_event(code, detail):
         detail: the bytes after the event code.
 
     Returns:
-        The text, e.g. "fall-back to the previous copy: slot B refused (signature A)". An event
-        code outside the table gives "unknown code 0x....".
+        The text, e.g. "fall-back to the previous copy: slot B refused (signature A)" or "change
+        in memory detected at 0x27 (update receiver: image check result outside its list)". An
+        event code outside the table gives "unknown code 0x....", a fault kind or location outside
+        its table "unknown code 0x..".
     """
     text = name_of(EVENTS, code, 4)
     if code in (EVENT_FALLBACK_PREVIOUS, EVENT_FALLBACK_LAST_RESORT):
@@ -240,6 +291,17 @@ def decode_event(code, detail):
         copy = detail[0]
         copy_text = f"slot {SLOTS[copy]}" if copy in (0x01, 0x02) else name_of(SLOTS, copy)
         return text + f": {copy_text} refused ({name_of(CHECK_RESULT, detail[1])})"
+    if code == EVENT_FAULT_DETECTED:
+        if not detail:
+            return text + ": fault kind not given"
+        return text + ": " + (FAULT_KIND[detail[0]][1] if detail[0] in FAULT_KIND else unknown(detail[0]))
+    if code == EVENT_MEMORY_CHANGE:
+        if not detail:
+            return text + ": location not given"
+        where = detail[0]
+        if where not in FAULT_LOCATION:
+            return text + f" at {unknown(where)}"
+        return text + f" at 0x{where:02x} ({FAULT_LOCATION[where][1]})"
     if code == EVENT_TESTS_FAILED:
         return text + ": " + ("test not named" if not detail else name_of(TRIAL_TESTS, detail[0]))
     if code == EVENT_RESTARTED_BY_ONBOARD:

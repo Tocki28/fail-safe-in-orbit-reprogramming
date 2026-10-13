@@ -52,6 +52,7 @@
 #include "controller_watch.hpp"
 #include "crc32.hpp"
 #include "data_link.hpp"
+#include "fault_codes.h"
 #include "frame.hpp"
 #include "image_checker.hpp"
 #include "image_file_check.hpp"
@@ -2841,16 +2842,26 @@ void testNamesAndFallbackDetail()
          std::strcmp(eventName(0x0009), "restart") == 0 && std::strcmp(eventName(0x0107), "unknown") == 0,
     "names: event 0x0106 'controller restarted by the onboard computer'; 0x0009 stays the controller's 'restart'");
   const char * expected[] = {"none: the copy passed", "the copy is empty", "proprietary string", "format", "kind",
-    "target", "length", "start address outside the region", "body check value", "signature A", "signature B"};
+    "target", "length", "start address outside the region", "body check value", "signature A", "signature B",
+    "flash read error", "trial started too often", "restarted too often"};
   bool results = true;
-  for (unsigned i = 0; i <= 0x0A; i++) {
+  for (unsigned i = 0; i <= 0x0D; i++) {
     results = results && std::strcmp(checkResultName(static_cast<uint8_t>(i)), expected[i]) == 0;
   }
-  report(results && std::strcmp(checkResultName(0x0B), "unknown") == 0,
-    "names: check results 0x00 to 0x0A as in the Sec. 5.4 table; 0x0B unknown");
+  report(results && std::strcmp(checkResultName(0x0E), "unknown") == 0,
+    "names: check results 0x00 to 0x0D as in the Sec. 5.4 table (0x0B to 0x0D added 13 Oct); 0x0E unknown");
 
   std::array<char, 192> text{};
   const uint8_t previous[] = {0x01, 0x09};
+  const uint8_t new_results[] = {0x0B, 0x0C, 0x0D};
+  const char * new_texts[] = {"flash read error", "trial started too often", "restarted too often"};
+  for (size_t i = 0; i < 3; i++) {
+    const uint8_t detail[] = {0x02, new_results[i]};
+    describeEvent(0x0003, detail, 2, text.data(), text.size());
+    std::array<char, 32> want{};
+    std::snprintf(want.data(), want.size(), "check result 0x%02x (%s)", new_results[i], new_texts[i]);
+    report(std::strstr(text.data(), want.data()) != nullptr, "event detail: 0x0003 with a new check result 0x0B to 0x0D is named");
+  }
   describeEvent(0x0002, previous, 2, text.data(), text.size());
   report(std::strcmp(text.data(), "EVENT 0x0002 (fall-back to the previous copy), refused copy 0x01 (A), check result 0x09 (signature A)") == 0,
     "event detail: 0x0002 {0x01, 0x09}: refused copy A, check result signature A");
@@ -2893,6 +2904,98 @@ void testNamesAndFallbackDetail()
   report(store.accept(event.data(), event.size(), 7, 100, out.data(), out.size()) &&
          bytes::readU32(&out[report::kOffsetNumber]) == 1 && out[report::kEventDetailOffset + 1] == 0x09,
     "event detail: the report store passes the 2-byte detail of event 0x0002 on unchanged");
+}
+
+/**
+ * @brief Reads src/controller/common/fault_codes.h and checks the updater's two fault tables
+ *        against it, and the decoding of events 0x0001 and 0x0005.
+ *
+ * The updater's tables (report_store.cpp) are a copy of the controller's header. Every
+ * FAULT_KIND_* and FAULT_AT_* number found in the header must be named by the matching function,
+ * and the function must name no other number, so a new code in the header fails this test until
+ * it is added to the table. The header is read from its place in the repository, relative to the
+ * test's working directory test/onboard-computer (the Makefile runs the test there); a header
+ * that cannot be opened fails the test, it is never skipped. The macros FAULT_AT_* are also
+ * compiled in, so a renumbering of the codes the decoding is tested with is caught.
+ *
+ * Passes when every header code is named, nothing else is, event 0x0001 and event 0x0005 are
+ * written in words (with the example of the owner's brief), and a value in no table prints as
+ * "unknown code 0x.." with the number.
+ *
+ * @return nothing
+ */
+void testFaultCodes()
+{
+  std::FILE * header = std::fopen("../../src/controller/common/fault_codes.h", "r");
+  report(header != nullptr, "fault codes: fault_codes.h opens from test/onboard-computer");
+  std::array<bool, 256> in_header_kind{};
+  std::array<bool, 256> in_header_at{};
+  size_t kinds = 0;
+  size_t locations = 0;
+  if (header != nullptr) {
+    std::array<char, 256> line{};
+    while (std::fgets(line.data(), static_cast<int>(line.size()), header) != nullptr) {
+      char name[96] = {0};
+      unsigned value = 0;
+      if (std::sscanf(line.data(), "#define %95s 0x%xU", name, &value) != 2 || value > 0xFFU) {
+        continue;
+      }
+      if (std::strncmp(name, "FAULT_KIND_", 11) == 0) {
+        in_header_kind[value] = true;
+        kinds++;
+      } else if (std::strncmp(name, "FAULT_AT_", 9) == 0) {
+        in_header_at[value] = true;
+        locations++;
+      }
+    }
+    std::fclose(header);
+  }
+  report(kinds >= 1 && locations >= 1, "fault codes: the header holds fault kinds and fault locations");
+  bool kinds_match = true;
+  bool locations_match = true;
+  size_t kinds_named = 0;
+  size_t locations_named = 0;
+  for (unsigned code = 0; code <= 0xFFU; code++) {
+    bool kind_named = faultKindName(static_cast<uint8_t>(code)) != nullptr;
+    bool at_named = faultLocationName(static_cast<uint8_t>(code)) != nullptr;
+    kinds_match = kinds_match && (kind_named == in_header_kind[code]);
+    locations_match = locations_match && (at_named == in_header_at[code]);
+    kinds_named += kind_named ? 1U : 0U;
+    locations_named += at_named ? 1U : 0U;
+  }
+  report(kinds_match && kinds_named == kinds, "fault codes: the fault-kind table is exactly the header's FAULT_KIND_* list");
+  report(locations_match && locations_named == locations,
+    "fault codes: the fault-location table is exactly the header's FAULT_AT_* list");
+
+  std::array<char, 192> text{};
+  const uint8_t core_clock[] = {FAULT_KIND_CORE_CLOCK};
+  describeEvent(0x0001, core_clock, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0001 (fault detected), fault kind 0x01 (core clock failed, running at 16 MHz)") == 0,
+    "fault codes: event 0x0001 kind 0x01 reads 'core clock failed, running at 16 MHz'");
+  const uint8_t bad_kind[] = {0x7E};
+  describeEvent(0x0001, bad_kind, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0001 (fault detected), fault kind unknown code 0x7e") == 0,
+    "fault codes: event 0x0001 with a kind in no table prints 'unknown code 0x7e'");
+  describeEvent(0x0001, nullptr, 0, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0001 (fault detected)") == 0, "fault codes: event 0x0001 without a detail shows no kind");
+
+  const uint8_t refusal_for[] = {FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR};
+  describeEvent(0x0005, refusal_for, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at 0x27 (update receiver: image check result outside its list)") == 0,
+    "fault codes: event 0x0005 location 0x27 reads 'update receiver: image check result outside its list'");
+  const uint8_t first_boot[] = {FAULT_RANGE_BOOTLOADER_FIRST};
+  describeEvent(0x0005, first_boot, 1, text.data(), text.size());
+  report(std::strstr(text.data(), " at 0x01 (bootloader backup: ") != nullptr, "fault codes: event 0x0005 location 0x01 (bootloader) is named");
+  const uint8_t last_firmware[] = {FAULT_AT_MODE_MANAGER_RUN_DANGEROUS};
+  describeEvent(0x0005, last_firmware, 1, text.data(), text.size());
+  report(std::strstr(text.data(), " at 0x2f (mode manager: ") != nullptr && std::strlen(text.data()) < text.size() - 1,
+    "fault codes: event 0x0005 location 0x2F (the longest) fits the log line whole");
+  const uint8_t bad_at[] = {0x99};
+  describeEvent(0x0005, bad_at, 1, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x99") == 0,
+    "fault codes: event 0x0005 with a location in no table prints 'unknown code 0x99'");
+  describeEvent(0x0005, nullptr, 0, text.data(), text.size());
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected)") == 0, "fault codes: event 0x0005 without a detail shows no location");
 }
 
 /**
@@ -3311,6 +3414,7 @@ int main(int argc, char ** argv)
   testTrialOverrunRestart(argv[4]);
   testArmNoAnswer(argv[4]);
   testNamesAndFallbackDetail();
+  testFaultCodes();
   testRestoreScriptOption();
   testCheckImageFile(argv[2], argv[3], argv[4]);
   testSeverity3(argv[1], argv[4]);

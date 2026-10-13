@@ -33,11 +33,11 @@ const char * modeName(uint8_t mode)
 const char * eventName(uint16_t code)
 {
   switch (code) {
-    case 0x0001: return "fault detected";
+    case report::kEventFaultDetected: return "fault detected";
     case 0x0002: return "fall-back to the previous copy";
     case 0x0003: return "fall-back to the last-resort firmware";
     case 0x0004: return "self-test failed";
-    case 0x0005: return "change in memory detected";
+    case report::kEventMemoryChange: return "change in memory detected";
     case report::kEventTrialStarted: return "trial started";
     case report::kEventFirmwareConfirmed: return "firmware confirmed";
     case report::kEventFirmwareGivenUp: return "firmware given up";
@@ -111,8 +111,108 @@ const char * checkResultName(uint8_t result)
     case 0x08: return "body check value";
     case 0x09: return "signature A";
     case 0x0A: return "signature B";
+    case 0x0B: return "flash read error";   // Sec. 5.4 check-result table, decision 4 (13 Oct 2026)
+    case 0x0C: return "trial started too often";
+    case 0x0D: return "restarted too often";
     default:   return "unknown";   // input from the link: a raw byte off the wire; any other value is unknown
   }
+}
+
+/**
+ * @brief One row of a code table: a number the controller sends and the words for it.
+ *
+ * Plain data, constant-initialized; the tables below are arrays of these.
+ */
+struct CodeText {
+  uint8_t code;        ///< the number as the controller sends it
+  const char * text;   ///< its words for the log
+};
+
+/**
+ * Fault kinds, the 1-byte detail of EVENT 0x0001. COPIED from src/controller/common/fault_codes.h
+ * (FAULT_KIND_*), where the controller defines them; keep the two in step. The unit test
+ * (test_updater.cpp, testFaultCodes) reads the header and fails when a code is missing here.
+ */
+constexpr std::array<CodeText, 1> kFaultKinds = {{
+  {0x01U, "core clock failed, running at 16 MHz"},   // FAULT_KIND_CORE_CLOCK
+}};
+
+/**
+ * Fault locations, the 1-byte detail of EVENT 0x0005. COPIED from
+ * src/controller/common/fault_codes.h (FAULT_AT_*): one code per function that holds a fault
+ * site; ranges 0x01-0x0F bootloader, 0x10-0x1F common, 0x20-0x4F firmware. Keep in step with
+ * the header; testFaultCodes in test_updater.cpp fails when a code is missing or extra here.
+ * The words are short: the program and function, then what is impossible there.
+ */
+constexpr std::array<CodeText, 25> kFaultLocations = {{
+  {0x01U, "bootloader backup: pair number past the last pair"},                 // VALUE_INDEX
+  {0x02U, "bootloader: slot code is not A, B or none"},                         // SLOT_LETTER
+  {0x03U, "bootloader: reset cause outside its list"},                          // RESET_CAUSE_TEXT
+  {0x04U, "bootloader: boot state load result outside its list"},               // LOAD_STATE
+  {0x05U, "bootloader: slot code is not A or B"},                               // SLOT_REGION
+  {0x06U, "bootloader: start role is not confirmed, trial or last resort"},     // ROLE_TEXT
+  {0x07U, "bootloader: image check result outside its list"},                   // CHECK_RESULT_CODE
+  {0x10U, "image check (both programs): image check result outside its list"},  // IMAGE_RESULT_TEXT
+  {0x11U, "boot state (both programs): slot code is not A or B"},               // BOOT_STATE_OTHER_SLOT
+  {0x20U, "boot slot: stored slot code is not none, A or B"},                   // TO_SLOT
+  {0x21U, "boot slot: other slot of none, or of a value outside the slots"},    // OTHER_SLOT
+  {0x22U, "boot slot: state code of a value outside the slots"},                // STATE_CODE
+  {0x23U, "core clock: clock is not 170 MHz or 16 MHz (start tick)"},           // CORE_CLOCK_START_TICK
+  {0x24U, "UART link: clock is not 170 MHz or 16 MHz (init)"},                  // UART_LINK_INIT
+  {0x25U, "health monitor: slot code outside the slots"},                       // SLOT_CODE
+  {0x26U, "update receiver: slot start of a value outside the slots"},          // UPDATE_RECEIVER_SLOT_START
+  {0x27U, "update receiver: image check result outside its list"},              // UPDATE_RECEIVER_REFUSAL_FOR
+  {0x28U, "update receiver: upload identifier outside its list (values fit)"},  // UPDATE_RECEIVER_VALUES_FIT
+  {0x29U, "update receiver: upload identifier outside its list (run)"},         // UPDATE_RECEIVER_RUN
+  {0x2AU, "arm state: a word differs from its complement, or is no code word"},  // ARM_STATE_CHECK_INTACT
+  {0x2BU, "test image: upload identifier outside its list (accept)"},           // TEST_IMAGE_ACCEPT
+  {0x2CU, "test image: upload identifier outside its list (run)"},              // TEST_IMAGE_RUN
+  {0x2DU, "mode manager: slot code outside the slots (copy code)"},             // COPY_CODE
+  {0x2EU, "mode manager: fall-back mode (never set) or a mode outside its list (poll)"},  // MODE_MANAGER_POLL
+  {0x2FU, "mode manager: dangerous command that is neither switch nor confirm"},  // MODE_MANAGER_RUN_DANGEROUS
+}};
+
+/**
+ * @brief Looks a number up in a code table.
+ *
+ * A bounded walk over the table (A9: fixed upper bound, no recursion); the number comes off the
+ * link, so a number that is in no row is not an error here, it is reported to the caller.
+ *
+ * @param[in]     rows   the first row of the table
+ * @param[in]     count  the number of rows
+ * @param[in]     code   the number received
+ * @return the row's words, or null when the table has no such number
+ */
+const char * lookupCode(const CodeText * rows, size_t count, uint8_t code)
+{
+  for (size_t i = 0; i < count; i++) {
+    if (rows[i].code == code) {
+      return rows[i].text;
+    }
+  }
+  return nullptr;
+}
+
+/**
+ * @brief Names a fault kind, the detail byte of EVENT 0x0001 "fault detected".
+ *
+ * @param[in]     kind  the fault-kind byte (fault_codes.h FAULT_KIND_*)
+ * @return the kind in words; null for a value not in the table, so the caller prints the number
+ */
+const char * faultKindName(uint8_t kind)
+{
+  return lookupCode(kFaultKinds.data(), kFaultKinds.size(), kind);
+}
+
+/**
+ * @brief Names a fault location, the detail byte of EVENT 0x0005 "change in memory detected".
+ *
+ * @param[in]     where  the fault-location byte (fault_codes.h FAULT_AT_*)
+ * @return the location in words; null for a value not in the table, so the caller prints the number
+ */
+const char * faultLocationName(uint8_t where)
+{
+  return lookupCode(kFaultLocations.data(), kFaultLocations.size(), where);
 }
 
 /**
@@ -122,7 +222,10 @@ const char * checkResultName(uint8_t result)
  * are decoded with slotName() and checkResultName() so the operator reads which copy failed which
  * check (Interfaces Sec. 5.4 event table and check-result table; REQ-040). A detail of another
  * length is shown as what it is, never padded. Event 0x000B shows its detail byte (which test).
- * Event 0x0106 shows its reason byte (decision H, accepted by the owner, 13 Oct 2026).
+ * Event 0x0106 shows its reason byte (decision H, accepted by the owner, 13 Oct 2026). Event
+ * 0x0001 shows its fault kind and event 0x0005 its fault location in words (owner's decisions 2
+ * and 3, 13 Oct 2026; faultKindName(), faultLocationName()); a value in no table prints as
+ * "unknown code 0x.." with the number, never left out.
  *
  * @param[in]     code           the event code
  * @param[in]     detail         the detail bytes after the code; may be null when detail_length is 0
@@ -146,6 +249,24 @@ void describeEvent(uint16_t code, const uint8_t * detail, size_t detail_length, 
   } else if (fallback) {
     n = std::snprintf(out, room, "EVENT 0x%04x (%s), detail of %zu byte(s) instead of the 2 of Sec. 5.4%s",
       code, eventName(code), detail_length, (detail_length == 1) ? ": refused copy only, no check result" : "");
+  } else if (code == report::kEventFaultDetected && detail_length >= 1) {
+    const char * kind = faultKindName(detail[0]);
+    if (kind != nullptr) {
+      n = std::snprintf(out, room, "EVENT 0x%04x (%s), fault kind 0x%02x (%s)", code, eventName(code),
+        detail[0], kind);
+    } else {
+      n = std::snprintf(out, room, "EVENT 0x%04x (%s), fault kind unknown code 0x%02x", code,
+        eventName(code), detail[0]);
+    }
+  } else if (code == report::kEventMemoryChange && detail_length >= 1) {
+    const char * where = faultLocationName(detail[0]);
+    if (where != nullptr) {
+      n = std::snprintf(out, room, "EVENT 0x%04x (%s) at 0x%02x (%s)", code, eventName(code),
+        detail[0], where);
+    } else {
+      n = std::snprintf(out, room, "EVENT 0x%04x (%s) at unknown code 0x%02x", code, eventName(code),
+        detail[0]);
+    }
   } else if ((code == report::kEventTrialTestsFailed || code == report::kEventControllerRestarted) &&
              detail_length >= 1) {
     n = std::snprintf(out, room, "EVENT 0x%04x (%s), detail 0x%02x", code, eventName(code), detail[0]);

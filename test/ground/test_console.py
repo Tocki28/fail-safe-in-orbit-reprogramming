@@ -420,6 +420,94 @@ class ConsoleTests(unittest.TestCase):
         r = c.decode_report(c.ADDED.pack(9, 8) + body)
         self.assertEqual((r["report_number"], r["onboard_time"]), (9, 8))
 
+    def event_text(self, code, detail=b""):
+        """Decode an EVENT report payload and return its text.
+
+        Args:
+            code: 16-bit event code.
+            detail: detail bytes after the code.
+
+        Returns:
+            The decoded text of the event (Sec. 5.4).
+        """
+        body = c.struct.pack("<IBH", 5, c.REPORT_EVENT, code) + detail
+        return c.decode_report(c.ADDED.pack(9, 8) + body)["text"]
+
+    def test_new_refusal_names(self):
+        """Check the refusal reasons added from Sec. 4.2 (0x10, 0x11) and the bench codes of
+        protocol.hpp (0xFD, 0xFE, 0xFF). Passes if each text matches and the bench ones say "bench".
+        """
+        self.assertEqual(c.refusal_text(0x10), "Image of the wrong kind for its place")
+        self.assertEqual(c.refusal_text(0x11), "Boot state could not be stored")
+        self.assertEqual(c.refusal_text(0xFD), "bench: the onboard computer could not send on data link A")
+        self.assertEqual(c.refusal_text(0xFE), "bench: the onboard computer's own storage failed")
+        self.assertEqual(c.refusal_text(0xFF), "bench: the controller did not answer within its timeout")
+
+    def test_refusal_printed_for_new_and_unknown_codes(self):
+        """Check that a REFUSED answer prints 0x10 and 0xFF in words and an unlisted code as
+        "unknown code" (Sec. 4.2). Passes if the printed lines match.
+        """
+        for code, text in ((0x10, "Image of the wrong kind for its place"),
+                           (0xFF, "bench: the controller did not answer within its timeout"),
+                           (0x42, "unknown code 0x42")):
+            self.fake.refuse = {c.DELIVER: code}
+            _, out = run_console(self.fake, "deliver", "--number", "1")
+            self.assertIn(f"REFUSED 0x{code:02x}: {text}", out)
+
+    def test_fallback_event_decoding(self):
+        """Check EVENT 0x0002 and 0x0003 detail decoding (Sec. 5.4, "Check result" table). Passes
+        if the refused copy and the check result come out in words for every listed value.
+        """
+        self.assertEqual(self.event_text(0x0002, b"\x02\x09"),
+                         "fall-back to the previous copy: slot B refused (signature A)")
+        self.assertEqual(self.event_text(0x0003, b"\x01\x0a"),
+                         "fall-back to the last-resort firmware: slot A refused (signature B)")
+        self.assertEqual(self.event_text(0x0002, b"\x03\x00"),
+                         "fall-back to the previous copy: last-resort refused (passed)")
+        for result, text in c.CHECK_RESULT.items():
+            self.assertTrue(self.event_text(0x0002, bytes([1, result])).endswith(f"({text})"))
+        self.assertEqual(len(c.CHECK_RESULT), 11)
+        self.assertEqual(c.CHECK_RESULT[0x07], "start address outside the region")
+
+    def test_fallback_event_unknown_and_short_detail(self):
+        """Check that an unlisted refused copy or check result, and a detail of the wrong length,
+        show as unknown or as a length note (Sec. 5.4). Passes if no value is printed bare.
+        """
+        self.assertEqual(self.event_text(0x0002, b"\x07\x09"),
+                         "fall-back to the previous copy: unknown code 0x07 refused (signature A)")
+        self.assertEqual(self.event_text(0x0003, b"\x01\x7e"),
+                         "fall-back to the last-resort firmware: slot A refused (unknown code 0x7e)")
+        self.assertEqual(self.event_text(0x0002, b"\x01"),
+                         "fall-back to the previous copy: detail of 1 bytes, expected 2")
+        self.assertEqual(self.event_text(0x0002),
+                         "fall-back to the previous copy: detail of 0 bytes, expected 2")
+
+    def test_restart_by_onboard_event(self):
+        """Check EVENT 0x0106 and its reason byte (Sec. 5.4). Passes if 0x01 reads "trial past its
+        time", an unlisted reason is unknown, and a missing reason is said so.
+        """
+        base = "controller restarted by the onboard computer"
+        self.assertEqual(self.event_text(0x0106, b"\x01"), base + ": trial past its time")
+        self.assertEqual(self.event_text(0x0106, b"\x02"), base + ": unknown code 0x02")
+        self.assertEqual(self.event_text(0x0106), base + ": reason not given")
+
+    def test_unknown_event_and_unknown_test(self):
+        """Check that an event code or failed-test value outside the tables prints as "unknown
+        code" with the number (Sec. 5.4). Passes if the texts match, also through format_report().
+        """
+        self.assertEqual(self.event_text(0x0999), "unknown code 0x0999")
+        self.assertEqual(self.event_text(0x000B, b"\x09"), "trial tests failed: unknown code 0x09")
+        r = c.decode_report(c.struct.pack("<IBH", 5, c.REPORT_EVENT, 0x0999))
+        self.assertIn("0x0999 unknown code 0x0999", c.format_report(r))
+
+    def test_health_unknown_values(self):
+        """Check that an unlisted mode, slot or self-test byte in HEALTH prints as "unknown code"
+        (Sec. 5.4). Passes if the three texts match.
+        """
+        r = c.decode_report(c.HEALTH_BODY.pack(5, 1, 9, 1, 2, 8, 1, 42, 7))
+        self.assertEqual((r["mode"], r["slot"], r["self_test"]),
+                         ("unknown code 0x09", "unknown code 0x08", "unknown code 0x07"))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

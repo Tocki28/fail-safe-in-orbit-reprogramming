@@ -61,6 +61,13 @@ REFUSAL_TEXT = {                        # Sec. 4.2: table of REFUSED codes
     0x0D: "A dangerous command cannot be scheduled",
     0x0E: "Image built for the other slot",
     0x0F: "Trial tests not passed",
+    0x10: "Image of the wrong kind for its place",
+    0x11: "Boot state could not be stored",
+    # BENCH ONLY, not in the Sec. 4.2 table: the onboard computer's own reasons, protocol.hpp
+    # kNoAnswerBench, kStorageBench, kCannotSendBench (open item: add them to Sec. 4.2).
+    0xFD: "bench: the onboard computer could not send on data link A",
+    0xFE: "bench: the onboard computer's own storage failed",
+    0xFF: "bench: the controller did not answer within its timeout",
 }
 
 # ---- Commands, Sec. 5.1 --------------------------------------------------------------
@@ -82,7 +89,19 @@ EVENTS = {                                                           # Sec. 5.4:
     0x0101: "data link lost", 0x0102: "data link working again",
     0x0103: "restore done", 0x0104: "health reports dropped",
     0x0105: "onboard computer clock differs from ground time",
+    0x0106: "controller restarted by the onboard computer",
 }
+EVENT_FALLBACK_PREVIOUS, EVENT_FALLBACK_LAST_RESORT = 0x0002, 0x0003   # Sec. 5.4: event codes
+EVENT_RESTARTED_BY_ONBOARD = 0x0106                                      # Sec. 5.4: event code
+# Check result in the detail of EVENTs 0x0002 and 0x0003 (Sec. 5.4, "Check result" table): the
+# first check the refused copy failed.
+CHECK_RESULT = {
+    0x00: "passed", 0x01: "empty", 0x02: "proprietary string", 0x03: "format", 0x04: "kind",
+    0x05: "target", 0x06: "length", 0x07: "start address outside the region",
+    0x08: "body check value", 0x09: "signature A", 0x0A: "signature B",
+}
+# Reason in the detail of EVENT 0x0106 (Sec. 5.4, event table).
+RESTART_REASON = {0x01: "trial past its time"}
 EVENT_TRIAL_STARTED, EVENT_CONFIRMED, EVENT_GIVEN_UP = 0x0006, 0x0007, 0x0008   # Sec. 5.4: event codes
 EVENT_TESTS_PASSED, EVENT_TESTS_FAILED = 0x000A, 0x000B                         # Sec. 5.4: event codes
 # Detail byte of EVENT 0x000B, which test failed (Sec. 5.4: "detail: which test").
@@ -153,6 +172,81 @@ def parse(data):
     return dict(type=ftype, dest=dest, seq=seq, payload=data[HEADER.size:HEADER.size + length])
 
 
+def unknown(value, digits=2):
+    """Text for a number that is in no table, so the operator never sees a bare code.
+
+    Every number the ground receives is shown as words (Sec. 4.2, Sec. 5.4); one that the
+    Interfaces tables do not list is shown as "unknown code" with the number, never dropped.
+
+    Args:
+        value: the number received.
+        digits: hexadecimal digits to print, 2 for a byte, 4 for an event code.
+
+    Returns:
+        The text "unknown code 0x.." with the number.
+    """
+    return f"unknown code 0x{value:0{digits}x}"
+
+
+def name_of(table, value, digits=2):
+    """Look a received number up in a table of the Interfaces document.
+
+    Args:
+        table: dict from number to text, one of the tables of Sec. 4.2 or Sec. 5.4.
+        value: the number received.
+        digits: hexadecimal digits for the unknown text, see unknown().
+
+    Returns:
+        The table's text, or unknown(value, digits) when the table has no such number.
+    """
+    return table[value] if value in table else unknown(value, digits)
+
+
+def refusal_text(code):
+    """Words for the code of a REFUSED answer (Sec. 4.2, table of reasons).
+
+    The operator has to read why a command was refused (Sec. 4.2), so the code is turned into
+    the reason of the table; the bench values 0xFD to 0xFF are marked "bench".
+
+    Args:
+        code: the code byte of the REFUSED answer.
+
+    Returns:
+        The reason text, or "unknown code 0x.." when the code is in no table.
+    """
+    return name_of(REFUSAL_TEXT, code)
+
+
+def decode_event(code, detail):
+    """Words for an EVENT report: its name and, where the table gives one, its detail (Sec. 5.4).
+
+    Sec. 5.4 gives a detail to some events: the refused copy and check result of 0x0002 and
+    0x0003 (so the operator sees which copy was refused and which check failed), the failed test
+    of 0x000B, and the reason of 0x0106. Each detail byte is turned into the table's words; a
+    value outside the table, or a detail of the wrong length, is shown as such, never left out.
+
+    Args:
+        code: 16-bit event code.
+        detail: the bytes after the event code.
+
+    Returns:
+        The text, e.g. "fall-back to the previous copy: slot B refused (signature A)". An event
+        code outside the table gives "unknown code 0x....".
+    """
+    text = name_of(EVENTS, code, 4)
+    if code in (EVENT_FALLBACK_PREVIOUS, EVENT_FALLBACK_LAST_RESORT):
+        if len(detail) != 2:
+            return text + f": detail of {len(detail)} bytes, expected 2"
+        copy = detail[0]
+        copy_text = f"slot {SLOTS[copy]}" if copy in (0x01, 0x02) else name_of(SLOTS, copy)
+        return text + f": {copy_text} refused ({name_of(CHECK_RESULT, detail[1])})"
+    if code == EVENT_TESTS_FAILED:
+        return text + ": " + ("test not named" if not detail else name_of(TRIAL_TESTS, detail[0]))
+    if code == EVENT_RESTARTED_BY_ONBOARD:
+        return text + ": " + ("reason not given" if not detail else name_of(RESTART_REASON, detail[0]))
+    return text
+
+
 def decode_report(payload):
     """Decode a Sec. 5.4 report payload into a dict, or None if it is not a report.
 
@@ -160,7 +254,7 @@ def decode_report(payload):
     front of every report it forwards (Sec. 5.4, REQ-070, REQ-071). A HEALTH report is a fixed
     length, so with or without the fields is told by length. An EVENT report is of variable
     length, so it is told by the kind byte: at offset 12 with the fields, offset 4 without.
-    EVENT 0x000B carries the failed test in its detail; it is decoded into the text.
+    The event's detail is decoded into the text by decode_event().
 
     Args:
         payload: the report frame's payload bytes.
@@ -179,19 +273,14 @@ def decode_report(payload):
     if len(payload) >= 7 and payload[4] == REPORT_EVENT:
         code = struct.unpack_from("<H", payload, 5)[0]
         detail = payload[7:]
-        text = EVENTS.get(code, f"event 0x{code:04x}")
-        if code == EVENT_TESTS_FAILED:
-            test = detail[0] if detail else None
-            name = "test not named" if test is None else TRIAL_TESTS.get(test, f"test 0x{test:02x}")
-            text += f": {name}"
-        return dict(out, kind="EVENT", code=code, text=text, detail=detail)
+        return dict(out, kind="EVENT", code=code, text=decode_event(code, detail), detail=detail)
     if len(payload) != HEALTH_LEN or payload[4] != REPORT_HEALTH:
         return None
     clock, _, mode, fwkind, version, slot, failed, trial_left, selftest = HEALTH_BODY.unpack(payload)
-    return dict(out, kind="HEALTH", controller_time=clock, mode=MODES.get(mode, f"0x{mode:02x}"),
-                fw_kind=fwkind, version=version, slot=SLOTS.get(slot, f"0x{slot:02x}"),
+    return dict(out, kind="HEALTH", controller_time=clock, mode=name_of(MODES, mode),
+                fw_kind=fwkind, version=version, slot=name_of(SLOTS, slot),
                 slot_code=slot, failed_starts=failed, trial_left=trial_left,
-                self_test=SELF_TEST.get(selftest, f"0x{selftest:02x}"))
+                self_test=name_of(SELF_TEST, selftest))
 
 
 def format_report(r):
@@ -405,7 +494,7 @@ class Console:
                 if kind == RECEIVED:
                     continue
                 if kind == REFUSED:
-                    text = REFUSAL_TEXT.get(code, "unknown reason")
+                    text = refusal_text(code)
                     raise Refused(f"{what} (seq {seq}) REFUSED 0x{code:02x}: {text}")
                 if kind in (DONE, ALREADY_DONE):
                     return kind

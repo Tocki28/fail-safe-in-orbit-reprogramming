@@ -8,8 +8,9 @@
 #                     test image through the bootloader's own check code)
 #   make keys         once: development key pairs (outside the repository) + common/keys.h
 #   make flash        bootloader only; everything else erased (bench scenarios: test/controller)
-#   make flash-firmware  bootloader + firmware in slot A + boot state "confirmed A"; the
-#                     firmware does not confirm itself yet (step 2d), so it runs as confirmed
+#   make flash-firmware  bootloader + firmware in slot A + boot state "confirmed A": firmware A
+#                     runs as confirmed, in OPERATE (the start of test/controller's
+#                     upload-probe and trial-probe)
 #   make reset        restart the chip
 #   make monitor      print the board's USART2 text (115200 8N1); PORT=/dev/cu.usbmodem...
 

@@ -93,12 +93,16 @@ enum class AnswerKind : uint8_t {
  * 2b). [[nodiscard]] on the type: the compiler warns wherever a returned code is ignored. */
 enum class [[nodiscard]] AnswerCode : uint8_t {
     kSuccess = 0x00U,
+    kNotArmed = 0x01U,          /* dangerous command without a valid arming command (REQ-029) */
+    kArmExpired = 0x02U,        /* arming command expired (REQ-030) */
+    kMode = 0x05U,              /* not allowed in the current mode (REQ-027) */
     kImpossible = 0x06U,        /* impossible values, or an unknown command (REQ-028) */
     kTrial = 0x07U,             /* no new firmware during a trial (REQ-050) */
     kDamaged = 0x08U,           /* image damaged (REQ-005, REQ-044) */
     kNotOperator = 0x09U,       /* image not from the operator (REQ-006, REQ-043) */
     kOtherController = 0x0BU,   /* image built for another controller (REQ-046) */
     kOtherSlot = 0x0EU,         /* image built for the other slot (REQ-005) */
+    kTestsNotPassed = 0x0FU,    /* trial tests not passed (REQ-012) */
 };
 
 /* One frame's fields. payload points at length bytes. */

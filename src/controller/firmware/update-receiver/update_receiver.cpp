@@ -49,6 +49,12 @@ constexpr uint32_t kFlashPageBytes = FLASH_PAGE_BYTES;
 /* The smallest image: header and two signatures (Interfaces Sec. 5.5, Figure 5). */
 constexpr uint32_t kImageMinBytes = IMAGE_HEADER_BYTES + IMAGE_SIGNATURES_BYTES;
 
+/**
+ * @brief Reads a little-endian 16-bit value from two bytes.
+ *
+ * @param[in] bytes  pointer to the low byte; the high byte follows
+ * @return the value, byte 0 low and byte 1 high
+ */
 uint16_t readU16(const uint8_t *bytes)
 {
     return static_cast<uint16_t>(static_cast<uint32_t>(bytes[0]) |
@@ -57,6 +63,16 @@ uint16_t readU16(const uint8_t *bytes)
 
 /* ---- Checks on arrival that need no state ------------------------------------------- */
 
+/**
+ * @brief Checks that a payload's length fits the command its identifier names.
+ *
+ * BEGIN is exactly 7 bytes, CHUNK is 7 bytes plus 1 to 256 data bytes, END and CANCEL are
+ * exactly 3 bytes. Any other identifier does not fit.
+ *
+ * @param[in] id      command identifier, first payload byte
+ * @param[in] length  payload bytes
+ * @return true if the length fits the command, false otherwise
+ */
 bool sizeFits(uint8_t id, uint32_t length)
 {
     switch (static_cast<UploadId>(id)) {
@@ -72,27 +88,16 @@ bool sizeFits(uint8_t id, uint32_t length)
     }
 }
 
-/* The payload's fields; false if its size does not fit the command. */
-bool parse(const uint8_t *payload, uint16_t length, UpdateCommand &cmd)
-{
-    cmd = UpdateCommand{};   /* every field 0, target Slot::kNone (C: memset to 0) */
-    if ((length < kIdBytes) || !sizeFits(payload[0], length)) {
-        return false;
-    }
-    cmd.id = static_cast<UploadId>(payload[0]);
-    cmd.image_number = readU16(&payload[kIdBytes]);
-    if (length >= kBeginPayload) {
-        cmd.value = image_read_u32(&payload[kShortPayload]);
-    }
-    if (cmd.id == UploadId::kChunk) {
-        cmd.data = &payload[kChunkHead];
-        cmd.data_bytes = static_cast<uint32_t>(length) - kChunkHead;
-    }
-    return true;
-}
-
-/* The bootloader's own checks, in its order (bootloader/main.c, image_passes): contents, then
- * both signatures, then any flash read error seen on the way. */
+/**
+ * @brief Runs the bootloader's checks on the image in a slot and returns the answer code.
+ *
+ * The bootloader's own checks, in its order (bootloader/main.c, image_passes): contents, then
+ * both signatures, then any flash read error seen on the way.
+ *
+ * @param[in] slot  slot holding the image (Slot::kA or Slot::kB)
+ * @return kUpdateOk if the image passes, otherwise the refusal code for the first fault;
+ *         AnswerCode::kDamaged if a flash read error was seen
+ */
 AnswerCode checkSlot(Slot slot)
 {
     uint32_t start = UpdateReceiver::slotStart(slot);
@@ -115,6 +120,12 @@ AnswerCode checkSlot(Slot slot)
 
 /* ---- The rules ---------------------------------------------------------------------- */
 
+/**
+ * @brief Finds the slot that contains a chip address.
+ *
+ * @param[in] address  chip address
+ * @return Slot::kA or Slot::kB if the address lies in that slot, otherwise Slot::kNone
+ */
 Slot UpdateReceiver::slotOf(uint32_t address)
 {
     /* Unsigned: an address below the slot wraps to a large number and fails the test. */
@@ -127,6 +138,12 @@ Slot UpdateReceiver::slotOf(uint32_t address)
     return Slot::kNone;
 }
 
+/**
+ * @brief Gives the first byte of a slot.
+ *
+ * @param[in] slot  Slot::kA or Slot::kB
+ * @return chip address of the slot's first byte; 0 for any other value
+ */
 uint32_t UpdateReceiver::slotStart(Slot slot)
 {
     if (slot == Slot::kA) {
@@ -138,6 +155,18 @@ uint32_t UpdateReceiver::slotStart(Slot slot)
     return 0U;
 }
 
+/**
+ * @brief Chooses the slot an upload may write: not confirmed, not running.
+ *
+ * Refuses without a valid boot state (the confirmed slot is not known) and during a trial.
+ * Otherwise the target is the slot the firmware does not run from.
+ *
+ * @param[in]  state_valid  true if the boot state was read
+ * @param[in]  state        the boot state
+ * @param[in]  running      slot this firmware runs from
+ * @param[out] target       the chosen slot, or Slot::kNone on a refusal
+ * @return kUpdateOk with target set, otherwise the refusal code (kImpossible or kTrial)
+ */
 AnswerCode UpdateReceiver::chooseTarget(bool state_valid, const boot_state_t &state, Slot running,
                                         Slot &target)
 {
@@ -159,6 +188,19 @@ AnswerCode UpdateReceiver::chooseTarget(bool state_valid, const boot_state_t &st
     return kUpdateOk;
 }
 
+/**
+ * @brief Checks that a flash range may be erased or written (the second barrier).
+ *
+ * Asked before every erase and write. Offsets are taken from the slot start, so no sum wraps
+ * past 2^32.
+ *
+ * @param[in] target   slot to be written
+ * @param[in] running  slot this firmware runs from
+ * @param[in] address  chip address of the first byte
+ * @param[in] bytes    length of the range in bytes
+ * @return true only if the range lies inside slot target, target is slot A or B and is not
+ *         running, and bytes is 1 to the slot size; false otherwise
+ */
 bool UpdateReceiver::writeAllowed(Slot target, Slot running, uint32_t address, uint32_t bytes)
 {
     uint32_t start = slotStart(target);
@@ -170,6 +212,13 @@ bool UpdateReceiver::writeAllowed(Slot target, Slot running, uint32_t address, u
     return (address >= start) && ((address - start) <= (kSlotBytes - bytes));
 }
 
+/**
+ * @brief Maps a result of the image checks to an answer code.
+ *
+ * @param[in] result  result of image_check_contents or image_check_signatures
+ * @return kUpdateOk for IMAGE_OK; kNotOperator for a bad signature; kOtherController for a bad
+ *         target; kOtherSlot for a bad start; kDamaged for every other fault
+ */
 AnswerCode UpdateReceiver::refusalFor(image_result_t result)
 {
     switch (result) {
@@ -191,23 +240,77 @@ AnswerCode UpdateReceiver::refusalFor(image_result_t result)
 
 /* ---- Checks on arrival -------------------------------------------------------------- */
 
+/**
+ * @brief Tells whether a payload starts with an upload command identifier.
+ *
+ * @param[in] payload  command payload, identifier first
+ * @param[in] length   payload bytes
+ * @return true if the identifier is one of the four upload commands (0x01 to 0x04), false
+ *         otherwise or if the payload is empty
+ */
 bool UpdateReceiver::isUpload(const uint8_t *payload, uint16_t length)
 {
     return (length >= kIdBytes) && (payload[0] >= static_cast<uint8_t>(UploadId::kBegin)) &&
            (payload[0] <= static_cast<uint8_t>(UploadId::kCancel));
 }
 
-/* The command names the transfer that BEGIN opened, into the same slot. */
+/**
+ * @brief Reads the fields of an upload payload (Interfaces Sec. 5.1, little-endian, Sec. 4.0).
+ *
+ * A static member since step 2d (before: a function private to this file): main.cpp reads the
+ * image number with it to send the test image, number 0xFFFF, to the mode manager
+ * (mode-manager/test_image.hpp) and never into this receiver. One reader keeps one payload
+ * layout for both. Its body is unchanged.
+ *
+ * @param[in]     payload  command payload, identifier first
+ * @param[in]     length   payload bytes
+ * @param[out]    cmd      the fields; every field 0 and target Slot::kNone if the size is wrong
+ * @return true if the payload's size fits its command, false otherwise
+ */
+bool UpdateReceiver::parse(const uint8_t *payload, uint16_t length, UpdateCommand &cmd)
+{
+    cmd = UpdateCommand{};   /* every field 0, target Slot::kNone (C: memset to 0) */
+    if ((length < kIdBytes) || !sizeFits(payload[0], length)) {
+        return false;
+    }
+    cmd.id = static_cast<UploadId>(payload[0]);
+    cmd.image_number = readU16(&payload[kIdBytes]);
+    if (length >= kBeginPayload) {
+        cmd.value = image_read_u32(&payload[kShortPayload]);
+    }
+    if (cmd.id == UploadId::kChunk) {
+        cmd.data = &payload[kChunkHead];
+        cmd.data_bytes = static_cast<uint32_t>(length) - kChunkHead;
+    }
+    return true;
+}
+
+/**
+ * @brief Checks that a command names the transfer that BEGIN opened.
+ *
+ * The command names the transfer that BEGIN opened, into the same slot.
+ *
+ * @param[in] cmd  the command
+ * @return true if a transfer is open and cmd has its image number and target slot, false
+ *         otherwise
+ */
 bool UpdateReceiver::sameTransfer(const UpdateCommand &cmd) const
 {
     return (phase_ != UpdatePhase::kIdle) && (cmd.image_number == image_number_) &&
            (cmd.target == target_);
 }
 
-/* A chunk starts at the next byte not yet written and stays inside the announced length.
+/**
+ * @brief Checks a CHUNK's offset and size against the transfer.
+ *
+ * A chunk starts at the next byte not yet written and stays inside the announced length.
  * Every chunk but the last is a whole number of flash words, so the next chunk starts on an
  * unwritten flash word: a written one cannot be written again [RM0440 Rev 9, Sec. 5.3.7,
- * p. 196]. */
+ * p. 196].
+ *
+ * @param[in] cmd  the CHUNK command
+ * @return true if the chunk fits, false otherwise
+ */
 bool UpdateReceiver::chunkFits(const UpdateCommand &cmd) const
 {
     uint32_t room = length_ - written_;   /* written_ never exceeds length_ */
@@ -217,6 +320,16 @@ bool UpdateReceiver::chunkFits(const UpdateCommand &cmd) const
            (last || ((cmd.data_bytes % kFlashWordBytes) == 0U));
 }
 
+/**
+ * @brief Checks a command's values against the transfer state.
+ *
+ * BEGIN: the length is from the smallest image to the slot size, in any phase. CHUNK: phase
+ * receiving, same transfer, chunk fits. END: phase receiving, same transfer, all bytes
+ * written. CANCEL: same transfer.
+ *
+ * @param[in] cmd  the command
+ * @return true if the values fit, false otherwise
+ */
 bool UpdateReceiver::valuesFit(const UpdateCommand &cmd) const
 {
     switch (cmd.id) {
@@ -234,6 +347,17 @@ bool UpdateReceiver::valuesFit(const UpdateCommand &cmd) const
     }
 }
 
+/**
+ * @brief Does the checks on arrival of an upload command.
+ *
+ * Parses the payload, chooses the target slot from the boot state as it is now, then checks
+ * the command's values. Changes no transfer state.
+ *
+ * @param[in]  payload  command payload, identifier first
+ * @param[in]  length   payload bytes
+ * @param[out] cmd      the command, filled in by parse and the slot choice
+ * @return kUpdateOk, or the refusal code (kImpossible, kTrial)
+ */
 AnswerCode UpdateReceiver::accept(const uint8_t *payload, uint16_t length, UpdateCommand &cmd) const
 {
     boot_state_t state{};
@@ -251,15 +375,31 @@ AnswerCode UpdateReceiver::accept(const uint8_t *payload, uint16_t length, Updat
 
 /* ---- Running a command -------------------------------------------------------------- */
 
+/**
+ * @brief Erases one flash page of the target slot after the write-range check.
+ *
+ * @param[in] page  chip address of the page's first byte
+ * @return true if the page is inside the target slot and the chip erased it, false otherwise
+ */
 bool UpdateReceiver::erasePage(uint32_t page) const
 {
     return writeAllowed(target_, running_, page, kFlashPageBytes) && UpdatePort::erasePage(page);
 }
 
-/* A BEGIN while a transfer is open restarts it. The onboard computer is the only sender and
+/**
+ * @brief Runs UPLOAD BEGIN: records the transfer and erases the whole target slot.
+ *
+ * A BEGIN while a transfer is open restarts it. The onboard computer is the only sender and
  * runs one transfer at a time, so a new BEGIN means it started over (after its own restart, or
  * for a new upload from the ground). Refusing it would block the slot until a CANCEL the
- * sender may not know it owes. Erasing the whole slot removes every byte of the old transfer. */
+ * sender may not know it owes. Erasing the whole slot removes every byte of the old transfer.
+ *
+ * The phase is closed until the whole slot is erased, then receiving. The watchdog is reloaded
+ * after each page.
+ *
+ * @param[in] cmd  the BEGIN command; cmd.value is the image length
+ * @return kUpdateOk, or AnswerCode::kDamaged if a page erase failed
+ */
 AnswerCode UpdateReceiver::runBegin(const UpdateCommand &cmd)
 {
     uint32_t start = slotStart(cmd.target);
@@ -284,8 +424,18 @@ AnswerCode UpdateReceiver::runBegin(const UpdateCommand &cmd)
     return kUpdateOk;
 }
 
-/* Program the chunk at `address`, then read it back through the ECC check. Byte i of the data
- * lands at address + i: the chip stores words little-endian [RM0440 Rev 9, Sec. 2.2.1, p. 82]. */
+/**
+ * @brief Programs a chunk into flash and verifies it by reading it back.
+ *
+ * Program the chunk at `address`, then read it back through the ECC check. Byte i of the data
+ * lands at address + i: the chip stores words little-endian [RM0440 Rev 9, Sec. 2.2.1, p. 82].
+ * A last flash word only partly filled is completed with 0xFF.
+ *
+ * @param[in] address  chip address of the first byte
+ * @param[in] cmd      the CHUNK command; its data and data_bytes are written
+ * @return true if the write was allowed, the chip programmed it, the read-back matches and no
+ *         ECC error was seen; false otherwise
+ */
 bool UpdateReceiver::writeChunk(uint32_t address, const UpdateCommand &cmd) const
 {
     std::array<uint32_t, kChunkWords> words;
@@ -302,6 +452,15 @@ bool UpdateReceiver::writeChunk(uint32_t address, const UpdateCommand &cmd) cons
     return same && !UpdatePort::eccErrorSeen();
 }
 
+/**
+ * @brief Runs UPLOAD CHUNK: writes the data at the chunk's offset in the target slot.
+ *
+ * On a failed write the phase becomes closed, since a half-written flash word cannot be
+ * written again. Otherwise the written count grows by the chunk's size.
+ *
+ * @param[in] cmd  the CHUNK command; cmd.value is the offset
+ * @return kUpdateOk, or AnswerCode::kDamaged if the write failed
+ */
 AnswerCode UpdateReceiver::runChunk(const UpdateCommand &cmd)
 {
     if (!writeChunk(slotStart(target_) + cmd.value, cmd)) {
@@ -312,6 +471,13 @@ AnswerCode UpdateReceiver::runChunk(const UpdateCommand &cmd)
     return kUpdateOk;
 }
 
+/**
+ * @brief Runs UPLOAD END: checks the image in the target slot and closes the transfer.
+ *
+ * Sets the phase to closed and records in image_passed_ whether the checks passed.
+ *
+ * @return kUpdateOk if the image passes, otherwise the refusal code from checkSlot
+ */
 AnswerCode UpdateReceiver::runEnd()
 {
     AnswerCode result = checkSlot(target_);
@@ -321,9 +487,15 @@ AnswerCode UpdateReceiver::runEnd()
     return result;
 }
 
-/* The header is in the slot's first page. Erased, the slot reads as empty to the bootloader
+/**
+ * @brief Runs UPLOAD CANCEL: erases the target slot's first page and ends the transfer.
+ *
+ * The header is in the slot's first page. Erased, the slot reads as empty to the bootloader
  * (common/image_check.c, IMAGE_EMPTY), which never starts it. On a failed erase the transfer
- * stays as it was, so CANCEL can be sent again. */
+ * stays as it was, so CANCEL can be sent again.
+ *
+ * @return kUpdateOk, or AnswerCode::kDamaged if the erase failed
+ */
 AnswerCode UpdateReceiver::runCancel()
 {
     if (!erasePage(slotStart(target_))) {
@@ -334,12 +506,24 @@ AnswerCode UpdateReceiver::runCancel()
     return kUpdateOk;
 }
 
+/**
+ * @brief Forgets any transfer and records the slot the firmware runs from.
+ *
+ * @param[in] running_slot  slotOf(the firmware's vector table address)
+ */
 void UpdateReceiver::init(Slot running_slot)
 {
     *this = UpdateReceiver{};   /* every member back to its initial value (C: memset to 0) */
     running_ = running_slot;
 }
 
+/**
+ * @brief Runs a command that accept() accepted.
+ *
+ * @param[in] cmd  the accepted command
+ * @return kUpdateOk, or the refusal code of the command's work (kDamaged or the END checks);
+ *         AnswerCode::kImpossible for an identifier that is not an upload command
+ */
 AnswerCode UpdateReceiver::run(const UpdateCommand &cmd)
 {
     switch (cmd.id) {

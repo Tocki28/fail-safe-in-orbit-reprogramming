@@ -50,6 +50,14 @@ struct Seen {
     std::array<std::array<uint8_t, kFramePayloadMax>, kMaxSeen> payloads{};
 };
 
+/**
+ * @brief Counts one test result and prints a PASS or FAIL line for it.
+ *
+ * Increments the global test count, and the failure count when the check failed.
+ *
+ * @param[in] ok    true if the check passed
+ * @param[in] name  text printed after PASS or FAIL
+ */
 void report(bool ok, const char *name)
 {
     tests++;
@@ -59,7 +67,19 @@ void report(bool ok, const char *name)
     std::printf("%s  %s\n", ok ? "PASS" : "FAIL", name);
 }
 
-/* Feed n bytes, all arriving at ms; record every frame accepted. */
+/**
+ * @brief Feeds bytes to the parser one by one and records every frame it accepts.
+ *
+ * Feed n bytes, all arriving at ms; record every frame accepted. An accepted frame is copied
+ * into the record together with its payload; the count keeps rising past the record size,
+ * but only the first kMaxSeen frames are stored.
+ *
+ * @param[in,out] p      parser under test
+ * @param[in]     bytes  bytes to feed, in order
+ * @param[in]     n      number of bytes to feed
+ * @param[in]     ms     millisecond count handed to the parser with every byte
+ * @param[in,out] seen   record of accepted frames; new frames are added after the old ones
+ */
 void feed(FrameParser &p, const uint8_t *bytes, uint32_t n, uint32_t ms, Seen &seen)
 {
     Frame f{};
@@ -76,6 +96,13 @@ void feed(FrameParser &p, const uint8_t *bytes, uint32_t n, uint32_t ms, Seen &s
     }
 }
 
+/**
+ * @brief Runs a byte string through a fresh parser and counts the frames it accepts.
+ *
+ * @param[in] bytes  bytes to feed, all at millisecond 0
+ * @param[in] n      number of bytes
+ * @return number of frames the parser accepted
+ */
 uint32_t accepted(const uint8_t *bytes, uint32_t n)
 {
     FrameParser p;
@@ -85,6 +112,14 @@ uint32_t accepted(const uint8_t *bytes, uint32_t n)
     return seen.count;
 }
 
+/**
+ * @brief Compares two frames field by field, including the payload bytes.
+ *
+ * @param[in] a  first frame
+ * @param[in] b  second frame; the payload is compared over a.length bytes
+ * @return true if type, destination, flags, length, sequence, expiry and payload all match,
+ *         false otherwise
+ */
 bool sameFrame(const Frame &a, const Frame &b)
 {
     return (a.type == b.type) && (a.destination == b.destination) && (a.flags == b.flags) &&
@@ -92,6 +127,14 @@ bool sameFrame(const Frame &a, const Frame &b)
            (std::memcmp(a.payload, b.payload, a.length) == 0);
 }
 
+/**
+ * @brief Writes the CRC-32 of the first bytes into the check field that follows them.
+ *
+ * The check value is stored little-endian, kFrameCheckBytes bytes, at bytes[covered].
+ *
+ * @param[in,out] bytes    frame buffer; must hold covered + kFrameCheckBytes bytes
+ * @param[in]     covered  number of leading bytes the check value covers
+ */
 void putCrc(uint8_t *bytes, uint32_t covered)
 {
     uint32_t crc = crc32_compute(bytes, covered);
@@ -103,6 +146,12 @@ void putCrc(uint8_t *bytes, uint32_t covered)
 
 /* ---- Tests ---------------------------------------------------------------------- */
 
+/**
+ * @brief Checks that the GET STATUS known-answer frame is accepted and decoded field by field.
+ *
+ * Passes if exactly one frame is accepted and its type, destination, flags, length, sequence,
+ * expiry and payload byte equal the values the frame was built from.
+ */
 void testKnownFrameAccepted()
 {
     FrameParser p;
@@ -116,6 +165,12 @@ void testKnownFrameAccepted()
            "good frame accepted: GET STATUS (bytes from zlib) decoded field by field");
 }
 
+/**
+ * @brief Checks the answer payload layout and the answer frame produced by the builder.
+ *
+ * Passes if the payload is the sequence answered (4 bytes, little-endian), the kind and the
+ * code, and if the built frame equals the known-answer bytes.
+ */
 void testAnswerLayout()
 {
     std::array<uint8_t, kAnswerPayloadBytes> payload{};
@@ -133,8 +188,16 @@ void testAnswerLayout()
            "answer frame from the builder equals the bytes computed with zlib");
 }
 
-/* Flip each bit of a good frame in turn: no frame may be accepted, and the parser must take
- * the good frame that follows after a pause. */
+/**
+ * @brief Flips each bit of a good frame in turn and checks the damaged copy is rejected.
+ *
+ * Flip each bit of a good frame in turn: no frame may be accepted, and the parser must take
+ * the good frame that follows after a pause. Reports one result line with the counts.
+ *
+ * @param[in] good  bytes of a valid frame
+ * @param[in] n     number of bytes in the frame
+ * @param[in] name  frame description used in the printed line
+ */
 void flipsRejected(const uint8_t *good, uint32_t n, const char *name)
 {
     std::array<uint8_t, kFrameMaxBytes> bad{};
@@ -160,6 +223,12 @@ void flipsRejected(const uint8_t *good, uint32_t n, const char *name)
     report((rejected == (n * 8U)) && (recovered == (n * 8U)), line);
 }
 
+/**
+ * @brief Runs the single-bit-flip check on three frames of different size.
+ *
+ * Passes (through flipsRejected) if every flip in the GET STATUS frame, the answer frame and a
+ * 100-byte-payload frame is rejected and the next good frame is taken each time.
+ */
 void testBitFlips()
 {
     std::array<uint8_t, kBigPayload> payload{};
@@ -179,6 +248,11 @@ void testBitFlips()
     flipsRejected(big.data(), big_size, "100-byte payload (120 bytes)");
 }
 
+/**
+ * @brief Checks that a frame with a wrong version byte is rejected even with a correct CRC.
+ *
+ * Passes if versions 0x00, 0x02 and 0xFF, each with the check value recomputed, yield no frame.
+ */
 void testWrongVersion()
 {
     std::array<uint8_t, kGetStatusBytes> bytes{};
@@ -194,6 +268,13 @@ void testWrongVersion()
     report(ok, "wrong version (0x00, 0x02, 0xFF) with a correct check value rejected");
 }
 
+/**
+ * @brief Checks the payload length limit in the parser and in the builder.
+ *
+ * Passes if the parser accepts Length 1024 and rejects Length 1025 (both with a correct CRC),
+ * and if the builder returns 0 for Length 1025 and for a buffer one byte too small, and the
+ * frame size for a buffer of exactly the right size.
+ */
 void testLengthLimit()
 {
     static std::array<uint8_t, kFrameMaxBytes + 1U> bytes;
@@ -223,6 +304,11 @@ void testLengthLimit()
            "builder refuses Length 1025 and a too-small buffer (25 bytes for 26)");
 }
 
+/**
+ * @brief Checks that stray bytes and false starts before the Sync bytes are skipped.
+ *
+ * Passes if, after a run of garbage, exactly one frame (sequence 7) is accepted.
+ */
 void testGarbageBeforeSync()
 {
     /* Stray bytes, lone Sync bytes, a Sync with a bad version, a header with Length 0xFFFF,
@@ -238,6 +324,11 @@ void testGarbageBeforeSync()
            "garbage before Sync skipped (incl. false starts), then the frame accepted");
 }
 
+/**
+ * @brief Checks that two frames sent with no pause between them are both accepted in order.
+ *
+ * Passes if the GET STATUS frame then the answer frame are accepted, in that order.
+ */
 void testBackToBack()
 {
     FrameParser p;
@@ -250,7 +341,16 @@ void testBackToBack()
            "two frames back to back: both accepted, in order");
 }
 
-/* First half of a frame at t1, the rest at t2: how many frames are accepted? */
+/**
+ * @brief Feeds a frame in two halves at two times and counts the frames accepted.
+ *
+ * First half of a frame at t1, the rest at t2: how many frames are accepted? A complete good
+ * frame is fed afterwards at t2 plus kLaterMs, so the parser recovers if it dropped the first.
+ *
+ * @param[in] t1  millisecond count of the first half
+ * @param[in] t2  millisecond count of the second half
+ * @return number of frames accepted: 2 if the split frame was kept, 1 if it was dropped
+ */
 uint32_t splitAt(uint32_t t1, uint32_t t2)
 {
     FrameParser p;
@@ -263,6 +363,12 @@ uint32_t splitAt(uint32_t t1, uint32_t t2)
     return seen.count;
 }
 
+/**
+ * @brief Checks the inter-byte gap rule: a gap of more than 10 ms drops the frame.
+ *
+ * Passes if an 11 ms gap drops the frame, a 10 ms gap keeps it, and the same holds when the
+ * millisecond count wraps around between the two halves.
+ */
 void testGap()
 {
     report(splitAt(1000U, 1011U) == 1U,
@@ -273,6 +379,12 @@ void testGap()
            "gap measured across the millisecond count's wrap: 10 ms kept, 11 ms dropped");
 }
 
+/**
+ * @brief Checks that builder output parsed back equals the input frame.
+ *
+ * Passes for payload lengths 0, 1, 6, 255 and 1024 if the built size is header plus payload plus
+ * check, exactly one frame is accepted, and it equals the input in every field.
+ */
 void testRoundTrip()
 {
     const uint16_t lengths[] = {0U, 1U, 6U, 255U, kFramePayloadMax};
@@ -299,6 +411,13 @@ void testRoundTrip()
     report(ok, "builder output parsed back equals the input (payload 0, 1, 6, 255, 1024 bytes)");
 }
 
+/**
+ * @brief Checks the parser against 100000 pseudo-random bytes, then a good frame.
+ *
+ * The bytes come from a fixed linear congruential sequence at about 16 bytes per millisecond.
+ * Passes if the following GET STATUS frame is the only frame accepted. Run under the
+ * sanitizers, an index outside the buffer stops the test.
+ */
 void testNoise()
 {
     FrameParser p;
@@ -317,6 +436,11 @@ void testNoise()
 
 }  // namespace
 
+/**
+ * @brief Runs every frame test and prints the totals.
+ *
+ * @return 0 if all tests passed, 1 if any failed
+ */
 int main()
 {
     testKnownFrameAccepted();

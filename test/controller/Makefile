@@ -6,12 +6,15 @@
 #   make check        host checks: CRC-32 against zlib; every image through the bootloader's
 #                     own check code (tools/check_images.py); the unit tests
 #   make unit         unit tests, built with the Mac's clang++ (C++17, as the firmware): frame
-#                     layer (unit/test_frame.cpp), HEALTH payload (unit/test_health.cpp), update
-#                     receiver with a fake flash and the build's signed images
-#                     (unit/test_update.cpp)
+#                     layer (unit/test_frame.cpp), HEALTH and EVENT payloads
+#                     (unit/test_health.cpp), update receiver with a fake flash and the build's
+#                     signed images (unit/test_update.cpp), arm state (unit/test_arm.cpp), mode
+#                     manager, trial tests, SWITCH and CONFIRM (unit/test_mode.cpp)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
+#   make trial-probe  SCENARIO=confirm|bad-image|timeout: switch to the other slot, run its
+#                     trial, then confirm it or watch it given up (trial_probe.py)
 #   make set-trial    boot state "confirmed $(CONFIRMED), trial $(TRIAL)" (default A, B), only
 #                     the boot-state pages rewritten, then restart: the bootloader checks and
 #                     starts the slot upload-probe wrote
@@ -90,13 +93,23 @@ FW_SRC     = $(SRC)/firmware
 LINK_SRC   = $(FW_SRC)/data-link
 UPD_SRC    = $(FW_SRC)/update-receiver
 HEALTH_SRC = $(FW_SRC)/health-monitor
-CXX_INCLUDES = -Iunit -I$(FW_SRC) -I$(LINK_SRC) -I$(UPD_SRC) -I$(HEALTH_SRC) -I$(COMMON)
+MODE_SRC   = $(FW_SRC)/mode-manager
+CMD_SRC    = $(FW_SRC)/command-checker
+CXX_INCLUDES = -Iunit -I$(FW_SRC) -I$(LINK_SRC) -I$(UPD_SRC) -I$(HEALTH_SRC) -I$(MODE_SRC) \
+               -I$(CMD_SRC) -I$(COMMON)
 # Every firmware and common header: a test is rebuilt when any of them changes.
 FW_HEADERS = $(wildcard $(FW_SRC)/*.hpp $(LINK_SRC)/*.hpp $(UPD_SRC)/*.hpp $(HEALTH_SRC)/*.hpp \
-                        $(COMMON)/*.h unit/*.hpp)
+                        $(MODE_SRC)/*.hpp $(CMD_SRC)/*.hpp $(COMMON)/*.h unit/*.hpp)
 FRAME_SRCS  = unit/test_frame.cpp $(LINK_SRC)/frame.cpp
 UPDATE_SRCS = unit/test_update.cpp unit/fake_port.cpp $(UPD_SRC)/update_receiver.cpp
 HEALTH_SRCS = unit/test_health.cpp $(HEALTH_SRC)/health_monitor.cpp
+ARM_SRCS    = unit/test_arm.cpp $(CMD_SRC)/arm_state.cpp
+# The mode manager with everything it is wired to in main.cpp; the chip and the UART replaced
+# by fakes (fake_port.cpp, fake_mode_port.cpp, fake_uart_link.cpp).
+MODE_SRCS   = unit/test_mode.cpp unit/fake_port.cpp unit/fake_mode_port.cpp \
+              unit/fake_uart_link.cpp $(MODE_SRC)/mode_manager.cpp $(MODE_SRC)/test_image.cpp \
+              $(CMD_SRC)/arm_state.cpp $(LINK_SRC)/frame_sender.cpp $(LINK_SRC)/frame.cpp \
+              $(HEALTH_SRC)/health_monitor.cpp $(UPD_SRC)/update_receiver.cpp
 COMMON_OBJS = build/host/crc32.o build/host/image_check.o
 MONO_OBJS   = build/host/monocypher.o build/host/monocypher-ed25519.o
 
@@ -117,14 +130,24 @@ build/host/test_update: $(UPDATE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 build/host/test_health: $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 	$(HOST_CXX) $(CXX_INCLUDES) $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
 
+build/host/test_arm: $(ARM_SRCS) $(FW_HEADERS)
+	mkdir -p build/host
+	$(HOST_CXX) $(CXX_INCLUDES) $(ARM_SRCS) -o $@
+
+build/host/test_mode: $(MODE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
+	$(HOST_CXX) $(CXX_INCLUDES) $(MODE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
+
 # The operating firmware's signed images (firmware-A.img, firmware-B.img).
 src-images:
 	$(MAKE) -C $(SRC) images
 
-unit: build/host/test_frame build/host/test_health build/host/test_update images src-images
+unit: build/host/test_frame build/host/test_health build/host/test_update build/host/test_arm \
+      build/host/test_mode images src-images
 	build/host/test_frame
 	build/host/test_health
 	build/host/test_update $(SRC)/build/images $(OUT)
+	build/host/test_arm
+	build/host/test_mode $(SRC)/build/images
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
 # PROBE_ARGS="--listen 4": listen first, and reset the board meanwhile to see its BL: lines.
@@ -139,6 +162,14 @@ link-probe:
 upload-probe: images src-images
 	@test -n "$(PORT)" || (echo "no /dev/cu.usbmodem* port: is the board plugged in?"; false)
 	$(PY) upload_probe.py $(PORT) --images $(SRC)/build/images --test-images $(OUT) $(PROBE_ARGS)
+
+# Needs the step-2d firmware running in OPERATE (make -C ../../src/controller flash-firmware).
+# Uploads the other slot's firmware (PROBE_ARGS="--no-upload" if it is already there), then
+# ARM + SWITCH, the trial, and the end SCENARIO names. timeout waits for the 120 s trial time.
+SCENARIO ?= confirm
+trial-probe: src-images
+	@test -n "$(PORT)" || (echo "no /dev/cu.usbmodem* port: is the board plugged in?"; false)
+	$(PY) trial_probe.py $(PORT) --images $(SRC)/build/images --scenario $(SCENARIO) $(PROBE_ARGS)
 
 # Boot-state pages, as programmer page numbers: page = (address - flash start) / 2 KB.
 CONFIRMED ?= A
@@ -175,5 +206,6 @@ scenario-7: images
 clean:
 	rm -rf test-firmware/build build
 
-.PHONY: all programs images src-images check unit link-probe upload-probe set-trial flash clean \
+.PHONY: all programs images src-images check unit link-probe upload-probe trial-probe set-trial \
+        flash clean \
         scenario-1 scenario-2 scenario-3 scenario-4 scenario-5 scenario-6 scenario-7

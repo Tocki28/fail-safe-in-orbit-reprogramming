@@ -28,7 +28,16 @@ constexpr uint32_t kGpioModeAf = 2U;
 /* One byte needs 86.8 us on the line; 1 ms without the transmit register emptying means the
  * transmitter has stopped. */
 constexpr uint32_t kSendByteTimeoutCycles = kCyclesPerMs;
+/* After send() returns, at most two bytes are still on their way: one in TDR and one in the
+ * shift register (send() writes TDR only once TXE says it is empty). Two bytes need 174 us on
+ * the line; 2 ms is over ten times that. */
+constexpr uint32_t kDrainTimeoutCycles = 2U * kCyclesPerMs;
 
+/**
+ * @brief Wait until USART2 can take the next byte, at most kSendByteTimeoutCycles.
+ *
+ * @return true if TXE was set in time; false if the transmitter did not empty
+ */
 bool waitTransmitEmpty()
 {
     uint32_t start = CoreClock::cyclesNow();
@@ -45,6 +54,14 @@ bool waitTransmitEmpty()
 
 }  // namespace
 
+/**
+ * @brief Reset the parser and set up PA2/PA3 and USART2 at 115200 baud, 8N1, receive
+ *        interrupt on.
+ *
+ * Enables the GPIOA and USART2 clocks, selects alternate function 7 on PA2 and PA3, writes the
+ * baud rate and enables transmitter, receiver and the receive interrupt, then enables the
+ * USART2 interrupt in the NVIC.
+ */
 void UartLink::init()
 {
     parser_.reset();
@@ -67,6 +84,15 @@ void UartLink::init()
     NVIC_EnableIRQ(USART2_IRQn);
 }
 
+/**
+ * @brief Store a received byte and its arrival time in the ring.
+ *
+ * Called from the interrupt. If the ring is full the byte is lost and counted. The head index
+ * moves last, so the main loop never sees a half-written entry.
+ *
+ * @param[in] byte  the received byte
+ * @param[in] ms    the millisecond it arrived
+ */
 void UartLink::ringPut(uint8_t byte, uint32_t ms)
 {
     uint32_t head = ring_head_;
@@ -81,6 +107,11 @@ void UartLink::ringPut(uint8_t byte, uint32_t ms)
     ring_head_ = head + 1U;   /* last, so the main loop never sees a half-written entry */
 }
 
+/**
+ * @brief Handle the USART2 interrupt: store a received byte, clear an overrun.
+ *
+ * @param[in] now_ms  the current millisecond tick, stored as the byte's arrival time
+ */
 void UartLink::onInterrupt(uint32_t now_ms)
 {
     uint32_t status = USART2->ISR;
@@ -99,6 +130,14 @@ void UartLink::onInterrupt(uint32_t now_ms)
     }
 }
 
+/**
+ * @brief Feed buffered bytes to the frame parser until a frame completes.
+ *
+ * Takes at most one ring's worth of bytes per call.
+ *
+ * @param[out] frame  the decoded frame, written only when true is returned
+ * @return true if a good frame was completed; false if the ring ran empty or the limit was hit
+ */
 bool UartLink::receive(Frame &frame)
 {
     /* At most one ring's worth per call, so the main loop returns to its other work (the
@@ -116,6 +155,14 @@ bool UartLink::receive(Frame &frame)
     return false;
 }
 
+/**
+ * @brief Send bytes on USART2, one at a time, waiting for each to be accepted.
+ *
+ * @param[in] bytes  the bytes to send
+ * @param[in] size   number of bytes
+ * @return true if all bytes were handed to the transmitter; false if it stalled (the rest is
+ *         not sent)
+ */
 bool UartLink::send(const uint8_t *bytes, uint32_t size)
 {
     for (uint32_t i = 0U; i < size; i++) {
@@ -123,6 +170,30 @@ bool UartLink::send(const uint8_t *bytes, uint32_t size)
             return false;
         }
         USART2->TDR = bytes[i];
+    }
+    return true;
+}
+
+/**
+ * @brief Wait until the transmitter has sent its last byte, at most kDrainTimeoutCycles.
+ *
+ * Called before a restart (mode-manager/mode_manager.cpp), so the last answer or event leaves
+ * the chip before the reset stops the USART halfway through a byte. TC is set when the last
+ * byte written to TDR has left the shift register [RM0440 Rev 9, Sec. 40.8.10, p. 1768].
+ * Rejected: waiting on TXE only, which is set while the last byte is still being shifted out.
+ *
+ * @return true if the transmitter finished in time; false if it stalled (the caller restarts
+ *         anyway, and the onboard computer drops the cut-short frame on its check value)
+ */
+bool UartLink::waitSent()
+{
+    uint32_t start = CoreClock::cyclesNow();
+
+    /* Unsigned subtraction stays right when the cycle counter wraps. */
+    while ((USART2->ISR & USART_ISR_TC) == 0U) {
+        if ((CoreClock::cyclesNow() - start) > kDrainTimeoutCycles) {
+            return false;
+        }
     }
     return true;
 }

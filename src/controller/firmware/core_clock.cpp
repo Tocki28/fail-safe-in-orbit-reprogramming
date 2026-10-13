@@ -32,17 +32,30 @@ constexpr uint32_t kSettleCycles = kCoreClockHz / 1000000U;
  * runs at during the change), far inside the watchdog's 1.88 s (bootloader/handover.c). */
 constexpr uint32_t kWaitCycles = 16000U;
 
+/**
+ * @brief Enable and zero the DWT cycle counter.
+ *
+ * The DWT cycle counter runs only with TRCENA set in DEMCR [RM0440 Rev 9, Sec. 47.10,
+ * p. 2102] and CYCCNTENA (bit 0) set in DWT_CTRL [RM0440 Rev 9, Sec. 47.13, p. 2104].
+ */
 void cyclesStart()
 {
-    /* The DWT cycle counter runs only with TRCENA set in DEMCR [RM0440 Rev 9, Sec. 47.10,
-     * p. 2102] and CYCCNTENA (bit 0) set in DWT_CTRL [RM0440 Rev 9, Sec. 47.13, p. 2104]. */
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CYCCNT = 0U;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 }
 
-/* Wait until (reg & mask) == want, at most kWaitCycles. C++: the register is passed by
- * reference, not by pointer: it always exists, so there is no null case to think about. */
+/**
+ * @brief Wait until (reg & mask) == want, at most kWaitCycles.
+ *
+ * C++: the register is passed by reference, not by pointer: it always exists, so there is no
+ * null case to think about. The timeout is measured on the cycle counter.
+ *
+ * @param[in] reg   the register to poll (read each pass)
+ * @param[in] mask  the bits to look at
+ * @param[in] want  the value those bits must have
+ * @return true if the bits reached the wanted value; false if kWaitCycles passed first
+ */
 bool waitBits(const volatile uint32_t &reg, uint32_t mask, uint32_t want)
 {
     uint32_t start = CoreClock::cyclesNow();
@@ -56,6 +69,13 @@ bool waitBits(const volatile uint32_t &reg, uint32_t mask, uint32_t want)
     return true;
 }
 
+/**
+ * @brief Busy-wait for a number of core clock cycles.
+ *
+ * Uses the cycle counter; unsigned subtraction keeps the result right when the counter wraps.
+ *
+ * @param[in] cycles  cycles to wait (core clock cycles)
+ */
 void waitCycles(uint32_t cycles)
 {
     uint32_t start = CoreClock::cyclesNow();
@@ -64,6 +84,12 @@ void waitCycles(uint32_t cycles)
     }
 }
 
+/**
+ * @brief Set the flash wait states and wait until the new value is in use.
+ *
+ * @param[in] latency  the FLASH_ACR_LATENCY_xWS value to write
+ * @return true if the read-back showed the new value in time; false if the wait timed out
+ */
 bool setFlashLatency(uint32_t latency)
 {
     FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY_Msk) | latency;
@@ -73,11 +99,25 @@ bool setFlashLatency(uint32_t latency)
 
 }  // namespace
 
+/**
+ * @brief Read the DWT cycle counter.
+ *
+ * @return the counter value, in core clock cycles; wraps at 2^32
+ */
 uint32_t CoreClock::cyclesNow()
 {
     return DWT->CYCCNT;
 }
 
+/**
+ * @brief Start the cycle counter and move the core clock from HSI16 to the 170 MHz PLL.
+ *
+ * Steps: AHB / 2, boost mode, 4 flash wait states with prefetch, PLL on and selected as system
+ * clock, 1 us wait, AHB / 1. Every wait gives up after kWaitCycles. On failure the function
+ * stops at the failed step and leaves the clock as it is.
+ *
+ * @return true if the core clock now runs at 170 MHz; false if a wait timed out
+ */
 bool CoreClock::start()
 {
     cyclesStart();
@@ -115,10 +155,14 @@ bool CoreClock::start()
     return true;
 }
 
-/* SysTick counts processor clocks down from RELOAD to 0 [Arm DUI 0553A, Sec. 4.4.1,
+/**
+ * @brief Start SysTick as a 1 ms interrupt from the processor clock.
+ *
+ * SysTick counts processor clocks down from RELOAD to 0 [Arm DUI 0553A, Sec. 4.4.1,
  * p. 4-33 to 4-34]; RELOAD = 169 999 fits its 24 bits (SysTick_LOAD_RELOAD_Msk, core_cm4.h).
  * No interrupt priority is set: this handler and USART2's are a few instructions each, so
- * neither delays the other by more than a fraction of one byte time (86.8 us). */
+ * neither delays the other by more than a fraction of one byte time (86.8 us).
+ */
 void CoreClock::startTick()
 {
     SysTick->LOAD = kCyclesPerMs - 1U;
@@ -126,6 +170,9 @@ void CoreClock::startTick()
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 }
 
+/**
+ * @brief Add one millisecond to the tick count; called from the SysTick interrupt.
+ */
 void CoreClock::onTick()
 {
     /* C++17 allows ++ on a volatile (C++20 deprecates it); written out, the read and the write
@@ -133,6 +180,11 @@ void CoreClock::onTick()
     milliseconds_ = milliseconds_ + 1U;
 }
 
+/**
+ * @brief Read the millisecond tick count.
+ *
+ * @return milliseconds since startTick(); wraps at 2^32
+ */
 uint32_t CoreClock::tickMs() const
 {
     /* One aligned 32-bit read: the interrupt cannot split it. */

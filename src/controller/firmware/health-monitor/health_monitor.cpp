@@ -1,7 +1,10 @@
 /*
- * health_monitor.cpp — the HEALTH report payload (see health_monitor.hpp for the layout).
+ * health_monitor.cpp — the HEALTH and EVENT report payloads (see health_monitor.hpp for the
+ * layouts).
  */
 #include "health_monitor.hpp"
+
+#include <cstring>
 
 #include "image_check.h"
 #include "image_format.h"
@@ -20,15 +23,34 @@ constexpr uint32_t kAtRunningSlot = 19U;
 constexpr uint32_t kAtFailedStarts = 20U;
 constexpr uint32_t kAtTrialTimeLeft = 21U;
 constexpr uint32_t kAtLastSelfTest = 23U;
+/* EVENT offsets: the ALL rows as above, then the event code and the detail. */
+constexpr uint32_t kAtEventCode = 13U;
+constexpr uint32_t kAtEventDetail = 15U;
 constexpr uint32_t kMsPerSecond = 1000U;
+/* Last self-test field (report table): 0x00 PASSED, 0x01 FAILED. */
 constexpr uint8_t kSelfTestPassed = 0x00U;
+constexpr uint8_t kSelfTestFailed = 0x01U;
 
+static_assert(kAtEventDetail == kEventHeadBytes, "EVENT detail follows the 15-byte head");
+
+/**
+ * @brief Write a 16-bit value little-endian.
+ *
+ * @param[out] bytes  two bytes, least significant first
+ * @param[in]  value  the value to write
+ */
 void writeU16(uint8_t *bytes, uint16_t value)
 {
     bytes[0] = static_cast<uint8_t>(value);
     bytes[1] = static_cast<uint8_t>(value >> 8);
 }
 
+/**
+ * @brief Write a 32-bit value little-endian.
+ *
+ * @param[out] bytes  four bytes, least significant first
+ * @param[in]  value  the value to write
+ */
 void writeU32(uint8_t *bytes, uint32_t value)
 {
     bytes[0] = static_cast<uint8_t>(value);
@@ -37,6 +59,12 @@ void writeU32(uint8_t *bytes, uint32_t value)
     bytes[3] = static_cast<uint8_t>(value >> 24);
 }
 
+/**
+ * @brief Convert a boot slot to its report code.
+ *
+ * @param[in] slot  the slot
+ * @return the report code for slot A or B; the unknown code for any other value
+ */
 ReportSlot slotCode(Slot slot)
 {
     if (slot == Slot::kA) {
@@ -47,6 +75,14 @@ ReportSlot slotCode(Slot slot)
 
 }  // namespace
 
+/**
+ * @brief Tell whether a HEALTH report is due; if so, restart the period.
+ *
+ * Due when kHealthPeriodMs or more have passed since the last report that was due.
+ *
+ * @param[in] now_ms  milliseconds since start
+ * @return true if a report is due now (the period restarts); false otherwise
+ */
 bool HealthMonitor::reportDue(uint32_t now_ms)
 {
     /* Unsigned subtraction stays right when the millisecond count wraps. */
@@ -57,14 +93,18 @@ bool HealthMonitor::reportDue(uint32_t now_ms)
     return true;
 }
 
-HealthMode HealthMonitor::mode(const HealthInputs &in)
-{
-    /* FALLBACK needs the mode manager (step 2d) to know a trial was given up. */
-    bool trial = in.state_valid && (toSlot(in.state.trial) != Slot::kNone) &&
-                 (toSlot(in.state.trial) == in.running_slot);
-    return trial ? HealthMode::kTrial : HealthMode::kOperate;
-}
-
+/**
+ * @brief Writes the 24-byte HEALTH payload, fields in the order of the Interfaces Sec. 5.4
+ * report table, multi-byte fields little-endian (Sec. 4.0).
+ *
+ * Step 2d: mode, trial time left and last self-test come from the mode manager, the one owner
+ * of the mode. Rejected: deriving the mode here from the boot state, as step 2c did; it would
+ * disagree with the mode manager after a CONFIRM whose boot-state write failed, or when the
+ * boot state cannot be read.
+ *
+ * @param[in]     in   the values to report (see HealthInputs)
+ * @param[out]    out  the payload
+ */
 void HealthMonitor::report(const HealthInputs &in, std::array<uint8_t, kHealthReportBytes> &out)
 {
     const uint8_t *header = in.running_header;
@@ -78,16 +118,48 @@ void HealthMonitor::report(const HealthInputs &in, std::array<uint8_t, kHealthRe
      * to 0.49 s per UPLOAD BEGIN. */
     writeU32(&out[kAtControllerTime], in.now_ms / kMsPerSecond);
     out[kAtKind] = kReportKindHealth;
-    out[kAtMode] = static_cast<uint8_t>(mode(in));
+    out[kAtMode] = static_cast<uint8_t>(in.mode);
     /* From the header the bootloader checked before it started this firmware. */
     out[kAtFirmwareKind] = (header != nullptr) ? header[IMAGE_OFFSET_KIND] : uint8_t{0U};
     writeU32(&out[kAtFirmwareVersion],
              (header != nullptr) ? image_read_u32(&header[IMAGE_OFFSET_VERSION]) : 0U);
     out[kAtRunningSlot] = static_cast<uint8_t>(slotCode(in.running_slot));
     out[kAtFailedStarts] = in.state_valid ? in.state.failed_starts : uint8_t{0U};
-    /* TODO step 2d (mode manager): the trial's time left. 0 until then. */
-    writeU16(&out[kAtTrialTimeLeft], 0U);
-    /* TODO step 2e (health monitor): the result of the last self-test. No self-test runs yet,
-     * so 0x00 ("PASSED" in the table) is a placeholder, not a result. */
-    out[kAtLastSelfTest] = kSelfTestPassed;
+    writeU16(&out[kAtTrialTimeLeft], in.trial_left_s);
+    /* The self-test at start (REQ-039, ModeManager::selfTest). Its repetition at TBD-selftest
+     * comes with the health monitor (step 2e). */
+    out[kAtLastSelfTest] = in.self_test_passed ? kSelfTestPassed : kSelfTestFailed;
+}
+
+/**
+ * @brief Writes an EVENT payload: the ALL rows of the Interfaces Sec. 5.4 report table, then the
+ * event code (2 bytes, little-endian, Sec. 4.0) and up to 32 detail bytes.
+ *
+ * Report number and onboard computer time are sent as 0, as in HEALTH: the onboard computer
+ * fills them before it stores the report (REQ-070, REQ-071). Controller clock time as in
+ * HEALTH: seconds since start, a placeholder until the controller clock (REQ-131).
+ *
+ * @param[in]     now_ms        milliseconds since start
+ * @param[in]     code          the event code (Interfaces Sec. 5.4, event code table)
+ * @param[in]     detail        detail bytes; may be nullptr when detail_bytes is 0
+ * @param[in]     detail_bytes  number of detail bytes, 0 to 32
+ * @param[out]    out           the payload; bytes past the returned length are left as they were
+ * @return the payload length, 15 + detail_bytes; 0 if detail_bytes is above 32 (nothing written)
+ */
+uint16_t HealthMonitor::eventReport(uint32_t now_ms, EventCode code, const uint8_t *detail,
+                                    uint32_t detail_bytes,
+                                    std::array<uint8_t, kEventReportMaxBytes> &out)
+{
+    if (detail_bytes > kEventDetailMax) {
+        return 0U;
+    }
+    writeU32(&out[kAtReportNumber], 0U);
+    writeU32(&out[kAtOnboardTime], 0U);
+    writeU32(&out[kAtControllerTime], now_ms / kMsPerSecond);
+    out[kAtKind] = kReportKindEvent;
+    writeU16(&out[kAtEventCode], static_cast<uint16_t>(code));
+    if (detail_bytes > 0U) {
+        std::memcpy(&out[kAtEventDetail], detail, detail_bytes);
+    }
+    return static_cast<uint16_t>(kEventHeadBytes + detail_bytes);
 }

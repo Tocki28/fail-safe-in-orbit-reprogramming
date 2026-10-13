@@ -32,6 +32,9 @@ public:
      * then cut short, and the receiver drops it on its check value. */
     [[nodiscard]] bool send(const uint8_t *bytes, uint32_t size);
 
+    /** @brief Wait, bounded, until the last byte sent has left the transmitter. */
+    [[nodiscard]] bool waitSent();
+
     /* The USART2 interrupt's work (C: the body of USART2_IRQHandler). now_ms is the
      * millisecond count, read by the handler: C++ keeps the link free of a pointer to the
      * clock, which would also move this whole object from .bss to .data (main.cpp). */

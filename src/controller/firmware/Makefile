@@ -12,16 +12,22 @@ BUILD = build/$(SLOT)
 TOP  := $(abspath ../../..)
 MONO  = $(TOP)/third_party/monocypher
 
-# Our C++: one class per component (common/build.mk has the C++ flags).
+# Our C++: one class per component (common/build.mk has the C++ flags). Object files are named
+# after the source without its folder, so every .cpp name must be unique.
 SRCS_CXX = main.cpp core_clock.cpp data-link/uart_link.cpp data-link/frame.cpp \
+           data-link/frame_sender.cpp \
            update-receiver/update_receiver.cpp update-receiver/update_port.cpp \
-           health-monitor/health_monitor.cpp
+           health-monitor/health_monitor.cpp \
+           mode-manager/mode_manager.cpp mode-manager/test_image.cpp mode-manager/mode_port.cpp \
+           command-checker/arm_state.cpp
 # common/ stays C, shared with the bootloader: the image checks the bootloader also runs
 # (UPLOAD END), boot state, flash, CRC-32. Its headers declare extern "C" for C++ callers.
 SRCS     = ../common/image_check.c ../common/boot_state.c ../common/flash.c ../common/crc32.c
 SRCS_EXT = $(MONO)/monocypher.c $(MONO)/monocypher-ed25519.c
-HEADERS  = $(wildcard *.hpp data-link/*.hpp update-receiver/*.hpp health-monitor/*.hpp)
-INCLUDES = -I. -Idata-link -Iupdate-receiver -Ihealth-monitor -I$(MONO)
+HEADERS  = $(wildcard *.hpp data-link/*.hpp update-receiver/*.hpp health-monitor/*.hpp \
+                      mode-manager/*.hpp command-checker/*.hpp)
+INCLUDES = -I. -Idata-link -Iupdate-receiver -Ihealth-monitor -Imode-manager -Icommand-checker \
+           -I$(MONO)
 
 ifeq ($(SLOT),A)
   CODE_START = SLOT_A_CODE_START

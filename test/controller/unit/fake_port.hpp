@@ -5,7 +5,8 @@
  * write, so a test can show that nothing outside the target slot was touched.
  *
  * C++: fake_port.cpp defines UpdatePort's static functions; the unit-test Makefile links it in
- * place of the board's update_port.cpp.
+ * place of the board's update_port.cpp. From step 2d fake_mode_port.cpp defines the mode
+ * manager's (ModePort) on the same flash and boot state; the last fields below are its record.
  */
 #ifndef FAKE_PORT_HPP
 #define FAKE_PORT_HPP
@@ -40,6 +41,13 @@ struct Fake {
     uint32_t outside;                             /* erases or writes outside allowed_slot: stays 0 */
     uint32_t bad_reads;                           /* UpdatePort::flash() outside the fake flash */
     uint32_t reloads;                             /* watchdog reloads */
+    /* ModePort (fake_mode_port.cpp) */
+    bool fail_state_write;                        /* the next boot-state writes fail */
+    uint32_t state_writes;                        /* ModePort::writeBootState() calls */
+    uint32_t sent_at_state_write;                 /* link bytes sent before the last write */
+    uint32_t restarts;                            /* ModePort::restart() calls */
+    uint32_t drains_at_restart;                   /* UartLink::waitSent() calls before it */
+    uint32_t sent_at_restart;                     /* link bytes sent before it */
 };
 
 extern Fake fake;

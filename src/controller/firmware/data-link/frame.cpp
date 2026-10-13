@@ -16,24 +16,48 @@
 
 namespace {
 
+/**
+ * @brief Read a little-endian 16-bit value.
+ *
+ * @param[in] bytes  two bytes, least significant first
+ * @return the value
+ */
 uint16_t readU16(const uint8_t *bytes)
 {
     return static_cast<uint16_t>(static_cast<uint32_t>(bytes[0]) |
                                  (static_cast<uint32_t>(bytes[1]) << 8));
 }
 
+/**
+ * @brief Read a little-endian 32-bit value.
+ *
+ * @param[in] bytes  four bytes, least significant first
+ * @return the value
+ */
 uint32_t readU32(const uint8_t *bytes)
 {
     return static_cast<uint32_t>(bytes[0]) | (static_cast<uint32_t>(bytes[1]) << 8) |
            (static_cast<uint32_t>(bytes[2]) << 16) | (static_cast<uint32_t>(bytes[3]) << 24);
 }
 
+/**
+ * @brief Write a 16-bit value little-endian.
+ *
+ * @param[out] bytes  two bytes, least significant first
+ * @param[in]  value  the value to write
+ */
 void writeU16(uint8_t *bytes, uint16_t value)
 {
     bytes[0] = static_cast<uint8_t>(value);
     bytes[1] = static_cast<uint8_t>(value >> 8);
 }
 
+/**
+ * @brief Write a 32-bit value little-endian.
+ *
+ * @param[out] bytes  four bytes, least significant first
+ * @param[in]  value  the value to write
+ */
 void writeU32(uint8_t *bytes, uint32_t value)
 {
     bytes[0] = static_cast<uint8_t>(value);
@@ -44,6 +68,9 @@ void writeU32(uint8_t *bytes, uint32_t value)
 
 }  // namespace
 
+/**
+ * @brief Drop any held bytes and forget the time of the last byte.
+ */
 void FrameParser::reset()
 {
     count_ = 0U;
@@ -51,13 +78,21 @@ void FrameParser::reset()
     last_ms_ = 0U;
 }
 
+/**
+ * @brief Drop the bytes held so far; the arrival time of the last byte is kept.
+ */
 void FrameParser::dropHeld()
 {
     count_ = 0U;
     total_ = 0U;
 }
 
-/* Drop what is held; keep the byte that broke the header if it can start a new frame. */
+/**
+ * @brief Drop what is held; keep the byte that broke the header if it can start a new frame.
+ *
+ * @param[in] byte  the byte that broke the header; kept as the first held byte if it is the
+ *                  first Sync byte
+ */
 void FrameParser::startOver(uint8_t byte)
 {
     dropHeld();
@@ -67,7 +102,14 @@ void FrameParser::startOver(uint8_t byte)
     }
 }
 
-/* Checks the header field that the byte just stored completes, if any. */
+/**
+ * @brief Check the header field that the byte just stored completes, if any.
+ *
+ * The fields checked are Sync byte 0, Sync byte 1, Version and Length (not above the payload
+ * maximum). Any other byte position passes.
+ *
+ * @return true if the header is still acceptable; false if the last byte broke it
+ */
 bool FrameParser::headerSoFarOk() const
 {
     switch (count_) {
@@ -84,6 +126,11 @@ bool FrameParser::headerSoFarOk() const
     }
 }
 
+/**
+ * @brief Compare the CRC-32 of the held frame with the check value at its end.
+ *
+ * @return true if they match; false if the frame is damaged
+ */
 bool FrameParser::checkValueOk() const
 {
     uint32_t covered = total_ - kFrameCheckBytes;
@@ -91,6 +138,14 @@ bool FrameParser::checkValueOk() const
     return crc32_compute(bytes_.data(), covered) == readU32(&bytes_[covered]);
 }
 
+/**
+ * @brief Copy the header fields of the held frame into a Frame.
+ *
+ * The payload pointer in the Frame points into the parser's own buffer, so it is valid only
+ * until the next call to feed().
+ *
+ * @param[out] frame  the decoded frame
+ */
 void FrameParser::decode(Frame &frame) const
 {
     frame.type = static_cast<FrameType>(bytes_[kFrameOffsetType]);
@@ -102,6 +157,18 @@ void FrameParser::decode(Frame &frame) const
     frame.payload = &bytes_[kFrameHeaderBytes];
 }
 
+/**
+ * @brief Take one received byte; report when it completes a good frame.
+ *
+ * A gap of more than kFrameGapMaxMs since the previous byte drops what was held first. A byte
+ * that breaks the header restarts the search (startOver). A complete frame whose check value
+ * does not match is dropped whole.
+ *
+ * @param[in]  byte    the received byte
+ * @param[in]  now_ms  the millisecond the byte arrived
+ * @param[out] frame   the decoded frame, written only when true is returned
+ * @return true if this byte completed a frame with a matching check value; false otherwise
+ */
 bool FrameParser::feed(uint8_t byte, uint32_t now_ms, Frame &frame)
 {
     /* Unsigned subtraction stays right when the millisecond count wraps. */
@@ -131,6 +198,18 @@ bool FrameParser::feed(uint8_t byte, uint32_t now_ms, Frame &frame)
     return good;
 }
 
+/**
+ * @brief Write a frame (header, payload, check value) into a buffer.
+ *
+ * The check value is the CRC-32 of the header and payload. Nothing is written when the payload
+ * is too long or the frame does not fit.
+ *
+ * @param[in]  frame  the frame to write; frame.payload must hold frame.length bytes
+ * @param[out] out    the buffer to write into
+ * @param[in]  room   size of out, in bytes
+ * @return the number of bytes written; 0 if frame.length is above kFramePayloadMax or the frame
+ *         does not fit in room
+ */
 uint32_t buildFrame(const Frame &frame, uint8_t *out, uint32_t room)
 {
     uint32_t covered = kFrameHeaderBytes + static_cast<uint32_t>(frame.length);
@@ -154,6 +233,14 @@ uint32_t buildFrame(const Frame &frame, uint8_t *out, uint32_t room)
     return covered + kFrameCheckBytes;
 }
 
+/**
+ * @brief Write the answer payload: the sequence number answered, the kind and the code.
+ *
+ * @param[in]  answered  sequence number of the frame being answered
+ * @param[in]  kind      the kind of answer
+ * @param[in]  code      the answer code
+ * @param[out] out       the payload
+ */
 void answerPayload(uint32_t answered, AnswerKind kind, AnswerCode code,
                    std::array<uint8_t, kAnswerPayloadBytes> &out)
 {

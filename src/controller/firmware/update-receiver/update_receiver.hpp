@@ -73,6 +73,9 @@ public:
     /* True if the payload's identifier is one of the four upload commands. */
     [[nodiscard]] static bool isUpload(const uint8_t *payload, uint16_t length);
 
+    /** @brief Read an upload payload's fields; false if its size does not fit the command. */
+    [[nodiscard]] static bool parse(const uint8_t *payload, uint16_t length, UpdateCommand &cmd);
+
     /* Checks on arrival. kUpdateOk, with cmd filled in, or the refusal code. */
     AnswerCode accept(const uint8_t *payload, uint16_t length, UpdateCommand &cmd) const;
 
@@ -85,7 +88,8 @@ public:
         return running_;
     }
 
-    /* After END (phase kClosed): its checks passed (for SWITCH, step 2d). */
+    /* After END (phase kClosed): its checks passed. Step 2d does not use it for SWITCH: the
+     * bootloader checks the image at the next start (mode-manager/mode_manager.cpp, runSwitch). */
     bool imagePassed() const
     {
         return image_passed_;

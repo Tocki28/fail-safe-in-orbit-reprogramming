@@ -46,6 +46,14 @@ using TestData = std::array<uint8_t, kTestLength>;
 uint32_t failures;
 uint32_t tests;
 
+/**
+ * @brief Counts one test result and prints a PASS or FAIL line for it.
+ *
+ * Increments the test counter, and the failure counter when ok is false.
+ *
+ * @param[in] ok    true if the check passed
+ * @param[in] name  text printed after PASS or FAIL
+ */
 void report(bool ok, const char *name)
 {
     tests++;
@@ -57,12 +65,24 @@ void report(bool ok, const char *name)
 
 /* ---- Payloads ------------------------------------------------------------------------ */
 
+/**
+ * @brief Writes a 16-bit value little-endian.
+ *
+ * @param[out] p  destination, at least 2 bytes
+ * @param[in]  v  value to store
+ */
 void putU16(uint8_t *p, uint16_t v)
 {
     p[0] = static_cast<uint8_t>(v);
     p[1] = static_cast<uint8_t>(v >> 8);
 }
 
+/**
+ * @brief Writes a 32-bit value little-endian.
+ *
+ * @param[out] p  destination, at least 4 bytes
+ * @param[in]  v  value to store
+ */
 void putU32(uint8_t *p, uint32_t v)
 {
     for (uint32_t i = 0U; i < 4U; i++) {
@@ -70,7 +90,14 @@ void putU32(uint8_t *p, uint32_t v)
     }
 }
 
-/* The identifier byte of an upload command. */
+/**
+ * @brief Returns the identifier byte of an upload command.
+ *
+ * The identifier byte of an upload command.
+ *
+ * @param[in] id  upload command
+ * @return the command's identifier byte
+ */
 constexpr uint8_t idByte(UploadId id)
 {
     return static_cast<uint8_t>(id);
@@ -83,6 +110,17 @@ struct Answer {
     AnswerCode code;
 };
 
+/**
+ * @brief Offers one payload to the receiver and returns what main.cpp would answer.
+ *
+ * Calls accept(); if that gives kUpdateOk the answer is RECEIVED and run() then gives the
+ * result code, otherwise the answer is REFUSED with the code from accept().
+ *
+ * @param[in,out] rx       receiver under test
+ * @param[in]     payload  command payload bytes
+ * @param[in]     length   payload length in bytes
+ * @return the answer: received is true if RECEIVED came first; code is the final code
+ */
 Answer send(UpdateReceiver &rx, const uint8_t *payload, uint16_t length)
 {
     UpdateCommand cmd{};
@@ -95,6 +133,16 @@ Answer send(UpdateReceiver &rx, const uint8_t *payload, uint16_t length)
     return a;
 }
 
+/**
+ * @brief Sends an UPLOAD BEGIN command.
+ *
+ * Payload: identifier, image number (2 bytes), image length (4 bytes).
+ *
+ * @param[in,out] rx      receiver under test
+ * @param[in]     number  image number
+ * @param[in]     length  announced image length in bytes
+ * @return the receiver's answer
+ */
 Answer begin(UpdateReceiver &rx, uint16_t number, uint32_t length)
 {
     std::array<uint8_t, kChunkHead> p{};
@@ -105,6 +153,18 @@ Answer begin(UpdateReceiver &rx, uint16_t number, uint32_t length)
     return send(rx, p.data(), kChunkHead);
 }
 
+/**
+ * @brief Sends an UPLOAD CHUNK command carrying n data bytes.
+ *
+ * Payload: identifier, image number (2 bytes), offset (4 bytes), then the data.
+ *
+ * @param[in,out] rx      receiver under test
+ * @param[in]     number  image number
+ * @param[in]     offset  offset of the first data byte in the image
+ * @param[in]     data    data bytes to send
+ * @param[in]     n       number of data bytes, at most kUploadChunkMax + 8
+ * @return the receiver's answer
+ */
 Answer chunk(UpdateReceiver &rx, uint16_t number, uint32_t offset, const uint8_t *data, uint32_t n)
 {
     std::array<uint8_t, kPayloadRoom> p{};
@@ -116,6 +176,14 @@ Answer chunk(UpdateReceiver &rx, uint16_t number, uint32_t offset, const uint8_t
     return send(rx, p.data(), static_cast<uint16_t>(kChunkHead + n));
 }
 
+/**
+ * @brief Sends a 3-byte upload command (END or CANCEL): identifier and image number.
+ *
+ * @param[in,out] rx      receiver under test
+ * @param[in]     id      upload command to send
+ * @param[in]     number  image number
+ * @return the receiver's answer
+ */
 Answer shortCommand(UpdateReceiver &rx, UploadId id, uint16_t number)
 {
     std::array<uint8_t, 3> p{};
@@ -125,25 +193,57 @@ Answer shortCommand(UpdateReceiver &rx, UploadId id, uint16_t number)
     return send(rx, p.data(), 3U);
 }
 
+/**
+ * @brief Tests whether an answer is RECEIVED followed by DONE.
+ *
+ * @param[in] a  answer to test
+ * @return true if RECEIVED and then code 0x00; false otherwise
+ */
 bool done(Answer a)
 {
     return a.received && (a.code == kUpdateOk);
 }
 
-/* Refused on arrival: no RECEIVED, only REFUSED with this code. */
+/**
+ * @brief Tests that a command was refused on arrival with the given code.
+ *
+ * Refused on arrival: no RECEIVED, only REFUSED with this code.
+ *
+ * @param[in] a     answer to test
+ * @param[in] code  expected refusal code
+ * @return true if no RECEIVED was sent and the code matches; false otherwise
+ */
 bool refusedOnly(Answer a, AnswerCode code)
 {
     return !a.received && (a.code == code);
 }
 
-/* RECEIVED, then REFUSED with this code. */
+/**
+ * @brief Tests that a command was answered RECEIVED and then refused with the given code.
+ *
+ * RECEIVED, then REFUSED with this code.
+ *
+ * @param[in] a     answer to test
+ * @param[in] code  expected refusal code
+ * @return true if RECEIVED was sent and the code matches; false otherwise
+ */
 bool receivedThenRefused(Answer a, AnswerCode code)
 {
     return a.received && (a.code == code);
 }
 
-/* The whole image in 256-byte chunks, stop-and-wait as the onboard computer sends it. The END
- * answer, or the first answer that was not DONE. */
+/**
+ * @brief Sends a whole image as BEGIN, CHUNKs and END, stopping at the first failed answer.
+ *
+ * The whole image in 256-byte chunks, stop-and-wait as the onboard computer sends it. The END
+ * answer, or the first answer that was not DONE.
+ *
+ * @param[in,out] rx      receiver under test
+ * @param[in]     image   image bytes
+ * @param[in]     size    image length in bytes
+ * @param[in]     number  image number
+ * @return the END answer, or the first answer that was not DONE
+ */
 Answer upload(UpdateReceiver &rx, const uint8_t *image, uint32_t size, uint16_t number)
 {
     Answer a = begin(rx, number, size);
@@ -155,7 +255,15 @@ Answer upload(UpdateReceiver &rx, const uint8_t *image, uint32_t size, uint16_t 
     return done(a) ? shortCommand(rx, UploadId::kEnd, number) : a;
 }
 
-/* Every byte outside `written_slot` still holds its region's pattern (fake_port.cpp). */
+/**
+ * @brief Tests that the fake flash changed nowhere except in the slot that was written.
+ *
+ * Every byte outside `written_slot` still holds its region's pattern (fake_port.cpp). Also
+ * requires no access outside the flash and no bad read.
+ *
+ * @param[in] written_slot  slot allowed to differ; kNone if no slot may differ
+ * @return true if nothing else changed; false otherwise
+ */
 bool othersUntouched(Slot written_slot)
 {
     uint32_t changed = fakeCountNot(BOOTLOADER_START, BOOTLOADER_BYTES, 0xB0U) +
@@ -170,6 +278,13 @@ bool othersUntouched(Slot written_slot)
     return (changed == 0U) && (fake.outside == 0U) && (fake.bad_reads == 0U);
 }
 
+/**
+ * @brief Fills the test data with a byte pattern whose first word is not erased.
+ *
+ * Byte i is (i * 7 + 1) modulo 256.
+ *
+ * @param[out] data  buffer of kTestLength bytes to fill
+ */
 void fillPattern(TestData &data)
 {
     for (uint32_t i = 0U; i < kTestLength; i++) {
@@ -177,13 +292,25 @@ void fillPattern(TestData &data)
     }
 }
 
-/* Running slot A, confirmed A, no trial: the upload target is slot B. */
+/**
+ * @brief Resets the fake flash and initialises the receiver as running slot A.
+ *
+ * Running slot A, confirmed A, no trial: the upload target is slot B.
+ *
+ * @param[in,out] rx  receiver to initialise
+ */
 void startRunningA(UpdateReceiver &rx)
 {
     fakeReset();
     rx.init(Slot::kA);
 }
 
+/**
+ * @brief Returns a pointer into the fake flash for an absolute flash address.
+ *
+ * @param[in] address  absolute address, at least kFlashStart and inside the fake flash
+ * @return pointer to the byte at that address
+ */
 const uint8_t *flashAt(uint32_t address)
 {
     return &fake.flash[address - kFlashStart];
@@ -191,6 +318,13 @@ const uint8_t *flashAt(uint32_t address)
 
 /* ---- Slot choice ----------------------------------------------------------------------- */
 
+/**
+ * @brief Checks chooseTarget() and the trial refusal of every upload command.
+ *
+ * Passes if the target is the slot not running and not confirmed, trial gives 0x07, no free
+ * slot or unknown state gives 0x06, and BEGIN, CHUNK, END and CANCEL during a trial are
+ * refused 0x07 with the flash untouched.
+ */
 void testSlotChoice()
 {
     boot_state_t s{};
@@ -237,6 +371,11 @@ void testSlotChoice()
            "during a trial BEGIN, CHUNK, END, CANCEL: REFUSED 0x07 only, flash untouched");
 }
 
+/**
+ * @brief Checks slotOf() on slot edges and addresses outside both slots.
+ *
+ * Passes if each address maps to slot A, slot B or none as expected.
+ */
 void testSlotOf()
 {
     struct Case {
@@ -266,12 +405,33 @@ void testSlotOf()
 
 /* ---- The address barrier ------------------------------------------------------------- */
 
+/**
+ * @brief Tests whether two address ranges share at least one byte.
+ *
+ * @param[in] a      first address of range 1
+ * @param[in] n      length of range 1 in bytes
+ * @param[in] start  first address of range 2
+ * @param[in] bytes  length of range 2 in bytes
+ * @return true if the ranges overlap; false otherwise
+ */
 bool overlaps(uint64_t a, uint64_t n, uint64_t start, uint64_t bytes)
 {
     return (a < (start + bytes)) && (start < (a + n));
 }
 
-/* What writeAllowed() must answer, worked out in 64 bits so nothing wraps. */
+/**
+ * @brief Computes the answer writeAllowed() must give, independently of its code.
+ *
+ * What writeAllowed() must answer, worked out in 64 bits so nothing wraps.
+ * Allowed only for a real target slot other than the running one, with n above 0 and the
+ * range inside the target slot.
+ *
+ * @param[in] target   slot being written
+ * @param[in] running  slot that is executing
+ * @param[in] a        first address of the write
+ * @param[in] n        length of the write in bytes
+ * @return true if the write must be allowed; false otherwise
+ */
 bool expectedAllowed(Slot target, Slot running, uint64_t a, uint64_t n)
 {
     uint64_t start = (target == Slot::kA) ? kSlotAStart : kSlotBStart;
@@ -281,6 +441,14 @@ bool expectedAllowed(Slot target, Slot running, uint64_t a, uint64_t n)
            ((a + n) <= (start + kSlotBytes));
 }
 
+/**
+ * @brief Tests whether a range touches the bootloader, last-resort, boot state or running slot.
+ *
+ * @param[in] running  slot that is executing; kNone if unknown
+ * @param[in] a        first address of the range
+ * @param[in] n        length of the range in bytes
+ * @return true if the range overlaps any protected region; false otherwise
+ */
 bool touchesProtected(Slot running, uint64_t a, uint64_t n)
 {
     uint64_t run = (running == Slot::kA) ? kSlotAStart : kSlotBStart;
@@ -291,6 +459,13 @@ bool touchesProtected(Slot running, uint64_t a, uint64_t n)
            ((running != Slot::kNone) && overlaps(a, n, run, kSlotBytes));
 }
 
+/**
+ * @brief Sweeps writeAllowed() over targets, running slots, sizes and addresses.
+ *
+ * Passes if no answer differs from expectedAllowed() and no allowed range touches the
+ * bootloader, running slot, last-resort or boot state. Slot codes 3 and 0xFF are no slot: a
+ * damaged value must be refused like kNone.
+ */
 void testAddressBarrier()
 {
     /* Slot codes 3 and 0xFF are no slot: a damaged value must be refused like kNone. */
@@ -329,6 +504,11 @@ void testAddressBarrier()
 
 /* ---- Answer codes -------------------------------------------------------------------- */
 
+/**
+ * @brief Checks the wire values of the refusal codes and refusalFor() for all 11 image results.
+ *
+ * Passes if every image check result maps to the expected answer code.
+ */
 void testResultCodes()
 {
     struct Case {
@@ -365,6 +545,12 @@ void testResultCodes()
 
 /* ---- Payload sizes and length bounds ------------------------------------------------- */
 
+/**
+ * @brief Checks that wrong payload sizes are refused 0x06 and isUpload() accepts 0x01 to 0x04.
+ *
+ * Passes if every bad size gets REFUSED 0x06 only with no erase, and only identifiers 0x01 to
+ * 0x04 count as upload commands.
+ */
 void testPayloadSizes()
 {
     UpdateReceiver rx;
@@ -411,6 +597,12 @@ void testPayloadSizes()
     report(ok, "upload commands are identifiers 0x01 to 0x04 only (Interfaces Sec. 5.1)");
 }
 
+/**
+ * @brief Checks the BEGIN length limits.
+ *
+ * Passes if lengths below the smallest image or above the slot size are refused 0x06 with
+ * nothing erased, and the two valid extremes are DONE after erasing the slot page by page.
+ */
 void testLengthBounds()
 {
     UpdateReceiver rx;
@@ -436,6 +628,13 @@ void testLengthBounds()
 
 /* ---- Offset sequencing --------------------------------------------------------------- */
 
+/**
+ * @brief Checks CHUNK, END and CANCEL sequencing through one transfer.
+ *
+ * Passes if commands out of order, at a wrong offset or number, or of a wrong size are
+ * refused 0x06, the data lands in slot B in order, END on non-image bytes gives RECEIVED then
+ * 0x08, and CANCEL erases the first page of slot B.
+ */
 void testOffsets()
 {
     UpdateReceiver rx;
@@ -498,6 +697,12 @@ void testOffsets()
            "(bootloader check: empty); a second CANCEL refused 0x06");
 }
 
+/**
+ * @brief Checks that BEGIN during an open transfer starts it over.
+ *
+ * Passes if the slot is erased again, the old image number is refused and the new one starts
+ * at offset 0.
+ */
 void testBeginRestarts()
 {
     UpdateReceiver rx;
@@ -515,6 +720,12 @@ void testBeginRestarts()
                "refused, new one starts at offset 0");
 }
 
+/**
+ * @brief Checks the receiver notices a boot state change after BEGIN.
+ *
+ * Passes if a trial set after BEGIN gives CHUNK REFUSED 0x07 with nothing written and the
+ * transfer continues once the trial is cleared, and a changed confirmed slot gives 0x06.
+ */
 void testTrialMidTransfer()
 {
     UpdateReceiver rx;
@@ -540,6 +751,12 @@ void testTrialMidTransfer()
                                         "nothing written");
 }
 
+/**
+ * @brief Checks the receiver's answers to erase, program and ECC read faults.
+ *
+ * Passes if each fault gives RECEIVED then REFUSED 0x08 (the ECC case REFUSED 0x08), the
+ * transfer is closed afterwards, and CANCEL can be repeated.
+ */
 void testFlashFaults()
 {
     UpdateReceiver rx;
@@ -574,6 +791,16 @@ void testFlashFaults()
 
 /* ---- Real images ---------------------------------------------------------------------- */
 
+/**
+ * @brief Reads an image file into a buffer.
+ *
+ * Prints a message if nothing could be read.
+ *
+ * @param[in]  dir   directory holding the file
+ * @param[in]  name  file name
+ * @param[out] buf   buffer receiving the bytes, at most one slot
+ * @return number of bytes read; 0 if the file could not be read
+ */
 uint32_t load(const char *dir, const char *name, SlotImage &buf)
 {
     char path[1024];
@@ -591,6 +818,16 @@ uint32_t load(const char *dir, const char *name, SlotImage &buf)
     return static_cast<uint32_t>(n);
 }
 
+/**
+ * @brief Sends the build's real signed images through the receiver into the fake flash.
+ *
+ * Passes if a good image is DONE and equals the slot, and a damaged body, an unknown key, a
+ * wrong controller identity, a wrong start address and a flash read error during END are
+ * refused with 0x08, 0x09, 0x0B, 0x0E and 0x08, with the rest of the flash untouched.
+ *
+ * @param[in] src_images   directory with firmware-A.img and firmware-B.img
+ * @param[in] test_images  directory with firmware-B-wrong-key-a.img
+ */
 void testImages(const char *src_images, const char *test_images)
 {
     static SlotImage a;
@@ -658,6 +895,14 @@ void testImages(const char *src_images, const char *test_images)
 
 }  // namespace
 
+/**
+ * @brief Runs all update receiver unit tests.
+ *
+ * @param[in] argc  argument count; must be 3
+ * @param[in] argv  program name, directory with the firmware images, directory with the
+ *                  wrong-key image
+ * @return 0 if all tests passed; 1 if a test failed; 2 on a usage error
+ */
 int main(int argc, char **argv)
 {
     if (argc != 3) {

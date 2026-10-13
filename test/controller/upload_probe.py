@@ -9,7 +9,8 @@ While the controller erases or writes its flash its receiver cannot run, and byt
 meanwhile are lost (src/controller/firmware/update-receiver/update_receiver.h).
 
   1. Waits for a HEALTH report: the running slot and the mode.
-  2. Mode TRIAL: BEGIN, CHUNK, END and CANCEL must each be answered REFUSED 0x07 only. Stop.
+  2. Mode TRIAL: BEGIN, CHUNK, END and CANCEL with image number 1 must each be answered REFUSED
+     0x07 only (the test image, number 0xFFFF, is trial_probe.py's). Stop.
   3. Mode OPERATE, into the slot that is not running (the "free" slot):
      a. CHUNK at offset 512 where 256 is next          REFUSED 0x06 only; CANCEL then DONE
      b. firmware-<free>.img, byte 0x600 inverted        END: RECEIVED, then REFUSED 0x08
@@ -54,37 +55,96 @@ WAIT_HEALTH_S = 2.5             # reports come every second
 HEALTH_LISTEN_S = 3.5           # long enough for three reports
 HEALTH_PERIOD_S = 1.0           # HEALTH_PERIOD_MS in health_monitor.h
 HEALTH_TOLERANCE_S = 0.1        # USB serial delivery jitter
+TRIAL_S = 120                   # kTrialMs in mode-manager/mode_manager.hpp (bench value)
 
 
 def begin(number: int, length: int) -> bytes:
+    """Builds an UPLOAD BEGIN payload.
+
+    Args:
+        number: Image number.
+        length: Image length in bytes.
+
+    Returns:
+        The payload bytes.
+    """
     return struct.pack("<BHI", BEGIN, number, length)
 
 
 def chunk(number: int, offset: int, data: bytes) -> bytes:
+    """Builds an UPLOAD CHUNK payload.
+
+    Args:
+        number: Image number.
+        offset: Offset of the data in the image.
+        data: Image bytes, at most CHUNK_BYTES.
+
+    Returns:
+        The payload bytes.
+    """
     return struct.pack("<BHI", CHUNK, number, offset) + data
 
 
 def end(number: int) -> bytes:
+    """Builds an UPLOAD END payload.
+
+    Args:
+        number: Image number.
+
+    Returns:
+        The payload bytes.
+    """
     return struct.pack("<BH", END, number)
 
 
 def cancel(number: int) -> bytes:
+    """Builds an UPLOAD CANCEL payload.
+
+    Args:
+        number: Image number.
+
+    Returns:
+        The payload bytes.
+    """
     return struct.pack("<BH", CANCEL, number)
 
 
 def code_text(answers: list) -> str:
+    """Formats answers as text.
+
+    Args:
+        answers: (kind, code) pairs.
+
+    Returns:
+        The pairs as "KIND 0xCC" joined by commas, or "no answer" if the list is empty.
+    """
     return ", ".join(f"{lp.KINDS.get(k, hex(k))} 0x{c:02x}" for k, c in answers) or "no answer"
 
 
 class Probe:
     def __init__(self, link: lp.Link, checks: lp.Checks):
+        """Stores the link and the result counter and starts the sequence number at 0.
+
+        Args:
+            link: Link to the controller.
+            checks: Result counter.
+        """
         self.link = link
         self.checks = checks
         self.seq = 0
         self.frames = []
 
     def command(self, payload: bytes, wait: float, what: str) -> list:
-        """Send one command and wait until its final answer arrives: stop-and-wait."""
+        """Send one command and wait until its final answer arrives: stop-and-wait.
+
+        Args:
+            payload: Command payload.
+            wait: Longest time to wait for a final answer, in seconds.
+            what: Short description printed with the frame.
+
+        Returns:
+            The (kind, code) answers to this command.
+        """
         self.seq += 1
         seq = self.seq
         self.link.send(lp.build(lp.TYPE_COMMAND, lp.DEST_CONTROLLER, seq, payload, lp.EXPIRY),
@@ -96,7 +156,15 @@ class Probe:
 
     def health(self, seconds: float, first_only: bool = True) -> list:
         """(arrival time, fields) of the HEALTH reports within `seconds`; stops at the first
-        one unless first_only is False."""
+        one unless first_only is False.
+
+        Args:
+            seconds: Longest time to listen.
+            first_only: If True, listening ends at the first HEALTH report.
+
+        Returns:
+            A list of (arrival time, HEALTH dict) pairs.
+        """
         stop = (lambda f: any(lp.decode_health(x) for x in f)) if first_only else None
         frames = self.link.collect(seconds, stop)
         self.frames += frames
@@ -104,7 +172,19 @@ class Probe:
 
     def upload(self, image: bytes, number: int, label: str):
         """BEGIN, every CHUNK, END. Returns (step that stopped it or "END", its answers,
-        seconds for the whole upload, seconds for BEGIN, seconds for END)."""
+        seconds for the whole upload, seconds for BEGIN, seconds for END).
+
+        Stops at the first command that is not answered RECEIVED then DONE 0x00, except END, whose
+        answers are returned as they are. Prints progress every 16 chunks.
+
+        Args:
+            image: Image bytes.
+            number: Image number.
+            label: Description used in the printed frames.
+
+        Returns:
+            The tuple described above.
+        """
         start = time.monotonic()
         answers = self.command(begin(number, len(image)), WAIT_BEGIN_S, f"UPLOAD BEGIN {label}")
         begin_s = time.monotonic() - start
@@ -123,6 +203,17 @@ class Probe:
         return "END", answers, now - start, begin_s, now - end_start
 
     def expect_end(self, image: bytes, number: int, label: str, code: int) -> None:
+        """Uploads an image that END must refuse, and reports whether it did.
+
+        Passes if every step up to END is accepted and END is answered RECEIVED, then REFUSED with
+        the given code.
+
+        Args:
+            image: Image bytes.
+            number: Image number.
+            label: Name of the check.
+            code: REFUSED code expected from END.
+        """
         print(f"---- {label}")
         step, answers, _, _, _ = self.upload(image, number, label)
         self.checks.report(step == "END" and answers == [(lp.RECEIVED, 0x00), (lp.REFUSED, code)],
@@ -131,17 +222,38 @@ class Probe:
 
 
 def check_health(checks: lp.Checks, h: dict) -> None:
+    """Checks the fields of a HEALTH report.
+
+    Report number and onboard time must be 0; mode OPERATE or TRIAL, slot A or B, firmware kind
+    main; trial time left 0 in OPERATE or 1 to TRIAL_S in TRIAL; last self-test 0x00.
+
+    Args:
+        checks: Result counter.
+        h: Dict from link_probe.decode_health.
+    """
     print("      " + lp.health_text(h))
     checks.report(h["number"] == 0 and h["onboard_time"] == 0,
                   "HEALTH: report number and onboard computer time sent as 0")
     checks.report(h["mode"] in (MODE_OPERATE, MODE_TRIAL) and h["slot"] in SLOT_NAMES and
                   h["fw_kind"] == FIRMWARE_KIND_MAIN,
                   "HEALTH: mode OPERATE or TRIAL, running slot A or B, firmware kind 0x02")
-    checks.report(h["trial_left"] == 0 and h["self_test"] == 0,
-                  "HEALTH: trial time left 0 and self-test 0x00 (placeholders until 2d/2e)")
+    # From step 2d: trial time left counts down from 120 s in TRIAL and is 0 in OPERATE; the
+    # last self-test (the running image's body check value, at start) is 0x00 PASSED for a good
+    # image.
+    left_ok = (1 <= h["trial_left"] <= TRIAL_S) if h["mode"] == MODE_TRIAL else h["trial_left"] == 0
+    checks.report(left_ok and h["self_test"] == 0,
+                  f"HEALTH: trial time left {h['trial_left']} s (0 in OPERATE, 1-{TRIAL_S} in "
+                  f"TRIAL), last self-test 0x00 PASSED")
 
 
 def trial_refusals(probe: Probe) -> None:
+    """Checks that UPLOAD BEGIN, CHUNK, END and CANCEL are each refused during a trial.
+
+    Passes for a command if its only answer is REFUSED 0x07.
+
+    Args:
+        probe: Probe used for the link.
+    """
     for payload, name in ((begin(1, 1024), "BEGIN"), (chunk(1, 0, bytes(CHUNK_BYTES)), "CHUNK"),
                           (end(1), "END"), (cancel(1), "CANCEL")):
         answers = probe.command(payload, WAIT_CHUNK_S, f"UPLOAD {name} during a trial")
@@ -150,6 +262,14 @@ def trial_refusals(probe: Probe) -> None:
 
 
 def wrong_offset(probe: Probe, image: bytes) -> None:
+    """Checks that a CHUNK at the wrong offset is refused and that CANCEL then succeeds.
+
+    Sends BEGIN, the first chunk, then the chunk for offset 512 where 256 is next.
+
+    Args:
+        probe: Probe used for the link.
+        image: Image bytes of the upload.
+    """
     print("---- CHUNK with a wrong offset")
     number = 1
     ok = probe.command(begin(number, len(image)), WAIT_BEGIN_S, "UPLOAD BEGIN") == DONE_OK
@@ -166,6 +286,15 @@ def wrong_offset(probe: Probe, image: bytes) -> None:
 
 
 def good_upload(probe: Probe, image: bytes, label: str) -> None:
+    """Uploads a good image and reports whether every command was answered RECEIVED then DONE.
+
+    Prints the total time and the time for BEGIN and for END.
+
+    Args:
+        probe: Probe used for the link.
+        image: Image bytes.
+        label: Name of the check.
+    """
     print(f"---- {label}")
     step, answers, total, begin_s, end_s = probe.upload(image, 5, label)
     chunks = (len(image) + CHUNK_BYTES - 1) // CHUNK_BYTES
@@ -176,6 +305,11 @@ def good_upload(probe: Probe, image: bytes, label: str) -> None:
 
 
 def health_period(probe: Probe) -> None:
+    """Checks that HEALTH reports come 1000 ms apart, within HEALTH_TOLERANCE_S.
+
+    Args:
+        probe: Probe used for the link.
+    """
     reports = probe.health(HEALTH_LISTEN_S, first_only=False)
     times = [t for t, _ in reports]
     gaps = [b - a for a, b in zip(times, times[1:])]
@@ -185,6 +319,11 @@ def health_period(probe: Probe) -> None:
 
 
 def main() -> int:
+    """Parses the command line, runs the upload checks and prints the verdict.
+
+    Returns:
+        0 if every check passed, 1 otherwise.
+    """
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("port", help="e.g. /dev/cu.usbmodem143203")
     p.add_argument("--images", required=True, type=Path)

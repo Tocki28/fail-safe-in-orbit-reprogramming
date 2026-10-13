@@ -73,3 +73,6 @@ probes as steps 2a and 2c, unchanged.
 | Wrong offset; flipped byte; unknown key A; slot-A build into slot B | PASS: REFUSED 0x06; 0x08; 0x09; 0x0E | `step-2c-cpp-upload-probe.log` |
 | Slot B (written by the C++ receiver) set on trial; uploads during the trial | PASS: slot B starts on trial; all four commands REFUSED 0x07 | `step-2c-cpp-upload-probe-in-trial.log` |
 | Three unconfirmed trial starts | PASS: trial given up; slot A started | `step-2c-cpp-trial-rollback.log` |
+
+Note (13 Oct 2026): in the logs, the path of the local working folder is written as `~/`. Only that
+path text was changed; every other byte of each log is as recorded.

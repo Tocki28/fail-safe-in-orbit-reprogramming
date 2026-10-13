@@ -1,4 +1,4 @@
-/Users/mingw/lodestar-prep/.venv/bin/python upload_probe.py /dev/cu.usbmodem143203 --images /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller/build/images --test-images build/images 
+~/.venv/bin/python upload_probe.py /dev/cu.usbmodem143203 --images ~/failsafe-remote-controller/src/controller/build/images --test-images build/images 
 PASS  a HEALTH report arrived
       HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 95 s
 PASS  HEALTH: report number and onboard computer time sent as 0

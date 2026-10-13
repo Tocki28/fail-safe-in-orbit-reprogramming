@@ -1,4 +1,4 @@
-/Users/mingw/lodestar-prep/.venv/bin/python link_probe.py /dev/cu.usbmodem143203 --listen 4
+~/.venv/bin/python link_probe.py /dev/cu.usbmodem143203 --listen 4
 listening 4.0 s
 recv  report seq 6 to 0x01: HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 6 s
 text  BL: start, reset by reset pin

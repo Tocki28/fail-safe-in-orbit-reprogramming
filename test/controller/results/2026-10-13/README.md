@@ -40,3 +40,6 @@ computer over data link A.
 | timeout | PASS: trial tests passed, no CONFIRM; EVENT 0x0008 119.7 s after EVENT 0x0006 (limit 120 s), no EVENT 0x000B; slot A back in OPERATE | `step-2d-trial-timeout.log` |
 
 Measured: two signature checks of the 17.8 KB firmware image take 68.0 to 68.1 ms at 170 MHz.
+
+Note (13 Oct 2026): in the logs, the path of the local working folder is written as `~/`. Only that
+path text was changed; every other byte of each log is as recorded.

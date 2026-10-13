@@ -63,9 +63,9 @@
  *     a lost answer (Interfaces Sec. 4.2, REQ-031; owner, 13 Oct 2026): once the first has ended
  *     DONE it is answered ALREADY DONE and nothing else happens (no ARM held, nothing sent to the
  *     controller); while the first has not ended it is answered RECEIVED and the first one's final
- *     answer follows as usual. A first that ended REFUSED is answered REFUSED 0x04, never ALREADY
- *     DONE, which would tell the ground the command ran (open: the owner has not decided this
- *     case).
+ *     answer follows as usual. A first that ended REFUSED is answered REFUSED with the same
+ *     code, never ALREADY DONE, which would tell the ground the command ran (Owner decided, 13
+ *     Oct 2026).
  *   - When an armed command's turn comes (sendNext), the pair goes out: an ARM naming the
  *     sequence number the command will carry on data link A, then the command. The ARM's
  *     answers are the onboard computer's own and do not go to the ground; if the controller

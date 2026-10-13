@@ -149,19 +149,21 @@ public:
     kNew,            // sequence number not in the ring
     kSamePending,    // same number, same bytes, first one not finished: answer RECEIVED
     kSameDone,       // same number, same bytes, first one ended DONE: answer ALREADY DONE
-    kSameRefused,    // same number, same bytes, first one ended REFUSED: not ALREADY DONE
+    kSameRefused,    // same number, same bytes, first one ended REFUSED: REFUSED, same code
     kDifferent,      // same number, other bytes: REFUSED 0x04
   };
 
   UsedSequences();
-  // Compares a command with the ring; changes nothing.
-  Repeat check(uint32_t sequence, const uint8_t * payload, uint16_t length) const;
+  // Compares a command with the ring; changes nothing. For kSameRefused, refusal_code is the
+  // code the first one was refused with; otherwise it is not written.
+  Repeat check(uint32_t sequence, const uint8_t * payload, uint16_t length,
+    uint8_t & refusal_code) const;
   // Replaces the oldest when full; the new entry is pending. False (nothing stored) when the
   // payload is longer than config::kUsedPayloadMax.
   [[nodiscard]] bool add(uint32_t sequence, const uint8_t * payload, uint16_t length);
-  // The entry's final answer has gone to the ground: done = DONE or ALREADY DONE, else REFUSED.
-  // Only a pending entry changes.
-  void finish(uint32_t sequence, bool done);
+  // The entry's final answer has gone to the ground: done = DONE or ALREADY DONE, else REFUSED
+  // with this code (kept, so that a resend learns the real reason). Only a pending entry changes.
+  void finish(uint32_t sequence, bool done, uint8_t refusal_code);
 
 private:
   enum class State : uint8_t
@@ -177,6 +179,7 @@ private:
     State state;
     uint32_t sequence;
     uint16_t length;
+    uint8_t refusal_code;   // the code of the final REFUSED; meaningful in State::kRefused only
     std::array<uint8_t, config::kUsedPayloadMax> payload;
   };
   std::array<Entry, config::kUsedSequenceCount> entries_;

@@ -496,16 +496,18 @@ UsedSequences::UsedSequences()
  * with the same sequence number and the same bytes so that the receiver can recognise the repeat
  * (Interfaces Sec. 4.2, REQ-031), while a different command under a used number is the replay
  * REQ-065 refuses. The state says whether the first one has finished, which decides RECEIVED or
- * ALREADY DONE. An entry is never changed here.
+ * ALREADY DONE. A first one that ended REFUSED gives its refusal code back, so that the resend is
+ * refused with the real reason (owner, 13 Oct 2026). An entry is never changed here.
  *
  * @param[in]     sequence  the ground sequence number of the command
  * @param[in]     payload   the command's payload bytes (length of them valid)
  * @param[in]     length    number of payload bytes
+ * @param[out]    refusal_code  written only for kSameRefused: the first one's REFUSED code
  * @return kNew: not in the ring; kSamePending, kSameDone, kSameRefused: same number and bytes,
  *         by how the first ended; kDifferent: same number, other bytes (REFUSED 0x04, REQ-065)
  */
 UsedSequences::Repeat UsedSequences::check(uint32_t sequence, const uint8_t * payload,
-  uint16_t length) const
+  uint16_t length, uint8_t & refusal_code) const
 {
   for (const Entry & entry : entries_) {
     if (!entry.used || entry.sequence != sequence) {
@@ -522,6 +524,7 @@ UsedSequences::Repeat UsedSequences::check(uint32_t sequence, const uint8_t * pa
       return Repeat::kSameDone;
     }
     if (entry.state == State::kRefused) {
+      refusal_code = entry.refusal_code;
       return Repeat::kSameRefused;
     }
     // A state that cannot exist is corrupted memory (code rules B1). The updater has no fault
@@ -554,6 +557,7 @@ bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t len
   entry.state = State::kPending;
   entry.sequence = sequence;
   entry.length = length;
+  entry.refusal_code = 0;
   std::memcpy(entry.payload.data(), payload, length);
   next_ = (next_ + 1) % entries_.size();
   return true;
@@ -563,19 +567,23 @@ bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t len
  * @brief Marks a remembered command finished: its final answer has gone to the ground.
  *
  * Why: a resend of a finished command is answered ALREADY DONE without running it again, a resend
- * of an unfinished one only RECEIVED (REQ-031). Only a pending entry changes, so a later answer
+ * of an unfinished one only RECEIVED, and a resend of a refused one repeats its refusal code
+ * (REQ-031). Only a pending entry changes, so a later answer
  * under the same number cannot overwrite how the first ended. Does nothing when no entry has the
  * number (a command that is not an ARM or dangerous command).
  *
  * @param[in]     sequence  the ground sequence number of the command
  * @param[in]     done      true: it ended DONE or ALREADY DONE; false: it ended REFUSED
+ * @param[in]     refusal_code  the REFUSED code that went to the ground; kept for a resend (ignored
+ *                          when done)
  * @return nothing
  */
-void UsedSequences::finish(uint32_t sequence, bool done)
+void UsedSequences::finish(uint32_t sequence, bool done, uint8_t refusal_code)
 {
   for (Entry & entry : entries_) {
     if (entry.used && entry.sequence == sequence && entry.state == State::kPending) {
       entry.state = done ? State::kDone : State::kRefused;
+      entry.refusal_code = done ? 0 : refusal_code;
     }
   }
 }

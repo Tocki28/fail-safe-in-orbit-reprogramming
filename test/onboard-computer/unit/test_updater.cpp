@@ -1999,12 +1999,13 @@ void testUsedSequences(const std::string & scratch)
   const uint8_t b99 = 99;
   const uint8_t b100 = 100;
   using Repeat = UsedSequences::Repeat;
-  report(ok && ring.check(35, &b35, 1) == Repeat::kNew && ring.check(36, &b36, 1) == Repeat::kSamePending &&
-         ring.check(99, &b99, 1) == Repeat::kSamePending && ring.check(100, &b100, 1) == Repeat::kNew,
+  uint8_t code = 0;
+  report(ok && ring.check(35, &b35, 1, code) == Repeat::kNew && ring.check(36, &b36, 1, code) == Repeat::kSamePending &&
+         ring.check(99, &b99, 1, code) == Repeat::kSamePending && ring.check(100, &b100, 1, code) == Repeat::kNew,
     "used sequences: ring keeps exactly the last 64 of 100");
   const std::array<uint8_t, config::kUsedPayloadMax + 1> too_long{};
   report(!ring.add(500, too_long.data(), static_cast<uint16_t>(too_long.size())) &&
-         ring.check(500, too_long.data(), 1) == Repeat::kNew,
+         ring.check(500, too_long.data(), 1, code) == Repeat::kNew,
     "used sequences: a payload longer than the ring keeps is not stored");
 }
 
@@ -2017,8 +2018,8 @@ void testUsedSequences(const std::string & scratch)
  * again while still queued, while its ARM is outstanding and while it is outstanding is answered
  * RECEIVED only, and the controller's one final answer follows; (3) the same number with other
  * bytes is REFUSED 0x04 and changes nothing; (4) a first one that ended REFUSED is not turned
- * into ALREADY DONE by a resend (REFUSED 0x04), after the controller refused the command and
- * after it refused the ARM.
+ * into ALREADY DONE by a resend (REFUSED with the original code, owner 13 Oct), after the
+ * controller refused the command and after it refused the ARM.
  *
  * @param[in]     scratch  scratch directory
  * @return nothing
@@ -2164,21 +2165,25 @@ void testResendAfterLostAnswer(const std::string & scratch)
     bool ok = rig.fromGround(kDest, 40, armOf(command::kSwitch, 41)) &&
               rig.fromGround(kDest, 41, {command::kSwitch}) && rig.tick(f);
     rig.answer(f.sequence, answer::kDone, 0);
-    ok = ok && rig.tick(f);
+    ok = ok && rig.tick(f) && f.payload[0] == command::kSwitch;   // the one SWITCH the controller gets
     rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
-    (void)rig.groundAnswers();
+    (void)rig.groundAnswers();   // the refusal the ground never saw
     ok = ok && rig.fromGround(kDest, 41, {command::kSwitch});
     std::vector<GroundAnswer> g = rig.groundAnswers();
-    report(ok && g.size() == 1 && hasAnswer(g, 41, answer::kRefused, answer::kOldCommand) && quiet(rig),
-      "resend: SWITCH refused by the controller, sent again: REFUSED 0x04, not ALREADY DONE");
+    report(ok && g.size() == 1 && hasAnswer(g, 41, answer::kRefused, answer::kNotInThisMode) && quiet(rig),
+      "resend: SWITCH refused 0x05 by the controller, answer lost, sent again: REFUSED 0x05 (the "
+      "original code; owner 13 Oct), not ALREADY DONE, nothing sent");
+    ok = rig.fromGround(kDest, 41, {command::kSwitch});
+    report(ok && hasAnswer(rig.groundAnswers(), 41, answer::kRefused, answer::kNotInThisMode) && quiet(rig),
+      "resend: and again: REFUSED 0x05 again, the controller still got SWITCH once");
     ok = rig.fromGround(kDest, 50, armOf(command::kSwitch, 51)) &&
          rig.fromGround(kDest, 51, {command::kSwitch}) && rig.tick(f);
     rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
     (void)rig.groundAnswers();
     ok = ok && rig.fromGround(kDest, 51, {command::kSwitch});
     g = rig.groundAnswers();
-    report(ok && g.size() == 1 && hasAnswer(g, 51, answer::kRefused, answer::kOldCommand) && quiet(rig),
-      "resend: SWITCH whose ARM the controller refused, sent again: REFUSED 0x04, not RECEIVED");
+    report(ok && g.size() == 1 && hasAnswer(g, 51, answer::kRefused, answer::kNotInThisMode) && quiet(rig),
+      "resend: SWITCH whose ARM the controller refused 0x05, sent again: REFUSED 0x05, not RECEIVED");
   }
 }
 
@@ -2346,6 +2351,37 @@ long readPid(const std::string & path)
 }
 
 /**
+ * @brief Waits for a mock script to write its process id into a file, up to 2 s.
+ *
+ * A child process (sh) started on a busy machine can take far longer than the test's own next
+ * line to reach its first command, so reading the pid file straight after start() or after a
+ * short serve loop races with the child and made the tests that read it fail at random. This
+ * polls every 5 ms for a non-empty file with a positive id and gives up after 2 s, so the
+ * test no longer depends on how fast the machine starts the child. Callers wait before the runner
+ * is polled when a short deadline could otherwise kill the child before it writes the file (the
+ * old code then read 0, and processGone(0) passed without checking anything). Only waits are
+ * new: every assertion and its expected value are unchanged. On timeout it prints which file never appeared.
+ *
+ * @param[in]     path  the file the script writes with echo $$ (or $!)
+ * @return the id (positive); 0 if the file stayed missing or empty for 2 s (the caller's
+ *         assertion then fails, because 0 is never a live child)
+ */
+long waitForPid(const std::string & path)
+{
+  const int kPolls = 400;           // test limit: 400 polls of 5 ms = 2 s, ample for a loaded host
+  const unsigned kPollUs = 5000;
+  for (int i = 0; i < kPolls; i++) {
+    long pid = readPid(path);
+    if (pid > 0) {
+      return pid;
+    }
+    ::usleep(kPollUs);
+  }
+  std::fprintf(stderr, "test: pid file %s not written within 2 s\n", path.c_str());
+  return 0;
+}
+
+/**
  * @brief RestartRunner (decision H): the result lines, the exit status, start errors, the deadline.
  *
  * Mock scripts in the scratch directory stand for restore.sh. Real child processes, the real
@@ -2446,9 +2482,13 @@ void testRestartRunner(const std::string & scratch)
   ok = writeScript(s, "echo $$ > " + dir + "/obeys.pid\nexec sleep 30\n", 0755);
   RestartRunner obeys(s.c_str(), 150, 150);
   t0 = clocks::nowMs();
-  ok = ok && obeys.start(t0, error) && runUntilEnded(obeys, 4000, o);
+  ok = ok && obeys.start(t0, error);
+  // Bounded wait until the child has written its pid, before the runner is polled: on a busy host
+  // the shell can start after the 150 ms deadline, and TERM must not reach it before it can write.
+  long obeys_pid = waitForPid(dir + "/obeys.pid");
+  ok = ok && runUntilEnded(obeys, 4000, o);
   report(ok && o.deadline_hit && !o.killed && o.term_signal == SIGTERM && o.result == R::kFailed &&
-         clocks::nowMs() - t0 < 2000 && processGone(readPid(dir + "/obeys.pid")),
+         clocks::nowMs() - t0 < 2000 && obeys_pid > 0 && processGone(obeys_pid),
     "restart runner: past the deadline the script gets TERM, is reaped, and the result is kFailed");
 
   // Deadline: KILL to a script that ignores TERM, and to the sleep it started.
@@ -2457,11 +2497,16 @@ void testRestartRunner(const std::string & scratch)
                       "/stubborn-child.pid\nwhile :; do sleep 1; done\n", 0755);
   RestartRunner stubborn(s.c_str(), 2500, 300);   // 2.5 s: a slow first start of sh (seen: over 600 ms) must still reach its trap
   t0 = clocks::nowMs();
-  ok = ok && stubborn.start(t0, error) && runUntilEnded(stubborn, 8000, o);
+  ok = ok && stubborn.start(t0, error);
+  // Bounded waits as for obeys.pid: both ids are written after the trap, so the script has its trap
+  // in place before the runner is polled and TERM can come.
+  long stubborn_pid = waitForPid(dir + "/stubborn.pid");
+  long stubborn_child_pid = waitForPid(dir + "/stubborn-child.pid");
+  ok = ok && runUntilEnded(stubborn, 8000, o);
   report(ok && o.deadline_hit && o.killed && !o.abandoned && o.term_signal == SIGKILL && o.result == R::kFailed &&
-         processGone(readPid(dir + "/stubborn.pid")),
+         stubborn_pid > 0 && processGone(stubborn_pid),
     "restart runner: a script that ignores TERM gets KILL after the grace");
-  report(processGone(readPid(dir + "/stubborn-child.pid")),
+  report(stubborn_child_pid > 0 && processGone(stubborn_child_pid),
     "restart runner: KILL goes to the whole process group: the sleep the script started is gone too");
   report(!stubborn.running() && !stubborn.poll(clocks::nowMs(), o), "restart runner: after the end, poll() is false and nothing runs");
 
@@ -2717,11 +2762,11 @@ void testTrialOverrunRestart(const std::string & scratch)
     (void)rig.tick(f);
     std::vector<std::vector<uint8_t>> reports;
     serveUntilScriptEnds(rig, "", reports);
-    long pid = readPid(dir + "/pid");
+    long pid = waitForPid(dir + "/pid");   // bounded wait: the script may not have started yet
     bool alive = pid > 0 && ::kill(static_cast<pid_t>(pid), 0) == 0;   // still sleeping before the deadline
     rig.advance(config::kRestartScriptMs + 1);   // past the updater's deadline: TERM
     serveUntilScriptEnds(rig, "", reports);
-    report(alive && processGone(readPid(dir + "/pid")) && noRestartEvent(reports),
+    report(alive && processGone(pid) && noRestartEvent(reports),
       "trial overrun: a script that hangs is stopped at the updater's deadline; nothing is sent");
   }
 }

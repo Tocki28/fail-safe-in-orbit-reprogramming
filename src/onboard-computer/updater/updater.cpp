@@ -351,7 +351,7 @@ void Updater::onGroundArm(const frame::Frame & c)
     static_cast<unsigned long long>(config::kArmExpiryMs));
   received(c.sequence);
   done(c.sequence);
-  used_.finish(c.sequence, true);   // RECEIVED and DONE are both sent: a resend is ALREADY DONE
+  used_.finish(c.sequence, true, 0);   // RECEIVED and DONE are both sent: a resend is ALREADY DONE
 }
 
 /**
@@ -361,9 +361,10 @@ void Updater::onGroundArm(const frame::Frame & c)
  * answer is lost, so that the receiver can recognise the repeat and run the command once
  * (Interfaces Sec. 4.2, REQ-031). Same bytes, first one ended DONE: ALREADY DONE, nothing else
  * (nothing goes to the controller, no ARM is held). Same bytes, first one not ended: RECEIVED
- * only; its final answer follows. Same bytes, first one ended REFUSED: REFUSED 0x04, because
- * ALREADY DONE would tell the ground the command ran (open: the owner has not decided this
- * case). Other bytes under a used number: REFUSED 0x04, a replay (REQ-065). A new number: not
+ * only; its final answer follows. Same bytes, first one ended REFUSED: REFUSED with the same
+ * code, nothing sent to the controller, so the operator learns the real reason and is never told
+ * the command ran (owner decided, 13 Oct 2026). Other bytes under a used number: REFUSED 0x04,
+ * a replay (REQ-065). A new number: not
  * handled here.
  *
  * @param[in]     c  the ARM or dangerous command frame
@@ -371,7 +372,8 @@ void Updater::onGroundArm(const frame::Frame & c)
  */
 bool Updater::answerRepeat(const frame::Frame & c)
 {
-  switch (used_.check(c.sequence, c.payload, c.length)) {
+  uint8_t refusal_code = answer::kOldCommand;
+  switch (used_.check(c.sequence, c.payload, c.length, refusal_code)) {
     case UsedSequences::Repeat::kNew:
       return false;
     case UsedSequences::Repeat::kSameDone:
@@ -385,9 +387,14 @@ bool Updater::answerRepeat(const frame::Frame & c)
       received(c.sequence);
       return true;
     case UsedSequences::Repeat::kSameRefused:
+      logging::line("ground: sequence %u sent again with the same bytes after it was refused "
+        "0x%02x; refused 0x%02x again, nothing else done", c.sequence, refusal_code,
+        refusal_code);
+      refused(c.sequence, refusal_code);
+      return true;
     case UsedSequences::Repeat::kDifferent:
-      logging::line("ground: sequence %u: that sequence number was used before (other bytes, or "
-        "the first was refused); refused 0x04", c.sequence);
+      logging::line("ground: sequence %u: that sequence number was used before (other bytes); "
+        "refused 0x04", c.sequence);
       refused(c.sequence, answer::kOldCommand);
       return true;
   }
@@ -401,8 +408,8 @@ bool Updater::answerRepeat(const frame::Frame & c)
  * @brief Answers REFUSED to a queued dangerous command and marks it finished in the used ring.
  *
  * A dangerous command that was accepted (queued, remembered) and then refused before or while
- * going to the controller has ended: a resend with the same bytes must be refused 0x04, not
- * answered RECEIVED for ever (Interfaces Sec. 4.2, REQ-031).
+ * going to the controller has ended: a resend with the same bytes is refused with the same code,
+ * not answered RECEIVED for ever (Interfaces Sec. 4.2, REQ-031).
  *
  * @param[in]     sequence  the ground command's sequence number
  * @param[in]     code      the refusal reason (protocol.hpp)
@@ -411,7 +418,7 @@ bool Updater::answerRepeat(const frame::Frame & c)
 void Updater::refusedQueued(uint32_t sequence, uint8_t code)
 {
   refused(sequence, code);
-  used_.finish(sequence, false);
+  used_.finish(sequence, false, code);
 }
 
 /**
@@ -824,7 +831,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
         "ground sequence %u", a.kind, a.code, a.answered, ground_sequence);
       (void)gate_.answer(ground_sequence, a.kind, a.code);
       if (final) {
-        used_.finish(ground_sequence, a.kind != answer::kRefused);
+        used_.finish(ground_sequence, a.kind != answer::kRefused, a.code);
         table_.remove(a.answered);
       }
     } else {
@@ -841,7 +848,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
         if (final) {
           logging::line("controller: answer 0x%02x code 0x%02x to ground sequence %u", a.kind,
             a.code, ground_sequence);
-          used_.finish(ground_sequence, a.kind != answer::kRefused);
+          used_.finish(ground_sequence, a.kind != answer::kRefused, a.code);
           table_.remove(a.answered);
         }
       }

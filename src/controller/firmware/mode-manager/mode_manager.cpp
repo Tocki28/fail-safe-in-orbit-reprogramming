@@ -11,9 +11,14 @@
  *   N  SWITCH and CONFIRM answer 0x11 when the boot-state write fails;
  *   O, P  the self-test design and the EVENT 0x000B detail codes are accepted as built;
  *   check-result reporting: the bootloader's fall-back record goes out as EVENT 0x0002 once.
- *
- * Open item left here: a give-up whose boot-state write fails still sends no EVENT 0x0008, even
- * when the give-up request was stored (decision G does not say; see giveUp).
+ * And the owner's decisions of 13 Oct 2026 numbered 2 to 6:
+ *   2  EVENT 0x0001 carries the fault kind, 0x01 for the clock fault (common/fault_codes.h);
+ *   3  a fault location the bootloader left goes out once as EVENT 0x0005 with its code;
+ *   4  one EVENT 0x0002 per copy the bootloader refused or skipped on this start;
+ *   5  a give-up handed to the bootloader as a request still sends EVENT 0x0008 (giveUp);
+ *   6  (in the update receiver) a slot written and passed by UPLOAD END gets a fresh count.
+ * Decision 5 closes the open item that was recorded here: a give-up whose boot-state write failed
+ * sent no EVENT 0x0008, even when the give-up request was stored.
  *
  * Switches over an enum have no default label. No default: the compiler checks every case
  * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which calls the
@@ -42,34 +47,21 @@ constexpr uint32_t kBodyMaxBytes = SLOT_BYTES - IMAGE_HEADER_BYTES - IMAGE_SIGNA
 constexpr uint32_t kMsPerSecond = 1000U;
 /* EVENT 0x0002's detail: refused copy (1 byte), check result (1 byte) (Interfaces Sec. 5.4). */
 constexpr uint32_t kFallbackDetailBytes = 2U;
-/* The highest check-result code, "signature B" (Interfaces Sec. 5.4, "Check result" table). */
-constexpr uint8_t kCheckResultMax = 0x0AU;
+/* The detail of EVENT 0x0001 (fault kind) and of EVENT 0x0005 (fault location): 1 byte each
+ * (decisions 2 and 3, common/fault_codes.h). */
+constexpr uint32_t kCodeDetailBytes = 1U;
+/* The highest check result a refused or skipped copy can have: CHECK_LAST (0x0D, "restarted too
+ * often"; Interfaces Sec. 5.4, "Check result" table, common/backup_layout.h). 0x00, "passed", is
+ * no refusal. Before decision 4 the highest was 0x0A, "signature B". */
+constexpr uint8_t kCheckResultLast = CHECK_LAST;
+/* The fault locations the bootloader can leave: its own (0x01 to 0x0F) and those of the shared
+ * code in common/ it runs (0x10 to 0x1F) (common/fault_codes.h). */
+constexpr uint32_t kBootloaderFaultFirst = FAULT_RANGE_BOOTLOADER_FIRST;
+constexpr uint32_t kBootloaderFaultLast = FAULT_RANGE_COMMON_LAST;
 
 static_assert(kEventReportMaxBytes <= kSendPayloadMax, "an EVENT report must fit FrameSender");
 
-/**
- * @brief Returns the slot code the boot state stores for a slot (common/boot_state.h).
- *
- * The Slot enumerators carry the boot state's codes (boot_slot.hpp). Every enumerator has its own
- * case; a value outside the enum is a corrupted variable: the fault reaction (see the file
- * comment). Before, a cast passed any value through into the boot-state record.
- *
- * @param[in]     slot  Slot::kNone, kA or kB
- * @return BOOT_SLOT_NONE, BOOT_SLOT_A or BOOT_SLOT_B
- * @note Does not return for a value outside Slot.
- */
-uint8_t stateCode(Slot slot)
-{
-    switch (slot) {
-    case Slot::kNone:
-        return BOOT_SLOT_NONE;
-    case Slot::kA:
-        return BOOT_SLOT_A;
-    case Slot::kB:
-        return BOOT_SLOT_B;
-    }
-    faultImpossibleValue("stateCode");   /* only a corrupted value reaches here */
-}
+/* stateCode moved to boot_slot.hpp with decision 6 (the update receiver needs it too). */
 
 /**
  * @brief Returns the code a slot has in the bootloader's fall-back record: the HEALTH report's
@@ -92,7 +84,8 @@ uint8_t copyCode(Slot slot)
     case Slot::kB:
         return BACKUP_COPY_B;
     }
-    faultImpossibleValue("copyCode");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_COPY_CODE, "copyCode");
 }
 
 }  // namespace
@@ -252,66 +245,128 @@ void ModeManager::sendEvent(EventCode code, const uint8_t *detail, uint32_t deta
 
 /**
  * @brief Returns true if the bootloader's fall-back record describes this start: it names this
- * firmware's slot as the copy started, a refused copy that is another one, and a check result in
- * the table.
+ * firmware's slot as the copy started, every copy's check result is 0x00 (not refused) or a code
+ * of the table, this slot itself is not among the refused, and at least one copy was refused.
  *
  * The record is stored data read from the backup registers, so a value outside the codes fails
- * this check and is dropped, never a fault (common/backup_layout.h). The bootloader clears the
- * record at every start before it writes a new one, so a record for another start is a record
- * that went bad, not an old one.
+ * this check and is dropped whole, never a fault (common/backup_layout.h). The bootloader clears
+ * the record at every start before it writes a new one, so a record for another start is a
+ * record that went bad, not an old one.
  *
  * @param[in]     record  the record as read
  * @return true if every field is one of its codes and the started copy is this slot
  */
 bool ModeManager::fallbackForThisStart(const FallbackRecord &record) const
 {
-    bool refused_ok = (record.refused == BACKUP_COPY_A) || (record.refused == BACKUP_COPY_B) ||
-                      (record.refused == BACKUP_COPY_LAST_RESORT);
     uint8_t started = copyCode(running_);
-    return refused_ok && (started != 0U) && (record.started == started) &&
-           (record.refused != started) && (record.check <= kCheckResultMax);
+    bool any = false;
+
+    if ((started == 0U) || (record.started != started)) {
+        return false;
+    }
+    for (const FallbackEntry &entry : record.copies) {
+        if (entry.check == CHECK_PASSED) {
+            continue;
+        }
+        if ((entry.check > kCheckResultLast) || (entry.copy == started)) {
+            return false;
+        }
+        any = true;
+    }
+    return any;
 }
 
 /**
- * @brief The events of a start, once, on the first poll(): EVENT 0x0001 after a clock fault
- * (decision C), EVENT 0x0002 with the bootloader's fall-back record (Interfaces Sec. 5.4).
+ * @brief Sends EVENT 0x0005 once if the bootloader left a fault location (decision 3, owner,
+ * 13 Oct 2026), then clears it.
  *
- * EVENT 0x0001 "fault detected": Proposal (TBR), awaiting the owner's acceptance. Decision C left
- * the choice of report to the builder. Why this one: the HEALTH report has no field for the
- * clock; 0x0001 is the event for a fault the controller found and answered on its own (REQ-038),
- * and running at 16 MHz is that answer. Not 0x0004: the self-test is the image check of decision
- * O, which the clock does not fail. No detail is sent: the Interfaces table defines none for
- * 0x0001, so the ground cannot yet tell a clock fault from another fault (a detail code would
- * need the owner).
- *
- * EVENT 0x0002 "fall-back to the previous copy", detail refused copy (1) and check result (1): a
- * main slot runs here, so a fall-back to it is a fall-back to the previous copy; 0x0003 is the
- * last-resort firmware's to send. The record is cleared after it, so the event goes out once.
+ * The bootloader has no link to the ground, so its fault reaction leaves the code in the backup
+ * registers and resets (bootloader/fault.c); the first firmware that runs reports it. The code is
+ * stored data: one outside the bootloader's and common/'s ranges (0x01 to 0x1F,
+ * common/fault_codes.h) is dropped, never a fault. Cleared whether it was sent or dropped; if the
+ * clear fails, this start does not read it again (start_events_sent_), and the next start
+ * reports it once more.
  *
  * @param[in]     now_ms  milliseconds since start
  */
-void ModeManager::sendStartEvents(uint32_t now_ms)
+void ModeManager::sendBootloaderFault(uint32_t now_ms)
+{
+    uint32_t location = 0U;
+
+    if (!ModePort::readBootloaderFault(location)) {
+        return;
+    }
+    if ((location >= kBootloaderFaultFirst) && (location <= kBootloaderFaultLast)) {
+        const uint8_t detail = static_cast<uint8_t>(location);
+        sendEvent(EventCode::kMemoryChanged, &detail, kCodeDetailBytes, now_ms);
+    }
+    (void)ModePort::clearBootloaderFault();   /* see above */
+}
+
+/**
+ * @brief Sends one EVENT 0x0002 per copy the bootloader refused or skipped on this start, then
+ * clears the record (decision 4, owner, 13 Oct 2026; Interfaces Sec. 5.4).
+ *
+ * EVENT 0x0002 "fall-back to the previous copy", detail refused copy (1) and check result (1): a
+ * main slot runs here, so a fall-back to it is a fall-back to the previous copy; 0x0003 is the
+ * last-resort firmware's to send. This build runs only in slot A or B (firmware/Makefile), so it
+ * never sends 0x0003. The events go in the order of the copies, A, B, last-resort, which is how
+ * the record holds them (common/backup_layout.h). Before decision 4 one record, one event.
+ *
+ * @param[in]     now_ms  milliseconds since start
+ */
+void ModeManager::sendFallbackEvents(uint32_t now_ms)
 {
     FallbackRecord record{};
 
-    if (start_events_sent_) {
-        return;
-    }
-    start_events_sent_ = true;
-    if (clock_fault_) {
-        sendEvent(EventCode::kFaultDetected, nullptr, 0U, now_ms);
-    }
     if (!ModePort::readFallbackRecord(record)) {
         return;
     }
     if (fallbackForThisStart(record)) {
-        const std::array<uint8_t, kFallbackDetailBytes> detail = {record.refused, record.check};
-        sendEvent(EventCode::kFallbackPrevious, detail.data(), kFallbackDetailBytes, now_ms);
+        for (const FallbackEntry &entry : record.copies) {
+            if (entry.check != CHECK_PASSED) {
+                const std::array<uint8_t, kFallbackDetailBytes> detail = {entry.copy, entry.check};
+                sendEvent(EventCode::kFallbackPrevious, detail.data(), kFallbackDetailBytes,
+                          now_ms);
+            }
+        }
     }
     /* Cleared whether it was sent or dropped. If the clear fails, the bootloader clears the
      * record at the next start anyway (bootloader/main.c, clear_fallback_record), and this start
      * does not read it again (start_events_sent_). */
     (void)ModePort::clearFallbackRecord();
+}
+
+/**
+ * @brief The events of a start, once, on the first poll(): EVENT 0x0005 with a fault location the
+ * bootloader left (decision 3), EVENT 0x0001 after a clock fault (decision C), then one EVENT
+ * 0x0002 per copy the bootloader refused or skipped (decision 4) (Interfaces Sec. 5.4).
+ *
+ * EVENT 0x0001 "fault detected": accepted, with its detail, by the owner's decision 2, 13 Oct 2026
+ * ("the C decision's report"). Decision C left the choice of report to the builder. Why this one:
+ * the HEALTH report has no field for the clock; 0x0001 is the event for a fault the controller
+ * found and answered on its own (REQ-038), and running at 16 MHz is that answer. Not 0x0004: the
+ * self-test is the image check of decision O, which the clock does not fail. The detail is the
+ * fault kind FAULT_KIND_CORE_CLOCK, 0x01 (common/fault_codes.h). Before decision 2 it was a
+ * Proposal (TBR) sent with no detail: the Interfaces table defined none for 0x0001, so the ground
+ * could not tell a clock fault from another fault.
+ * The order: the bootloader's fault happened before this start, so it goes first; the clock
+ * event before the fall-back events as before (no technical reason).
+ *
+ * @param[in]     now_ms  milliseconds since start
+ */
+void ModeManager::sendStartEvents(uint32_t now_ms)
+{
+    if (start_events_sent_) {
+        return;
+    }
+    start_events_sent_ = true;
+    sendBootloaderFault(now_ms);
+    if (clock_fault_) {
+        const uint8_t kind = FAULT_KIND_CORE_CLOCK;
+        sendEvent(EventCode::kFaultDetected, &kind, kCodeDetailBytes, now_ms);
+    }
+    sendFallbackEvents(now_ms);
 }
 
 /**
@@ -365,8 +420,11 @@ void ModeManager::restartWhenSent()
  * bootloader gives the trial up before it counts its next start (bootloader/main.c,
  * apply_give_up_request). Before, nothing was left, and the trial could start again until the
  * bootloader's start count ended it (REQ-015). If even the request cannot be stored, that start
- * count still ends it. Open: no EVENT 0x0008 is sent when the write fails, even with the request
- * stored; whether 0x0008 should then go out is for the owner (decision G does not say).
+ * count still ends it.
+ * EVENT 0x0008 goes out when the give-up is stored either way: in the boot state, or as the
+ * request the bootloader applies (decision 5, owner, 13 Oct 2026). Before, it went out only after
+ * the boot-state write. When neither could be stored, no 0x0008: the trial is not given up yet;
+ * the bootloader's start count ends it later (REQ-015).
  *
  * @param[in]     now_ms  milliseconds since start
  * @note Does not return on the board.
@@ -378,12 +436,11 @@ void ModeManager::giveUp(uint32_t now_ms)
     state.confirmed = stateCode(otherSlot(running_));
     state.trial = BOOT_SLOT_NONE;
     state.failed_starts = 0U;
-    if (ModePort::writeBootState(state)) {
+    /* The request only when the write failed: nowhere else to keep the give-up then. */
+    bool stored = ModePort::writeBootState(state) ||
+                  ModePort::leaveGiveUpRequest(stateCode(running_));
+    if (stored) {
         sendEvent(EventCode::kGivenUp, nullptr, 0U, now_ms);
-    } else {
-        /* Nowhere else to keep the give-up: if the request is not stored either, the
-         * bootloader's start count still ends the trial (REQ-015). */
-        (void)ModePort::leaveGiveUpRequest(stateCode(running_));
     }
     restartWhenSent();
 }
@@ -476,9 +533,11 @@ void ModeManager::poll(uint32_t now_ms)
         pollTrial(now_ms);
         return;
     case HealthMode::kFallback:
-        faultImpossibleValue("ModeManager::poll: FALLBACK is not set by this build");
+        faultImpossibleValue(FAULT_AT_MODE_MANAGER_POLL,
+                             "ModeManager::poll: FALLBACK is not set by this build");
     }
-    faultImpossibleValue("ModeManager::poll");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_MODE_MANAGER_POLL, "ModeManager::poll");
 }
 
 /**
@@ -652,7 +711,8 @@ AnswerCode ModeManager::runDangerous(uint8_t command, uint32_t now_ms)
     if (command == kCmdConfirm) {
         return runConfirm(now_ms);
     }
-    faultImpossibleValue("ModeManager::runDangerous");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_MODE_MANAGER_RUN_DANGEROUS, "ModeManager::runDangerous");
 }
 
 /**

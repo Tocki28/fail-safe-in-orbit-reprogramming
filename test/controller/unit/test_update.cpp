@@ -8,9 +8,11 @@
  * The last group sends the build's real signed images through the receiver into the fake flash;
  * UPLOAD END then runs the bootloader's own checks on them (common/image_check.c, Monocypher).
  *
- * Owner's decisions of 13 Oct 2026 under test here: M (IMAGE_BAD_KIND answers 0x10), and the
- * fault rule: a value in memory that cannot exist (an image_result_t, UploadId or Slot outside
- * its enum, a slot code outside A/B/none) is the fault reaction (fake_fault.cpp catches it), while
+ * Owner's decisions of 13 Oct 2026 under test here: M (IMAGE_BAD_KIND answers 0x10), 6 (a slot
+ * that passes UPLOAD END gets a fresh decision-B restart count), 3 (each fault site passes its own
+ * fault-location code, common/fault_codes.h), and the fault rule: a value in memory that cannot
+ * exist (an image_result_t, UploadId or Slot outside its enum, a slot code outside A/B/none) is
+ * the fault reaction (fake_fault.cpp catches it), while
  * a byte received from the link that fits no command is refused 0x06, never a fault.
  *
  * Built with the Mac's clang++, the undefined-behaviour sanitizer and libc++'s debug hardening
@@ -526,10 +528,11 @@ void testBarrierCorruptTarget()
         faultClear();
         FAULT_CATCH(faulted, allowed = UpdateReceiver::writeAllowed(static_cast<Slot>(code),
                                                                    Slot::kA, kSlotBStart, 8U));
-        all = all && faulted && !allowed && (fault_calls == 1U);
+        all = all && faulted && !allowed && (fault_calls == 1U) &&
+              (fault_last_location == FAULT_AT_UPDATE_RECEIVER_SLOT_START);
     }
     report(all, "writeAllowed: target 3 or 0xFF (outside Slot) -> fault reaction in slotStart, "
-                "nothing allowed (was: refused like none)");
+                "fault location 0x26, nothing allowed (was: refused like none)");
     report(UpdateReceiver::slotStart(Slot::kNone) == 0U,
            "slotStart: Slot::kNone -> 0, no slot (a real value, not a fault)");
 }
@@ -627,10 +630,11 @@ void testResultCodeEach()
         faultClear();
         FAULT_CATCH(faulted,
                     code = UpdateReceiver::refusalFor(static_cast<image_result_t>(outside)));
-        all = all && faulted && (code == AnswerCode::kSuccess) && (fault_calls == 1U);
+        all = all && faulted && (code == AnswerCode::kSuccess) && (fault_calls == 1U) &&
+              (fault_last_location == FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR);
     }
-    report(all, "refusalFor: a value outside image_result_t (11, 15) -> fault reaction, no "
-                "answer code (was: 0x08)");
+    report(all, "refusalFor: a value outside image_result_t (11, 15) -> fault reaction, fault "
+                "location 0x27, no answer code (was: 0x08)");
 }
 
 /**
@@ -671,10 +675,11 @@ void testResultText()
 
         faultClear();
         FAULT_CATCH(faulted, text = image_result_text(static_cast<image_result_t>(outside)));
-        all = all && faulted && (text == nullptr) && (fault_calls == 1U);
+        all = all && faulted && (text == nullptr) && (fault_calls == 1U) &&
+              (fault_last_location == FAULT_AT_IMAGE_RESULT_TEXT);
     }
-    report(all, "image_result_text: a value outside image_result_t (11, 15) -> fault reaction, no "
-                "text (was \"corrupted result value\")");
+    report(all, "image_result_text: a value outside image_result_t (11, 15) -> fault reaction, "
+                "fault location 0x10, no text (was \"corrupted result value\")");
 }
 
 /**
@@ -696,9 +701,11 @@ void testOtherSlot()
 
         faultClear();
         FAULT_CATCH(faulted, got = otherSlot(static_cast<Slot>(code)));
-        all = all && faulted && (got == Slot::kA) && (fault_calls == 1U);
+        all = all && faulted && (got == Slot::kA) && (fault_calls == 1U) &&
+              (fault_last_location == FAULT_AT_OTHER_SLOT);
     }
-    report(all, "otherSlot: none, 3, 0xEE and 0xFF -> fault reaction (was: none)");
+    report(all, "otherSlot: none, 3, 0xEE and 0xFF -> fault reaction, fault location 0x21 (was: "
+                "none)");
 
     report((toSlot(BOOT_SLOT_NONE) == Slot::kNone) && (toSlot(BOOT_SLOT_A) == Slot::kA) &&
                (toSlot(BOOT_SLOT_B) == Slot::kB),
@@ -710,9 +717,11 @@ void testOtherSlot()
 
         faultClear();
         FAULT_CATCH(faulted, got = toSlot(code));
-        all = all && faulted && (got == Slot::kA) && (fault_calls == 1U);
+        all = all && faulted && (got == Slot::kA) && (fault_calls == 1U) &&
+              (fault_last_location == FAULT_AT_TO_SLOT);
     }
-    report(all, "toSlot: stored code 3 or 0xEE -> fault reaction (was: a Slot outside the enum)");
+    report(all, "toSlot: stored code 3 or 0xEE -> fault reaction, fault location 0x20 (was: a "
+                "Slot outside the enum)");
 }
 
 /**
@@ -736,9 +745,10 @@ void testRunOutsideEnum()
     faultClear();
     FAULT_CATCH(run_fault, code = rx.run(cmd));
     report(run_fault && (code == AnswerCode::kSuccess) && (fault_calls == 1U) &&
-               (fake.erases == 0U) && (fake.programs == 0U),
-           "run: an identifier outside UploadId (0x7F) -> fault reaction, flash untouched "
-           "(was: 0x06)");
+               (fault_last_location == FAULT_AT_UPDATE_RECEIVER_RUN) && (fake.erases == 0U) &&
+               (fake.programs == 0U),
+           "run: an identifier outside UploadId (0x7F) -> fault reaction, fault location 0x29, "
+           "flash untouched (was: 0x06)");
 }
 
 /**
@@ -1126,6 +1136,53 @@ void testImages(const char *src_images, const char *test_images)
            "running B, confirmed B: firmware-A.img into slot A, END DONE 0x00, slot B untouched");
 }
 
+/**
+ * @brief Decision 6 (owner, 13 Oct 2026): an image written into a slot that passes UPLOAD END
+ * clears decision B's restart count of that slot; an END that is refused, and a count of the
+ * other slot, leave the count as it is.
+ *
+ * Fails on the old code: END never reached the backup registers, so slot B's count of 2 stayed
+ * (scratch-copy mutation run, the clear removed from UpdateReceiver::runEnd).
+ *
+ * @param[in] src_images  directory with firmware-B.img
+ */
+void testRestartCountAtEnd(const char *src_images)
+{
+    static SlotImage b;
+    static SlotImage changed;
+    uint32_t b_size = load(src_images, "firmware-B.img", b);
+    UpdateReceiver rx;
+    uint32_t value = 0xFFU;
+    const uint32_t count_b = (BOOT_SLOT_B << BACKUP_RESTARTS_SLOT_SHIFT) | 2U;
+    const uint32_t count_a = (BOOT_SLOT_A << BACKUP_RESTARTS_SLOT_SHIFT) | 2U;
+
+    if (b_size == 0U) {
+        report(false, "decision 6: could not read firmware-B.img");
+        return;
+    }
+    startRunningA(rx);
+    fakeBackupSet(BACKUP_PAIR_RESTARTS, count_b);
+    bool passed = done(upload(rx, b.data(), b_size, 1U));
+    report(passed && fakeBackupGet(BACKUP_PAIR_RESTARTS, value) && (value == 0U),
+           "6: firmware-B.img into slot B, END DONE -> slot B's restart count (2) cleared (was: "
+           "kept)");
+
+    startRunningA(rx);
+    fakeBackupSet(BACKUP_PAIR_RESTARTS, count_b);
+    changed = b;
+    changed[kFlipOffset] = static_cast<uint8_t>(changed[kFlipOffset] ^ 0xFFU);
+    bool refused = receivedThenRefused(upload(rx, changed.data(), b_size, 2U),
+                                       AnswerCode::kDamaged);
+    report(refused && fakeBackupGet(BACKUP_PAIR_RESTARTS, value) && (value == count_b),
+           "6: damaged image into slot B, END REFUSED 0x08 -> slot B's count kept");
+
+    startRunningA(rx);
+    fakeBackupSet(BACKUP_PAIR_RESTARTS, count_a);
+    passed = done(upload(rx, b.data(), b_size, 3U));
+    report(passed && fakeBackupGet(BACKUP_PAIR_RESTARTS, value) && (value == count_a),
+           "6: firmware-B.img into slot B, END DONE -> a count of slot A (running) kept");
+}
+
 }  // namespace
 
 /**
@@ -1159,6 +1216,7 @@ int main(int argc, char **argv)
     testTrialMidTransfer();
     testFlashFaults();
     testImages(argv[1], argv[2]);
+    testRestartCountAtEnd(argv[1]);
     if (failures == 0U) {
         std::printf("update receiver unit tests: all %u passed\n", tests);
         return 0;

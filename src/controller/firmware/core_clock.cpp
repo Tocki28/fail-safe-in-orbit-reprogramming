@@ -255,7 +255,7 @@ uint32_t CoreClock::start()
 void CoreClock::startTick(uint32_t core_hz)
 {
     if ((core_hz != kCoreClockHz) && (core_hz != kHsi16Hz)) {
-        faultImpossibleValue("CoreClock::startTick");
+        faultImpossibleValue(FAULT_AT_CORE_CLOCK_START_TICK, "CoreClock::startTick");
     }
     SysTick->LOAD = (core_hz / kMsPerSecond) - 1U;
     SysTick->VAL = 0U;

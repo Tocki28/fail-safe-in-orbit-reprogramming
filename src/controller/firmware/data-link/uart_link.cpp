@@ -82,7 +82,7 @@ bool waitTransmitEmpty()
 void UartLink::init(uint32_t core_hz)
 {
     if ((core_hz != kCoreClockHz) && (core_hz != kHsi16Hz)) {
-        faultImpossibleValue("UartLink::init");
+        faultImpossibleValue(FAULT_AT_UART_LINK_INIT, "UartLink::init");
     }
     parser_.reset();
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;

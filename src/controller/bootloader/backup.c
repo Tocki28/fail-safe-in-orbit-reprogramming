@@ -18,6 +18,10 @@
 /* A pair takes two registers: the value, then its complement (common/backup_layout.h). */
 #define PAIR_WORDS  2U
 
+/* The map must fit the 16 registers of this chip (common/backup_layout.h, "Where"). */
+_Static_assert((BACKUP_PAIRS * PAIR_WORDS) <= BACKUP_REGISTERS,
+               "the backup pairs of common/backup_layout.h fit the 16 TAMP backup registers");
+
 /**
  * @brief Returns the address of backup register `index`.
  *
@@ -41,7 +45,7 @@ static volatile uint32_t *backup_register(uint32_t index)
  * BACKUP_PAIRS is a corrupted value or a defect, never data: the fault reaction (common/fault.h).
  * The check also keeps every access inside the 16 registers of this chip.
  *
- * @param[in]     pair  BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FALLBACK
+ * @param[in]     pair  BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LOCATION
  * @return register number of the value word; the complement is the next register
  * @note Does not return for a pair number outside the map.
  */
@@ -50,7 +54,28 @@ static uint32_t value_index(uint32_t pair)
     if (pair < BACKUP_PAIRS) {
         return pair * PAIR_WORDS;
     }
-    fault_impossible_value("backup pair number");
+    fault_impossible_value(FAULT_AT_VALUE_INDEX, "backup pair number");
+}
+
+/**
+ * @brief Writes a value and its complement into the two registers from `index` on, then reads
+ * both back.
+ *
+ * The one place that writes a pair, so backup_write and backup_leave_fault_location store a pair
+ * the same way.
+ *
+ * @param[in]     index  register number of the value word; the complement goes in the next
+ * @param[in]     value  value to store
+ * @return true if both words read back as written, false otherwise
+ */
+static bool write_pair(uint32_t index, uint32_t value)
+{
+    volatile uint32_t *word = backup_register(index);
+    volatile uint32_t *inverse = backup_register(index + 1U);
+
+    *word = value;
+    *inverse = ~value;
+    return (*word == value) && (*inverse == ~value);
 }
 
 /**
@@ -94,7 +119,7 @@ void backup_close(void)
  * request (decision B). After an RTC domain reset both words are 0, a broken pair, so a fresh
  * chip reads as empty (common/backup_layout.h).
  *
- * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FALLBACK
+ * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LOCATION
  * @param[out]    value  the stored value; 0 when the pair is broken
  * @return true if the pair matches, false if it is broken (empty)
  */
@@ -119,17 +144,31 @@ bool backup_read(uint32_t pair, uint32_t *value)
  * read-back then fails, so the caller learns that nothing was stored. A reset between the two
  * writes leaves a broken pair, which reads as empty, never as a wrong value.
  *
- * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FALLBACK
+ * @param[in]     pair   BACKUP_PAIR_RESTARTS to BACKUP_PAIR_FAULT_LOCATION
  * @param[in]     value  value to store
  * @return true if both words read back as written, false otherwise
  */
 bool backup_write(uint32_t pair, uint32_t value)
 {
-    uint32_t index = value_index(pair);
-    volatile uint32_t *word = backup_register(index);
-    volatile uint32_t *inverse = backup_register(index + 1U);
+    return write_pair(value_index(pair), value);
+}
 
-    *word = value;
-    *inverse = ~value;
-    return (*word == value) && (*inverse == ~value);
+/**
+ * @brief Leaves a fault-location code in the FAULT_LOCATION pair for the firmware that runs next
+ * (decision 3, owner, 13 Oct 2026); called by the fault reaction (bootloader/fault.c) only.
+ *
+ * Opens the backup domain first: a fault can come before main() opens it, or after it closed it
+ * for the hand-over. The register number is fixed when this is compiled, not found by
+ * value_index, so the fault reaction never calls a function that can call it again (no
+ * recursion, JPL Power of Ten rule 1, code rule A9). The reset follows whatever the write did: a
+ * write the chip ignored leaves the old pair, and one cut short a broken pair, which reads as
+ * empty (common/backup_layout.h).
+ *
+ * @param[in]     location  the fault-location code (common/fault_codes.h)
+ */
+void backup_leave_fault_location(uint8_t location)
+{
+    backup_open();
+    /* Not read back: the reset follows either way, and nothing here could do better. */
+    (void)write_pair(BACKUP_PAIR_FAULT_LOCATION * PAIR_WORDS, location);
 }

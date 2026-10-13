@@ -10,9 +10,12 @@
  *     TAMP base;
  *   - a pair counts only when the second word is the complement of the first: all-zero registers
  *     (after an RTC domain reset) and every single flipped bit read as empty, never as a value;
- *   - a pair number outside the map is the fault reaction (common/fault.h), and nothing is
- *     written.
- * All of these fail on the old code: backup.c did not exist.
+ *   - a pair number outside the map is the fault reaction (common/fault.h) with value_index's
+ *     fault-location code (decision 3), and nothing is written;
+ *   - backup_leave_fault_location opens the backup domain itself and writes the FAULT_LOCATION
+ *     pair, TAMP_BKP10R and TAMP_BKP11R, and nothing else (decision 3).
+ * All of these fail on the old code: backup.c did not exist; the fault-location pair and its
+ * writer came with decision 3 (owner, 13 Oct 2026).
  *
  * Built with the Mac's cc and the undefined-behaviour sanitizer. Run: make -C test/controller
  * unit. Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -37,18 +40,22 @@ static uint32_t tests;
 static jmp_buf fault_exit;
 static bool fault_armed;
 static volatile uint32_t fault_calls;
+static volatile uint8_t fault_location;
 /* A value that no test writes, to see which registers were left alone. */
 #define UNTOUCHED 0x5A5A5A5AU
 
 /**
- * @brief Stand-in for the fault reaction: counts the call and leaves by longjmp to fault_exit.
+ * @brief Stand-in for the fault reaction: counts the call, keeps the fault location and leaves by
+ * longjmp to fault_exit.
  *
- * @param[in]     where  the function that found the impossible value
+ * @param[in]     location  the fault-location code (common/fault_codes.h)
+ * @param[in]     where     the function that found the impossible value
  * @note Does not return; stops the test program if no test expected a fault.
  */
-void fault_impossible_value(const char *where)
+void fault_impossible_value(uint8_t location, const char *where)
 {
     fault_calls++;
+    fault_location = location;
     if (fault_armed) {
         fault_armed = false;
         longjmp(fault_exit, 1);
@@ -183,9 +190,36 @@ static void test_pair_outside(void)
         untouched = untouched && (fake_tamp.BKP[i] == UNTOUCHED);
     }
     fault_armed = false;
-    report(write_fault && !returned && (fault_calls == 2U) && untouched,
-           "pair number 5 (outside the map): read and write -> fault reaction, no register "
-           "touched");
+    report(write_fault && !returned && (fault_calls == 2U) && untouched &&
+               (fault_location == FAULT_AT_VALUE_INDEX),
+           "pair number BACKUP_PAIRS (6, outside the map): read and write -> fault reaction, "
+           "fault location 0x01, no register touched");
+}
+
+/**
+ * @brief Decision 3: backup_leave_fault_location opens the backup domain and writes the code and
+ * its complement into TAMP_BKP10R and TAMP_BKP11R, touching no other register.
+ *
+ * Fails on the old code: the function and the pair did not exist.
+ */
+static void test_leave_fault_location(void)
+{
+    uint32_t v = 0U;
+    bool others = true;
+
+    reset_rig();
+    backup_leave_fault_location(FAULT_AT_SLOT_REGION);
+    for (uint32_t i = 0U; i < FAKE_TAMP_BKP_REGISTERS; i++) {
+        if ((i != 10U) && (i != 11U)) {
+            others = others && (fake_tamp.BKP[i] == UNTOUCHED);
+        }
+    }
+    report((fake_tamp.BKP[10] == 0x05U) && (fake_tamp.BKP[11] == ~0x05U) && others &&
+               ((fake_pwr.CR1 & PWR_CR1_DBP) != 0U) &&
+               ((fake_rcc.APB1ENR1 & RCC_APB1ENR1_RTCAPBEN) != 0U) &&
+               backup_read(BACKUP_PAIR_FAULT_LOCATION, &v) && (v == 0x05U) && (fault_calls == 0U),
+           "3: backup_leave_fault_location(0x05), backup domain closed before -> opened, "
+           "BKP10R = 0x05, BKP11R = its complement, no other register touched");
 }
 
 /**
@@ -199,6 +233,7 @@ int main(void)
     test_write_read();
     test_broken_pairs();
     test_pair_outside();
+    test_leave_fault_location();
     if (failures == 0U) {
         printf("backup register unit tests: all %u passed\n", tests);
         return 0;

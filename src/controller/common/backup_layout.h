@@ -36,8 +36,11 @@
  * [RM0440 Rev 9, Sec. 38.1, p. 1610; DS12589 Rev 6, Sec. 3.26, p. 37]. TAMP_BKPxR sits at offset
  * 0x100 + 4 x from the TAMP base [RM0440 Rev 9, Sec. 38.6.8, p. 1623], and the TAMP base is
  * 0x4000 2400 [RM0440 Rev 9, Table 3, p. 87]: TAMP_BKP0R is at 0x4000 2500. Pair n uses
- * TAMP_BKP(2n)R for the value and TAMP_BKP(2n+1)R for its bitwise complement, so the five pairs
- * below take TAMP_BKP0R to TAMP_BKP9R, 0x4000 2500 to 0x4000 2527.
+ * TAMP_BKP(2n)R for the value and TAMP_BKP(2n+1)R for its bitwise complement, so the six pairs
+ * below take TAMP_BKP0R to TAMP_BKP11R, 0x4000 2500 to 0x4000 252F. Budget: 12 of the 16
+ * registers; TAMP_BKP12R to TAMP_BKP15R are free. Before decision 3 (13 Oct 2026) five pairs
+ * used 10. Each program checks the map against the 16 registers when it is compiled
+ * (bootloader/backup.c, firmware/mode-manager/mode_port.cpp).
  *
  * ---- One bit error cannot fake a value ---------------------------------------------------------
  * A pair counts only when the second word is the complement of the first. One flipped bit breaks
@@ -56,8 +59,11 @@
  *                   up's boot-state write fails    (decision G)
  *    3  FAULT       main firmware, before a        bootloader, at the next start
  *                   counted software restart
- *    4  FALLBACK    bootloader, when it refused a  main firmware: EVENT 0x0002 once, then
- *                   copy and started a later one   cleared (Interfaces Sec. 5.4)
+ *    4  FALLBACK    bootloader, every copy it      main firmware: one EVENT 0x0002 per
+ *                   refused or skipped on this     refused copy, then cleared (Interfaces
+ *                   start (decision 4)             Sec. 5.4)
+ *    5  FAULT_      bootloader's fault reaction,   main firmware: EVENT 0x0005 with the code,
+ *       LOCATION    before its reset (decision 3)  once, then cleared
  */
 #ifndef BACKUP_LAYOUT_H
 #define BACKUP_LAYOUT_H
@@ -70,7 +76,8 @@
 #define BACKUP_PAIR_GIVE_UP           2U
 #define BACKUP_PAIR_FAULT             3U
 #define BACKUP_PAIR_FALLBACK          4U
-#define BACKUP_PAIRS                  5U
+#define BACKUP_PAIR_FAULT_LOCATION    5U
+#define BACKUP_PAIRS                  6U
 
 #define BACKUP_BYTE_MASK              0xFFU
 
@@ -93,13 +100,49 @@
 #define BACKUP_FAULT_IMPOSSIBLE_VALUE 0x01U   /* fault_impossible_value: EVENT 0x0005 sent */
 #define BACKUP_FAULT_SELF_TEST        0x02U   /* self-test failed in OPERATE (decision L) */
 
-/* FALLBACK: bits 7:0 the check result of the refused copy (Interfaces Sec. 5.4, "Check result"
- * table, 0x00 to 0x0A), bits 15:8 the refused copy and bits 23:16 the copy started, both in the
- * codes of the HEALTH report's running slot (Interfaces Sec. 5.4): */
-#define BACKUP_FALLBACK_REFUSED_SHIFT 8U
-#define BACKUP_FALLBACK_STARTED_SHIFT 16U
+/* FAULT_LOCATION: the fault-location code (common/fault_codes.h, 0x01 to 0x1F) of the function
+ * that found an impossible value while the bootloader ran (decision 3, owner, 13 Oct 2026). The
+ * bootloader never reads or clears it, so it survives the bootloader's later starts until a main
+ * firmware reports it. */
+
+/* FALLBACK (decision 4, owner, 13 Oct 2026): every copy refused or skipped on one start. One byte
+ * per copy holds the check result it was refused or skipped with (the table below), 0x00 when it
+ * was not; bits 31:24 hold the copy started, 0x00 when none was (the bootloader parked). Copies
+ * are in the codes of the HEALTH report's running slot (Interfaces Sec. 5.4). Why one byte per
+ * copy: a start tries each copy at most once (trial and confirmed are the two different slots,
+ * common/boot_state.c, fields_valid; then the last-resort firmware), so up to three records fit
+ * one pair, in the order of the copies, not of the start. Before, bits 7:0 held the check
+ * result, bits 15:8 the one copy refused just before the start, bits 23:16 the copy started. */
+#define BACKUP_FALLBACK_A_SHIFT            0U
+#define BACKUP_FALLBACK_B_SHIFT            8U
+#define BACKUP_FALLBACK_LAST_RESORT_SHIFT  16U
+#define BACKUP_FALLBACK_STARTED_SHIFT      24U
 #define BACKUP_COPY_A                 0x01U
 #define BACKUP_COPY_B                 0x02U
 #define BACKUP_COPY_LAST_RESORT       0x03U
+
+/* Check-result codes of a refused copy: Interfaces Sec. 5.4, "Check result" table, the first
+ * check the copy failed. One code per check of common/image_check.c, in the order it runs them.
+ * Moved here from bootloader/main.c with decision 4, so the bootloader that writes them and the
+ * firmware that checks them read one list; the last three are a refusal or skip that is not an
+ * image check. */
+#define CHECK_PASSED            0x00U   /* none: the copy passed */
+#define CHECK_EMPTY             0x01U   /* the copy is empty */
+#define CHECK_MAGIC             0x02U   /* proprietary string */
+#define CHECK_FORMAT            0x03U   /* format */
+#define CHECK_KIND              0x04U   /* kind */
+#define CHECK_TARGET            0x05U   /* target */
+#define CHECK_LENGTH            0x06U   /* length */
+#define CHECK_START             0x07U   /* start address outside the region */
+#define CHECK_BODY              0x08U   /* body check value */
+#define CHECK_SIGNATURE_A       0x09U   /* signature A */
+#define CHECK_SIGNATURE_B       0x0AU   /* signature B */
+/* Added by decision 4 (owner, 13 Oct 2026): */
+#define CHECK_FLASH_READ        0x0BU   /* a flash read raised an ECC error during the checks */
+#define CHECK_TRIAL_STARTS      0x0CU   /* trial started too often: given up at its start limit */
+#define CHECK_RESTARTS          0x0DU   /* restarted too often: decision B skipped the confirmed
+                                         * slot */
+/* The highest code of the table. */
+#define CHECK_LAST              CHECK_RESTARTS
 
 #endif /* BACKUP_LAYOUT_H */

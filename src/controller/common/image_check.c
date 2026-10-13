@@ -181,5 +181,6 @@ const char *image_result_text(image_result_t result)
     case IMAGE_BAD_SIGNATURE_A: return "signature A";
     case IMAGE_BAD_SIGNATURE_B: return "signature B";
     }
-    fault_impossible_value("image_result_text");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_IMAGE_RESULT_TEXT, "image_result_text");
 }

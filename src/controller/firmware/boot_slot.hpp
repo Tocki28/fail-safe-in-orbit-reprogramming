@@ -52,7 +52,33 @@ inline Slot toSlot(uint8_t code)
     case BOOT_SLOT_B:
         return Slot::kB;
     }
-    faultImpossibleValue("toSlot");   /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_TO_SLOT, "toSlot");   /* only a corrupted value reaches here */
+}
+
+/**
+ * @brief Returns the slot code the boot state stores for a slot (common/boot_state.h).
+ *
+ * The Slot enumerators carry the boot state's codes (see above). Every enumerator has its own
+ * case; a value outside the enum is a corrupted variable: the fault reaction (see the file
+ * comment). Before, a cast passed any value through into the boot-state record.
+ * Moved here from mode-manager/mode_manager.cpp with decision 6 (owner, 13 Oct 2026): the update
+ * receiver also needs a slot's code, to clear decision B's restart count of the slot it wrote.
+ *
+ * @param[in]     slot  Slot::kNone, kA or kB
+ * @return BOOT_SLOT_NONE, BOOT_SLOT_A or BOOT_SLOT_B
+ * @note Does not return for a value outside Slot.
+ */
+inline uint8_t stateCode(Slot slot)
+{
+    switch (slot) {
+    case Slot::kNone:
+        return BOOT_SLOT_NONE;
+    case Slot::kA:
+        return BOOT_SLOT_A;
+    case Slot::kB:
+        return BOOT_SLOT_B;
+    }
+    faultImpossibleValue(FAULT_AT_STATE_CODE, "stateCode");   /* only a corrupted value */
 }
 
 /**
@@ -77,9 +103,10 @@ inline Slot otherSlot(Slot slot)
     case Slot::kB:
         return Slot::kA;
     case Slot::kNone:
-        faultImpossibleValue("otherSlot: no slot");   /* no caller asks this: see above */
+        /* no caller asks this: see above */
+        faultImpossibleValue(FAULT_AT_OTHER_SLOT, "otherSlot: no slot");
     }
-    faultImpossibleValue("otherSlot");   /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_OTHER_SLOT, "otherSlot");   /* only a corrupted value */
 }
 
 #endif /* BOOT_SLOT_HPP */

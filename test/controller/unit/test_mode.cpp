@@ -16,7 +16,11 @@
  * boot state again), F(a) (SWITCH checks the other slot's image), G (give-up request), L (failed
  * self-test in OPERATE restarts, counted), N (0x11 when the boot state cannot be stored), the
  * fall-back EVENT 0x0002, and the fault rule (a corrupted value reaches the fault reaction,
- * caught by fake_fault.cpp). Each test's name or comment says what the old code did.
+ * caught by fake_fault.cpp); and the decisions numbered 2 to 5: the fault kind of EVENT 0x0001,
+ * the bootloader's fault location sent as EVENT 0x0005, one EVENT 0x0002 per refused or skipped
+ * copy, EVENT 0x0008 for a give-up handed to the bootloader; each fault site passes its own
+ * fault-location code (common/fault_codes.h). Each test's name or comment says what the old code
+ * did.
  *
  * Built with the Mac's clang++, the undefined-behaviour sanitizer and libc++'s debug hardening.
  * Run: make -C test/controller unit. Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -776,9 +780,10 @@ void testSelfTest()
     bool faulted = false;
     faultClear();
     FAULT_CATCH(faulted, got = ModeManager::selfTest(static_cast<Slot>(3U)) ? 1 : 0);
-    report(faulted && (got == -1) && (fault_calls == 1U) && (fake.bad_reads == 0U),
-           "self-test: running slot 3 (outside Slot) -> fault reaction in slotStart, no read "
-           "(was: failed without a read)");
+    report(faulted && (got == -1) && (fault_calls == 1U) && (fake.bad_reads == 0U) &&
+               (fault_last_location == FAULT_AT_UPDATE_RECEIVER_SLOT_START),
+           "self-test: running slot 3 (outside Slot) -> fault reaction in slotStart, fault "
+           "location 0x26, no read (was: failed without a read)");
 }
 
 /**
@@ -893,12 +898,15 @@ void testTestImageOutsideEnum()
     cmd.value = 40U;
     faultClear();
     FAULT_CATCH(accept_fault, code = rig.mm.acceptTestImage(cmd));
+    const uint8_t accept_location = fault_last_location;
     FAULT_CATCH(run_fault, code = rig.mm.runTestImage(cmd));
     cmd.id = UploadId::kBegin;
     report(accept_fault && run_fault && (code == AnswerCode::kDamaged) && (fault_calls == 2U) &&
+               (accept_location == FAULT_AT_TEST_IMAGE_ACCEPT) &&
+               (fault_last_location == FAULT_AT_TEST_IMAGE_RUN) &&
                (rig.mm.acceptTestImage(cmd) == AnswerCode::kSuccess),
            "test image: an identifier outside UploadId (0x7F): accept and run -> fault reaction, "
-           "state unchanged (was: 0x06)");
+           "fault locations 0x2B and 0x2C, state unchanged (was: 0x06)");
 }
 
 /* ---- Data-link test ----------------------------------------------------------------------- */
@@ -1116,20 +1124,23 @@ void testPassedAndTimeout()
     fails.mm.poll(kTrialMs);
     uint32_t request = 0U;
     bool stored = fakeBackupGet(BACKUP_PAIR_GIVE_UP, request) && (request == BOOT_SLOT_B);
-    report((fake_link.sent_bytes == mark) && (fake.restarts == 1U) && (fake.state_writes == 1U) &&
-               stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U) && stored,
-           "G: give-up whose boot-state write fails: give-up request for B left in the backup "
-           "registers, no EVENT 0x0008, restart (was: no request)");
+    report(sentIs(mark, {ev(EventCode::kGivenUp)}) &&
+               (fake.sent_at_restart == fake_link.sent_bytes) && (fake.restarts == 1U) &&
+               (fake.state_writes == 1U) && stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U) && stored,
+           "G/5: give-up whose boot-state write fails: give-up request for B left in the backup "
+           "registers, EVENT 0x0008 before the restart (decision 5; was: no EVENT 0x0008)");
 
     Rig nowhere;
     startRig(nowhere, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
     nowhere.mm.poll(0U);
     fake.fail_state_write = true;
     fake.backup_writable = false;
+    mark = fake_link.sent_bytes;
     nowhere.mm.poll(kTrialMs);
-    report((fake.restarts == 1U) && !fakeBackupGet(BACKUP_PAIR_GIVE_UP, request),
-           "G: neither the boot state nor the request can be stored: restart anyway (the "
-           "bootloader's start count ends the trial, REQ-015)");
+    report((fake.restarts == 1U) && !fakeBackupGet(BACKUP_PAIR_GIVE_UP, request) &&
+               (fake_link.sent_bytes == mark),
+           "G/5: neither the boot state nor the request can be stored: no EVENT 0x0008 (not given "
+           "up yet), restart anyway (the bootloader's start count ends the trial, REQ-015)");
 }
 
 /* ---- CONFIRM -------------------------------------------------------------------------------- */
@@ -1422,23 +1433,50 @@ void testSwitchWriteFails()
 
 /* ---- Events of the start, restart count ------------------------------------------------- */
 
+using FallbackDetail = std::array<uint8_t, 2>;
+
 /**
- * @brief Returns true if exactly one frame was sent: EVENT 0x0002 with the detail
- * "refused, check".
+ * @brief Returns true if the frames sent are exactly EVENT 0x0002 reports with these details
+ * (refused copy, check result), in this order.
  *
- * @param[in]     refused  refused-copy byte expected
- * @param[in]     check    check-result byte expected
+ * @param[in]     want  the 2-byte details expected, in order
  * @return true if so
  */
-bool onlyFallbackEvent(uint8_t refused, uint8_t check)
+bool fallbackEventsAre(std::initializer_list<FallbackDetail> want)
 {
     static SentLog log;
     uint32_t n = decodeRange(0U, fake_link.sent_bytes, log);
+    bool same = (static_cast<size_t>(n) == want.size());
+    uint32_t i = 0U;
 
-    return (n == 1U) && (log[0].type == FrameType::kReport) && (log[0].length == 17U) &&
-           (log[0].payload[12] == kReportKindEvent) && (log[0].payload[13] == 0x02U) &&
-           (log[0].payload[14] == 0x00U) && (log[0].payload[15] == refused) &&
-           (log[0].payload[16] == check);
+    for (const FallbackDetail &w : want) {
+        if (!same) {
+            break;
+        }
+        const Sent &s = log[i];
+        same = (s.type == FrameType::kReport) && (s.length == 17U) &&
+               (s.payload[12] == kReportKindEvent) && (s.payload[13] == 0x02U) &&
+               (s.payload[14] == 0x00U) && (s.payload[15] == w[0]) && (s.payload[16] == w[1]);
+        i++;
+    }
+    return same;
+}
+
+/**
+ * @brief Returns a FALLBACK pair value in the layout of decision 4 (common/backup_layout.h): one
+ * byte per copy with its check result, the copy started in the top byte.
+ *
+ * @param[in]     a        slot A's check result; 0 when not refused
+ * @param[in]     b        slot B's check result
+ * @param[in]     lr       the last-resort firmware's check result
+ * @param[in]     started  the copy started (BACKUP_COPY_...)
+ * @return the pair value
+ */
+uint32_t recordOf(uint32_t a, uint32_t b, uint32_t lr, uint32_t started)
+{
+    return (started << BACKUP_FALLBACK_STARTED_SHIFT) |
+           (lr << BACKUP_FALLBACK_LAST_RESORT_SHIFT) | (b << BACKUP_FALLBACK_B_SHIFT) |
+           (a << BACKUP_FALLBACK_A_SHIFT);
 }
 
 /**
@@ -1458,11 +1496,13 @@ void startWithRecord(Rig &rig, Slot running, uint32_t record)
 }
 
 /**
- * @brief The events of a start: EVENT 0x0001 after a clock fault (decision C), EVENT 0x0002 from
- * the bootloader's fall-back record, once, then the record is cleared.
+ * @brief The events of a start: EVENT 0x0001 with the fault kind after a clock fault (decisions
+ * C and 2), one EVENT 0x0002 per copy in the bootloader's fall-back record (decision 4), once,
+ * then the record is cleared.
  *
- * Fails on the old code: neither event existed (start() had no clock-fault input; the record was
- * not read).
+ * Fails on the old code: 0x0001 went out with no detail; the record held one refused copy in
+ * another layout, so a record of two copies gave one event, and the check results 0x0B to 0x0D
+ * were dropped (scratch-copy mutation runs).
  */
 void testStartEvents()
 {
@@ -1473,48 +1513,140 @@ void testStartEvents()
         rig.mm.start(Slot::kB, 0U, true);
         rig.mm.poll(0U);
         rig.mm.poll(1U);
-        report(sentIs(0U, {ev(EventCode::kFaultDetected), ev(EventCode::kTrialStarted)}),
-               "C: clock fell back to 16 MHz -> EVENT 0x0001 once at start (no detail), then the "
-               "trial's 0x0006");
+        report(sentIs(0U, {ev(EventCode::kFaultDetected, FAULT_KIND_CORE_CLOCK),
+                           ev(EventCode::kTrialStarted)}),
+               "2/C: clock fell back to 16 MHz -> EVENT 0x0001 once at start with fault kind 0x01 "
+               "(was: no detail), then the trial's 0x0006");
+    }
+    {
+        Rig rig;
+        uint32_t left = 0xFFU;
+        startWithRecord(rig, Slot::kA, recordOf(0U, CHECK_SIGNATURE_A, 0U, BACKUP_COPY_A));
+        rig.mm.poll(0U);
+        rig.mm.poll(1U);
+        report(fallbackEventsAre({{0x02U, 0x09U}}) &&
+                   fakeBackupGet(BACKUP_PAIR_FALLBACK, left) && (left == 0U),
+               "record: slot B refused (signature A), A started -> EVENT 0x0002 detail 02 09, "
+               "once over two passes; record cleared");
+    }
+    {
+        bool all = true;
+        for (uint8_t check : {uint8_t{CHECK_FLASH_READ}, uint8_t{CHECK_TRIAL_STARTS},
+                              uint8_t{CHECK_RESTARTS}}) {
+            Rig rig;
+            startWithRecord(rig, Slot::kA, recordOf(0U, check, 0U, BACKUP_COPY_A));
+            rig.mm.poll(0U);
+            all = all && fallbackEventsAre({{0x02U, check}});
+        }
+        report(all, "4: slot B refused with 0x0B (flash read error), 0x0C (trial started too "
+                    "often), 0x0D (restarted too often) -> EVENT 0x0002 02 0B, 02 0C, 02 0D (was: "
+                    "dropped, highest code 0x0A)");
     }
     {
         Rig rig;
         uint32_t left = 0xFFU;
         startWithRecord(rig, Slot::kA,
-                        (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
-                            (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+                        recordOf(0U, CHECK_TRIAL_STARTS, CHECK_BODY, BACKUP_COPY_A));
         rig.mm.poll(0U);
         rig.mm.poll(1U);
-        report(onlyFallbackEvent(0x02U, 0x09U) && fakeBackupGet(BACKUP_PAIR_FALLBACK, left) &&
-                   (left == 0U),
-               "record: slot B refused (signature A), A started -> EVENT 0x0002 detail 02 09, "
-               "once over two passes; record cleared");
+        report(fallbackEventsAre({{0x02U, 0x0CU}, {0x03U, 0x08U}}) &&
+                   fakeBackupGet(BACKUP_PAIR_FALLBACK, left) && (left == 0U),
+               "4: record of two copies (B 0x0C, last-resort 0x08), A started -> two EVENT 0x0002, "
+               "02 0C then 03 08, once; record cleared (the decoder takes every record; a real "
+               "start of a main slot leaves at most the trial's)");
     }
     {
         Rig rig;
         uint32_t left = 0xFFU;
         faultClear();
         startWithRecord(rig, Slot::kA,
-                        (BACKUP_COPY_LAST_RESORT << BACKUP_FALLBACK_STARTED_SHIFT) |
-                            (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+                        recordOf(0U, CHECK_SIGNATURE_A, 0U, BACKUP_COPY_LAST_RESORT));
         rig.mm.poll(0U);
         bool other = (fake_link.sent_bytes == 0U) && fakeBackupGet(BACKUP_PAIR_FALLBACK, left) &&
                      (left == 0U);
         Rig same;
-        startWithRecord(same, Slot::kA,
-                        (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
-                            (BACKUP_COPY_A << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+        startWithRecord(same, Slot::kA, recordOf(CHECK_SIGNATURE_A, 0U, 0U, BACKUP_COPY_A));
         same.mm.poll(0U);
         bool self = (fake_link.sent_bytes == 0U);
         Rig check;
-        startWithRecord(check, Slot::kA, (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
-                                             (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) |
-                                             0x0BU);
+        startWithRecord(check, Slot::kA, recordOf(0U, CHECK_LAST + 1U, 0U, BACKUP_COPY_A));
         check.mm.poll(0U);
-        report(other && self && (fake_link.sent_bytes == 0U) && (fault_calls == 0U),
-               "record naming another started copy, the running copy as refused, or check result "
-               "0x0B: dropped and cleared, no event, no fault (stored data, not memory)");
+        bool past = (fake_link.sent_bytes == 0U);
+        Rig half;
+        startWithRecord(half, Slot::kA,
+                        recordOf(0U, CHECK_SIGNATURE_A, CHECK_LAST + 1U, BACKUP_COPY_A));
+        half.mm.poll(0U);
+        bool whole = (fake_link.sent_bytes == 0U);
+        Rig none;
+        startWithRecord(none, Slot::kA, recordOf(0U, 0U, 0U, BACKUP_COPY_A));
+        none.mm.poll(0U);
+        report(other && self && past && whole && (fake_link.sent_bytes == 0U) &&
+                   (fault_calls == 0U),
+               "record naming another started copy, the running copy as refused, a check result "
+               "past the table (0x0E), one good and one bad copy, or no refused copy: dropped "
+               "whole and cleared, no event, no fault (stored data, not memory)");
     }
+}
+
+/**
+ * @brief Decision 3: a fault location the bootloader left goes out once as EVENT 0x0005 with that
+ * code, then is cleared; a value outside the bootloader's and common/'s ranges (0x01 to 0x1F) is
+ * dropped and cleared, never a fault. The events of a start go in the order 0x0005, 0x0001,
+ * 0x0002.
+ *
+ * Fails on the old code: the pair did not exist and nothing was sent (scratch-copy mutation run:
+ * the call removed from ModeManager::sendStartEvents).
+ */
+void testBootloaderFault()
+{
+    bool sent = true;
+    for (uint8_t location : {uint8_t{FAULT_AT_SLOT_REGION}, uint8_t{FAULT_AT_IMAGE_RESULT_TEXT}}) {
+        Rig rig;
+        uint32_t left = 0xFFU;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fakeBackupSet(BACKUP_PAIR_FAULT_LOCATION, location);
+        rig.updater.init(Slot::kA);
+        rig.mm.start(Slot::kA, 0U, false);
+        rig.mm.poll(0U);
+        rig.mm.poll(1U);
+        sent = sent && sentIs(0U, {ev(EventCode::kMemoryChanged, location)}) &&
+               fakeBackupGet(BACKUP_PAIR_FAULT_LOCATION, left) && (left == 0U) &&
+               (fake.restarts == 0U) && (fake.counted_restarts == 0U);
+    }
+    report(sent, "3: bootloader left fault location 0x05 (slot_region) or 0x10 (common/, "
+                 "image_result_text) -> EVENT 0x0005 with that detail, once over two passes; "
+                 "cleared; no restart (was: nothing sent)");
+
+    bool dropped = true;
+    faultClear();
+    for (uint32_t bad : {uint32_t{FAULT_RANGE_FIRMWARE_FIRST}, uint32_t{0x55U},
+                         uint32_t{0xFFFF0001U}}) {
+        Rig rig;
+        uint32_t left = 0xFFU;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fakeBackupSet(BACKUP_PAIR_FAULT_LOCATION, bad);
+        rig.updater.init(Slot::kA);
+        rig.mm.start(Slot::kA, 0U, false);
+        rig.mm.poll(0U);
+        dropped = dropped && (fake_link.sent_bytes == 0U) &&
+                  fakeBackupGet(BACKUP_PAIR_FAULT_LOCATION, left) && (left == 0U);
+    }
+    report(dropped && (fault_calls == 0U),
+           "3: stored fault location 0x20 (a firmware code), 0x55 or 0xFFFF0001 -> dropped and "
+           "cleared, no event, no fault (stored data, not memory)");
+
+    Rig rig;
+    prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+    fakeBackupSet(BACKUP_PAIR_FAULT_LOCATION, FAULT_AT_SLOT_LETTER);
+    fakeBackupSet(BACKUP_PAIR_FALLBACK, recordOf(0U, CHECK_SIGNATURE_A, 0U, BACKUP_COPY_A));
+    rig.updater.init(Slot::kA);
+    rig.mm.start(Slot::kA, 0U, true);
+    rig.mm.poll(0U);
+    report(sentIs(0U, {ev(EventCode::kMemoryChanged, FAULT_AT_SLOT_LETTER),
+                       ev(EventCode::kFaultDetected, FAULT_KIND_CORE_CLOCK),
+                       ev(EventCode::kFallbackPrevious, 0x02U)}),
+           "start events in order: 0x0005 (bootloader fault 0x02), 0x0001 (fault kind 0x01), "
+           "0x0002 (02 09)");
 }
 
 /**
@@ -1627,8 +1759,10 @@ void testModeFaults()
         faultClear();
         FAULT_CATCH(faulted, code = rig.mm.runDangerous(0x55U, 0U));
         report(faulted && (code == AnswerCode::kSuccess) && (fault_calls == 1U) &&
+                   (fault_last_location == FAULT_AT_MODE_MANAGER_RUN_DANGEROUS) &&
                    (fake.state_writes == 0U) && (fake_link.sent_bytes == 0U),
-               "runDangerous(0x55): fault reaction, nothing written or sent (was: 0x06)");
+               "runDangerous(0x55): fault reaction, fault location 0x2F, nothing written or sent "
+               "(was: 0x06)");
     }
     static Rig rig;   /* static: zero-filled storage, so padding bytes compare equal */
     startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
@@ -1645,11 +1779,13 @@ void testModeFaults()
         }
         faultClear();
         FAULT_CATCH(faulted, rig.mm.poll(10U));
-        all = all && faulted && (fault_calls == 1U) && (fake_link.sent_bytes == 0U) &&
-              (fake.restarts == 0U);
+        all = all && faulted && (fault_calls == 1U) &&
+              (fault_last_location == FAULT_AT_MODE_MANAGER_POLL) &&
+              (fake_link.sent_bytes == 0U) && (fake.restarts == 0U);
     }
     report(all, "poll with the mode byte set to 7, and to FALLBACK (never set by this build): "
-                "fault reaction, nothing sent (was: run as OPERATE)");
+                "fault reaction, fault location 0x2E (one code for both sites), nothing sent "
+                "(was: run as OPERATE)");
 
     startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
     MmBytes run_a = bytesOf(rig.mm);
@@ -1665,17 +1801,18 @@ void testModeFaults()
     faultClear();
     FAULT_CATCH(state_fault, rig.mm.poll(kNormalRunMs));
     const char *state_where = fault_last_where;
-    startWithRecord(rig, Slot::kA,
-                    (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
-                        (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+    const uint8_t state_location = fault_last_location;
+    startWithRecord(rig, Slot::kA, recordOf(0U, CHECK_SIGNATURE_A, 0U, BACKUP_COPY_A));
     if (found) {
         corrupt(rig.mm, running_at, 0x07U);
     }
     FAULT_CATCH(copy_fault, rig.mm.poll(1U));
     report(found && state_fault && copy_fault && (std::strcmp(state_where, "stateCode") == 0) &&
-               (std::strcmp(fault_last_where, "copyCode") == 0) && (fake_link.sent_bytes == 0U),
-           "running slot byte set to 7: the restart-count clear faults in stateCode, the "
-           "fall-back record in copyCode; nothing sent");
+               (state_location == FAULT_AT_STATE_CODE) &&
+               (std::strcmp(fault_last_where, "copyCode") == 0) &&
+               (fault_last_location == FAULT_AT_COPY_CODE) && (fake_link.sent_bytes == 0U),
+           "running slot byte set to 7: the restart-count clear faults in stateCode (0x22), the "
+           "fall-back record in copyCode (0x2D); nothing sent");
 }
 
 }  // namespace
@@ -1716,6 +1853,7 @@ int main(int argc, char **argv)
     testSwitchImageCheck();
     testSwitchWriteFails();
     testStartEvents();
+    testBootloaderFault();
     testRestartCountClear();
     testModeFaults();
     if (failures == 0U) {

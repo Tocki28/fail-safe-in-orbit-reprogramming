@@ -47,7 +47,7 @@ extern uint32_t stub_watchdog_waited_us;
  * the stand-ins leave by longjmp(run_exit, <one of these>):
  *   RUN_PARKED   the third watchdog_reload() after uart_off(): the park loop;
  *   RUN_STARTED  handover_start(): a firmware would start (started_vector says which);
- *   RUN_FAULT    fault_impossible_value() (fault_where says where).
+ *   RUN_FAULT    fault_impossible_value() (fault_where says where, fault_location its code).
  * Unarmed, a hand-over or a fault prints FAIL and stops the test program. */
 #define RUN_PARKED   1
 #define RUN_STARTED  2
@@ -57,6 +57,7 @@ extern bool run_exit_armed;
 extern volatile int run_how;   /* set to RUN_... by the stand-in just before its longjmp */
 extern uint32_t started_vector;
 extern char fault_where[64];
+extern uint8_t fault_location;
 extern uint32_t fault_calls;
 
 /* Runs `statement` with run_exit armed and sets `ended` to how it ended: 0 if the statement came
@@ -76,7 +77,7 @@ extern uint32_t fault_calls;
         (ended) = run_how;                 \
     } while (0)
 
-/* Clears the fault record (fault_where, fault_calls) before a test. */
+/* Clears the fault record (fault_where, fault_location, fault_calls) before a test. */
 void fault_clear(void);
 
 /* The TAMP backup registers, as RAM (common/backup_layout.h): pair n is words 2n and 2n + 1.

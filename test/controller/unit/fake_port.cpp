@@ -6,6 +6,7 @@
 #include "fake_port.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "update_port.hpp"
@@ -212,4 +213,68 @@ bool UpdatePort::eccErrorSeen()
 void UpdatePort::watchdogReload()
 {
     fake.reloads++;
+}
+
+/**
+ * @brief Stores a value and its complement in a backup pair; stops the test for a pair outside
+ * the map.
+ *
+ * Here, not in fake_mode_port.cpp, since decision 6: the update receiver's fake reaches the
+ * backup registers too (UpdatePort::clearRestartCount), and test_update links this file only.
+ *
+ * @param[in]     pair   pair number, below BACKUP_PAIRS
+ * @param[in]     value  value to store
+ */
+void fakeBackupSet(uint32_t pair, uint32_t value)
+{
+    if (pair >= BACKUP_PAIRS) {
+        std::printf("FAIL  backup pair %u outside the map\n", pair);
+        std::exit(1);
+    }
+    fake.backup[2U * pair] = value;
+    fake.backup[(2U * pair) + 1U] = ~value;
+}
+
+/**
+ * @brief Reads a backup pair with the complement rule; stops the test for a pair outside the map.
+ *
+ * @param[in]     pair   pair number, below BACKUP_PAIRS
+ * @param[out]    value  the stored value; 0 if the pair is broken
+ * @return true if the two words are complements
+ */
+bool fakeBackupGet(uint32_t pair, uint32_t &value)
+{
+    if (pair >= BACKUP_PAIRS) {
+        std::printf("FAIL  backup pair %u outside the map\n", pair);
+        std::exit(1);
+    }
+    if (fake.backup[2U * pair] != ~fake.backup[(2U * pair) + 1U]) {
+        value = 0U;
+        return false;
+    }
+    value = fake.backup[2U * pair];
+    return true;
+}
+
+/**
+ * @brief Host stand-in for UpdatePort::clearRestartCount: clears the RESTARTS pair if it belongs
+ * to slot_code, with the rule of ModePort::clearRestartCount, to which the board's
+ * update_port.cpp forwards (decision 6).
+ *
+ * @param[in]     slot_code  the slot just written
+ * @return true if nothing to clear or cleared; false if fake.backup_writable is false
+ */
+bool UpdatePort::clearRestartCount(uint8_t slot_code)
+{
+    uint32_t value = 0U;
+
+    if (!fakeBackupGet(BACKUP_PAIR_RESTARTS, value) ||
+        (((value >> BACKUP_RESTARTS_SLOT_SHIFT) & BACKUP_BYTE_MASK) != slot_code)) {
+        return true;
+    }
+    if (!fake.backup_writable) {
+        return false;
+    }
+    fakeBackupSet(BACKUP_PAIR_RESTARTS, 0U);
+    return true;
 }

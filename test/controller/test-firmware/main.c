@@ -173,15 +173,19 @@ static void confirm_if_trial(void)
  *
  * The test application needs only what the bench sees: the line says where, and the reset
  * (CMSIS NVIC_SystemReset, SYSRESETREQ [Arm DUI 0553A, Sec. 4.3.5, Table 4-17, p. 4-17]) hands
- * back to the bootloader, which reads everything again.
+ * back to the bootloader, which reads everything again. The line also carries the fault-location
+ * code (decision 3, common/fault_codes.h), in decimal.
  *
- * @param[in]     where  the function that found the impossible value
+ * @param[in]     location  the fault-location code (common/fault_codes.h)
+ * @param[in]     where     the function that found the impossible value
  * @note Does not return.
  */
-void fault_impossible_value(const char *where)
+void fault_impossible_value(uint8_t location, const char *where)
 {
     say("corrupted value; restarting");
     put_text(where);
+    put_text(", fault location ");
+    put_decimal(location);
     put_text("\r\n");
     NVIC_SystemReset();
 }

@@ -432,11 +432,11 @@ that kind only.}
 \toprule
 Code & Event & Sent by & Requirement \\
 \midrule
-0x0001 & fault detected & controller & REQ-038 \\
+0x0001 & fault detected; detail: fault kind (1) & controller & REQ-038 \\
 0x0002 & fall-back to the previous copy; detail: refused copy (1), check result (1) & controller & REQ-040 \\
 0x0003 & fall-back to the last-resort firmware; detail: refused copy (1), check result (1) & controller & REQ-040 \\
 0x0004 & self-test failed & controller & REQ-039 \\
-0x0005 & change in memory detected & controller & REQ-041 \\
+0x0005 & change in memory detected; detail: where (1) & controller & REQ-041 \\
 0x0006 & trial started & controller & REQ-037 \\
 0x0007 & firmware confirmed & controller & REQ-037 \\
 0x0008 & firmware given up & controller & REQ-037 \\
@@ -473,6 +473,61 @@ Check result & Check that failed \\
 0x08 & body check value \\
 0x09 & signature A \\
 0x0A & signature B \\
+0x0B & a flash read error while the copy was checked \\
+0x0C & not checked: the trial was started too often \\
+0x0D & not checked: the copy restarted too often \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+\noindent One event 0x0002 or 0x0003 is sent for every copy that was refused or passed over at
+one start, in the order slot A, slot B, last-resort firmware.
+
+\medskip
+\noindent The detail of event 0x0001 names the kind of fault:
+
+{\footnotesize\noindent\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Fault kind & Fault \\
+\midrule
+0x01 & the core clock failed; the controller runs on its 16~MHz internal clock \\
+\bottomrule
+\end{tabularx}}
+
+\medskip
+\noindent The detail of event 0x0005 names the check that found a value which cannot exist,
+a sign that memory changed. The controller then restarts \mbox{[3,~REQ-041]}. A value found by
+the bootloader is reported by the firmware that runs next.
+
+{\footnotesize\noindent\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Where & Found by & Value that cannot exist \\
+\midrule
+0x01 & bootloader & a record number of the memory kept over restarts, outside its range \\
+0x02 & bootloader & a slot code that is not A, B or none, when logging it \\
+0x03 & bootloader & a reset cause outside its list \\
+0x04 & bootloader & a boot-state read result outside its list \\
+0x05 & bootloader & a slot code that is not A or B, when choosing the copy to start \\
+0x06 & bootloader & a start role that is not confirmed, trial or last-resort \\
+0x07 & bootloader & a check result outside its list, when recording a fall-back \\
+0x10 & bootloader or firmware & a check result outside its list, when logging it \\
+0x11 & bootloader or firmware & a slot code that is not A or B, when finding the other slot \\
+0x20 & firmware & a stored slot code that is not none, A or B \\
+0x21 & firmware & a slot that is none or outside its list, when finding the other slot \\
+0x22 & firmware & a slot outside its list, when writing the boot state \\
+0x23 & firmware & a core clock that is neither 170~MHz nor 16~MHz, when setting the tick \\
+0x24 & firmware & a core clock that is neither 170~MHz nor 16~MHz, when setting the data link's baud rate \\
+0x25 & firmware & a slot outside its list, when building a health report \\
+0x26 & firmware & a slot outside its list, when finding its address \\
+0x27 & firmware & a check result outside its list, when choosing the refusal code \\
+0x28 & firmware & an upload command outside its list, when checking its values \\
+0x29 & firmware & an upload command outside its list, when running it \\
+0x2A & firmware & an arm-state word that differs from its complement, or a state outside its three values \\
+0x2B & firmware & an upload command outside its list, when accepting the test image \\
+0x2C & firmware & an upload command outside its list, when running the test image \\
+0x2D & firmware & a slot outside its list, when reporting a fall-back \\
+0x2E & firmware & a mode outside its list, or FALLBACK, which this build never sets \\
+0x2F & firmware & a dangerous command that is neither SWITCH nor CONFIRM, when running it \\
 \bottomrule
 \end{tabularx}}
 

@@ -18,7 +18,9 @@
  *     decision): boot_state_classify answers DAMAGED;
  *   - decision D: both copies erased -> BLANK; a copy written but not valid, with no valid copy ->
  *     DAMAGED;
- *   - the check-result codes of Interfaces Sec. 5.4 ("Check result" table).
+ *   - the check-result codes of Interfaces Sec. 5.4 ("Check result" table);
+ *   - decision 3: each fault site passes its function's fault-location code
+ *     (common/fault_codes.h), checked by faulted_only.
  *
  * Built with the Mac's cc and the undefined-behaviour sanitizer. Run: make -C test/controller
  * unit. Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -61,17 +63,18 @@ static void fresh(void)
 }
 
 /**
- * @brief Returns true if a run ended in the fault reaction, called once at `where`, with nothing
- * logged before it.
+ * @brief Returns true if a run ended in the fault reaction, called once at `where` with its
+ * fault-location code (decision 3, common/fault_codes.h), with nothing logged before it.
  *
- * @param[in]     ended  how the run ended (RUN_CATCH)
- * @param[in]     where  the function name the fault reaction must have been given
+ * @param[in]     ended     how the run ended (RUN_CATCH)
+ * @param[in]     where     the function name the fault reaction must have been given
+ * @param[in]     location  the fault-location code it must have been given
  * @return true if so
  */
-static bool faulted_only(int ended, const char *where)
+static bool faulted_only(int ended, const char *where, uint8_t location)
 {
     return (ended == RUN_FAULT) && (fault_calls == 1U) && (strcmp(fault_where, where) == 0) &&
-           (uart_log[0] == '\0');
+           (fault_location == location) && (uart_log[0] == '\0');
 }
 
 /**
@@ -105,7 +108,7 @@ static void test_slot_region(void)
 
         fresh();
         RUN_CATCH(ended, got = slot_region(bad[i]));
-        all = all && faulted_only(ended, "slot_region") && (got == NULL);
+        all = all && faulted_only(ended, "slot_region", FAULT_AT_SLOT_REGION) && (got == NULL);
     }
     report(all, "slot_region: none, 3, 0xEE, 0xFF -> fault reaction, no region returned (was "
                 "NULL)");
@@ -165,15 +168,15 @@ static void test_candidates(void)
     volatile uint32_t got = 99U;
     fresh();
     RUN_CATCH(ended, got = list_for(0xEEU, BOOT_SLOT_NONE, false, order));
-    report(faulted_only(ended, "slot_region") && (got == 99U),
+    report(faulted_only(ended, "slot_region", FAULT_AT_SLOT_REGION) && (got == 99U),
            "candidates: confirmed code 0xEE -> fault reaction, no list (was: last-resort only)");
     fresh();
     RUN_CATCH(ended, got = list_for(BOOT_SLOT_NONE, BOOT_SLOT_NONE, false, order));
-    report(faulted_only(ended, "slot_region") && (got == 99U),
+    report(faulted_only(ended, "slot_region", FAULT_AT_SLOT_REGION) && (got == 99U),
            "candidates: confirmed code none -> fault reaction (was: last-resort only)");
     fresh();
     RUN_CATCH(ended, got = list_for(BOOT_SLOT_A, 0xEEU, false, order));
-    report(faulted_only(ended, "slot_region") && (got == 99U),
+    report(faulted_only(ended, "slot_region", FAULT_AT_SLOT_REGION) && (got == 99U),
            "candidates: trial code 0xEE -> fault reaction (was: trial left out, slot A, "
            "last-resort)");
 }
@@ -199,7 +202,7 @@ static void test_slot_letter(void)
 
         fresh();
         RUN_CATCH(ended, text = slot_letter(bad[i]));
-        all = all && faulted_only(ended, "slot_letter") && (text == NULL);
+        all = all && faulted_only(ended, "slot_letter", FAULT_AT_SLOT_LETTER) && (text == NULL);
     }
     report(all, "slot_letter: 3 and 0xEE -> fault reaction, no text (was \"corrupted slot code\")");
 }
@@ -223,7 +226,9 @@ static void test_other_slot(void)
 
         fresh();
         RUN_CATCH(ended, got = boot_state_other_slot(bad[i]));
-        all = all && faulted_only(ended, "boot_state_other_slot") && (got == 0x55U);
+        all = all &&
+              faulted_only(ended, "boot_state_other_slot", FAULT_AT_BOOT_STATE_OTHER_SLOT) &&
+              (got == 0x55U);
     }
     report(all, "boot_state_other_slot: none, 3, 0xEE -> fault reaction (was: none)");
 }
@@ -420,7 +425,8 @@ static void test_check_result_code(void)
 
         fresh();
         RUN_CATCH(ended, got = check_result_code((image_result_t)outside[i]));
-        all = all && faulted_only(ended, "check_result_code") && (got == 0x55U);
+        all = all && faulted_only(ended, "check_result_code", FAULT_AT_CHECK_RESULT_CODE) &&
+              (got == 0x55U);
     }
     report(all, "check_result_code: a value outside image_result_t (11, 15) -> fault reaction");
 }
@@ -445,10 +451,11 @@ static void test_texts(void)
            "reset_cause_text and role_text: every value has its own text");
     fresh();
     RUN_CATCH(ended, text = reset_cause_text((reset_cause_t)9));
-    bool cause_fault = faulted_only(ended, "reset_cause_text") && (text == NULL);
+    bool cause_fault =
+        faulted_only(ended, "reset_cause_text", FAULT_AT_RESET_CAUSE_TEXT) && (text == NULL);
     fresh();
     RUN_CATCH(ended, text = role_text(7U));
-    report(cause_fault && faulted_only(ended, "role_text") && (text == NULL),
+    report(cause_fault && faulted_only(ended, "role_text", FAULT_AT_ROLE_TEXT) && (text == NULL),
            "reset_cause_text(9) and role_text(7): fault reaction, no text");
 }
 

@@ -190,7 +190,9 @@ void runDamaged(ArmState &copy, FlipCount &counts)
                  (copy.check(kConfirm, kSeq, kArmedAt + 1U) == AnswerCode::kSuccess);
     });
     counts.armed += passes ? 1U : 0U;
-    counts.faulted += faulted ? 1U : 0U;
+    /* Counted only with ArmState::checkIntact's own fault location (decision 3). */
+    counts.faulted += (faulted && (fault_last_location == FAULT_AT_ARM_STATE_CHECK_INTACT)) ? 1U
+                                                                                          : 0U;
 }
 
 /**

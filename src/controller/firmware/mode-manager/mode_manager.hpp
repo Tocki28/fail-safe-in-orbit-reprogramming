@@ -19,11 +19,14 @@
  *   - given up: the boot state is written with trial = none and failed starts = 0, EVENT 0x0008
  *     "firmware given up", the UART is drained (bounded), and the chip restarts; the bootloader
  *     then starts the confirmed slot. If the write fails, a give-up request is left in the backup
- *     registers instead, and the bootloader applies it (decision G).
+ *     registers instead, and the bootloader applies it (decision G); EVENT 0x0008 still goes out
+ *     when the request is stored (decision 5).
  *
- * At every start, once: EVENT 0x0001 if the clock fell back to 16 MHz (decision C), and EVENT
- * 0x0002 if the bootloader left a fall-back record for this start (Interfaces Sec. 5.4). After
- * kNormalRunMs of running, the bootloader's restart count of this slot is cleared (decision B).
+ * At every start, once: EVENT 0x0005 with the fault location if the bootloader left one
+ * (decision 3), EVENT 0x0001 with the fault kind if the clock fell back to 16 MHz (decisions C
+ * and 2), and one EVENT 0x0002 per copy the bootloader refused or skipped on this start
+ * (decision 4; Interfaces Sec. 5.4). After kNormalRunMs of running, the bootloader's restart
+ * count of this slot is cleared (decision B).
  * In OPERATE a failed self-test sends EVENT 0x0004 and restarts the chip, counted by the
  * bootloader (decision L).
  *
@@ -138,6 +141,8 @@ private:
     void sendEvent(EventCode code, const uint8_t *detail, uint32_t detail_bytes, uint32_t now_ms);
     void sendStartEvents(uint32_t now_ms);
     [[nodiscard]] bool fallbackForThisStart(const FallbackRecord &record) const;
+    void sendBootloaderFault(uint32_t now_ms);
+    void sendFallbackEvents(uint32_t now_ms);
     void clearRestartCountWhenDue(uint32_t now_ms);
     void pollOperate(uint32_t now_ms);
     void pollTrial(uint32_t now_ms);
@@ -155,7 +160,7 @@ private:
     bool tests_passed_sent_ = false;    /* EVENT 0x000A sent */
     bool restart_due_ = false;          /* SWITCH done: restart on the next pass */
     bool clock_fault_ = false;          /* the clock fell back to 16 MHz (decision C) */
-    bool start_events_sent_ = false;    /* EVENT 0x0001 / 0x0002 of this start handled */
+    bool start_events_sent_ = false;    /* EVENT 0x0005 / 0x0001 / 0x0002 of this start handled */
     bool restart_count_cleared_ = false;   /* decision B's count cleared after kNormalRunMs */
     uint32_t trial_start_ms_ = 0U;      /* the firmware's start, milliseconds since start */
 };

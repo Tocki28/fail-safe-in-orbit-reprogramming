@@ -176,7 +176,8 @@ uint32_t UpdateReceiver::slotStart(Slot slot)
     case Slot::kNone:
         return 0U;
     }
-    faultImpossibleValue("slotStart");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_UPDATE_RECEIVER_SLOT_START, "slotStart");
 }
 
 /**
@@ -279,7 +280,8 @@ AnswerCode UpdateReceiver::refusalFor(image_result_t result)
     case IMAGE_BAD_KIND:
         return AnswerCode::kWrongKind;
     }
-    faultImpossibleValue("refusalFor");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR, "refusalFor");
 }
 
 /* ---- Checks on arrival -------------------------------------------------------------- */
@@ -392,7 +394,8 @@ bool UpdateReceiver::valuesFit(const UpdateCommand &cmd) const
     case UploadId::kCancel:
         return sameTransfer(cmd);
     }
-    faultImpossibleValue("UpdateReceiver::valuesFit");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_UPDATE_RECEIVER_VALUES_FIT, "UpdateReceiver::valuesFit");
 }
 
 /**
@@ -522,7 +525,11 @@ AnswerCode UpdateReceiver::runChunk(const UpdateCommand &cmd)
 /**
  * @brief Runs UPLOAD END: checks the image in the target slot and closes the transfer.
  *
- * Sets the phase to closed and records in image_passed_ whether the checks passed.
+ * Sets the phase to closed and records in image_passed_ whether the checks passed. An image that
+ * passes clears decision B's restart count of its slot (decision 6, owner, 13 Oct 2026): the new
+ * firmware gets a fresh count, and a count left from the slot's old firmware cannot have it
+ * skipped after fewer restarts of its own. Before, the old count stayed until the new firmware
+ * had run kNormalRunMs as the confirmed slot. A count of the other slot is left as it is.
  *
  * @return kUpdateOk if the image passes, otherwise the refusal code from checkSlot
  */
@@ -532,6 +539,12 @@ AnswerCode UpdateReceiver::runEnd()
 
     phase_ = UpdatePhase::kClosed;
     image_passed_ = (result == kUpdateOk);
+    if (image_passed_) {
+        /* END is answered by the image check either way. If the clear fails, the old count
+         * stays: at worst the slot is skipped after fewer restarts, the safe direction of
+         * decision B (as ModeManager::clearRestartCountWhenDue). */
+        (void)UpdatePort::clearRestartCount(stateCode(target_));
+    }
     return result;
 }
 
@@ -588,5 +601,6 @@ AnswerCode UpdateReceiver::run(const UpdateCommand &cmd)
     case UploadId::kCancel:
         return runCancel();
     }
-    faultImpossibleValue("UpdateReceiver::run");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_UPDATE_RECEIVER_RUN, "UpdateReceiver::run");
 }

@@ -40,6 +40,7 @@ bool run_exit_armed;
 volatile int run_how;
 uint32_t started_vector;
 char fault_where[64];
+uint8_t fault_location;
 uint32_t fault_calls;
 uint32_t stub_backup[BACKUP_REGISTERS];
 bool stub_backup_writable = true;
@@ -279,15 +280,19 @@ void handover_start(uint32_t vector_table)
 }
 
 /**
- * @brief Stand-in for the fault reaction: records where, and leaves the run.
+ * @brief Stand-in for the fault reaction: records the fault location and where, and leaves the
+ * run.
  *
- * @param[in]     where  the function that found the impossible value, kept in fault_where
+ * @param[in]     location  the fault-location code (common/fault_codes.h), kept in
+ *                          fault_location
+ * @param[in]     where     the function that found the impossible value, kept in fault_where
  * @note Does not return.
  */
-void fault_impossible_value(const char *where)
+void fault_impossible_value(uint8_t location, const char *where)
 {
     ev_add('Z');
     fault_calls++;
+    fault_location = location;
     (void)snprintf(fault_where, sizeof fault_where, "%s", where);   /* a cut name still shows */
     leave_run(RUN_FAULT, where);
 }
@@ -298,6 +303,7 @@ void fault_impossible_value(const char *where)
 void fault_clear(void)
 {
     fault_where[0] = '\0';
+    fault_location = 0U;
     fault_calls = 0U;
 }
 

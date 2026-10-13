@@ -19,8 +19,9 @@ extern bool fault_armed;               /* a test expects a fault: leave by longj
 extern volatile bool fault_hit;        /* the last FAULT_CATCH ended in the fault reaction */
 extern volatile uint32_t fault_calls;  /* calls since faultClear() */
 extern const char *volatile fault_last_where;
+extern volatile uint8_t fault_last_location;   /* fault-location code of the last call */
 
-/* Clears fault_calls and fault_last_where. */
+/* Clears fault_calls, fault_last_where and fault_last_location. */
 void faultClear();
 
 /* Runs `statement` with the fault reaction armed and sets `faulted` to true if it ended there.

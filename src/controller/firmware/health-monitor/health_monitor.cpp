@@ -88,7 +88,8 @@ ReportSlot slotCode(Slot slot)
     case Slot::kNone:
         return ReportSlot::kUnknown;
     }
-    faultImpossibleValue("slotCode");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_SLOT_CODE, "slotCode");
 }
 
 }  // namespace

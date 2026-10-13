@@ -22,6 +22,9 @@ constexpr uint32_t kBkpStride = 4U;
 constexpr uint32_t kPairWords = 2U;
 constexpr uint32_t kByteMask = BACKUP_BYTE_MASK;
 
+static_assert((BACKUP_PAIRS * kPairWords) <= BACKUP_REGISTERS,
+              "the backup pairs of common/backup_layout.h fit the 16 TAMP backup registers");
+
 /**
  * @brief Returns backup register `index` (TAMP_BKP<index>R).
  *
@@ -198,9 +201,11 @@ bool ModePort::leaveGiveUpRequest(uint8_t slot_code)
 }
 
 /**
- * @brief Reads the bootloader's fall-back record (FALLBACK pair, common/backup_layout.h).
+ * @brief Reads the bootloader's fall-back record (FALLBACK pair, common/backup_layout.h), split
+ * into one entry per copy and the copy started.
  *
- * @param[out]    record  refused copy, check result, started copy; all 0 when none is stored
+ * @param[out]    record  each copy's check result, and the copy started; every check result and
+ *                        the started copy 0 when none is stored
  * @return true if a record is stored (matching pair, value not 0), false otherwise
  */
 bool ModePort::readFallbackRecord(FallbackRecord &record)
@@ -208,8 +213,13 @@ bool ModePort::readFallbackRecord(FallbackRecord &record)
     uint32_t value = 0U;
     bool stored = readPair<BACKUP_PAIR_FALLBACK>(value) && (value != 0U);
 
-    record.check = static_cast<uint8_t>(value & kByteMask);
-    record.refused = static_cast<uint8_t>((value >> BACKUP_FALLBACK_REFUSED_SHIFT) & kByteMask);
+    record.copies[0] = {BACKUP_COPY_A,
+                        static_cast<uint8_t>((value >> BACKUP_FALLBACK_A_SHIFT) & kByteMask)};
+    record.copies[1] = {BACKUP_COPY_B,
+                        static_cast<uint8_t>((value >> BACKUP_FALLBACK_B_SHIFT) & kByteMask)};
+    record.copies[2] = {BACKUP_COPY_LAST_RESORT,
+                        static_cast<uint8_t>((value >> BACKUP_FALLBACK_LAST_RESORT_SHIFT) &
+                                             kByteMask)};
     record.started = static_cast<uint8_t>((value >> BACKUP_FALLBACK_STARTED_SHIFT) & kByteMask);
     return stored;
 }
@@ -222,6 +232,28 @@ bool ModePort::readFallbackRecord(FallbackRecord &record)
 bool ModePort::clearFallbackRecord()
 {
     return writePair<BACKUP_PAIR_FALLBACK>(0U);
+}
+
+/**
+ * @brief Reads the fault location the bootloader's fault reaction left (FAULT_LOCATION pair,
+ * common/backup_layout.h; decision 3).
+ *
+ * @param[out]    location  the stored value as read; 0 when none is stored
+ * @return true if a value is stored (matching pair, value not 0), false otherwise
+ */
+bool ModePort::readBootloaderFault(uint32_t &location)
+{
+    return readPair<BACKUP_PAIR_FAULT_LOCATION>(location) && (location != 0U);
+}
+
+/**
+ * @brief Clears the bootloader's fault location, so its EVENT 0x0005 goes out once (decision 3).
+ *
+ * @return true if the cleared pair reads back, false otherwise
+ */
+bool ModePort::clearBootloaderFault()
+{
+    return writePair<BACKUP_PAIR_FAULT_LOCATION>(0U);
 }
 
 /**

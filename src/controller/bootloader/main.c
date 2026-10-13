@@ -25,7 +25,11 @@
  *   check-result reporting: a copy refused before the one started is left in the backup
  *         registers with its check result, for the firmware's EVENT 0x0002 or 0x0003
  *         (leave_fallback_record; Interfaces Sec. 5.4);
- *   faults: a value in memory that cannot exist calls fault_impossible_value (common/fault.h).
+ *   4     every copy refused or skipped on one start is recorded, up to three: a flash read
+ *         error, a trial given up at its start limit and a confirmed slot skipped by decision B
+ *         have their own check results (0x0B, 0x0C, 0x0D; add_record);
+ *   faults: a value in memory that cannot exist calls fault_impossible_value (common/fault.h)
+ *         with the fault-location code of its function (decision 3, common/fault_codes.h).
  *
  * Switches over an enum have no default label. No default: the compiler checks every case
  * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch. This deviates on
@@ -63,19 +67,8 @@
 /* The count is one byte of the RESTARTS pair (common/backup_layout.h), so it stops at 255. */
 #define RESTARTS_COUNT_MAX      0xFFU
 
-/* Check-result codes of a refused copy: Interfaces Sec. 5.4, "Check result" table, the first
- * check the copy failed. One code per check of common/image_check.c, in the order it runs them. */
-#define CHECK_PASSED            0x00U   /* none: the copy passed */
-#define CHECK_EMPTY             0x01U   /* the copy is empty */
-#define CHECK_MAGIC             0x02U   /* proprietary string */
-#define CHECK_FORMAT            0x03U   /* format */
-#define CHECK_KIND              0x04U   /* kind */
-#define CHECK_TARGET            0x05U   /* target */
-#define CHECK_LENGTH            0x06U   /* length */
-#define CHECK_START             0x07U   /* start address outside the region */
-#define CHECK_BODY              0x08U   /* body check value */
-#define CHECK_SIGNATURE_A       0x09U   /* signature A */
-#define CHECK_SIGNATURE_B       0x0AU   /* signature B */
+/* The check-result codes (CHECK_...) moved to common/backup_layout.h with decision 4, so the
+ * firmware that reads the fall-back record checks against the same table. */
 
 typedef struct {
     const char *name;   /* for the log */
@@ -85,15 +78,38 @@ typedef struct {
     uint8_t slot;       /* BOOT_SLOT_A/B, or BOOT_SLOT_NONE for the last-resort region */
     uint8_t copy;       /* its code in the fall-back record: the HEALTH report's running-slot
                          * code (Interfaces Sec. 5.4): BACKUP_COPY_A, _B or _LAST_RESORT */
+    uint8_t record_shift;   /* where its check result sits in the fall-back record
+                             * (BACKUP_FALLBACK_..._SHIFT, common/backup_layout.h) */
 } region_t;
 
 static const region_t REGION_A = {"slot A", SLOT_A_START, SLOT_BYTES, IMAGE_KIND_MAIN, BOOT_SLOT_A,
-                                  BACKUP_COPY_A};
+                                  BACKUP_COPY_A, BACKUP_FALLBACK_A_SHIFT};
 static const region_t REGION_B = {"slot B", SLOT_B_START, SLOT_BYTES, IMAGE_KIND_MAIN, BOOT_SLOT_B,
-                                  BACKUP_COPY_B};
+                                  BACKUP_COPY_B, BACKUP_FALLBACK_B_SHIFT};
 static const region_t REGION_LAST_RESORT = {"last-resort", LAST_RESORT_START, LAST_RESORT_BYTES,
                                             IMAGE_KIND_LAST_RESORT, BOOT_SLOT_NONE,
-                                            BACKUP_COPY_LAST_RESORT};
+                                            BACKUP_COPY_LAST_RESORT,
+                                            BACKUP_FALLBACK_LAST_RESORT_SHIFT};
+
+/* Defined with the candidates below; count_trial_start needs it first, for the record of a trial
+ * given up at its start limit. */
+static const region_t *slot_region(uint8_t slot);
+
+/**
+ * @brief Adds a copy refused or skipped on this start, with its check result, to the fall-back
+ * record, which is kept in RAM until the hand-over or the park (decision 4, owner, 13 Oct 2026).
+ *
+ * Each copy has its own byte (region_t.record_shift); a start tries each copy at most once, so no
+ * record overwrites another (common/backup_layout.h, FALLBACK).
+ *
+ * @param[in,out] records  the fall-back record of this start
+ * @param[in]     region   the copy refused or skipped
+ * @param[in]     check    its check result (CHECK_..., common/backup_layout.h), 0x01 to CHECK_LAST
+ */
+static void add_record(uint32_t *records, const region_t *region, uint8_t check)
+{
+    *records |= (uint32_t)check << region->record_shift;
+}
 
 /* The cause of the last reset, from the flags of RCC_CSR [RM0440 Rev 9, Sec. 7.4.28,
  * p. 327-328]. */
@@ -149,7 +165,8 @@ static const char *slot_letter(uint8_t slot)
     case BOOT_SLOT_NONE:
         return "none";
     }
-    fault_impossible_value("slot_letter");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_SLOT_LETTER, "slot_letter");
 }
 
 /**
@@ -176,7 +193,8 @@ static const char *reset_cause_text(reset_cause_t cause)
     case RESET_OTHER:
         return "other";
     }
-    fault_impossible_value("reset_cause_text");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_RESET_CAUSE_TEXT, "reset_cause_text");
 }
 
 /**
@@ -367,7 +385,8 @@ static bool load_state(boot_state_t *state)
                  "");
         return false;
     }
-    fault_impossible_value("load_state");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_LOAD_STATE, "load_state");
 }
 
 /**
@@ -400,16 +419,22 @@ static bool give_up_trial(boot_state_t *state, const char *why)
  * limit (even a damaged 255) gives the trial up, and cannot wrap round to 0 and start the trial
  * again (audit finding #21).
  *
- * @param[in,out] state  boot state; failed_starts goes up by one; trial is cleared if the trial is
- *                       given up
+ * A trial given up here is recorded with check result 0x0C, "trial started too often"
+ * (decision 4, owner, 13 Oct 2026): it is the first candidate, so whatever copy starts on this
+ * start starts in its place. Before, it left no record.
+ *
+ * @param[in,out] state    boot state; failed_starts goes up by one; trial is cleared if the trial
+ *                         is given up
+ * @param[in,out] records  the fall-back record of this start (add_record)
  * @note Does nothing if no trial is set.
  */
-static void count_trial_start(boot_state_t *state)
+static void count_trial_start(boot_state_t *state, uint32_t *records)
 {
     if (state->trial == BOOT_SLOT_NONE) {
         return;
     }
     if (state->failed_starts >= BOOT_STATE_MAX_STARTS) {
+        add_record(records, slot_region(state->trial), CHECK_TRIAL_STARTS);
         /* Not started either way. If the save failed twice, the stored count is still at the
          * limit, so the next start gives the trial up again. */
         (void)give_up_trial(state, "started too often without confirming itself");
@@ -641,7 +666,8 @@ static const region_t *slot_region(uint8_t slot)
     case BOOT_SLOT_B:
         return &REGION_B;
     }
-    fault_impossible_value("slot_region");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_SLOT_REGION, "slot_region");
 }
 
 /**
@@ -680,7 +706,8 @@ static const char *role_text(uint32_t role)
     case BACKUP_ROLE_CONFIRMED:
         return " (confirmed)";
     }
-    fault_impossible_value("role_text");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_ROLE_TEXT, "role_text");
 }
 
 /**
@@ -751,7 +778,8 @@ static uint8_t check_result_code(image_result_t result)
     case IMAGE_BAD_SIGNATURE_B:
         return CHECK_SIGNATURE_B;
     }
-    fault_impossible_value("check_result_code");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    fault_impossible_value(FAULT_AT_CHECK_RESULT_CODE, "check_result_code");
 }
 
 /**
@@ -808,24 +836,30 @@ static void clear_fallback_record(void)
 }
 
 /**
- * @brief Leaves the copy refused just before the one started, and its check result, for the
- * firmware that starts (Interfaces Sec. 5.4, events 0x0002 and 0x0003, accepted 13 Oct 2026).
+ * @brief Leaves every copy refused or skipped on this start, with its check result, and the copy
+ * started, for the firmware that starts (Interfaces Sec. 5.4, events 0x0002 and 0x0003, accepted
+ * 13 Oct 2026; decision 4, owner, 13 Oct 2026).
  *
- * The firmware sends EVENT 0x0002 (a main slot started: fall-back to the previous copy) or
- * 0x0003 (the last-resort firmware started) with the 2-byte detail "refused copy, check result",
- * once after its start, and clears the record. When two copies were refused (trial, then
- * confirmed), the record names the second, the one the started copy replaced; the log has both.
+ * The firmware that starts sends one EVENT 0x0002 (a main slot started: fall-back to the previous
+ * copy) or 0x0003 (the last-resort firmware started) per record, with the 2-byte detail "refused
+ * copy, check result", once after its start, and clears the record. In this repository only the
+ * main firmware does so (0x0002); the last-resort region holds the bench test application, which
+ * sends no EVENT. Before decision 4, when two copies
+ * were refused (trial, then confirmed), the record named only the second; now it holds both.
+ * Nothing is written when no copy was refused or skipped: the pair was cleared at this start
+ * (clear_fallback_record). At the park no copy started, so the started byte is 0; no program
+ * reads that record, and the next start clears it.
  *
- * @param[in]     refused  region refused just before
- * @param[in]     check    its check result (check_result_code)
- * @param[in]     started  region about to start
+ * @param[in]     records  the fall-back record of this start (add_record)
+ * @param[in]     started  the copy about to start (region_t.copy), 0 when none starts
  */
-static void leave_fallback_record(const region_t *refused, uint8_t check, const region_t *started)
+static void leave_fallback_record(uint32_t records, uint8_t started)
 {
-    uint32_t record = ((uint32_t)started->copy << BACKUP_FALLBACK_STARTED_SHIFT) |
-                      ((uint32_t)refused->copy << BACKUP_FALLBACK_REFUSED_SHIFT) | check;
-
-    if (!backup_write(BACKUP_PAIR_FALLBACK, record)) {
+    if (records == 0U) {
+        return;
+    }
+    if (!backup_write(BACKUP_PAIR_FALLBACK,
+                      records | ((uint32_t)started << BACKUP_FALLBACK_STARTED_SHIFT))) {
         log_text("fall-back record could not be stored: no EVENT for this fall-back", "", "");
     }
 }
@@ -846,52 +880,56 @@ static void note_start(const region_t *region, uint32_t role)
 /**
  * @brief Checks the regions in order and starts the first whose image passes.
  *
- * Before the jump: the fall-back record if a copy was refused just before (check-result
- * reporting), the start record (decision B), the backup registers closed. A refused trial image
- * will not change by itself, so the trial is given up at once. A copy refused only for a flash
- * read error has no code in the "Check result" table (Interfaces Sec. 5.4): it is logged and
- * leaves no record (open item for the owner).
+ * Before the jump: the fall-back record if a copy was refused or skipped (check-result
+ * reporting, decision 4), the start record (decision B), the backup registers closed. A refused
+ * trial image will not change by itself, so the trial is given up at once.
+ * Every refused copy is recorded (decision 4, owner, 13 Oct 2026): with check result 0x0B if a
+ * flash read raised an ECC error during its checks, which is the reason image_passes refuses it
+ * whatever the checks found; otherwise with the first check it failed. Before, a copy refused
+ * only for a flash read error left no record, and only the last refused copy was kept.
+ * A confirmed slot skipped by decision B is recorded with 0x0D when the start goes past its place,
+ * which is just before the last-resort firmware (candidates). A trial that passes starts before
+ * that place, so its start leaves no record of a skip that changed nothing.
+ * If no region passes, the record is left with no copy started, before the park.
  *
- * @param[in,out] state  boot state; the trial is given up if its image is refused
- * @param[in]     order  regions to try, first to last
- * @param[in]     count  number of regions in order
+ * @param[in,out] state    boot state; the trial is given up if its image is refused
+ * @param[in]     order    regions to try, first to last
+ * @param[in]     count    number of regions in order
+ * @param[in]     skipped  the confirmed slot's region if decision B skips it, NULL otherwise
+ * @param[in,out] records  the fall-back record of this start (add_record)
  * @note Returns only if no region passes; otherwise it does not return (handover_start).
  */
 static void start_first_passing(boot_state_t *state, const region_t *const order[],
-                                uint32_t count)
+                                uint32_t count, const region_t *skipped, uint32_t *records)
 {
-    const region_t *refused = NULL;
-    uint8_t refused_check = CHECK_PASSED;
-
     for (uint32_t i = 0U; i < count; i++) {
         image_result_t result = IMAGE_OK;
         bool read_error = false;
 
+        if ((skipped != NULL) && (order[i] == &REGION_LAST_RESORT)) {
+            add_record(records, skipped, CHECK_RESTARTS);
+        }
         watchdog_reload();   /* a full time-out for this candidate's checks */
         if (image_passes(order[i], &result, &read_error)) {
             uint32_t role = role_code(order[i], state);
-            if (refused != NULL) {
-                leave_fallback_record(refused, refused_check, order[i]);
-            }
+            leave_fallback_record(*records, order[i]->copy);
             note_start(order[i], role);
             backup_close();
             log_text("starting ", order[i]->name, role_text(role));
             handover_start(order[i]->start + (uint32_t)IMAGE_CODE_OFFSET);
         }
-        if (read_error && (result == IMAGE_OK)) {
-            log_text(order[i]->name, ": no check-result code for a flash read error, ",
-                     "no fall-back record");
-            refused = NULL;
-        } else {
-            refused = order[i];
-            refused_check = check_result_code(result);
+        uint8_t check = CHECK_FLASH_READ;
+        if (!read_error) {
+            check = check_result_code(result);
         }
+        add_record(records, order[i], check);
         if ((state->trial != BOOT_SLOT_NONE) && (order[i]->slot == state->trial)) {
             /* The trial is not started on this start either way. If both saves fail, the next
              * start checks the image again, refuses it again and gives the trial up again. */
             (void)give_up_trial(state, "its image was refused");
         }
     }
+    leave_fallback_record(*records, 0U);
 }
 
 /**
@@ -912,6 +950,7 @@ static void start_first_passing(boot_state_t *state, const region_t *const order
  *    running watchdog (decision F(b)), counts this start if a trial is set, and takes the regions
  *    in order: trial slot (if set), confirmed slot (unless decision B skips it), last-resort.
  * 4. Starts the first region whose image passes all checks; a refused trial is given up at once.
+ *    Every copy refused or skipped on the way is left in the fall-back record (decision 4).
  * 5. If no image passes: logs that, closes the backup registers, turns the UART off and parks,
  *    reloading the watchdog on every pass, so the chip stays quiet and reachable through SWD as
  *    Architecture Sec. 5.1 decided.
@@ -939,6 +978,8 @@ int main(void)
 
     boot_state_t state;
     const region_t *order[MAX_CANDIDATES];
+    const region_t *skipped = NULL;
+    uint32_t records = 0U;
     uint32_t count;
 
     /* All zero: BOOT_SLOT_NONE in both slot fields, for the damaged case below. */
@@ -946,13 +987,16 @@ int main(void)
     if (load_state(&state)) {
         apply_give_up_request(&state);
         hold_trial_without_watchdog(&state);
-        count_trial_start(&state);
-        count = candidates(&state, confirmed_skipped(&state), order);
+        count_trial_start(&state, &records);
+        if (confirmed_skipped(&state)) {
+            skipped = slot_region(state.confirmed);
+        }
+        count = candidates(&state, skipped != NULL, order);
     } else {
         order[0] = &REGION_LAST_RESORT;
         count = 1U;
     }
-    start_first_passing(&state, order, count);
+    start_first_passing(&state, order, count, skipped, &records);
 
     /* Nothing passed. Drive nothing and park, so the chip stays quiet and reachable through SWD
      * for the onboard computer's restore (Architecture Sec. 5.1). The watchdog keeps running

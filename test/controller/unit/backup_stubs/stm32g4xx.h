@@ -1,8 +1,9 @@
 /*
- * stm32g4xx.h — host stand-in for ST's device header, for the backup-register unit test only
- * (unit/test_backup.c). The bootloader's backup.c touches three peripherals: RCC_APB1ENR1 (PWR
- * and RTC APB clocks), PWR_CR1 (DBP) and the TAMP backup registers. This header gives each a RAM
- * structure with the bits of the real header (ST's stm32g431xx.h):
+ * stm32g4xx.h — host stand-in for ST's device header, for the backup-register unit test
+ * (unit/test_backup.c) and the bootloader's fault-reaction test (unit/test_fault.c). The
+ * bootloader's backup.c touches three peripherals: RCC_APB1ENR1 (PWR and RTC APB clocks), PWR_CR1
+ * (DBP) and the TAMP backup registers. This header gives each a RAM structure with the bits of
+ * the real header (ST's stm32g431xx.h):
  *   PWREN    RCC_APB1ENR1 bit 28 [RM0440 Rev 9, Sec. 7.4.17, p. 309];
  *   RTCAPBEN RCC_APB1ENR1 bit 10 [RM0440 Rev 9, Sec. 7.4.17, p. 310];
  *   DBP      PWR_CR1 bit 8 [RM0440 Rev 9, Sec. 6.4.1, p. 253].
@@ -44,5 +45,9 @@ extern TAMP_TypeDef fake_tamp;
 #define RCC_APB1ENR1_PWREN     (1UL << 28)
 #define RCC_APB1ENR1_RTCAPBEN  (1UL << 10)
 #define PWR_CR1_DBP            (1UL << 8)
+
+/* The reset request of bootloader/fault.c (CMSIS core_cm4.h declares it no-return). Defined by
+ * unit/test_fault.c, which leaves by longjmp; test_backup.c never calls it. */
+_Noreturn void NVIC_SystemReset(void);
 
 #endif /* STM32G4XX_H */

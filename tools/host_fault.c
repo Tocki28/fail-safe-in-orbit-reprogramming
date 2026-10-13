@@ -15,12 +15,17 @@
  * computer. Every program on the board defines its own reaction (see common/fault.h), and the
  * unit tests define theirs (test/controller/unit), so this file lives outside src/ (code rule
  * A10b, owner, 13 Oct 2026) and is linked by check_images.py alone.
+ * The fault-location code came with decision 3 (owner, 13 Oct 2026, common/fault_codes.h); the
+ * signature follows common/fault.h, or this file does not compile.
  *
- * @param[in]     where  the function that found the impossible value (not used)
+ * @param[in]     location  the fault-location code of the function (common/fault_codes.h; not
+ *                          used)
+ * @param[in]     where     the function that found the impossible value (not used)
  * @note Does not return: abort() ends the process.
  */
-void fault_impossible_value(const char *where)
+void fault_impossible_value(uint8_t location, const char *where)
 {
-    (void)where;   /* nothing to report it to in a host library: the process stops */
+    (void)location;   /* nothing to report it to in a host library: the process stops */
+    (void)where;      /* nor this */
     abort();
 }

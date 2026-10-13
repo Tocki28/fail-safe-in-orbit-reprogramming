@@ -219,8 +219,10 @@ void testTick()
     bool faulted = false;
     fake_systick.LOAD = 7U;
     FAULT_CATCH(faulted, CoreClock::startTick(1000000U));
-    report(faulted && (fake_systick.LOAD == 7U) && (fault_calls == 1U),
-           "startTick(1 MHz), a clock start() never returns -> fault reaction, SysTick untouched");
+    report(faulted && (fake_systick.LOAD == 7U) && (fault_calls == 1U) &&
+               (fault_last_location == FAULT_AT_CORE_CLOCK_START_TICK),
+           "startTick(1 MHz), a clock start() never returns -> fault reaction, fault location "
+           "0x23, SysTick untouched");
 }
 
 /**
@@ -249,13 +251,16 @@ void testUart()
     resetChip();
     fake_usart2.BRR = 7U;
     FAULT_CATCH(faulted, link.init(12345U));
-    report(faulted && (fake_usart2.BRR == 7U) && (fault_calls == 1U),
-           "init(12 345 Hz), a clock start() never returns -> fault reaction, USART2 untouched");
+    report(faulted && (fake_usart2.BRR == 7U) && (fault_calls == 1U) &&
+               (fault_last_location == FAULT_AT_UART_LINK_INIT),
+           "init(12 345 Hz), a clock start() never returns -> fault reaction, fault location "
+           "0x24, USART2 untouched");
 }
 
 /**
  * @brief The firmware's backup-register access (mode_port.cpp): give-up request (G), fall-back
- * record, restart-count clear (B), counted restart (L and the fault reaction).
+ * record (decision 4 layout), the bootloader's fault location (decision 3), restart-count clear
+ * (B), counted restart (L and the fault reaction).
  *
  * Fails on the old code: none of these functions existed.
  */
@@ -268,18 +273,40 @@ void testBackup()
                ((fake_rcc.APB1ENR1 & RCC_APB1ENR1_RTCAPBEN) != 0U),
            "G: give-up request for B -> BKP4R = 2, BKP5R = its complement; DBP cleared again");
 
+    /* Decision 4 layout (common/backup_layout.h): byte 0 slot A's check result, byte 1 slot B's,
+     * byte 2 the last-resort's, byte 3 the copy started. Here: B 0x09, last-resort 0x0D, A
+     * started. Fails on the old code: it read byte 1 as the refused copy. */
     FallbackRecord record{};
-    fake_tamp.BKP[8] = 0x00010209U;
-    fake_tamp.BKP[9] = ~0x00010209U;
+    fake_tamp.BKP[8] = 0x010D0900U;
+    fake_tamp.BKP[9] = ~0x010D0900U;
     bool read = ModePort::readFallbackRecord(record);
-    bool fields = (record.started == 0x01U) && (record.refused == 0x02U) && (record.check == 0x09U);
+    bool fields = (record.started == 0x01U) && (record.copies[0].copy == 0x01U) &&
+                  (record.copies[0].check == 0x00U) && (record.copies[1].copy == 0x02U) &&
+                  (record.copies[1].check == 0x09U) && (record.copies[2].copy == 0x03U) &&
+                  (record.copies[2].check == 0x0DU);
     fake_tamp.BKP[9] ^= 0x10U;   /* one flipped bit */
     bool broken = !ModePort::readFallbackRecord(record);
     bool cleared = ModePort::clearFallbackRecord() && (fake_tamp.BKP[8] == 0U) &&
                    (fake_tamp.BKP[9] == 0xFFFFFFFFU) && !ModePort::readFallbackRecord(record);
     report(read && fields && broken && cleared,
-           "fall-back record: read as started 01, refused 02, check 09; one flipped bit -> none; "
-           "cleared -> none");
+           "4: fall-back record BKP8R 0x010D0900 -> A not refused, B 09, last-resort 0D, started "
+           "01; one flipped bit -> none; cleared -> none");
+
+    /* Decision 3: the bootloader's fault location is pair 5, BKP10R and BKP11R. Fails on the old
+     * code: the pair and both functions did not exist. */
+    uint32_t location = 0U;
+    fake_tamp.BKP[10] = 0x05U;
+    fake_tamp.BKP[11] = ~uint32_t{0x05U};
+    bool loc_read = ModePort::readBootloaderFault(location) && (location == 0x05U);
+    fake_tamp.BKP[10] ^= 0x01U;   /* one flipped bit */
+    bool loc_broken = !ModePort::readBootloaderFault(location);
+    bool loc_cleared = ModePort::clearBootloaderFault() && (fake_tamp.BKP[10] == 0U) &&
+                       (fake_tamp.BKP[11] == 0xFFFFFFFFU) &&
+                       ((fake_pwr.CR1 & PWR_CR1_DBP) == 0U) &&
+                       !ModePort::readBootloaderFault(location);
+    report(loc_read && loc_broken && loc_cleared,
+           "3: bootloader fault location in BKP10R/BKP11R read as 0x05; one flipped bit -> none; "
+           "cleared to 0 / 0xFFFFFFFF with DBP cleared again -> none");
 
     fake_tamp.BKP[0] = (BOOT_SLOT_A << BACKUP_RESTARTS_SLOT_SHIFT) | 2U;
     fake_tamp.BKP[1] = ~fake_tamp.BKP[0];

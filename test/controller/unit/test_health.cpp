@@ -179,21 +179,28 @@ int main()
            "(length 0, nothing written)");
 
     /* The event codes added on 13 Oct 2026, on the wire (Interfaces Sec. 5.4, event code table):
-     * 0x0002 with its 2-byte detail (refused copy 0x02, check result 0x09), 0x0001, 0x0004 and
-     * 0x0005 without detail. New codes: no old code to fail. */
+     * 0x0002 with its 2-byte detail (refused copy 0x02, check result 0x09), 0x0004 without
+     * detail, and 0x0001 and 0x0005 with the 1-byte details of decisions 2 and 3 (fault kind
+     * 0x01, fault location 0x2E; common/fault_codes.h). Before decisions 2 and 3 this test sent
+     * 0x0001 and 0x0005 without detail. A layout test: eventReport did not change, so it passes
+     * on the old code too. */
     const std::array<uint8_t, 2> fall = {0x02U, 0x09U};
     event.fill(0xEEU);
     length = HealthMonitor::eventReport(0U, EventCode::kFallbackPrevious, fall.data(), 2U, event);
     bool fallback = (length == 17U) && (event[13] == 0x02U) && (event[14] == 0x00U) &&
                     (event[15] == 0x02U) && (event[16] == 0x09U);
-    length = HealthMonitor::eventReport(0U, EventCode::kFaultDetected, nullptr, 0U, event);
-    bool fault = (length == 15U) && (event[13] == 0x01U);
+    const uint8_t kind = FAULT_KIND_CORE_CLOCK;
+    length = HealthMonitor::eventReport(0U, EventCode::kFaultDetected, &kind, 1U, event);
+    bool fault = (length == 16U) && (event[13] == 0x01U) && (event[15] == 0x01U);
     length = HealthMonitor::eventReport(0U, EventCode::kSelfTestFailed, nullptr, 0U, event);
     bool self_test = (length == 15U) && (event[13] == 0x04U);
-    length = HealthMonitor::eventReport(0U, EventCode::kMemoryChanged, nullptr, 0U, event);
-    bool memory = (length == 15U) && (event[13] == 0x05U) && (event[14] == 0x00U);
+    const uint8_t location = FAULT_AT_MODE_MANAGER_POLL;
+    length = HealthMonitor::eventReport(0U, EventCode::kMemoryChanged, &location, 1U, event);
+    bool memory = (length == 16U) && (event[13] == 0x05U) && (event[14] == 0x00U) &&
+                  (event[15] == 0x2EU);
     report(fallback && fault && self_test && memory,
-           "EVENT 0x0002 with detail 02 09 (17 bytes); 0x0001, 0x0004, 0x0005 without detail");
+           "EVENT 0x0002 with detail 02 09 (17 bytes); 0x0004 without detail (15); 0x0001 with "
+           "fault kind 01 and 0x0005 with fault location 2E (16 bytes each)");
 
     /* A running slot outside the Slot enum: slotCode's fault reaction (firmware/fault.hpp).
      * Before, it was reported as 0x00 like a slot not known; fails on that code. */
@@ -202,9 +209,9 @@ int main()
     in.running_slot = static_cast<Slot>(7U);
     faultClear();
     FAULT_CATCH(faulted, HealthMonitor::report(in, out));
-    report(faulted && (fault_calls == 1U),
-           "HEALTH with a running slot outside the enum (7): fault reaction in slotCode (was: "
-           "slot 0x00)");
+    report(faulted && (fault_calls == 1U) && (fault_last_location == FAULT_AT_SLOT_CODE),
+           "HEALTH with a running slot outside the enum (7): fault reaction in slotCode, fault "
+           "location 0x25 (was: slot 0x00)");
 
     if (failures == 0U) {
         std::printf("health report unit tests: all %u passed\n", tests);

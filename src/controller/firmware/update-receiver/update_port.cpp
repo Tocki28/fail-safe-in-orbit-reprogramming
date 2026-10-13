@@ -5,6 +5,7 @@
 #include "update_port.hpp"
 
 #include "flash.h"
+#include "mode_port.hpp"
 #include "watchdog.hpp"
 
 /**
@@ -81,4 +82,21 @@ bool UpdatePort::eccErrorSeen()
 void UpdatePort::watchdogReload()
 {
     Watchdog::reload();
+}
+
+/**
+ * @brief Clears decision B's restart count if it belongs to `slot_code`, through
+ * ModePort::clearRestartCount (decision 6, owner, 13 Oct 2026).
+ *
+ * Why through the mode manager's port: the firmware's backup-register access lives there
+ * (mode-manager/mode_port.cpp), and a second copy of it here would be two writers of the same
+ * pair with two sets of rules.
+ *
+ * @param[in] slot_code  BOOT_SLOT_A or BOOT_SLOT_B, the slot just written
+ * @return true if there was nothing to clear or the cleared count reads back; false if the
+ *         write failed
+ */
+bool UpdatePort::clearRestartCount(uint8_t slot_code)
+{
+    return ModePort::clearRestartCount(slot_code);
 }

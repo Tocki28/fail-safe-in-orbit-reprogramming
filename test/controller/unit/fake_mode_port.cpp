@@ -109,43 +109,7 @@ void ModePort::restart()
     fake.sent_at_restart = fake_link.sent_bytes;
 }
 
-/**
- * @brief Stores a value and its complement in a backup pair; stops the test for a pair outside
- * the map.
- *
- * @param[in]     pair   pair number, below BACKUP_PAIRS
- * @param[in]     value  value to store
- */
-void fakeBackupSet(uint32_t pair, uint32_t value)
-{
-    if (pair >= BACKUP_PAIRS) {
-        std::printf("FAIL  backup pair %u outside the map\n", pair);
-        std::exit(1);
-    }
-    fake.backup[2U * pair] = value;
-    fake.backup[(2U * pair) + 1U] = ~value;
-}
-
-/**
- * @brief Reads a backup pair with the complement rule; stops the test for a pair outside the map.
- *
- * @param[in]     pair   pair number, below BACKUP_PAIRS
- * @param[out]    value  the stored value; 0 if the pair is broken
- * @return true if the two words are complements
- */
-bool fakeBackupGet(uint32_t pair, uint32_t &value)
-{
-    if (pair >= BACKUP_PAIRS) {
-        std::printf("FAIL  backup pair %u outside the map\n", pair);
-        std::exit(1);
-    }
-    if (fake.backup[2U * pair] != ~fake.backup[(2U * pair) + 1U]) {
-        value = 0U;
-        return false;
-    }
-    value = fake.backup[2U * pair];
-    return true;
-}
+/* fakeBackupSet and fakeBackupGet are in fake_port.cpp since decision 6. */
 
 namespace {
 
@@ -179,9 +143,10 @@ bool ModePort::leaveGiveUpRequest(uint8_t slot_code)
 }
 
 /**
- * @brief Host stand-in for ModePort::readFallbackRecord: the FALLBACK pair, split into its bytes.
+ * @brief Host stand-in for ModePort::readFallbackRecord: the FALLBACK pair, split into one entry
+ * per copy and the copy started, as mode_port.cpp splits it (common/backup_layout.h).
  *
- * @param[out]    record  refused copy, check result, started copy
+ * @param[out]    record  each copy's check result, and the copy started
  * @return true if the pair matches and is not 0
  */
 bool ModePort::readFallbackRecord(FallbackRecord &record)
@@ -189,9 +154,13 @@ bool ModePort::readFallbackRecord(FallbackRecord &record)
     uint32_t value = 0U;
     bool stored = fakeBackupGet(BACKUP_PAIR_FALLBACK, value) && (value != 0U);
 
-    record.check = static_cast<uint8_t>(value & BACKUP_BYTE_MASK);
-    record.refused = static_cast<uint8_t>((value >> BACKUP_FALLBACK_REFUSED_SHIFT) &
-                                          BACKUP_BYTE_MASK);
+    record.copies[0] = {BACKUP_COPY_A, static_cast<uint8_t>((value >> BACKUP_FALLBACK_A_SHIFT) &
+                                                            BACKUP_BYTE_MASK)};
+    record.copies[1] = {BACKUP_COPY_B, static_cast<uint8_t>((value >> BACKUP_FALLBACK_B_SHIFT) &
+                                                            BACKUP_BYTE_MASK)};
+    record.copies[2] = {BACKUP_COPY_LAST_RESORT,
+                        static_cast<uint8_t>((value >> BACKUP_FALLBACK_LAST_RESORT_SHIFT) &
+                                             BACKUP_BYTE_MASK)};
     record.started = static_cast<uint8_t>((value >> BACKUP_FALLBACK_STARTED_SHIFT) &
                                           BACKUP_BYTE_MASK);
     return stored;
@@ -205,6 +174,27 @@ bool ModePort::readFallbackRecord(FallbackRecord &record)
 bool ModePort::clearFallbackRecord()
 {
     return writePair(BACKUP_PAIR_FALLBACK, 0U);
+}
+
+/**
+ * @brief Host stand-in for ModePort::readBootloaderFault: the FAULT_LOCATION pair (decision 3).
+ *
+ * @param[out]    location  the stored value; 0 when none is stored
+ * @return true if the pair matches and is not 0
+ */
+bool ModePort::readBootloaderFault(uint32_t &location)
+{
+    return fakeBackupGet(BACKUP_PAIR_FAULT_LOCATION, location) && (location != 0U);
+}
+
+/**
+ * @brief Host stand-in for ModePort::clearBootloaderFault.
+ *
+ * @return fake.backup_writable
+ */
+bool ModePort::clearBootloaderFault()
+{
+    return writePair(BACKUP_PAIR_FAULT_LOCATION, 0U);
 }
 
 /**

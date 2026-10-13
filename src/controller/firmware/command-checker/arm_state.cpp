@@ -86,10 +86,12 @@ bool ArmState::pairsMatch() const
 void ArmState::checkIntact() const
 {
     if (!pairsMatch()) {
-        faultImpossibleValue("ArmState: word and complement differ");
+        faultImpossibleValue(FAULT_AT_ARM_STATE_CHECK_INTACT,
+                             "ArmState: word and complement differ");
     }
     if ((state_ != kDisarmed) && (state_ != kArmed) && (state_ != kExpired)) {
-        faultImpossibleValue("ArmState: state word is no code word");
+        faultImpossibleValue(FAULT_AT_ARM_STATE_CHECK_INTACT,
+                             "ArmState: state word is no code word");
     }
 }
 

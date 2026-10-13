@@ -72,7 +72,8 @@ AnswerCode TestImage::accept(const UpdateCommand &cmd) const
     case UploadId::kCancel:
         return (phase_ != UpdatePhase::kIdle) ? kUpdateOk : AnswerCode::kImpossible;
     }
-    faultImpossibleValue("TestImage::accept");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_TEST_IMAGE_ACCEPT, "TestImage::accept");
 }
 
 /**
@@ -138,5 +139,6 @@ AnswerCode TestImage::run(const UpdateCommand &cmd)
         received_ = 0U;
         return kUpdateOk;
     }
-    faultImpossibleValue("TestImage::run");   /* only a corrupted value reaches here */
+    /* only a corrupted value reaches here */
+    faultImpossibleValue(FAULT_AT_TEST_IMAGE_RUN, "TestImage::run");
 }

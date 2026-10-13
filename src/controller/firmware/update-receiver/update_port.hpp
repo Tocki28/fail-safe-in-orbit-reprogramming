@@ -1,10 +1,11 @@
 /*
  * update_port.hpp — everything the update receiver needs from the chip, in one list.
  *
- * On the board: update_port.cpp, which passes each call to common/flash.c, common/boot_state.c
- * or the watchdog. In the host unit tests: test/controller/unit/fake_port.cpp, which keeps a
- * RAM copy of the 128 KB flash and records every erase and write. So update_receiver.cpp holds
- * no register access and compiles on both.
+ * On the board: update_port.cpp, which passes each call to common/flash.c, common/boot_state.c,
+ * the watchdog, or (decision 6, the restart count) the mode manager's backup-register access
+ * (mode-manager/mode_port.hpp). In the host unit tests: test/controller/unit/fake_port.cpp,
+ * which keeps a RAM copy of the 128 KB flash and records every erase and write. So
+ * update_receiver.cpp holds no register access and compiles on both.
  *
  * C++: a struct of static functions, and the build picks the body, as in the C version: the
  * firmware Makefile links update_port.cpp, the unit-test Makefile links fake_port.cpp.
@@ -46,6 +47,10 @@ struct UpdatePort {
 
     /* Reload the independent watchdog. */
     static void watchdogReload();
+
+    /* Clear decision B's restart count if it belongs to `slot_code` (decision 6). True unless
+     * the write failed. */
+    [[nodiscard]] static bool clearRestartCount(uint8_t slot_code);
 };
 
 #endif /* UPDATE_PORT_HPP */

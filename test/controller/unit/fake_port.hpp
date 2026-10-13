@@ -64,7 +64,7 @@ void fakeReset();
 /* Number of bytes in [start, start + bytes) that differ from `value`. */
 uint32_t fakeCountNot(uint32_t start, uint32_t bytes, uint8_t value);
 /* Store `value` with its complement in backup pair `pair` / read a pair: true and the value if
- * the two words are complements (fake_mode_port.cpp). */
+ * the two words are complements (fake_port.cpp). */
 void fakeBackupSet(uint32_t pair, uint32_t value);
 bool fakeBackupGet(uint32_t pair, uint32_t &value);
 

@@ -84,10 +84,12 @@ TestImage test_image;
 ModeManager mode_manager{sender, test_image};
 ArmState arm_state;
 
-/* The function that found the last impossible value (faultImpossibleValue), for a debugger: no
- * detail is defined for EVENT 0x0005 (Interfaces Sec. 5.4). volatile: written just before the
- * reset, so the compiler must not drop the write. */
+/* The function that found the last impossible value (faultImpossibleValue), for a debugger; the
+ * ground learns it from EVENT 0x0005's fault-location code (decision 3). volatile: written just
+ * before the reset, so the compiler must not drop the write. */
 const char *volatile fault_where = nullptr;
+/* The detail of EVENT 0x0005: the fault-location code, 1 byte (Interfaces Sec. 5.4, decision 3). */
+constexpr uint32_t kFaultDetailBytes = 1U;
 /* True once the fault reaction has begun: a second fault found while it sends its EVENT goes
  * straight to the restart instead of starting the reaction again (no recursion). */
 bool in_fault = false;
@@ -286,30 +288,32 @@ void sendHealthWhenDue()
 }  // namespace
 
 /**
- * @brief The firmware's fault reaction (firmware/fault.hpp): EVENT 0x0005, a bounded wait for the
- * UART, then a restart counted by the bootloader.
+ * @brief The firmware's fault reaction (firmware/fault.hpp): EVENT 0x0005 with the fault
+ * location, a bounded wait for the UART, then a restart counted by the bootloader.
  *
  * Owner's decision, 13 Oct 2026: a value in memory that cannot exist is a fault, never data, and
  * the reaction is a restart; REQ-041: detect a change in its own memory and return to a known
- * safe state. EVENT 0x0005 "change in memory detected" (Interfaces Sec. 5.4) goes out with no
- * detail bytes, because the Interfaces document defines none for it (a 1-byte location code
- * would need the owner's acceptance); `where` stays in fault_where for a debugger. The restart
+ * safe state. EVENT 0x0005 "change in memory detected" (Interfaces Sec. 5.4) goes out with a
+ * 1-byte detail, the fault-location code of the function that found the value
+ * (common/fault_codes.h; decision 3, owner, 13 Oct 2026). Before, it went out with no detail
+ * bytes, and only fault_where, for a debugger, said where; `where` still goes there. The restart
  * carries the fault mark in the backup registers (ModePort::restartCounted), so the bootloader
  * counts it like a watchdog restart of the confirmed slot (decision B) and a loop of such
  * restarts ends in the last-resort firmware. A fault found while the EVENT is being sent skips
  * the EVENT (in_fault). Defined here because the frame sender it sends through lives here.
  *
- * @param[in]     where  the function that found the impossible value
+ * @param[in]     location  the fault-location code of the function (common/fault_codes.h)
+ * @param[in]     where     the function that found the impossible value
  * @note Does not return.
  */
-void faultImpossibleValue(const char *where)
+void faultImpossibleValue(uint8_t location, const char *where)
 {
     fault_where = where;
     if (!in_fault) {
         in_fault = true;
         std::array<uint8_t, kEventReportMaxBytes> payload{};
         uint16_t length = HealthMonitor::eventReport(core_clock.tickMs(), EventCode::kMemoryChanged,
-                                                     nullptr, 0U, payload);
+                                                     &location, kFaultDetailBytes, payload);
         if (length != 0U) {
             sender.send(FrameType::kReport, payload.data(), length);
         }
@@ -327,12 +331,13 @@ void faultImpossibleValue(const char *where)
  * common/image_check.c and common/boot_state.c call this C name for their own impossible values;
  * extern "C" keeps the plain name the C code links against.
  *
- * @param[in]     where  the function that found the impossible value
+ * @param[in]     location  the fault-location code of the function (common/fault_codes.h)
+ * @param[in]     where     the function that found the impossible value
  * @note Does not return.
  */
-extern "C" void fault_impossible_value(const char *where)
+extern "C" void fault_impossible_value(uint8_t location, const char *where)
 {
-    faultImpossibleValue(where);
+    faultImpossibleValue(location, where);
 }
 
 /*
@@ -379,7 +384,8 @@ extern "C" void USART2_IRQHandler(void)
  * events and the restart it causes.
  *
  * Decision C: the tick and the UART are set from the clock CoreClock::start() reports in use,
- * 170 MHz or 16 MHz after a clock fault, and the mode manager sends EVENT 0x0001 for the fault.
+ * 170 MHz or 16 MHz after a clock fault, and the mode manager sends EVENT 0x0001 for the fault,
+ * with the fault kind 0x01 (decision 2, common/fault_codes.h).
  * Before, a clock fault stopped the firmware until the watchdog restarted it.
  *
  * @note Does not return.

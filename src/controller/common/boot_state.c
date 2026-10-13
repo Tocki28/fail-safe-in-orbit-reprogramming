@@ -302,5 +302,6 @@ uint8_t boot_state_other_slot(uint8_t slot)
     if (slot == BOOT_SLOT_B) {
         return BOOT_SLOT_A;
     }
-    fault_impossible_value("boot_state_other_slot");   /* only a corrupted value: see above */
+    /* only a corrupted value: see above */
+    fault_impossible_value(FAULT_AT_BOOT_STATE_OTHER_SLOT, "boot_state_other_slot");
 }

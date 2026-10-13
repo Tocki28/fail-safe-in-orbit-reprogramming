@@ -15,7 +15,9 @@
 #                     bootloader's slot handling with the chip replaced (unit/test_boot.c), the
 #                     order of its steps: watchdog, start count, park loop (unit/test_flow.c),
 #                     its watchdog module (unit/test_watchdog.c), its backup-register module
-#                     (unit/test_backup.c) and the flash address barrier (unit/test_flash.c)
+#                     (unit/test_backup.c), its fault reaction (unit/test_fault.c) and the
+#                     flash address barrier (unit/test_flash.c); and the fault-location codes
+#                     of every fault site (check_fault_codes.py, decision 3)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
@@ -139,6 +141,9 @@ FLOW_SRCS   = unit/test_flow.c unit/boot_stubs/boot_stubs.c
 WDOG_SRCS   = unit/test_watchdog.c $(SRC)/bootloader/watchdog.c
 # backup.c as built, against RAM stand-ins of RCC, PWR and TAMP that keep the real offsets.
 BACKUP_SRCS = unit/test_backup.c $(SRC)/bootloader/backup.c
+# fault.c and backup.c as built, against the same RAM stand-ins; the UART and the reset request
+# are stood in by the test (decision 3: the fault location left in the backup registers).
+FAULT_SRCS  = unit/test_fault.c $(SRC)/bootloader/fault.c $(SRC)/bootloader/backup.c
 FLASH_SRCS  = unit/test_flash.c $(COMMON)/flash.c
 MONO_OBJS   = build/host/monocypher.o build/host/monocypher-ed25519.o
 
@@ -178,6 +183,11 @@ build/host/test_backup: $(BACKUP_SRCS) \
 	mkdir -p build/host
 	$(HOST_CC) -Iunit/backup_stubs -I$(SRC)/bootloader -I$(COMMON) $(BACKUP_SRCS) -o $@
 
+build/host/test_fault: $(FAULT_SRCS) \
+                       $(wildcard $(SRC)/bootloader/*.h $(COMMON)/*.h unit/backup_stubs/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Iunit/backup_stubs -I$(SRC)/bootloader -I$(COMMON) $(FAULT_SRCS) -o $@
+
 build/host/test_flash: $(FLASH_SRCS) $(wildcard $(COMMON)/*.h unit/flash_stubs/*.h)
 	mkdir -p build/host
 	$(HOST_CC) -Wno-int-to-pointer-cast -Iunit/flash_stubs -I$(COMMON) $(FLASH_SRCS) -o $@
@@ -199,7 +209,8 @@ src-images:
 
 unit: build/host/test_frame build/host/test_health build/host/test_update build/host/test_arm \
       build/host/test_mode build/host/test_boot build/host/test_flow build/host/test_watchdog \
-      build/host/test_backup build/host/test_flash build/host/test_registers images src-images
+      build/host/test_backup build/host/test_fault build/host/test_flash build/host/test_registers \
+      images src-images
 	build/host/test_frame
 	build/host/test_health
 	build/host/test_update $(SRC)/build/images $(OUT)
@@ -210,7 +221,9 @@ unit: build/host/test_frame build/host/test_health build/host/test_update build/
 	build/host/test_flow
 	build/host/test_watchdog
 	build/host/test_backup
+	build/host/test_fault
 	build/host/test_flash
+	$(PY) check_fault_codes.py $(SRC)
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
 # PROBE_ARGS="--listen 4": listen first, and reset the board meanwhile to see its BL: lines.

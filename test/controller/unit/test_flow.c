@@ -22,8 +22,9 @@
  *   - F(b): no trial start without a running watchdog; the start is then not counted;
  *   - G: the firmware's give-up request is applied before the start is counted;
  *   - I: the default-state and give-up saves are tried twice, with the result logged;
- *   - check-result reporting: the copy refused before the one started, its check result and the
- *     started copy are left in the backup registers.
+ *   - check-result reporting: every copy refused or skipped on one start, each with its check
+ *     result, and the started copy are left in the backup registers (decision 4: up to three
+ *     records; 0x0B flash read error, 0x0C trial started too often, 0x0D restarted too often).
  * Each test's comment says whether it failed on the code before this change.
  *
  * Built with the Mac's cc and the undefined-behaviour sanitizer. Run: make -C test/controller
@@ -279,17 +280,20 @@ static uint32_t start_of(uint32_t role, uint32_t slot)
 }
 
 /**
- * @brief Returns the FALLBACK value (common/backup_layout.h).
+ * @brief Returns the FALLBACK value in the layout of decision 4 (common/backup_layout.h): one byte
+ * per copy with its check result, the copy started in the top byte.
  *
- * @param[in]     refused  refused copy code
- * @param[in]     check    check result code
- * @param[in]     started  started copy code
+ * @param[in]     a        slot A's check result; 0 when not refused
+ * @param[in]     b        slot B's check result
+ * @param[in]     lr       the last-resort firmware's check result
+ * @param[in]     started  started copy code; 0 when none started
  * @return the pair value
  */
-static uint32_t fallback_of(uint32_t refused, uint32_t check, uint32_t started)
+static uint32_t record_of(uint32_t a, uint32_t b, uint32_t lr, uint32_t started)
 {
-    return (started << BACKUP_FALLBACK_STARTED_SHIFT) | (refused << BACKUP_FALLBACK_REFUSED_SHIFT) |
-           check;
+    return (started << BACKUP_FALLBACK_STARTED_SHIFT) |
+           (lr << BACKUP_FALLBACK_LAST_RESORT_SHIFT) | (b << BACKUP_FALLBACK_B_SHIFT) |
+           (a << BACKUP_FALLBACK_A_SHIFT);
 }
 
 /* ---- The order of the steps ------------------------------------------------------- */
@@ -336,29 +340,35 @@ static void test_cycles_not_counting(void)
 static void test_count_trial_start(void)
 {
     boot_state_t state;
+    uint32_t records = 0U;
 
     reset_rig();
     memset(&state, 0, sizeof state);
     state.confirmed = BOOT_SLOT_A;
     state.trial = BOOT_SLOT_B;
     state.failed_starts = 255U;
-    count_trial_start(&state);
+    records = 0U;
+    count_trial_start(&state, &records);
     report((state.trial == BOOT_SLOT_NONE) && (state.failed_starts == 0U) &&
                (strstr(uart_log, "given up") != NULL) && (write_count == 1U) &&
-               (written[0].trial == BOOT_SLOT_NONE),
-           "count_trial_start: stored 255 -> trial given up, count 0, saved (no wrap to a start)");
+               (written[0].trial == BOOT_SLOT_NONE) &&
+               (records == record_of(0U, CHECK_TRIAL_STARTS, 0U, 0U)),
+           "count_trial_start: stored 255 -> trial given up, count 0, saved (no wrap to a start); "
+           "trial B recorded 0x0C (decision 4)");
 
     reset_rig();
     state.trial = BOOT_SLOT_B;
     state.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
-    count_trial_start(&state);
+    records = 0U;
+    count_trial_start(&state, &records);
     report((state.trial == BOOT_SLOT_NONE) && (strstr(uart_log, "given up") != NULL),
            "count_trial_start: stored 3 (the limit) -> trial given up");
 
     reset_rig();
     state.trial = BOOT_SLOT_B;
     state.failed_starts = (uint8_t)(BOOT_STATE_MAX_STARTS - 1U);
-    count_trial_start(&state);
+    records = 0U;
+    count_trial_start(&state, &records);
     report((state.trial == BOOT_SLOT_B) && (state.failed_starts == BOOT_STATE_MAX_STARTS) &&
                (write_count == 1U) && (written[0].failed_starts == BOOT_STATE_MAX_STARTS) &&
                (strstr(uart_log, "start 3 of 3") != NULL),
@@ -367,14 +377,17 @@ static void test_count_trial_start(void)
     reset_rig();
     state.trial = BOOT_SLOT_B;
     state.failed_starts = 0U;
-    count_trial_start(&state);
-    report((state.trial == BOOT_SLOT_B) && (state.failed_starts == 1U) && (write_count == 1U),
-           "count_trial_start: stored 0 -> start 1 of 3 counted and saved");
+    records = 0U;
+    count_trial_start(&state, &records);
+    report((state.trial == BOOT_SLOT_B) && (state.failed_starts == 1U) && (write_count == 1U) &&
+               (records == 0U),
+           "count_trial_start: stored 0 -> start 1 of 3 counted and saved, nothing recorded");
 
     reset_rig();
     state.trial = BOOT_SLOT_NONE;
     state.failed_starts = 0U;
-    count_trial_start(&state);
+    records = 0U;
+    count_trial_start(&state, &records);
     report((write_count == 0U) && (state.failed_starts == 0U),
            "count_trial_start: no trial -> nothing counted, nothing saved");
 
@@ -382,7 +395,8 @@ static void test_count_trial_start(void)
     write_results[0] = false;
     state.trial = BOOT_SLOT_B;
     state.failed_starts = 0U;
-    count_trial_start(&state);
+    records = 0U;
+    count_trial_start(&state, &records);
     report((state.trial == BOOT_SLOT_NONE) &&
                (strstr(uart_log, "could not be counted") != NULL),
            "count_trial_start: the save fails -> trial not started, confirmed slot runs");
@@ -557,8 +571,10 @@ static void test_d_boot_state(void)
     stored_load = 7;
     ended = run_boot();
     report((ended == RUN_FAULT) && (strcmp(fault_where, "load_state") == 0) &&
-               (started_vector == 0U) && (write_count == 0U),
-           "load_state: a case value outside boot_state_load_t (7) -> fault, nothing started");
+               (fault_location == FAULT_AT_LOAD_STATE) && (started_vector == 0U) &&
+               (write_count == 0U),
+           "load_state: a case value outside boot_state_load_t (7) -> fault, fault location 0x04, "
+           "nothing started");
 }
 
 /* ---- Decision F(b) ---------------------------------------------------------------- */
@@ -680,10 +696,12 @@ static void test_i_retry(void)
 /* ---- Check-result reporting -------------------------------------------------------- */
 
 /**
- * @brief The copy refused just before the one started, its check result and the started copy are
- * left in the FALLBACK pair; a start without a refusal leaves it empty.
+ * @brief Every copy refused before the one started is left in the FALLBACK pair with its check
+ * result, and the started copy; a start without a refusal leaves it empty.
  *
- * Fails on the old code: nothing was left for the firmware.
+ * Fails on the old code: nothing was left for the firmware. Two expectations changed with
+ * decision 4 (owner, 13 Oct 2026): two refused copies are both recorded (was: only the second),
+ * and a copy refused for a flash read error is recorded 0x0B (was: no record).
  */
 static void test_fallback_record(void)
 {
@@ -693,14 +711,13 @@ static void test_fallback_record(void)
     int ended = run_boot();
     report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
                (pair_value(BACKUP_PAIR_FALLBACK) ==
-                fallback_of(BACKUP_COPY_B, 0x09U, BACKUP_COPY_A)) &&
+                record_of(0U, CHECK_SIGNATURE_A, 0U, BACKUP_COPY_A)) &&
                !stub_backup_open,
-           "record: trial B refused (signature A), A started -> refused 0x02, check 0x09, "
-           "started 0x01; backup registers closed before the jump");
+           "record: trial B refused (signature A), A started -> B 0x09, started 0x01; backup "
+           "registers closed before the jump");
 
     reset_rig();
-    stub_backup_set(BACKUP_PAIR_FALLBACK,
-                    fallback_of(BACKUP_COPY_A, 0x08U, BACKUP_COPY_LAST_RESORT));
+    stub_backup_set(BACKUP_PAIR_FALLBACK, record_of(CHECK_BODY, 0U, 0U, BACKUP_COPY_LAST_RESORT));
     ended = run_boot();
     report((ended == RUN_STARTED) && (pair_value(BACKUP_PAIR_FALLBACK) == 0U),
            "record: nothing refused -> an old record is cleared, so it is never reported later");
@@ -710,9 +727,9 @@ static void test_fallback_record(void)
     ended = run_boot();
     report((ended == RUN_STARTED) && (started_vector == VECTOR_LR) &&
                (pair_value(BACKUP_PAIR_FALLBACK) ==
-                fallback_of(BACKUP_COPY_A, 0x08U, BACKUP_COPY_LAST_RESORT)),
-           "record: confirmed A refused (body check value), last-resort started -> 0x01, 0x08, "
-           "0x03");
+                record_of(CHECK_BODY, 0U, 0U, BACKUP_COPY_LAST_RESORT)),
+           "record: confirmed A refused (body check value), last-resort started -> A 0x08, "
+           "started 0x03");
 
     reset_rig();
     stored.trial = BOOT_SLOT_B;
@@ -721,17 +738,90 @@ static void test_fallback_record(void)
     ended = run_boot();
     report((ended == RUN_STARTED) && (started_vector == VECTOR_LR) &&
                (pair_value(BACKUP_PAIR_FALLBACK) ==
-                fallback_of(BACKUP_COPY_A, 0x07U, BACKUP_COPY_LAST_RESORT)),
-           "record: trial B and confirmed A refused -> the record names A (the copy refused just "
-           "before the one started)");
+                record_of(CHECK_START, CHECK_EMPTY, 0U, BACKUP_COPY_LAST_RESORT)),
+           "4: trial B (empty) and confirmed A (start address) refused -> both recorded, B 0x01 "
+           "and A 0x07 (was: only A, the copy refused just before the one started)");
 
     reset_rig();
     stub_ecc_address = SLOT_A_START;
     ended = run_boot();
     report((ended == RUN_STARTED) && (started_vector == VECTOR_LR) &&
-               (pair_value(BACKUP_PAIR_FALLBACK) == 0U) &&
-               (strstr(uart_log, "no check-result code for a flash read error") != NULL),
-           "record: A refused only for a flash read error -> no table code, no record, logged");
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(CHECK_FLASH_READ, 0U, 0U, BACKUP_COPY_LAST_RESORT)),
+           "4: A refused only for a flash read error -> A 0x0B (was: no table code, no record)");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    region_result[AT_B] = IMAGE_BAD_BODY_CHECK;
+    stub_ecc_address = SLOT_B_START;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(0U, CHECK_FLASH_READ, 0U, BACKUP_COPY_A)),
+           "4: trial B fails its body check after a flash read error -> B 0x0B, the reason "
+           "image_passes refuses it (not 0x08)");
+}
+
+/**
+ * @brief Decision 4: a trial given up at its start limit is recorded 0x0C; a confirmed slot
+ * skipped by decision B is recorded 0x0D when the start goes past it; with the last-resort
+ * firmware refused too, all three copies are recorded and none is started (the park).
+ *
+ * Fails on the old code: neither was recorded (the record named only a copy whose image was
+ * refused), and the park left nothing.
+ */
+static void test_skip_records(void)
+{
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    stored.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
+    int ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(0U, CHECK_TRIAL_STARTS, 0U, BACKUP_COPY_A)),
+           "4: trial B at its start limit (3) -> given up, B 0x0C, A started (was: no record)");
+
+    reset_rig();
+    stub_backup_set(BACKUP_PAIR_RESTARTS, restarts_of(BOOT_SLOT_A, CONFIRMED_RESTARTS_MAX));
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_LR) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(CHECK_RESTARTS, 0U, 0U, BACKUP_COPY_LAST_RESORT)),
+           "4: confirmed A skipped by decision B (3 restarts), no trial -> A 0x0D, last-resort "
+           "started (was: no record)");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    region_result[AT_B] = IMAGE_BAD_SIGNATURE_B;
+    stub_backup_set(BACKUP_PAIR_RESTARTS, restarts_of(BOOT_SLOT_A, CONFIRMED_RESTARTS_MAX));
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_LR) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(CHECK_RESTARTS, CHECK_SIGNATURE_B, 0U, BACKUP_COPY_LAST_RESORT)),
+           "4: trial B refused (signature B), confirmed A skipped -> B 0x0A and A 0x0D, "
+           "last-resort started");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    stub_backup_set(BACKUP_PAIR_RESTARTS, restarts_of(BOOT_SLOT_A, CONFIRMED_RESTARTS_MAX));
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_B) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) == 0U),
+           "4: trial B passes, confirmed A at 3 restarts -> B started; no record (the start never "
+           "reached A's place)");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    stored.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
+    stub_backup_set(BACKUP_PAIR_RESTARTS, restarts_of(BOOT_SLOT_A, CONFIRMED_RESTARTS_MAX));
+    region_result[AT_LR] = IMAGE_BAD_SIGNATURE_A;
+    ended = run_boot();
+    report((ended == RUN_PARKED) &&
+               (pair_value(BACKUP_PAIR_FALLBACK) ==
+                record_of(CHECK_RESTARTS, CHECK_TRIAL_STARTS, CHECK_SIGNATURE_A, 0U)) &&
+               !stub_backup_open,
+           "4: trial B at its limit, confirmed A skipped, last-resort refused (signature A) -> "
+           "park; three records, B 0x0C, A 0x0D, last-resort 0x09, none started");
 }
 
 /**
@@ -752,6 +842,7 @@ int main(void)
     test_g_give_up_request();
     test_i_retry();
     test_fallback_record();
+    test_skip_records();
     if (failures == 0U) {
         printf("bootloader flow tests: all %u passed\n", tests);
         return 0;

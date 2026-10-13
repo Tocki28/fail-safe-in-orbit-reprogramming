@@ -17,15 +17,27 @@
 #ifndef MODE_PORT_HPP
 #define MODE_PORT_HPP
 
+#include <array>
 #include <cstdint>
 
 #include "boot_state.h"
 
-/* The bootloader's fall-back record, as read from the FALLBACK pair (common/backup_layout.h). */
+/* The copies the bootloader can refuse or skip on one start: slot A, slot B, the last-resort
+ * firmware (common/backup_layout.h, FALLBACK). */
+constexpr uint32_t kFallbackCopies = 3U;
+
+/* One copy's entry in the bootloader's fall-back record. */
+struct FallbackEntry {
+    uint8_t copy;    /* the copy: 0x01 slot A, 0x02 slot B, 0x03 last-resort */
+    uint8_t check;   /* its check result, Interfaces Sec. 5.4 "Check result" table; 0x00 when it
+                      * was not refused or skipped */
+};
+
+/* The bootloader's fall-back record, as read from the FALLBACK pair (common/backup_layout.h):
+ * every copy refused or skipped on one start (decision 4). Before, one refused copy. */
 struct FallbackRecord {
-    uint8_t refused;   /* refused copy: 0x01 slot A, 0x02 slot B, 0x03 last-resort */
-    uint8_t check;     /* its check result, Interfaces Sec. 5.4 "Check result" table */
-    uint8_t started;   /* copy started, same codes as refused */
+    std::array<FallbackEntry, kFallbackCopies> copies;   /* slot A, slot B, last-resort */
+    uint8_t started;                                     /* copy started, same codes as copy */
 };
 
 struct ModePort {
@@ -57,6 +69,12 @@ struct ModePort {
 
     /** @brief Clear the fall-back record. True if read back. */
     [[nodiscard]] static bool clearFallbackRecord();
+
+    /** @brief Read the fault location the bootloader left (decision 3). False if none is stored. */
+    [[nodiscard]] static bool readBootloaderFault(uint32_t &location);
+
+    /** @brief Clear the bootloader's fault location. True if read back. */
+    [[nodiscard]] static bool clearBootloaderFault();
 
     /** @brief Clear decision B's restart count if it belongs to `slot_code`. True unless the
      *  write failed. */

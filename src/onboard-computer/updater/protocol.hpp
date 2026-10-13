@@ -154,6 +154,9 @@ constexpr uint16_t kEventMemoryChange = 0x0005;
 // (src/controller/common/fault_codes.h), which the unit test compares with the header.
 constexpr size_t kMemoryChangeDetailBytes = 2;
 constexpr uint8_t kFoundByBootloader = 0x80U;
+// The later-faults byte stops counting at 255; a copy of BACKUP_FAULT_LATER_MAX
+// (src/controller/common/backup_layout.h), which the unit test compares with the header.
+constexpr uint8_t kLaterFaultsMax = 0xFFU;
 constexpr uint16_t kEventTrialStarted = 0x0006;
 constexpr uint16_t kEventFirmwareConfirmed = 0x0007;
 constexpr uint16_t kEventFirmwareGivenUp = 0x0008;

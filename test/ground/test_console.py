@@ -557,10 +557,18 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(self.event_text(0x0005, b"\x79\x00"),
                          f"{base} at unknown code 0x79, found by the firmware")
         self.assertEqual(self.event_text(0x0005, b"\x99\xff"),
-                         f"{base} at unknown code 0x19, found by the bootloader, 255 more after it")
+                         f"{base} at unknown code 0x19, found by the bootloader, 255 or more after it")
         self.assertEqual(self.event_text(0x0005, b"\x90"), f"{base} at unknown code 0x90")
         self.assertEqual(self.event_text(0x0005, b"\x27"),
                          f"{base} at 0x27 (update receiver: image check result outside its list)")
+        self.assertEqual(self.event_text(0x0005, b"\x90\xfe"),
+                         f"{base} at 0x10 ({loc10}), found by the bootloader, 254 more after it")
+        self.assertEqual(self.event_text(0x0005, b"\x90\xff"),
+                         f"{base} at 0x10 ({loc10}), found by the bootloader, 255 or more after it")
+        self.assertTrue(self.event_text(0x0005, b"\x27\xfe").endswith(
+            ", found by the firmware, 254 more after it"))
+        self.assertTrue(self.event_text(0x0005, b"\x27\xff").endswith(
+            ", found by the firmware, 255 or more after it"))
         r = c.decode_report(c.struct.pack("<IBH", 5, c.REPORT_EVENT, 0x0005) + b"\xa7\x01")
         self.assertIn("found by the bootloader, 1 more after it", c.format_report(r))
 
@@ -656,6 +664,16 @@ class FaultCodesHeaderTests(unittest.TestCase):
         self.assertIsNotNone(flag)
         self.assertEqual(int(flag.group(1), 16), c.FOUND_BY_BOOTLOADER)
         self.assertTrue(all(code & c.FOUND_BY_BOOTLOADER == 0 for code in c.FAULT_LOCATION))
+
+    def test_later_faults_max_matches_header(self):
+        """Check FAULT_LATER_MAX against BACKUP_FAULT_LATER_MAX in backup_layout.h. Passes if the
+        header defines the value and it is the console's, so the "255 or more" wording follows
+        the count the bootloader saturates at.
+        """
+        limit = re.search(r"^#define\s+BACKUP_FAULT_LATER_MAX\s+0x([0-9A-Fa-f]+)U\b",
+                          FAULT_CODES_H.with_name("backup_layout.h").read_text(), re.MULTILINE)
+        self.assertIsNotNone(limit)
+        self.assertEqual(int(limit.group(1), 16), c.FAULT_LATER_MAX)
 
     def test_fault_location_codes_in_the_header_ranges(self):
         """Check that every location code lies in a range of the header and has words. Passes if

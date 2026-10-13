@@ -262,8 +262,9 @@ static int describeFallback(uint16_t code, const uint8_t * detail, size_t detail
  * FAULT_FOUND_BY_BOOTLOADER). With both bytes, bit 7 of where says who found the fault: set, the
  * bootloader at the last start ("found by the bootloader", then "N more after it", N being the
  * second byte); clear, the firmware ("found by the firmware"; a second byte other than 0 is shown
- * too, never dropped). The location is the lower seven bits, named with faultLocationName(); one
- * in no table prints as "unknown code 0x.." with the number. With one byte only the text is as
+ * too, never dropped). A second byte of 255 is the saturated count (BACKUP_FAULT_LATER_MAX) and
+ * reads "255 or more after it", so it is not taken for an exact count. The location is the lower
+ * seven bits, named with faultLocationName(); one in no table prints as "unknown code 0x.." with the number. With one byte only the text is as
  * before the second byte existed: the byte as a location, nothing about who found it.
  *
  * @param[in]     code           the event code, 0x0005
@@ -293,8 +294,9 @@ static int describeMemoryChange(uint16_t code, const uint8_t * detail, size_t de
   char * tail = out + n;
   const size_t tail_room = room - static_cast<size_t>(n);
   if (bootloader || later != 0U) {
-    return std::snprintf(tail, tail_room, ", found by the %s, %u more after it",
-      bootloader ? "bootloader" : "firmware", static_cast<unsigned>(later));
+    return std::snprintf(tail, tail_room, ", found by the %s, %u%s more after it",
+      bootloader ? "bootloader" : "firmware", static_cast<unsigned>(later),
+      later == report::kLaterFaultsMax ? " or" : "");
   }
   return std::snprintf(tail, tail_room, ", found by the firmware");
 }

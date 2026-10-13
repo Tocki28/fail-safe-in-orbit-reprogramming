@@ -117,6 +117,9 @@ CHECK_RESULT = {
 # fault at the last start. COPIED from FAULT_FOUND_BY_BOOTLOADER in fault_codes.h; the console's
 # test compares the two.
 FOUND_BY_BOOTLOADER = 0x80
+# The later-faults byte of EVENT 0x0005 stops counting here. COPIED from BACKUP_FAULT_LATER_MAX in
+# src/controller/common/backup_layout.h ("the count stops at 255"): a byte of 255 may mean more.
+FAULT_LATER_MAX = 0xFF
 # Fault kind, the 1-byte detail of EVENT 0x0001 (owner's decision 2, 13 Oct 2026). COPIED from
 # src/controller/common/fault_codes.h (FAULT_KIND_*), where the controller defines the codes; keep
 # the two in step. Each value is (the header's name without FAULT_KIND_, the words). The console's
@@ -294,6 +297,24 @@ def check_result_text(result):
     return CHECK_RESULT[result][1] if result in CHECK_RESULT else unknown(result)
 
 
+def later_faults_text(count):
+    """Words for the number of faults found after the first, the second byte of EVENT 0x0005.
+
+    The bootloader's count stops at 255 (BACKUP_FAULT_LATER_MAX), so a byte of 255 only says "at
+    least 255". The text then reads "255 or more", so the operator does not read a saturated count
+    as an exact one. Every other value is printed as it is.
+
+    Args:
+        count: the later-faults byte, 0 to 255.
+
+    Returns:
+        "N more after it", or "255 or more after it" when count is FAULT_LATER_MAX.
+    """
+    if count == FAULT_LATER_MAX:
+        return f"{count} or more after it"
+    return f"{count} more after it"
+
+
 def memory_change_text(detail):
     """Words for the detail of EVENT 0x0005 "change in memory detected" (Sec. 5.4).
 
@@ -303,6 +324,8 @@ def memory_change_text(detail):
     the lower seven bits, looked up in FAULT_LOCATION; one in no table prints as "unknown code".
     With both bytes the text ends "found by the bootloader, N more after it" (N is the second
     byte, always shown) or "found by the firmware" (N is added only when not 0, never dropped).
+    A second byte of 255 is the saturated count and reads "255 or more after it"
+    (later_faults_text()).
     With one byte only the text is as before the second byte existed: the byte is read as a
     location and nothing is said about who found it.
 
@@ -323,8 +346,8 @@ def memory_change_text(detail):
     if not both:
         return text
     if bootloader:
-        return text + f", found by the bootloader, {detail[1]} more after it"
-    return text + ", found by the firmware" + (f", {detail[1]} more after it" if detail[1] else "")
+        return text + f", found by the bootloader, {later_faults_text(detail[1])}"
+    return text + ", found by the firmware" + (f", {later_faults_text(detail[1])}" if detail[1] else "")
 
 
 def decode_event(code, detail):

@@ -3068,6 +3068,8 @@ void testCheckResultCodes()
   report(CHECK_WATCHDOG_NOT_RUNNING == 0x0EU && CHECK_START_NOT_COUNTED == 0x0FU && CHECK_STATE_DAMAGED == 0x10U &&
          CHECK_LAST == 0x10U && report::kFoundByBootloader == FAULT_FOUND_BY_BOOTLOADER,
     "check results: codes 0x0E, 0x0F, 0x10 and the bootloader flag 0x80 have the header's numbers");
+  report(report::kLaterFaultsMax == BACKUP_FAULT_LATER_MAX,
+    "check results: the later-faults saturation value 255 is the header's BACKUP_FAULT_LATER_MAX");
 }
 
 /**
@@ -3108,15 +3110,31 @@ void testMemoryChangeDetail()
     "memory change: {0x79, 0}, a location in no table, prints 'unknown code 0x79'");
   const uint8_t unknown_boot[] = {0x99, 255};
   describeEvent(0x0005, unknown_boot, 2, text.data(), text.size());
-  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x19, found by the bootloader, 255 more after it") == 0,
-    "memory change: {0x99, 255}, bit 7 set and 0x19 in no table, prints 'unknown code 0x19' and 255 more");
+  report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x19, found by the bootloader, 255 or more after it") == 0,
+    "memory change: {0x99, 255}, bit 7 set and 0x19 in no table, prints 'unknown code 0x19' and 255 or more");
+  const uint8_t boot_254[] = {0x10 | FAULT_FOUND_BY_BOOTLOADER, 254};
+  describeEvent(0x0005, boot_254, 2, text.data(), text.size());
+  report(std::strstr(text.data(), "found by the bootloader, 254 more after it") != nullptr,
+    "memory change: 254 later faults reads '254 more after it' (an exact count)");
+  const uint8_t boot_255[] = {0x10 | FAULT_FOUND_BY_BOOTLOADER, 255};
+  describeEvent(0x0005, boot_255, 2, text.data(), text.size());
+  report(std::strstr(text.data(), "found by the bootloader, 255 or more after it") != nullptr,
+    "memory change: 255 later faults reads '255 or more after it' (the count may have saturated)");
+  const uint8_t firmware_254[] = {FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR, 254};
+  describeEvent(0x0005, firmware_254, 2, text.data(), text.size());
+  report(std::strstr(text.data(), "found by the firmware, 254 more after it") != nullptr,
+    "memory change: a firmware fault with 254 later faults reads '254 more after it'");
+  const uint8_t firmware_255[] = {FAULT_AT_UPDATE_RECEIVER_REFUSAL_FOR, 255};
+  describeEvent(0x0005, firmware_255, 2, text.data(), text.size());
+  report(std::strstr(text.data(), "found by the firmware, 255 or more after it") != nullptr,
+    "memory change: a firmware fault with 255 later faults reads '255 or more after it'");
   const uint8_t one_byte[] = {0x90};
   describeEvent(0x0005, one_byte, 1, text.data(), text.size());
   report(std::strcmp(text.data(), "EVENT 0x0005 (change in memory detected) at unknown code 0x90") == 0,
     "memory change: a 1-byte detail prints as before (the byte as a location, no word on who found it)");
   const uint8_t longest[] = {0x2E | FAULT_FOUND_BY_BOOTLOADER, 255};
   describeEvent(0x0005, longest, 2, text.data(), text.size());
-  report(std::strstr(text.data(), "255 more after it") != nullptr && std::strlen(text.data()) < text.size() - 1,
+  report(std::strstr(text.data(), "255 or more after it") != nullptr && std::strlen(text.data()) < text.size() - 1,
     "memory change: the longest location with bit 7 and 255 later faults fits the log line whole");
   std::array<char, 60> small{};
   describeEvent(0x0005, example, 2, small.data(), small.size());

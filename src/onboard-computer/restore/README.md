@@ -22,17 +22,17 @@ static (`file`: ELF 64-bit LSB executable, ARM aarch64, statically linked); the 
 but the kernel and the ST-LINK's USB access (run as root).
 
 ## Deploy
-The bootloader input is a signed image of kind bootloader, made from the linked `.bin` (keys as in
-`tools/bench.mk`; development keys only):
+The bootloader input is a signed image of kind bootloader, made by `make -C src/controller` (its default
+`images` target) as `src/controller/build/images/bootloader.img` from the linked `bootloader/build/bootloader.bin`,
+signed with the same development keys as the firmware images (`tools/bench.mk`; development keys only).
+The last-resort image of the bench is `test/controller/build/images/last-resort-v1.img` (made by
+`make -C test/controller`; no other last-resort image exists in the repository yet).
 
-    python tools/make_image.py --bin src/controller/bootloader/build/bootloader.bin \
-        --kind bootloader --slot bootloader --version 1 --key-a KEYS/key-a.pem --key-b KEYS/key-b.pem \
-        --build-id "<commit> bootloader" --out bootloader.img
-
-    D=src/onboard-computer/restore; I=test/controller/build/images; U=src/onboard-computer/updater
+    D=src/onboard-computer/restore; I=test/controller/build/images; C=src/controller/build/images
+    U=src/onboard-computer/updater
     ssh root@192.168.7.1 mkdir -p /home/root/restore
     scp -r $D/dist/openocd $D/dist/tcl $D/restore.sh test/onboard-computer/brick.sh \
-        $U/build/board/fsir-updater bootloader.img $I/last-resort-v1.img $I/slotA-v1.img \
+        $U/build/board/fsir-updater $C/bootloader.img $I/last-resort-v1.img $I/slotA-v1.img \
         root@192.168.7.1:/home/root/restore/
 
 ## Mode reset (decision H, accepted by the owner, 13 Oct 2026)

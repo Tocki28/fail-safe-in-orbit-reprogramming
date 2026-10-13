@@ -2,7 +2,9 @@
 # (more programs as they are written). Bench-only test tools are in test/controller/ (REQ-101).
 #
 #   make              build the operating programs and sign the firmware images:
-#                     build/images/firmware-A.img, firmware-B.img (kind main), and
+#                     build/images/firmware-A.img, firmware-B.img (kind main),
+#                     bootloader.img (kind bootloader, body = bootloader.bin as linked at
+#                     0x08000000; the restore's bootloader input) and
 #                     state-confirmed-A.bin (boot state: confirmed A, no trial)
 #   make check        forwards to test/controller: host checks (CRC-32 against zlib; every
 #                     test image through the bootloader's own check code)
@@ -32,6 +34,7 @@ images: programs
 	mkdir -p $(OUT)
 	$(SIGN) --bin $(FW)/A/firmware.bin --kind main --slot A --version $(FW_VERSION) --build-id "$(COMMIT) firmware A" --out $(OUT)/firmware-A.img
 	$(SIGN) --bin $(FW)/B/firmware.bin --kind main --slot B --version $(FW_VERSION) --build-id "$(COMMIT) firmware B" --out $(OUT)/firmware-B.img
+	$(SIGN) --bin $(BL) --kind bootloader --slot bootloader --version $(FW_VERSION) --build-id "$(COMMIT) bootloader" --out $(OUT)/bootloader.img
 	$(PY) $(TOOLS)/make_boot_state.py --confirmed A --out $(OUT)/state-confirmed-A.bin
 
 check:

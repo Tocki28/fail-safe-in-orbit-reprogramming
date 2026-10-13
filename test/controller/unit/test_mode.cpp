@@ -11,6 +11,13 @@
  * back through the real FrameParser, so a test checks the order of answers and events on the
  * wire.
  *
+ * Owner's decisions of 13 Oct 2026 under test here (letters of the controller audit): B (restart
+ * count cleared after kNormalRunMs), C (EVENT 0x0001 after a clock fault), E (SWITCH reads the
+ * boot state again), F(a) (SWITCH checks the other slot's image), G (give-up request), L (failed
+ * self-test in OPERATE restarts, counted), N (0x11 when the boot state cannot be stored), the
+ * fall-back EVENT 0x0002, and the fault rule (a corrupted value reaches the fault reaction,
+ * caught by fake_fault.cpp). Each test's name or comment says what the old code did.
+ *
  * Built with the Mac's clang++, the undefined-behaviour sanitizer and libc++'s debug hardening.
  * Run: make -C test/controller unit. Prints PASS or FAIL per test; exit status 1 on a failure.
  * Usage: test_mode <dir with firmware-A.img, firmware-B.img>
@@ -22,8 +29,10 @@
 #include <initializer_list>
 
 #include "arm_state.hpp"
+#include "backup_layout.h"
 #include "boot_slot.hpp"
 #include "crc32.h"
+#include "fake_fault.hpp"
 #include "fake_port.hpp"
 #include "fake_uart_link.hpp"
 #include "frame.hpp"
@@ -61,6 +70,13 @@ using TestBytes = std::array<uint8_t, kTestImageMaxBytes>;
 
 uint32_t failures;
 uint32_t tests;
+
+/* The build's signed images (firmware-A.img, firmware-B.img), loaded once by main(), for the
+ * SWITCH tests: decision F(a) checks the other slot's image with the bootloader's checks. */
+SlotImage g_image_a;
+SlotImage g_image_b;
+uint32_t g_size_a;
+uint32_t g_size_b;
 
 /**
  * @brief Counts and prints one test result.
@@ -166,7 +182,7 @@ void startRig(Rig &rig, Slot running, uint8_t confirmed, uint8_t trial, uint32_t
 {
     prepare(running, confirmed, trial);
     rig.updater.init(running);
-    rig.mm.start(running, now);
+    rig.mm.start(running, now, false);
 }
 
 /* ---- Reading back what was sent --------------------------------------------------------- */
@@ -653,7 +669,7 @@ void testModeAtStart()
         Rig rig;
         prepare(Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B);
         fake.state_valid = false;
-        rig.mm.start(Slot::kB, 0U);
+        rig.mm.start(Slot::kB, 0U, false);
         report(rig.mm.mode() == HealthMode::kOperate,
                "start: no valid boot state (the record says trial B) -> OPERATE: no trial known");
     }
@@ -753,8 +769,16 @@ void testSelfTest()
     fake.ecc_error = true;
     bool ecc = ModeManager::selfTest(Slot::kB);
     fake.ecc_error = false;
-    report(!ecc && !ModeManager::selfTest(Slot::kNone) && !ModeManager::selfTest(toSlot(3U)),
-           "self-test: a flash read error (ECC) fails; slot none or 3 fails without a read");
+    report(!ecc && !ModeManager::selfTest(Slot::kNone),
+           "self-test: a flash read error (ECC) fails; slot none fails without a read");
+
+    volatile int got = -1;
+    bool faulted = false;
+    faultClear();
+    FAULT_CATCH(faulted, got = ModeManager::selfTest(static_cast<Slot>(3U)) ? 1 : 0);
+    report(faulted && (got == -1) && (fault_calls == 1U) && (fake.bad_reads == 0U),
+           "self-test: running slot 3 (outside Slot) -> fault reaction in slotStart, no read "
+           "(was: failed without a read)");
 }
 
 /**
@@ -820,7 +844,7 @@ void testSelfTestFailure()
 
     prepare(Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B);
     slotBytes(Slot::kB)[kHeader] = static_cast<uint8_t>(slotBytes(Slot::kB)[kHeader] ^ 0x01U);
-    rig.mm.start(Slot::kB, 0U);
+    rig.mm.start(Slot::kB, 0U, false);
     bool first = !rig.mm.selfTestPassed() && (rig.mm.firstFailedTest() == TrialTest::kSelfTest);
     rig.mm.poll(50U);
     bool sent = sentIs(0U, {ev(EventCode::kTrialStarted), ev(EventCode::kTestsFailed, 0x01U),
@@ -831,38 +855,50 @@ void testSelfTestFailure()
            "(confirmed A, trial none, 0 starts), EVENT 0x0008, link drained, one restart");
 
     Rig operate;
+    uint32_t mark = 0U;
     prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
     slotBytes(Slot::kA)[kHeader] = static_cast<uint8_t>(slotBytes(Slot::kA)[kHeader] ^ 0x01U);
-    operate.mm.start(Slot::kA, 0U);
+    operate.mm.start(Slot::kA, 0U, false);
     operate.mm.poll(50U);
-    report(!operate.mm.selfTestPassed() && (fake_link.sent_bytes == 0U) &&
-               (fake.state_writes == 0U) && (fake.restarts == 0U),
-           "OPERATE, self-test fails: reported in HEALTH only (no event, no write, no restart)");
+    report(!operate.mm.selfTestPassed() && sentIs(0U, {ev(EventCode::kSelfTestFailed)}) &&
+               (fake.state_writes == 0U) && (fake.restarts == 0U) &&
+               (fake.counted_restarts == 1U) && (fake.fault_reason == BACKUP_FAULT_SELF_TEST) &&
+               fakeBackupGet(BACKUP_PAIR_FAULT, mark) && (mark == BACKUP_FAULT_SELF_TEST) &&
+               (fake.drains_at_restart >= 1U) && (fake.sent_at_restart == fake_link.sent_bytes),
+           "L: OPERATE, self-test fails -> EVENT 0x0004, link drained, restart with the fault mark "
+           "(the bootloader counts it, decision B); no boot-state write (was: HEALTH only, no "
+           "restart)");
 }
 
 /**
- * @brief The test-image rules for an identifier outside UploadId: accept() and run() refuse.
+ * @brief The test-image rules for an identifier outside UploadId: accept() and run() are the
+ * fault reaction.
  *
- * parse() never produces such a command; a corrupted UpdateCommand could. Passes if both
- * answer 0x06 (Interfaces Sec. 4.2) and the transfer state is not changed (a following
- * BEGIN is still accepted).
+ * parse() never produces such a command; only a corrupted UpdateCommand could. Before, both
+ * answered 0x06 (fails on the old code: no fault reaction). The transfer state is not changed:
+ * a following BEGIN is still accepted.
  */
 void testTestImageOutsideEnum()
 {
     Rig rig;
     UpdateCommand cmd{};
+    volatile AnswerCode code = AnswerCode::kDamaged;
+    bool accept_fault = false;
+    bool run_fault = false;
 
     startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
     rig.mm.poll(0U);
     cmd.id = static_cast<UploadId>(0x7FU);
     cmd.image_number = kTestImageNumber;
     cmd.value = 40U;
-    bool refused = (rig.mm.acceptTestImage(cmd) == AnswerCode::kImpossible) &&
-                   (rig.mm.runTestImage(cmd) == AnswerCode::kImpossible);
+    faultClear();
+    FAULT_CATCH(accept_fault, code = rig.mm.acceptTestImage(cmd));
+    FAULT_CATCH(run_fault, code = rig.mm.runTestImage(cmd));
     cmd.id = UploadId::kBegin;
-    report(refused && (rig.mm.acceptTestImage(cmd) == AnswerCode::kSuccess),
-           "test image: an identifier outside UploadId (0x7F): accept and run give 0x06, "
-           "state unchanged");
+    report(accept_fault && run_fault && (code == AnswerCode::kDamaged) && (fault_calls == 2U) &&
+               (rig.mm.acceptTestImage(cmd) == AnswerCode::kSuccess),
+           "test image: an identifier outside UploadId (0x7F): accept and run -> fault reaction, "
+           "state unchanged (was: 0x06)");
 }
 
 /* ---- Data-link test ----------------------------------------------------------------------- */
@@ -1078,9 +1114,21 @@ void testPassedAndTimeout()
     fake.fail_state_write = true;
     mark = fake_link.sent_bytes;
     fails.mm.poll(kTrialMs);
+    uint32_t request = 0U;
+    bool stored = fakeBackupGet(BACKUP_PAIR_GIVE_UP, request) && (request == BOOT_SLOT_B);
     report((fake_link.sent_bytes == mark) && (fake.restarts == 1U) && (fake.state_writes == 1U) &&
-               stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U),
-           "give-up whose boot-state write fails: no EVENT 0x0008, restart anyway (the "
+               stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U) && stored,
+           "G: give-up whose boot-state write fails: give-up request for B left in the backup "
+           "registers, no EVENT 0x0008, restart (was: no request)");
+
+    Rig nowhere;
+    startRig(nowhere, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    nowhere.mm.poll(0U);
+    fake.fail_state_write = true;
+    fake.backup_writable = false;
+    nowhere.mm.poll(kTrialMs);
+    report((fake.restarts == 1U) && !fakeBackupGet(BACKUP_PAIR_GIVE_UP, request),
+           "G: neither the boot state nor the request can be stored: restart anyway (the "
            "bootloader's start count ends the trial, REQ-015)");
 }
 
@@ -1193,21 +1241,37 @@ void testConfirmRuns()
         uint32_t mark = fake_link.sent_bytes;
         Answer a = armedCommand(rig, kConfirm, 50U);
         bool sent = sentIs(mark, {kRecv, kDone, kRecv,
-                                  ans(AnswerKind::kRefused, AnswerCode::kImpossible)});
+                                  ans(AnswerKind::kRefused, AnswerCode::kStateNotStored)});
         bool trial = (rig.mm.mode() == HealthMode::kTrial) && stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U);
         fake.fail_state_write = false;
         Answer retry = armedCommand(rig, kConfirm, 60U);
-        report(passed && receivedThenRefused(a, AnswerCode::kImpossible) && sent && trial &&
+        report(passed && receivedThenRefused(a, AnswerCode::kStateNotStored) && sent && trial &&
                    done(retry) && stateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U),
-               "CONFIRM whose boot-state write fails: RECEIVED, REFUSED 0x06, no EVENT 0x0007, "
-               "still TRIAL; a new ARM + CONFIRM then succeeds");
+               "N: CONFIRM whose boot-state write fails: RECEIVED, REFUSED 0x11, no EVENT 0x0007, "
+               "still TRIAL; a new ARM + CONFIRM then succeeds (was: 0x06)");
     }
 }
 
-/* ---- SWITCH --------------------------------------------------------------------------------- */
+/* ---- SWITCH ---------------------------------------------------------------------------- */
 
 /**
- * @brief SWITCH: mode, arming, the boot state, the restart after DONE, a failed write.
+ * @brief Puts the build's signed image for a slot into that slot of the fake flash.
+ *
+ * @param[in]     slot  Slot::kA (firmware-A.img) or Slot::kB (firmware-B.img)
+ */
+void putSigned(Slot slot)
+{
+    if (slot == Slot::kA) {
+        std::memcpy(slotBytes(Slot::kA), g_image_a.data(), g_size_a);
+        return;
+    }
+    std::memcpy(slotBytes(Slot::kB), g_image_b.data(), g_size_b);
+}
+
+/**
+ * @brief SWITCH: mode, arming, the boot state, the restart after DONE.
+ *
+ * The other slot holds the build's signed image, so decision F(a)'s check passes.
  */
 void testSwitch()
 {
@@ -1220,6 +1284,7 @@ void testSwitch()
     {
         Rig rig;
         startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+        putSigned(Slot::kB);
         bool no_arm = refusedOnly(dangerous(rig, kSwitch, rig.seq++, 0U), AnswerCode::kNotArmed);
         sendArm(rig, kConfirm, rig.seq + 1U, 0U);
         bool wrong = refusedOnly(dangerous(rig, kSwitch, rig.seq++, 0U), AnswerCode::kNotArmed);
@@ -1233,25 +1298,384 @@ void testSwitch()
         rig.mm.poll(11U);
         report(done(a) && before && (fake.restarts == 1U) && (fake.drains_at_restart >= 1U) &&
                    (fake.sent_at_restart == fake_link.sent_bytes),
-               "OPERATE, running A, ARM + SWITCH: RECEIVED, DONE 0x00; boot state confirmed A, "
-               "trial B, 0 starts; on the next pass the link is drained and the chip restarts");
+               "OPERATE, running A, firmware-B.img in B, ARM + SWITCH: RECEIVED, DONE 0x00; boot "
+               "state confirmed A, trial B, 0 starts; on the next pass the link is drained and the "
+               "chip restarts");
     }
     {
         Rig rig;
         startRig(rig, Slot::kB, BOOT_SLOT_B, BOOT_SLOT_NONE, 0U);
+        putSigned(Slot::kA);
         report(done(armedCommand(rig, kSwitch, 0U)) && stateIs(BOOT_SLOT_B, BOOT_SLOT_A, 0U),
-               "OPERATE, running B: ARM + SWITCH writes confirmed B, trial A");
+               "OPERATE, running B, firmware-A.img in A: ARM + SWITCH writes confirmed B, trial A");
+    }
+}
+
+/**
+ * @brief Decision E: SWITCH reads the boot state again and runs only from the confirmed slot with
+ * no trial set; otherwise RECEIVED, REFUSED 0x05, nothing written.
+ *
+ * Fails on the old code: it wrote "confirmed = running, trial = other" without looking, so in the
+ * second case it would have made A the confirmed slot over B.
+ */
+void testSwitchStateCheck()
+{
+    {
+        Rig rig;
+        startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+        putSigned(Slot::kB);
+        Answer a = armedCommand(rig, kSwitch, 0U);
+        rig.mm.poll(1U);
+        report((rig.mm.mode() == HealthMode::kOperate) &&
+                   receivedThenRefused(a, AnswerCode::kMode) && (fake.state_writes == 0U) &&
+                   (fake.restarts == 0U) && stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U),
+               "E: running A in OPERATE, boot state already has trial B: SWITCH RECEIVED, "
+               "REFUSED 0x05, nothing written, no restart");
+    }
+    {
+        Rig rig;
+        startRig(rig, Slot::kA, BOOT_SLOT_B, BOOT_SLOT_NONE, 0U);
+        putSigned(Slot::kB);
+        report(receivedThenRefused(armedCommand(rig, kSwitch, 0U), AnswerCode::kMode) &&
+                   (fake.state_writes == 0U) && stateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U),
+               "E: running A while the boot state names B confirmed: REFUSED 0x05, B stays "
+               "confirmed");
     }
     {
         Rig rig;
         startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
-        fake.fail_state_write = true;
-        Answer a = armedCommand(rig, kSwitch, 0U);
-        rig.mm.poll(1U);
-        report(receivedThenRefused(a, AnswerCode::kImpossible) && (fake.restarts == 0U) &&
-                   stateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U),
-               "SWITCH whose boot-state write fails: RECEIVED, REFUSED 0x06, no restart");
+        putSigned(Slot::kB);
+        fake.state.trial = BOOT_SLOT_B;   /* set after start, before SWITCH */
+        bool late_trial = receivedThenRefused(armedCommand(rig, kSwitch, 0U), AnswerCode::kMode);
+        fake.state.trial = BOOT_SLOT_NONE;
+        fake.state_valid = false;          /* the boot state cannot be read at SWITCH */
+        bool unreadable = receivedThenRefused(armedCommand(rig, kSwitch, 1U), AnswerCode::kMode);
+        report(late_trial && unreadable && (fake.state_writes == 0U),
+               "E: a trial set after start, or a boot state that cannot be read at SWITCH: "
+               "REFUSED 0x05, nothing written");
     }
+}
+
+/**
+ * @brief Decision F(a): SWITCH checks the other slot's image with UPLOAD END's checks before it
+ * writes; a refused image answers that check's code, nothing written, no restart.
+ *
+ * Fails on the old code: SWITCH wrote the boot state without checking the image (DONE 0x00).
+ */
+void testSwitchImageCheck()
+{
+    struct Case {
+        const char *name;
+        AnswerCode code;
+    };
+    const Case cases[] = {
+        {"F(a): slot B holds no image (the fake flash's pattern): REFUSED 0x08",
+         AnswerCode::kDamaged},
+        {"F(a): firmware-B.img with byte 0x600 inverted in slot B: REFUSED 0x08",
+         AnswerCode::kDamaged},
+        {"F(a): firmware-A.img (linked for slot A) in slot B: REFUSED 0x0E",
+         AnswerCode::kOtherSlot},
+        {"F(a): firmware-B.img in slot B, a flash read error during the check: REFUSED 0x08",
+         AnswerCode::kDamaged},
+    };
+
+    for (uint32_t i = 0U; i < 4U; i++) {
+        Rig rig;
+        startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+        if (i == 1U) {
+            putSigned(Slot::kB);
+            slotBytes(Slot::kB)[kFlipOffset] =
+                static_cast<uint8_t>(slotBytes(Slot::kB)[kFlipOffset] ^ 0xFFU);
+        } else if (i == 2U) {
+            std::memcpy(slotBytes(Slot::kB), g_image_a.data(), g_size_a);
+        } else if (i == 3U) {
+            putSigned(Slot::kB);
+            fake.ecc_error = true;
+        }
+        Answer a = armedCommand(rig, kSwitch, 0U);
+        fake.ecc_error = false;
+        rig.mm.poll(1U);
+        report(receivedThenRefused(a, cases[i].code) && (fake.state_writes == 0U) &&
+                   (fake.restarts == 0U) && stateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U),
+               cases[i].name);
+    }
+}
+
+/**
+ * @brief Decision N: a SWITCH whose boot-state write fails answers 0x11 and does not restart.
+ *
+ * Fails on the old code: it answered 0x06.
+ */
+void testSwitchWriteFails()
+{
+    Rig rig;
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    putSigned(Slot::kB);
+    fake.fail_state_write = true;
+    Answer a = armedCommand(rig, kSwitch, 0U);
+    rig.mm.poll(1U);
+    report(receivedThenRefused(a, AnswerCode::kStateNotStored) && (fake.restarts == 0U) &&
+               stateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U),
+           "N: SWITCH whose boot-state write fails: RECEIVED, REFUSED 0x11, no restart (was: "
+           "0x06)");
+}
+
+/* ---- Events of the start, restart count ------------------------------------------------- */
+
+/**
+ * @brief Returns true if exactly one frame was sent: EVENT 0x0002 with the detail
+ * "refused, check".
+ *
+ * @param[in]     refused  refused-copy byte expected
+ * @param[in]     check    check-result byte expected
+ * @return true if so
+ */
+bool onlyFallbackEvent(uint8_t refused, uint8_t check)
+{
+    static SentLog log;
+    uint32_t n = decodeRange(0U, fake_link.sent_bytes, log);
+
+    return (n == 1U) && (log[0].type == FrameType::kReport) && (log[0].length == 17U) &&
+           (log[0].payload[12] == kReportKindEvent) && (log[0].payload[13] == 0x02U) &&
+           (log[0].payload[14] == 0x00U) && (log[0].payload[15] == refused) &&
+           (log[0].payload[16] == check);
+}
+
+/**
+ * @brief Starts a rig running `running` (OPERATE, no trial) with a FALLBACK record set first.
+ *
+ * @param[in,out] rig      the controller
+ * @param[in]     running  the running slot
+ * @param[in]     record   FALLBACK pair value (common/backup_layout.h)
+ */
+void startWithRecord(Rig &rig, Slot running, uint32_t record)
+{
+    prepare(running, (running == Slot::kA) ? uint8_t{BOOT_SLOT_A} : uint8_t{BOOT_SLOT_B},
+            BOOT_SLOT_NONE);
+    fakeBackupSet(BACKUP_PAIR_FALLBACK, record);
+    rig.updater.init(running);
+    rig.mm.start(running, 0U, false);
+}
+
+/**
+ * @brief The events of a start: EVENT 0x0001 after a clock fault (decision C), EVENT 0x0002 from
+ * the bootloader's fall-back record, once, then the record is cleared.
+ *
+ * Fails on the old code: neither event existed (start() had no clock-fault input; the record was
+ * not read).
+ */
+void testStartEvents()
+{
+    {
+        Rig rig;
+        prepare(Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B);
+        rig.updater.init(Slot::kB);
+        rig.mm.start(Slot::kB, 0U, true);
+        rig.mm.poll(0U);
+        rig.mm.poll(1U);
+        report(sentIs(0U, {ev(EventCode::kFaultDetected), ev(EventCode::kTrialStarted)}),
+               "C: clock fell back to 16 MHz -> EVENT 0x0001 once at start (no detail), then the "
+               "trial's 0x0006");
+    }
+    {
+        Rig rig;
+        uint32_t left = 0xFFU;
+        startWithRecord(rig, Slot::kA,
+                        (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
+                            (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+        rig.mm.poll(0U);
+        rig.mm.poll(1U);
+        report(onlyFallbackEvent(0x02U, 0x09U) && fakeBackupGet(BACKUP_PAIR_FALLBACK, left) &&
+                   (left == 0U),
+               "record: slot B refused (signature A), A started -> EVENT 0x0002 detail 02 09, "
+               "once over two passes; record cleared");
+    }
+    {
+        Rig rig;
+        uint32_t left = 0xFFU;
+        faultClear();
+        startWithRecord(rig, Slot::kA,
+                        (BACKUP_COPY_LAST_RESORT << BACKUP_FALLBACK_STARTED_SHIFT) |
+                            (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+        rig.mm.poll(0U);
+        bool other = (fake_link.sent_bytes == 0U) && fakeBackupGet(BACKUP_PAIR_FALLBACK, left) &&
+                     (left == 0U);
+        Rig same;
+        startWithRecord(same, Slot::kA,
+                        (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
+                            (BACKUP_COPY_A << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+        same.mm.poll(0U);
+        bool self = (fake_link.sent_bytes == 0U);
+        Rig check;
+        startWithRecord(check, Slot::kA, (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
+                                             (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) |
+                                             0x0BU);
+        check.mm.poll(0U);
+        report(other && self && (fake_link.sent_bytes == 0U) && (fault_calls == 0U),
+               "record naming another started copy, the running copy as refused, or check result "
+               "0x0B: dropped and cleared, no event, no fault (stored data, not memory)");
+    }
+}
+
+/**
+ * @brief Decision B: the firmware clears the bootloader's restart count of its own slot after
+ * kNormalRunMs (60 s bench value) of running, not before, and leaves another slot's count.
+ *
+ * Fails on the old code: nothing was ever cleared.
+ */
+void testRestartCountClear()
+{
+    constexpr uint32_t kStart = 1000U;
+    uint32_t value = 0U;
+    {
+        Rig rig;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fakeBackupSet(BACKUP_PAIR_RESTARTS, (BOOT_SLOT_A << BACKUP_RESTARTS_SLOT_SHIFT) | 2U);
+        rig.updater.init(Slot::kA);
+        rig.mm.start(Slot::kA, kStart, false);
+        rig.mm.poll(kStart + kNormalRunMs - 1U);
+        bool before = fakeBackupGet(BACKUP_PAIR_RESTARTS, value) &&
+                      (value == ((BOOT_SLOT_A << BACKUP_RESTARTS_SLOT_SHIFT) | 2U));
+        rig.mm.poll(kStart + kNormalRunMs);
+        bool after = fakeBackupGet(BACKUP_PAIR_RESTARTS, value) && (value == 0U);
+        report(before && after && (kNormalRunMs == 60000U),
+               "B: restart count of slot A (2) kept at 59.999 s of running, cleared at 60 s "
+               "(kNormalRunMs, bench value)");
+    }
+    {
+        Rig rig;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fakeBackupSet(BACKUP_PAIR_RESTARTS, (BOOT_SLOT_B << BACKUP_RESTARTS_SLOT_SHIFT) | 2U);
+        rig.updater.init(Slot::kA);
+        rig.mm.start(Slot::kA, kStart, false);
+        rig.mm.poll(kStart + kNormalRunMs);
+        report(fakeBackupGet(BACKUP_PAIR_RESTARTS, value) &&
+                   (value == ((BOOT_SLOT_B << BACKUP_RESTARTS_SLOT_SHIFT) | 2U)),
+               "B: a count of slot B is left as it is by firmware running from A");
+    }
+}
+
+/* ---- Fault paths of the mode manager ------------------------------------------------------ */
+
+using MmBytes = std::array<uint8_t, sizeof(ModeManager)>;
+
+/**
+ * @brief Copies the bytes of a mode manager.
+ *
+ * @param[in]     mm  the mode manager
+ * @return its bytes
+ */
+MmBytes bytesOf(const ModeManager &mm)
+{
+    MmBytes b{};
+    std::memcpy(b.data(), &mm, sizeof(ModeManager));
+    return b;
+}
+
+/**
+ * @brief Returns the one offset where two snapshots differ.
+ *
+ * Why: the mode and the running slot are private; a test finds the byte that holds one by
+ * starting the same object twice with one input changed (layout-independent), then writes an
+ * impossible value there, as a flipped bit in RAM would.
+ *
+ * @param[in]     x  first snapshot
+ * @param[in]     y  second snapshot
+ * @return the offset; sizeof(ModeManager) if they differ in no byte or in more than one
+ */
+size_t onlyDifference(const MmBytes &x, const MmBytes &y)
+{
+    size_t at = sizeof(ModeManager);
+    uint32_t count = 0U;
+
+    for (size_t i = 0U; i < sizeof(ModeManager); i++) {
+        if (x[i] != y[i]) {
+            at = i;
+            count++;
+        }
+    }
+    return (count == 1U) ? at : sizeof(ModeManager);
+}
+
+/**
+ * @brief Writes one byte into a mode manager's memory, as a flipped bit in RAM would.
+ *
+ * @param[in,out] mm      the mode manager
+ * @param[in]     offset  byte offset (onlyDifference)
+ * @param[in]     value   the byte
+ */
+void corrupt(ModeManager &mm, size_t offset, uint8_t value)
+{
+    reinterpret_cast<unsigned char *>(&mm)[offset] = value;
+}
+
+/**
+ * @brief The mode manager's fault paths: runDangerous with an identifier acceptDangerous never
+ * passes; poll with a corrupted mode, and with FALLBACK, which this build never sets; a corrupted
+ * running slot reaching stateCode and copyCode.
+ *
+ * Fails on the old code: runDangerous answered 0x06; poll treated any mode but TRIAL as OPERATE;
+ * stateCode was a cast; copyCode did not exist.
+ */
+void testModeFaults()
+{
+    {
+        Rig rig;
+        volatile AnswerCode code = AnswerCode::kSuccess;
+        bool faulted = false;
+        startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+        faultClear();
+        FAULT_CATCH(faulted, code = rig.mm.runDangerous(0x55U, 0U));
+        report(faulted && (code == AnswerCode::kSuccess) && (fault_calls == 1U) &&
+                   (fake.state_writes == 0U) && (fake_link.sent_bytes == 0U),
+               "runDangerous(0x55): fault reaction, nothing written or sent (was: 0x06)");
+    }
+    static Rig rig;   /* static: zero-filled storage, so padding bytes compare equal */
+    startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    MmBytes trial = bytesOf(rig.mm);
+    startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    size_t mode_at = onlyDifference(trial, bytesOf(rig.mm));
+    bool found = (mode_at < sizeof(ModeManager));
+    bool all = found;
+    for (uint8_t value : {uint8_t{0x07U}, static_cast<uint8_t>(HealthMode::kFallback)}) {
+        bool faulted = false;
+        startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+        if (found) {
+            corrupt(rig.mm, mode_at, value);
+        }
+        faultClear();
+        FAULT_CATCH(faulted, rig.mm.poll(10U));
+        all = all && faulted && (fault_calls == 1U) && (fake_link.sent_bytes == 0U) &&
+              (fake.restarts == 0U);
+    }
+    report(all, "poll with the mode byte set to 7, and to FALLBACK (never set by this build): "
+                "fault reaction, nothing sent (was: run as OPERATE)");
+
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    MmBytes run_a = bytesOf(rig.mm);
+    startRig(rig, Slot::kB, BOOT_SLOT_B, BOOT_SLOT_NONE, 0U);
+    size_t running_at = onlyDifference(run_a, bytesOf(rig.mm));
+    found = (running_at < sizeof(ModeManager));
+    bool state_fault = false;
+    bool copy_fault = false;
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    if (found) {
+        corrupt(rig.mm, running_at, 0x07U);
+    }
+    faultClear();
+    FAULT_CATCH(state_fault, rig.mm.poll(kNormalRunMs));
+    const char *state_where = fault_last_where;
+    startWithRecord(rig, Slot::kA,
+                    (BACKUP_COPY_A << BACKUP_FALLBACK_STARTED_SHIFT) |
+                        (BACKUP_COPY_B << BACKUP_FALLBACK_REFUSED_SHIFT) | 0x09U);
+    if (found) {
+        corrupt(rig.mm, running_at, 0x07U);
+    }
+    FAULT_CATCH(copy_fault, rig.mm.poll(1U));
+    report(found && state_fault && copy_fault && (std::strcmp(state_where, "stateCode") == 0) &&
+               (std::strcmp(fault_last_where, "copyCode") == 0) && (fake_link.sent_bytes == 0U),
+           "running slot byte set to 7: the restart-count clear faults in stateCode, the "
+           "fall-back record in copyCode; nothing sent");
 }
 
 }  // namespace
@@ -1269,6 +1693,11 @@ int main(int argc, char **argv)
         std::printf("usage: %s <src image dir>\n", argv[0]);
         return 2;
     }
+    g_size_a = load(argv[1], "firmware-A.img", g_image_a);
+    g_size_b = load(argv[1], "firmware-B.img", g_image_b);
+    if ((g_size_a == 0U) || (g_size_b == 0U)) {
+        report(false, "could not read firmware-A.img and firmware-B.img");
+    }
     testModeAtStart();
     testTrialStarted();
     testTrialTime();
@@ -1283,6 +1712,12 @@ int main(int argc, char **argv)
     testConfirmRefusals();
     testConfirmRuns();
     testSwitch();
+    testSwitchStateCheck();
+    testSwitchImageCheck();
+    testSwitchWriteFails();
+    testStartEvents();
+    testRestartCountClear();
+    testModeFaults();
     if (failures == 0U) {
         std::printf("mode manager unit tests: all %u passed\n", tests);
         return 0;

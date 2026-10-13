@@ -15,6 +15,7 @@
 
 #include "boot_slot.hpp"
 #include "boot_state.h"
+#include "fake_fault.hpp"
 #include "health_monitor.hpp"
 #include "image_format.h"
 #include "layout.h"
@@ -86,8 +87,9 @@ bool payloadIs(const HealthInputs &in, const Payload &expected)
  * @brief Runs the HEALTH and EVENT report tests and prints the totals.
  *
  * Checks four HEALTH cases (trial on B, operate on A, nothing known, trial time left with a
- * failed self-test) and the EVENT report with no detail, a one-byte detail, the largest detail
- * and a detail one byte too long.
+ * failed self-test), the EVENT report with no detail, a one-byte detail, the largest detail
+ * and a detail one byte too long, the event codes added on 13 Oct 2026, and the fault reaction
+ * for a running slot outside the enum.
  *
  * @return 0 if all tests passed, 1 if any failed
  */
@@ -175,6 +177,34 @@ int main()
     report(none && most && over,
            "EVENT without detail: 15 bytes; with 32 detail bytes: 47; 33 detail bytes: refused "
            "(length 0, nothing written)");
+
+    /* The event codes added on 13 Oct 2026, on the wire (Interfaces Sec. 5.4, event code table):
+     * 0x0002 with its 2-byte detail (refused copy 0x02, check result 0x09), 0x0001, 0x0004 and
+     * 0x0005 without detail. New codes: no old code to fail. */
+    const std::array<uint8_t, 2> fall = {0x02U, 0x09U};
+    event.fill(0xEEU);
+    length = HealthMonitor::eventReport(0U, EventCode::kFallbackPrevious, fall.data(), 2U, event);
+    bool fallback = (length == 17U) && (event[13] == 0x02U) && (event[14] == 0x00U) &&
+                    (event[15] == 0x02U) && (event[16] == 0x09U);
+    length = HealthMonitor::eventReport(0U, EventCode::kFaultDetected, nullptr, 0U, event);
+    bool fault = (length == 15U) && (event[13] == 0x01U);
+    length = HealthMonitor::eventReport(0U, EventCode::kSelfTestFailed, nullptr, 0U, event);
+    bool self_test = (length == 15U) && (event[13] == 0x04U);
+    length = HealthMonitor::eventReport(0U, EventCode::kMemoryChanged, nullptr, 0U, event);
+    bool memory = (length == 15U) && (event[13] == 0x05U) && (event[14] == 0x00U);
+    report(fallback && fault && self_test && memory,
+           "EVENT 0x0002 with detail 02 09 (17 bytes); 0x0001, 0x0004, 0x0005 without detail");
+
+    /* A running slot outside the Slot enum: slotCode's fault reaction (firmware/fault.hpp).
+     * Before, it was reported as 0x00 like a slot not known; fails on that code. */
+    Payload out{};
+    bool faulted = false;
+    in.running_slot = static_cast<Slot>(7U);
+    faultClear();
+    FAULT_CATCH(faulted, HealthMonitor::report(in, out));
+    report(faulted && (fault_calls == 1U),
+           "HEALTH with a running slot outside the enum (7): fault reaction in slotCode (was: "
+           "slot 0x00)");
 
     if (failures == 0U) {
         std::printf("health report unit tests: all %u passed\n", tests);

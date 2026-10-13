@@ -10,10 +10,12 @@
 #                     (unit/test_health.cpp), update receiver with a fake flash and the build's
 #                     signed images (unit/test_update.cpp), arm state (unit/test_arm.cpp), mode
 #                     manager, trial tests, SWITCH and CONFIRM (unit/test_mode.cpp), the
+#                     firmware's clock, UART and backup-register code on RAM registers
+#                     (unit/test_registers.cpp), the
 #                     bootloader's slot handling with the chip replaced (unit/test_boot.c), the
 #                     order of its steps: watchdog, start count, park loop (unit/test_flow.c),
-#                     its watchdog module (unit/test_watchdog.c) and the flash address barrier
-#                     (unit/test_flash.c)
+#                     its watchdog module (unit/test_watchdog.c), its backup-register module
+#                     (unit/test_backup.c) and the flash address barrier (unit/test_flash.c)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
@@ -86,8 +88,11 @@ check: images unit
 # std::array; libc++'s debug hardening checks those, and stops the run with the failed bound
 # printed.
 # -Wswitch-enum on every host build, as on the board (common/build.mk): a switch over an enum
-# must name every enumerator, even with a default.
-HOST_CC    = cc -std=c11 -O1 -g -Wall -Wextra -Wswitch-enum -Werror -fsanitize=undefined -fno-sanitize-recover=undefined
+# must name every enumerator, even with a default. The C files get the board's strict C set too
+# (-Wpedantic -Wconversion -Wsign-conversion -Wshadow; owner, 13 Oct 2026, code rule D1), so a
+# conversion the board build refuses is refused here as well.
+HOST_CC    = cc -std=c11 -O1 -g -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow \
+             -Wswitch-enum -Werror -fsanitize=undefined -fno-sanitize-recover=undefined
 HOST_CXX   = clang++ -std=c++17 -O1 -g -fno-exceptions -fno-rtti \
              -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow -Wold-style-cast \
              -Wcast-align -Wnull-dereference -Wformat=2 -Wswitch-enum -Werror \
@@ -107,15 +112,20 @@ CXX_INCLUDES = -Iunit -I$(FW_SRC) -I$(LINK_SRC) -I$(UPD_SRC) -I$(HEALTH_SRC) -I$
 FW_HEADERS = $(wildcard $(FW_SRC)/*.hpp $(LINK_SRC)/*.hpp $(UPD_SRC)/*.hpp $(HEALTH_SRC)/*.hpp \
                         $(MODE_SRC)/*.hpp $(CMD_SRC)/*.hpp $(COMMON)/*.h unit/*.hpp)
 FRAME_SRCS  = unit/test_frame.cpp $(LINK_SRC)/frame.cpp
-UPDATE_SRCS = unit/test_update.cpp unit/fake_port.cpp $(UPD_SRC)/update_receiver.cpp
-HEALTH_SRCS = unit/test_health.cpp $(HEALTH_SRC)/health_monitor.cpp
-ARM_SRCS    = unit/test_arm.cpp $(CMD_SRC)/arm_state.cpp
+UPDATE_SRCS = unit/test_update.cpp unit/fake_port.cpp unit/fake_fault.cpp \
+              $(UPD_SRC)/update_receiver.cpp
+HEALTH_SRCS = unit/test_health.cpp unit/fake_fault.cpp $(HEALTH_SRC)/health_monitor.cpp
+ARM_SRCS    = unit/test_arm.cpp unit/fake_fault.cpp $(CMD_SRC)/arm_state.cpp
 # The mode manager with everything it is wired to in main.cpp; the chip and the UART replaced
 # by fakes (fake_port.cpp, fake_mode_port.cpp, fake_uart_link.cpp).
-MODE_SRCS   = unit/test_mode.cpp unit/fake_port.cpp unit/fake_mode_port.cpp \
+MODE_SRCS   = unit/test_mode.cpp unit/fake_port.cpp unit/fake_mode_port.cpp unit/fake_fault.cpp \
               unit/fake_uart_link.cpp $(MODE_SRC)/mode_manager.cpp $(MODE_SRC)/test_image.cpp \
               $(CMD_SRC)/arm_state.cpp $(LINK_SRC)/frame_sender.cpp $(LINK_SRC)/frame.cpp \
               $(HEALTH_SRC)/health_monitor.cpp $(UPD_SRC)/update_receiver.cpp
+# The firmware's register-level files (clock, UART, backup registers) against RAM registers and a
+# model of the PLL and the clock switch (unit/board_stubs).
+REG_SRCS    = unit/test_registers.cpp unit/fake_fault.cpp $(FW_SRC)/core_clock.cpp \
+              $(LINK_SRC)/uart_link.cpp $(LINK_SRC)/frame.cpp $(MODE_SRC)/mode_port.cpp
 COMMON_OBJS = build/host/crc32.o build/host/image_check.o
 # The bootloader's own main.c with the chip replaced (unit/boot_stubs), and boot_state.c as built.
 BOOT_SRCS   = unit/test_boot.c unit/boot_stubs/boot_stubs.c $(COMMON)/boot_state.c
@@ -127,6 +137,8 @@ FLOW_SRCS   = unit/test_flow.c unit/boot_stubs/boot_stubs.c
 # computer's 64-bit pointers warn about: -Wno-int-to-pointer-cast for that one file (that code is
 # never run here: only the refusals and a zero-length program are).
 WDOG_SRCS   = unit/test_watchdog.c $(SRC)/bootloader/watchdog.c
+# backup.c as built, against RAM stand-ins of RCC, PWR and TAMP that keep the real offsets.
+BACKUP_SRCS = unit/test_backup.c $(SRC)/bootloader/backup.c
 FLASH_SRCS  = unit/test_flash.c $(COMMON)/flash.c
 MONO_OBJS   = build/host/monocypher.o build/host/monocypher-ed25519.o
 
@@ -161,6 +173,11 @@ build/host/test_watchdog: $(WDOG_SRCS) $(wildcard $(SRC)/bootloader/*.h unit/wat
 	mkdir -p build/host
 	$(HOST_CC) -Iunit/watchdog_stubs -I$(SRC)/bootloader -I$(COMMON) $(WDOG_SRCS) -o $@
 
+build/host/test_backup: $(BACKUP_SRCS) \
+                        $(wildcard $(SRC)/bootloader/*.h $(COMMON)/*.h unit/backup_stubs/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Iunit/backup_stubs -I$(SRC)/bootloader -I$(COMMON) $(BACKUP_SRCS) -o $@
+
 build/host/test_flash: $(FLASH_SRCS) $(wildcard $(COMMON)/*.h unit/flash_stubs/*.h)
 	mkdir -p build/host
 	$(HOST_CC) -Wno-int-to-pointer-cast -Iunit/flash_stubs -I$(COMMON) $(FLASH_SRCS) -o $@
@@ -168,6 +185,10 @@ build/host/test_flash: $(FLASH_SRCS) $(wildcard $(COMMON)/*.h unit/flash_stubs/*
 build/host/test_arm: $(ARM_SRCS) $(FW_HEADERS)
 	mkdir -p build/host
 	$(HOST_CXX) $(CXX_INCLUDES) $(ARM_SRCS) -o $@
+
+build/host/test_registers: $(REG_SRCS) build/host/crc32.o $(FW_HEADERS) \
+                           $(wildcard unit/board_stubs/*.h)
+	$(HOST_CXX) -Iunit/board_stubs $(CXX_INCLUDES) $(REG_SRCS) build/host/crc32.o -o $@
 
 build/host/test_mode: $(MODE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 	$(HOST_CXX) $(CXX_INCLUDES) $(MODE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
@@ -178,15 +199,17 @@ src-images:
 
 unit: build/host/test_frame build/host/test_health build/host/test_update build/host/test_arm \
       build/host/test_mode build/host/test_boot build/host/test_flow build/host/test_watchdog \
-      build/host/test_flash images src-images
+      build/host/test_backup build/host/test_flash build/host/test_registers images src-images
 	build/host/test_frame
 	build/host/test_health
 	build/host/test_update $(SRC)/build/images $(OUT)
 	build/host/test_arm
 	build/host/test_mode $(SRC)/build/images
+	build/host/test_registers
 	build/host/test_boot
 	build/host/test_flow
 	build/host/test_watchdog
+	build/host/test_backup
 	build/host/test_flash
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.

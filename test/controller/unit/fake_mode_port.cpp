@@ -5,9 +5,12 @@
  * writeBootState refuses what the real boot_state_write refuses (common/boot_state.c,
  * fields_valid: confirmed A or B; trial none or the slot not confirmed), and fails on request.
  * restart() records when it was called and returns, so a test can look at what happened before
- * it; on the board it does not return, so a test does not poll again after a restart.
+ * it; on the board it does not return, so a test does not poll again after a restart. The backup
+ * registers are fake.backup, with the pair rule of mode_port.cpp: a pair counts only when its
+ * second word is the complement of the first.
  */
 #include <cstdio>
+#include <cstdlib>
 
 #include "fake_port.hpp"
 #include "fake_uart_link.hpp"
@@ -102,6 +105,138 @@ bool ModePort::eccErrorSeen()
 void ModePort::restart()
 {
     fake.restarts++;
+    fake.drains_at_restart = fake_link.drains;
+    fake.sent_at_restart = fake_link.sent_bytes;
+}
+
+/**
+ * @brief Stores a value and its complement in a backup pair; stops the test for a pair outside
+ * the map.
+ *
+ * @param[in]     pair   pair number, below BACKUP_PAIRS
+ * @param[in]     value  value to store
+ */
+void fakeBackupSet(uint32_t pair, uint32_t value)
+{
+    if (pair >= BACKUP_PAIRS) {
+        std::printf("FAIL  backup pair %u outside the map\n", pair);
+        std::exit(1);
+    }
+    fake.backup[2U * pair] = value;
+    fake.backup[(2U * pair) + 1U] = ~value;
+}
+
+/**
+ * @brief Reads a backup pair with the complement rule; stops the test for a pair outside the map.
+ *
+ * @param[in]     pair   pair number, below BACKUP_PAIRS
+ * @param[out]    value  the stored value; 0 if the pair is broken
+ * @return true if the two words are complements
+ */
+bool fakeBackupGet(uint32_t pair, uint32_t &value)
+{
+    if (pair >= BACKUP_PAIRS) {
+        std::printf("FAIL  backup pair %u outside the map\n", pair);
+        std::exit(1);
+    }
+    if (fake.backup[2U * pair] != ~fake.backup[(2U * pair) + 1U]) {
+        value = 0U;
+        return false;
+    }
+    value = fake.backup[2U * pair];
+    return true;
+}
+
+namespace {
+
+/**
+ * @brief Writes a backup pair unless the test made the backup registers unwritable.
+ *
+ * @param[in]     pair   pair number
+ * @param[in]     value  value to store
+ * @return fake.backup_writable
+ */
+bool writePair(uint32_t pair, uint32_t value)
+{
+    if (!fake.backup_writable) {
+        return false;
+    }
+    fakeBackupSet(pair, value);
+    return true;
+}
+
+}  // namespace
+
+/**
+ * @brief Host stand-in for ModePort::leaveGiveUpRequest: the GIVE_UP pair.
+ *
+ * @param[in]     slot_code  the trial slot given up
+ * @return fake.backup_writable
+ */
+bool ModePort::leaveGiveUpRequest(uint8_t slot_code)
+{
+    return writePair(BACKUP_PAIR_GIVE_UP, slot_code);
+}
+
+/**
+ * @brief Host stand-in for ModePort::readFallbackRecord: the FALLBACK pair, split into its bytes.
+ *
+ * @param[out]    record  refused copy, check result, started copy
+ * @return true if the pair matches and is not 0
+ */
+bool ModePort::readFallbackRecord(FallbackRecord &record)
+{
+    uint32_t value = 0U;
+    bool stored = fakeBackupGet(BACKUP_PAIR_FALLBACK, value) && (value != 0U);
+
+    record.check = static_cast<uint8_t>(value & BACKUP_BYTE_MASK);
+    record.refused = static_cast<uint8_t>((value >> BACKUP_FALLBACK_REFUSED_SHIFT) &
+                                          BACKUP_BYTE_MASK);
+    record.started = static_cast<uint8_t>((value >> BACKUP_FALLBACK_STARTED_SHIFT) &
+                                          BACKUP_BYTE_MASK);
+    return stored;
+}
+
+/**
+ * @brief Host stand-in for ModePort::clearFallbackRecord.
+ *
+ * @return fake.backup_writable
+ */
+bool ModePort::clearFallbackRecord()
+{
+    return writePair(BACKUP_PAIR_FALLBACK, 0U);
+}
+
+/**
+ * @brief Host stand-in for ModePort::clearRestartCount: clears the RESTARTS pair if it belongs to
+ * slot_code, as mode_port.cpp does.
+ *
+ * @param[in]     slot_code  the running slot's code
+ * @return true if nothing to clear or cleared; false if the write failed
+ */
+bool ModePort::clearRestartCount(uint8_t slot_code)
+{
+    uint32_t value = 0U;
+
+    if (!fakeBackupGet(BACKUP_PAIR_RESTARTS, value) ||
+        (((value >> BACKUP_RESTARTS_SLOT_SHIFT) & BACKUP_BYTE_MASK) != slot_code)) {
+        return true;
+    }
+    return writePair(BACKUP_PAIR_RESTARTS, 0U);
+}
+
+/**
+ * @brief Host stand-in for ModePort::restartCounted: stores the fault mark, records the restart,
+ * the drains and the bytes sent before it, and returns.
+ *
+ * @param[in]     reason  BACKUP_FAULT_...
+ */
+void ModePort::restartCounted(uint8_t reason)
+{
+    /* As on the board: the restart follows whether or not the mark was stored. */
+    (void)writePair(BACKUP_PAIR_FAULT, reason);
+    fake.counted_restarts++;
+    fake.fault_reason = reason;
     fake.drains_at_restart = fake_link.drains;
     fake.sent_at_restart = fake_link.sent_bytes;
 }

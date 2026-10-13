@@ -6,12 +6,19 @@
  * anything else is refused 0x06. Not taken over: the receiver's rule that every CHUNK but the
  * last is a whole number of 8-byte flash words. It exists because a written flash word cannot
  * be written again [RM0440 Rev 9, Sec. 5.3.7, p. 196]; the test image is in RAM.
+ *
+ * The switches over UploadId have no default label. No default: the compiler checks every case
+ * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which calls the
+ * fault reaction (firmware/fault.hpp). A deliberate deviation from MISRA C:2012 Rule 16.4, whose
+ * purpose, handling a value outside the cases, the fault reaction meets. cmd.id is never a byte
+ * from the link here: UpdateReceiver::parse set it only after sizeFits accepted the byte.
  */
 #include "test_image.hpp"
 
 #include <cstring>
 
 #include "crc32.h"
+#include "fault.hpp"
 #include "image_check.h"
 
 /**
@@ -34,11 +41,13 @@ bool TestImage::isTestImage(const UpdateCommand &cmd)
  * the data stays inside the length. END: a transfer is open and every byte has arrived.
  * CANCEL: a transfer was begun (open or closed by END).
  *
- * All four UploadId values have their own case (-Wswitch-enum, common/build.mk). The default is
- * for a value outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): refused 0x06.
+ * All four UploadId values have their own case (-Wswitch-enum, common/build.mk). A value outside
+ * the enum is a corrupted variable: the fault reaction (see the file comment). Before, a default
+ * refused it 0x06.
  *
  * @param[in]     cmd  the command, read by UpdateReceiver::parse
  * @return kUpdateOk if accepted; AnswerCode::kImpossible (0x06) otherwise
+ * @note Does not return for an identifier outside UploadId.
  */
 AnswerCode TestImage::accept(const UpdateCommand &cmd) const
 {
@@ -62,9 +71,8 @@ AnswerCode TestImage::accept(const UpdateCommand &cmd) const
                    : AnswerCode::kImpossible;
     case UploadId::kCancel:
         return (phase_ != UpdatePhase::kIdle) ? kUpdateOk : AnswerCode::kImpossible;
-    default:
-        return AnswerCode::kImpossible;   /* outside the enum only: refuse */
     }
+    faultImpossibleValue("TestImage::accept");   /* only a corrupted value reaches here */
 }
 
 /**
@@ -99,12 +107,14 @@ AnswerCode TestImage::runEnd()
  * END's result as it is: only END sets it. The CHUNK bound is checked again here, against the
  * buffer itself, so no command can write past it even if a caller skipped accept().
  *
- * All four UploadId values have their own case (-Wswitch-enum). The default is for a value
- * outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): nothing runs, 0x06.
+ * All four UploadId values have their own case (-Wswitch-enum). A value outside the enum is a
+ * corrupted variable: the fault reaction (see the file comment), and nothing runs. Before, a
+ * default answered 0x06.
  *
  * @param[in]     cmd  the command
  * @return kUpdateOk; at END, AnswerCode::kDamaged (0x08) on a wrong check value; 0x06 for a
  *         command accept() would have refused
+ * @note Does not return for an identifier outside UploadId.
  */
 AnswerCode TestImage::run(const UpdateCommand &cmd)
 {
@@ -127,7 +137,6 @@ AnswerCode TestImage::run(const UpdateCommand &cmd)
         phase_ = UpdatePhase::kIdle;
         received_ = 0U;
         return kUpdateOk;
-    default:
-        return AnswerCode::kImpossible;   /* outside the enum only: accept() takes these four */
     }
+    faultImpossibleValue("TestImage::run");   /* only a corrupted value reaches here */
 }

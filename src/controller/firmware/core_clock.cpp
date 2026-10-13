@@ -11,9 +11,15 @@
  * if the bootloader's switch back to HSI16 does not finish, it returns early and the firmware
  * starts on the PLL (bootloader/clock.c, clock_back_to_reset). start() copes with both: it
  * writes every clock setting it needs, in the same order, whichever clock it finds.
+ *
+ * Decision C (owner, 13 Oct 2026): if the PLL does not start, the firmware runs on HSI16 at
+ * 16 MHz instead of spinning until the watchdog restarts it; start() returns the clock in use, and
+ * the UART divider and the SysTick reload are computed from it (main.cpp). Before, start() left
+ * the clock as it was at the failed step and main() stopped reloading the watchdog.
  */
 #include "core_clock.hpp"
 
+#include "fault.hpp"
 #include "stm32g4xx.h"
 
 /* C++: an unnamed namespace instead of `static` on each name: everything inside is private to
@@ -121,6 +127,40 @@ void waitCycles(uint32_t cycles)
 }
 
 /**
+ * @brief Select the system clock source and wait until the chip shows it in use.
+ *
+ * @param[in] sw   value for RCC_CFGR SW
+ * @param[in] sws  value RCC_CFGR SWS must show
+ * @return true if SWS showed the source in time; false if the wait timed out
+ */
+bool selectSystemClock(uint32_t sw, uint32_t sws)
+{
+    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW_Msk) | sw;
+    return waitBits(RCC->CFGR, RCC_CFGR_SWS_Msk, sws);
+}
+
+/**
+ * @brief After a step towards 170 MHz failed: HSI16 as the system clock, PLL off, AHB / 1
+ * (decision C).
+ *
+ * The same fall-back as the bootloader's (bootloader/clock.c, stay_on_hsi16), copied, not shared
+ * (REQ-119). The 4 wait states and boost mode may stay: both are allowed at 16 MHz [RM0440 Rev 9,
+ * Table 29, p. 190; Sec. 6.1.5, p. 233]. If even the switch to HSI16 does not finish, the source
+ * is not known and nothing is changed further: 0, and main() treats the clock as not usable.
+ *
+ * @return kHsi16Hz if the core now runs from HSI16, 0 if the switch did not finish
+ */
+uint32_t stayOnHsi16()
+{
+    if (!selectSystemClock(RCC_CFGR_SW_HSI, RCC_CFGR_SWS_HSI)) {
+        return 0U;
+    }
+    RCC->CR &= ~RCC_CR_PLLON;
+    RCC->CFGR &= ~RCC_CFGR_HPRE_Msk;   /* AHB / 1: the core at the full 16 MHz */
+    return kHsi16Hz;
+}
+
+/**
  * @brief Set the flash wait states and wait until the new value is in use.
  *
  * @param[in] latency  the FLASH_ACR_LATENCY_xWS value to write
@@ -150,25 +190,26 @@ uint32_t CoreClock::cyclesNow()
  *
  * Steps: AHB / 2, boost mode, 4 flash wait states with prefetch, PLL on and selected as system
  * clock, 1 us wait, AHB / 1. Every wait gives up after kWaitCycles cycles or kWaitPasses passes.
- * On failure the function stops at the failed step and leaves the clock as it is.
+ * When a step does not finish, the core goes back to HSI16 (stayOnHsi16) and the firmware runs
+ * at 16 MHz (decision C); main.cpp reports it with EVENT 0x0001 (mode-manager/mode_manager.cpp).
  *
- * A cycle counter that does not count is handled as a failure: every wait here and in the
- * link driver depends on it, so the clock is reported not usable and nothing else is touched
- * (main.cpp then stops reloading the watchdog, which restarts the chip, REQ-022). The firmware
- * has no log line before its link is up.
+ * A cycle counter that does not count is handled as no usable clock: every wait here and in the
+ * link driver depends on it, so 0 is returned and nothing else is touched (main.cpp then stops
+ * reloading the watchdog, which restarts the chip, REQ-022; the bootloader counts that restart,
+ * decision B). The firmware has no log line before its link is up.
  *
- * @return true if the core clock now runs at 170 MHz; false if a wait timed out or the cycle
- *         counter does not count
+ * @return kCoreClockHz if the core now runs at 170 MHz; kHsi16Hz if it went back to HSI16; 0 if
+ *         the cycle counter does not count or the switch back to HSI16 did not finish
  */
-bool CoreClock::start()
+uint32_t CoreClock::start()
 {
     if (!cyclesStart()) {
-        return false;
+        return 0U;
     }
 
     /* PWR registers ignore writes until their bus clock is on. */
     RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
-    (void)RCC->APB1ENR1;
+    (void)RCC->APB1ENR1;   /* read back, value not needed: the clock runs before PWR is written */
 
     /* Range 1 normal -> boost mode, steps 1-5 [RM0440 Rev 9, Sec. 6.1.5, p. 233];
      * above 150 MHz boost mode is needed [RM0440 Rev 9, Table 38, p. 232]. */
@@ -178,7 +219,7 @@ bool CoreClock::start()
      * prefetch on, to hide most of those wait states [RM0440 Rev 9, Sec. 5.3.4, p. 192]. */
     FLASH->ACR |= FLASH_ACR_PRFTEN;
     if (!setFlashLatency(FLASH_ACR_LATENCY_4WS)) {
-        return false;
+        return stayOnHsi16();
     }
 
     /* 4: PLL on, then make it the system clock. Fields can change only while it is off. */
@@ -186,30 +227,37 @@ bool CoreClock::start()
                    (kPllN << RCC_PLLCFGR_PLLN_Pos) | (kPllrDiv2Field << RCC_PLLCFGR_PLLR_Pos) |
                    RCC_PLLCFGR_PLLREN;
     RCC->CR |= RCC_CR_PLLON;
-    if (!waitBits(RCC->CR, RCC_CR_PLLRDY, RCC_CR_PLLRDY)) {
-        return false;
-    }
-    RCC->CFGR = (RCC->CFGR & ~RCC_CFGR_SW_Msk) | RCC_CFGR_SW_PLL;
-    if (!waitBits(RCC->CFGR, RCC_CFGR_SWS_Msk, RCC_CFGR_SWS_PLL)) {
-        return false;
+    if (!waitBits(RCC->CR, RCC_CR_PLLRDY, RCC_CR_PLLRDY) ||
+        !selectSystemClock(RCC_CFGR_SW_PLL, RCC_CFGR_SWS_PLL)) {
+        return stayOnHsi16();
     }
 
     waitCycles(kSettleCycles);                                          /* 5: wait 1 us, */
     RCC->CFGR &= ~RCC_CFGR_HPRE_Msk;                                    /*    then AHB / 1 */
-    return true;
+    return kCoreClockHz;
 }
 
 /**
- * @brief Start SysTick as a 1 ms interrupt from the processor clock.
+ * @brief Start SysTick as a 1 ms interrupt from the processor clock in use.
  *
  * SysTick counts processor clocks down from RELOAD to 0 [Arm DUI 0553A, Sec. 4.4.1,
- * p. 4-33 to 4-34]; RELOAD = 169 999 fits its 24 bits (SysTick_LOAD_RELOAD_Msk, core_cm4.h).
- * No interrupt priority is set: this handler and USART2's are a few instructions each, so
- * neither delays the other by more than a fraction of one byte time (86.8 us).
+ * p. 4-33 to 4-34], so RELOAD = core_hz / 1000 - 1: 169 999 at 170 MHz, 15 999 at 16 MHz after
+ * a clock fault (decision C: computed from the clock actually in use, so a millisecond stays a
+ * millisecond); both fit its 24 bits (SysTick_LOAD_RELOAD_Msk, core_cm4.h). core_hz can only be
+ * one of the two clocks start() returns; any other value is a corrupted variable: the fault
+ * reaction (firmware/fault.hpp). No interrupt priority is set: this handler and USART2's are a
+ * few instructions each, so neither delays the other by more than a fraction of one byte time
+ * (86.8 us).
+ *
+ * @param[in] core_hz  the core clock in use, kCoreClockHz or kHsi16Hz (CoreClock::start)
+ * @note Does not return for any other core_hz.
  */
-void CoreClock::startTick()
+void CoreClock::startTick(uint32_t core_hz)
 {
-    SysTick->LOAD = kCyclesPerMs - 1U;
+    if ((core_hz != kCoreClockHz) && (core_hz != kHsi16Hz)) {
+        faultImpossibleValue("CoreClock::startTick");
+    }
+    SysTick->LOAD = (core_hz / kMsPerSecond) - 1U;
     SysTick->VAL = 0U;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
 }

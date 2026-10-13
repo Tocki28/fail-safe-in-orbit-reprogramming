@@ -18,12 +18,21 @@
  *   - kTrialMs pass without a CONFIRM (REQ-013): the trial is given up;
  *   - given up: the boot state is written with trial = none and failed starts = 0, EVENT 0x0008
  *     "firmware given up", the UART is drained (bounded), and the chip restarts; the bootloader
- *     then starts the confirmed slot.
+ *     then starts the confirmed slot. If the write fails, a give-up request is left in the backup
+ *     registers instead, and the bootloader applies it (decision G).
+ *
+ * At every start, once: EVENT 0x0001 if the clock fell back to 16 MHz (decision C), and EVENT
+ * 0x0002 if the bootloader left a fall-back record for this start (Interfaces Sec. 5.4). After
+ * kNormalRunMs of running, the bootloader's restart count of this slot is cleared (decision B).
+ * In OPERATE a failed self-test sends EVENT 0x0004 and restarts the chip, counted by the
+ * bootloader (decision L).
  *
  * SWITCH (0x20) and CONFIRM (0x26): checks on arrival in this order, each refusal answered
- * REFUSED only: mode (SWITCH in OPERATE, CONFIRM in TRIAL and before kTrialMs have passed; else 0x05), arming (0x01, 0x02;
- * command-checker/arm_state.hpp), and for CONFIRM the trial tests (0x0F). Then RECEIVED, the
- * boot-state write, and DONE.
+ * REFUSED only: mode (SWITCH in OPERATE, CONFIRM in TRIAL and before kTrialMs have passed; else
+ * 0x05), arming (0x01, 0x02; command-checker/arm_state.hpp), and for CONFIRM the trial tests
+ * (0x0F). Then RECEIVED, the work, and DONE or REFUSED. SWITCH's work: the boot state read again
+ * (decision E, 0x05), the other slot's image checked (decision F(a), the UPLOAD END codes), the
+ * boot-state write (0x11 if it fails, decision N). CONFIRM's work: the boot-state write (0x11).
  *
  * Every decision is here; main.cpp only routes frames and sends the answers. The chip is reached
  * through mode_port.hpp and the link through FrameSender, so the same file runs in the host unit
@@ -39,6 +48,7 @@
 #include "frame.hpp"
 #include "frame_sender.hpp"
 #include "health_monitor.hpp"
+#include "mode_port.hpp"
 #include "test_image.hpp"
 #include "update_receiver.hpp"
 
@@ -46,14 +56,18 @@
  * is TBD-trial in the SRS (REQ-011). */
 constexpr uint32_t kTrialMs = 120000U;
 
+/* How long the firmware must run before it clears the bootloader's count of restarts of its slot
+ * (decision B, owner, 13 Oct 2026): 60 s from the firmware's start. Bench value, TBD for flight. */
+constexpr uint32_t kNormalRunMs = 60000U;
+
 /* The dangerous commands of this step, each 1 byte with no fields (Interfaces Sec. 5.1).
  * RETURN TO PREVIOUS (0x21) and START FAILED (0x22) are not in this step. */
 constexpr uint8_t kCmdSwitch = 0x20U;
 constexpr uint8_t kCmdConfirm = 0x26U;
 constexpr uint16_t kDangerousBytes = 1U;
 
-/* The detail byte of EVENT 0x000B "trial tests failed": which test (Interfaces Sec. 5.4 gives
- * "detail: which test" and no codes). Proposal (TBR), awaiting the owner's acceptance. */
+/* The detail byte of EVENT 0x000B "trial tests failed": which test (Interfaces Sec. 5.4: 0x01
+ * self-test, 0x02 data link, 0x03 test image). Accepted by the owner, 13 Oct 2026 (decision P). */
 enum class TrialTest : uint8_t {
     kNone = 0x00U,        /* no test failed (never sent) */
     kSelfTest = 0x01U,
@@ -75,7 +89,7 @@ public:
     }
 
     /** @brief Decide the mode from the boot state and run the self-test; once, at start. */
-    void start(Slot running, uint32_t now_ms);
+    void start(Slot running, uint32_t now_ms, bool clock_fault);
 
     /** @brief The work of one main-loop pass: events, failed tests, time-out, restart. */
     void poll(uint32_t now_ms);
@@ -122,6 +136,11 @@ public:
 
 private:
     void sendEvent(EventCode code, const uint8_t *detail, uint32_t detail_bytes, uint32_t now_ms);
+    void sendStartEvents(uint32_t now_ms);
+    [[nodiscard]] bool fallbackForThisStart(const FallbackRecord &record) const;
+    void clearRestartCountWhenDue(uint32_t now_ms);
+    void pollOperate(uint32_t now_ms);
+    void pollTrial(uint32_t now_ms);
     void giveUp(uint32_t now_ms);
     void restartWhenSent();
     AnswerCode runSwitch();
@@ -135,6 +154,9 @@ private:
     bool trial_started_sent_ = false;   /* EVENT 0x0006 sent */
     bool tests_passed_sent_ = false;    /* EVENT 0x000A sent */
     bool restart_due_ = false;          /* SWITCH done: restart on the next pass */
+    bool clock_fault_ = false;          /* the clock fell back to 16 MHz (decision C) */
+    bool start_events_sent_ = false;    /* EVENT 0x0001 / 0x0002 of this start handled */
+    bool restart_count_cleared_ = false;   /* decision B's count cleared after kNormalRunMs */
     uint32_t trial_start_ms_ = 0U;      /* the firmware's start, milliseconds since start */
 };
 

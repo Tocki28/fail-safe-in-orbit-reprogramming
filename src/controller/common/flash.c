@@ -224,6 +224,23 @@ bool flash_ecc_error_seen(void)
 }
 
 /**
+ * @brief Returns a pointer to the flash byte at a chip address.
+ *
+ * The flash is read in place at its own address [RM0440 Rev 9, Table 28, p. 189], so this is the
+ * address made a pointer. Why a function and not a cast at each read: the bootloader's image
+ * checks and boot_state.c's reads all go through it, so the host tests replace this one function
+ * with a RAM copy of the flash (test/controller/unit/boot_stubs) and run the real readers
+ * (decision D's tests read boot-state records through it).
+ *
+ * @param[in]     address  chip address of the byte
+ * @return pointer to that byte
+ */
+const uint8_t *flash_at(uint32_t address)
+{
+    return (const uint8_t *)(uintptr_t)address;
+}
+
+/**
  * @brief Handles the NMI. If the ECC detection flag is set, clears it, records an error and
  * returns.
  *
@@ -246,6 +263,6 @@ void NMI_Handler(void)
      * its first action (bootloader/main.c) and the firmware runs too (firmware/watchdog.hpp),
      * so the chip is restarted when the watchdog's time-out ends [RM0440 Rev 9, Sec. 35.3.1,
      * p. 1557]. The bootloader's time-out is about 32 s (bootloader/watchdog.c). */
-    for (;;) {
+    for (;;) {   /* endless: a stop for an NMI cause not used here; the watchdog ends it */
     }
 }

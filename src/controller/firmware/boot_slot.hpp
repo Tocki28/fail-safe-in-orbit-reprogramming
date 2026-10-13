@@ -6,6 +6,10 @@
  * compiler refuses `slot == 1`. common/ stays C, shared with the bootloader, so the stored
  * boot state still holds uint8_t codes; toSlot() converts where the firmware reads one.
  *
+ * Switches over a Slot have no default label: every enumerator has its own case that leaves the
+ * function, and the line after the switch, reached only by a corrupted value, calls the fault
+ * reaction (firmware/fault.hpp, which states the MISRA C:2012 Rule 16.4 deviation).
+ *
  * No hardware here: compiles for the board and for the unit tests (test/controller/unit).
  */
 #ifndef BOOT_SLOT_HPP
@@ -14,6 +18,7 @@
 #include <cstdint>
 
 #include "boot_state.h"
+#include "fault.hpp"
 
 /* Enumerator names are kName, not NAME: the vendor headers own the UPPER_CASE names as macros
  * (FLASH, CRC and RCC are macros in stm32g4xx.h), and a macro would replace an enumerator of
@@ -25,35 +30,46 @@ enum class Slot : uint8_t {
 };
 
 /**
- * @brief Returns a stored slot code as a Slot.
+ * @brief Returns a stored slot code as a Slot; any other code is the fault reaction.
  *
- * The underlying type is fixed (uint8_t), so every byte converts: a damaged code stays a value
- * that equals none of the three enumerators, as the byte did in the C version. Switches over a
- * Slot meet such a value in their default case (otherSlot below).
+ * Every caller passes a code from a boot state that passed its checks (common/boot_state.c,
+ * fields_valid: confirmed A or B, trial none or the other slot), and reads it only after the read
+ * reported a valid state. So a code that is none of the three is a corrupted value in memory
+ * (owner's decision, 13 Oct 2026). Before, it converted any byte, and a damaged code became a
+ * Slot value outside the enum that the callers then compared as data.
  *
  * @param[in]     code  slot code as stored in the boot state (common/boot_state.h)
- * @return the Slot with that code; a value outside the three enumerators for any other byte
+ * @return the Slot with that code
+ * @note Does not return for a code that is not BOOT_SLOT_NONE, BOOT_SLOT_A or BOOT_SLOT_B.
  */
-constexpr Slot toSlot(uint8_t code)
+inline Slot toSlot(uint8_t code)
 {
-    return static_cast<Slot>(code);
+    switch (code) {
+    case BOOT_SLOT_NONE:
+        return Slot::kNone;
+    case BOOT_SLOT_A:
+        return Slot::kA;
+    case BOOT_SLOT_B:
+        return Slot::kB;
+    }
+    faultImpossibleValue("toSlot");   /* only a corrupted value reaches here */
 }
 
 /**
- * @brief Returns the other slot of the pair: B for A, A for B, Slot::kNone for any other value.
+ * @brief Returns the other slot of the pair: B for A, A for B; Slot::kNone and any other value
+ * are the fault reaction.
  *
- * Before (mode-manager/mode_manager.cpp, a private helper), every value that was not A answered
- * A, so kNone or a damaged code named a real slot. Moved here so the unit tests can reach it.
- * Every Slot enumerator has its own case (-Wswitch-enum, common/build.mk); the default is only
- * for a value outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4). Callers
- * (ModeManager::giveUp, runSwitch) store stateCode() of the result in the boot state, where
- * kNone as the confirmed slot is refused by the boot-state write (common/boot_state.c,
- * fields_valid).
+ * Every caller asks only about a running slot it has found to be A or B: ModeManager::giveUp runs
+ * only in TRIAL, which start() sets only for a running slot A or B; ModeManager::runSwitch and
+ * UpdateReceiver::chooseTarget check for A or B first. So kNone here is an impossible value as
+ * much as a corrupted one is (owner's decision, 13 Oct 2026). Before, both gave Slot::kNone, a
+ * normal-looking answer, and before that slot A.
  *
  * @param[in]     slot  Slot::kA or Slot::kB
- * @return the other slot; Slot::kNone if slot is not A or B
+ * @return the other slot
+ * @note Does not return for Slot::kNone or a value outside the enum.
  */
-constexpr Slot otherSlot(Slot slot)
+inline Slot otherSlot(Slot slot)
 {
     switch (slot) {
     case Slot::kA:
@@ -61,10 +77,9 @@ constexpr Slot otherSlot(Slot slot)
     case Slot::kB:
         return Slot::kA;
     case Slot::kNone:
-        return Slot::kNone;
-    default:
-        return Slot::kNone;   /* outside the enum only: a corrupted value has no other slot */
+        faultImpossibleValue("otherSlot: no slot");   /* no caller asks this: see above */
     }
+    faultImpossibleValue("otherSlot");   /* only a corrupted value reaches here */
 }
 
 #endif /* BOOT_SLOT_HPP */

@@ -8,10 +8,16 @@
  * The last group sends the build's real signed images through the receiver into the fake flash;
  * UPLOAD END then runs the bootloader's own checks on them (common/image_check.c, Monocypher).
  *
+ * Owner's decisions of 13 Oct 2026 under test here: M (IMAGE_BAD_KIND answers 0x10), and the
+ * fault rule: a value in memory that cannot exist (an image_result_t, UploadId or Slot outside
+ * its enum, a slot code outside A/B/none) is the fault reaction (fake_fault.cpp catches it), while
+ * a byte received from the link that fits no command is refused 0x06, never a fault.
+ *
  * Built with the Mac's clang++, the undefined-behaviour sanitizer and libc++'s debug hardening
  * (Monocypher without them). Run: make -C test/controller unit. Prints PASS or FAIL per test;
  * exit status 1 on a failure.
- * Usage: test_update <dir with firmware-A.img, firmware-B.img> <dir with firmware-B-wrong-key-a.img>
+ * Usage: test_update <dir with firmware-A.img, firmware-B.img>
+ *                    <dir with firmware-B-wrong-key-a.img, last-resort-v1.img>
  */
 #include <array>
 #include <cstdint>
@@ -19,6 +25,7 @@
 #include <cstring>
 
 #include "boot_slot.hpp"
+#include "fake_fault.hpp"
 #include "fake_port.hpp"
 #include "frame.hpp"
 #include "image_check.h"
@@ -328,7 +335,7 @@ const uint8_t *flashAt(uint32_t address)
 void testSlotChoice()
 {
     boot_state_t s{};
-    Slot t = toSlot(0xEEU);
+    Slot t = static_cast<Slot>(0xEEU);   /* outside the enum: the call must overwrite it */
 
     s.confirmed = BOOT_SLOT_A;
     report((UpdateReceiver::chooseTarget(true, s, Slot::kA, t) == kUpdateOk) && (t == Slot::kB),
@@ -463,13 +470,12 @@ bool touchesProtected(Slot running, uint64_t a, uint64_t n)
  * @brief Sweeps writeAllowed() over targets, running slots, sizes and addresses.
  *
  * Passes if no answer differs from expectedAllowed() and no allowed range touches the
- * bootloader, running slot, last-resort or boot state. Slot codes 3 and 0xFF are no slot: a
- * damaged value must be refused like kNone.
+ * bootloader, running slot, last-resort or boot state. Slot values outside the enum are no longer
+ * swept here: they are the fault reaction (testBarrierCorruptTarget).
  */
 void testAddressBarrier()
 {
-    /* Slot codes 3 and 0xFF are no slot: a damaged value must be refused like kNone. */
-    const Slot targets[] = {Slot::kNone, Slot::kA, Slot::kB, toSlot(3U), toSlot(0xFFU)};
+    const Slot targets[] = {Slot::kNone, Slot::kA, Slot::kB};
     const Slot runnings[] = {Slot::kNone, Slot::kA, Slot::kB};
     const uint32_t sizes[] = {0U, 1U, 8U, 256U, kFlashPageBytes, kSlotBytes, kSlotBytes + 1U};
     const uint32_t extremes[] = {0U, 8U, 0x7FFFFFFFU, 0xFFFFF800U, 0xFFFFFFF8U, 0xFFFFFFFFU};
@@ -502,6 +508,32 @@ void testAddressBarrier()
     report((wrong == 0U) && (protected_hits == 0U), line);
 }
 
+/**
+ * @brief writeAllowed() with a target outside the Slot enum (3, 0xFF): the fault reaction in
+ * slotStart, nothing allowed and nothing written.
+ *
+ * Before, such a target was refused like Slot::kNone. Fails on the old code: no fault reaction.
+ */
+void testBarrierCorruptTarget()
+{
+    const uint8_t bad[] = {3U, 0xFFU};
+    bool all = true;
+
+    for (uint8_t code : bad) {
+        volatile bool allowed = false;
+        bool faulted = false;
+
+        faultClear();
+        FAULT_CATCH(faulted, allowed = UpdateReceiver::writeAllowed(static_cast<Slot>(code),
+                                                                   Slot::kA, kSlotBStart, 8U));
+        all = all && faulted && !allowed && (fault_calls == 1U);
+    }
+    report(all, "writeAllowed: target 3 or 0xFF (outside Slot) -> fault reaction in slotStart, "
+                "nothing allowed (was: refused like none)");
+    report(UpdateReceiver::slotStart(Slot::kNone) == 0U,
+           "slotStart: Slot::kNone -> 0, no slot (a real value, not a fault)");
+}
+
 /* ---- Answer codes -------------------------------------------------------------------- */
 
 /**
@@ -520,7 +552,7 @@ void testResultCodes()
         {IMAGE_EMPTY, AnswerCode::kDamaged},
         {IMAGE_BAD_MAGIC, AnswerCode::kDamaged},
         {IMAGE_BAD_FORMAT, AnswerCode::kDamaged},
-        {IMAGE_BAD_KIND, AnswerCode::kDamaged},
+        {IMAGE_BAD_KIND, AnswerCode::kWrongKind},
         {IMAGE_BAD_TARGET, AnswerCode::kOtherController},
         {IMAGE_BAD_LENGTH, AnswerCode::kDamaged},
         {IMAGE_BAD_START, AnswerCode::kOtherSlot},
@@ -534,13 +566,16 @@ void testResultCodes()
               (static_cast<uint8_t>(AnswerCode::kOtherController) == 0x0BU) &&
               (static_cast<uint8_t>(AnswerCode::kOtherSlot) == 0x0EU) &&
               (static_cast<uint8_t>(AnswerCode::kTrial) == 0x07U) &&
-              (static_cast<uint8_t>(AnswerCode::kImpossible) == 0x06U);
+              (static_cast<uint8_t>(AnswerCode::kImpossible) == 0x06U) &&
+              (static_cast<uint8_t>(AnswerCode::kWrongKind) == 0x10U) &&
+              (static_cast<uint8_t>(AnswerCode::kStateNotStored) == 0x11U);
 
     for (const Case &c : cases) {
         ok = ok && (UpdateReceiver::refusalFor(c.result) == c.code);
     }
     report(ok, "image check result -> code: passed 0x00, body/structure 0x08, signature 0x09, "
-               "target 0x0B, start address 0x0E (all 11 results)");
+               "target 0x0B, start address 0x0E, kind 0x10 (all 11 results); 0x10 and 0x11 on "
+               "the wire as Interfaces Sec. 4.2");
 }
 
 /* Values that are no image_result_t enumerator. The enum's enumerators are 0 to 10; a C++ enum
@@ -554,9 +589,9 @@ constexpr int kOutsideB = 15;
  * @brief Checks refusalFor() one image_result_t value at a time, and a value outside the enum.
  *
  * One report per enumerator, so a failure names the result. The mapping is Interfaces Sec. 4.2:
- * signatures 0x09, target 0x0B, start address 0x0E, damage-type results 0x08. IMAGE_BAD_KIND has
- * no code of its own in Sec. 4.2; 0x08 is the nearest refusal and is what the receiver gave
- * before (open gap, reported to the owner). A value outside the enum refuses the image (0x08).
+ * signatures 0x09, target 0x0B, start address 0x0E, kind 0x10 (decision M; before, 0x08, so the
+ * IMAGE_BAD_KIND line fails on the old code), damage-type results 0x08. A value outside the enum
+ * is the fault reaction (before, refused 0x08: fails on the old code).
  */
 void testResultCodeEach()
 {
@@ -570,7 +605,7 @@ void testResultCodeEach()
         {IMAGE_EMPTY, AnswerCode::kDamaged, "IMAGE_EMPTY -> 0x08"},
         {IMAGE_BAD_MAGIC, AnswerCode::kDamaged, "IMAGE_BAD_MAGIC -> 0x08"},
         {IMAGE_BAD_FORMAT, AnswerCode::kDamaged, "IMAGE_BAD_FORMAT -> 0x08"},
-        {IMAGE_BAD_KIND, AnswerCode::kDamaged, "IMAGE_BAD_KIND -> 0x08 (no code for a wrong kind)"},
+        {IMAGE_BAD_KIND, AnswerCode::kWrongKind, "IMAGE_BAD_KIND -> 0x10 (decision M)"},
         {IMAGE_BAD_TARGET, AnswerCode::kOtherController, "IMAGE_BAD_TARGET -> 0x0B"},
         {IMAGE_BAD_LENGTH, AnswerCode::kDamaged, "IMAGE_BAD_LENGTH -> 0x08"},
         {IMAGE_BAD_START, AnswerCode::kOtherSlot, "IMAGE_BAD_START -> 0x0E"},
@@ -584,16 +619,25 @@ void testResultCodeEach()
         std::snprintf(line, sizeof line, "refusalFor: %s", c.name);
         report(UpdateReceiver::refusalFor(c.result) == c.code, line);
     }
-    report((UpdateReceiver::refusalFor(static_cast<image_result_t>(kOutsideA)) == AnswerCode::kDamaged) &&
-               (UpdateReceiver::refusalFor(static_cast<image_result_t>(kOutsideB)) == AnswerCode::kDamaged),
-           "refusalFor: a value outside image_result_t (11, 15) refuses the image, 0x08");
+    bool all = true;
+    for (int outside : {kOutsideA, kOutsideB}) {
+        volatile AnswerCode code = AnswerCode::kSuccess;
+        bool faulted = false;
+
+        faultClear();
+        FAULT_CATCH(faulted,
+                    code = UpdateReceiver::refusalFor(static_cast<image_result_t>(outside)));
+        all = all && faulted && (code == AnswerCode::kSuccess) && (fault_calls == 1U);
+    }
+    report(all, "refusalFor: a value outside image_result_t (11, 15) -> fault reaction, no "
+                "answer code (was: 0x08)");
 }
 
 /**
  * @brief Checks image_result_text() for every image_result_t value and a value outside the enum.
  *
- * The text is for the bootloader's log (common/image_check.c). A value outside the enum gives
- * "corrupted result value", never the text of a real result.
+ * The text is for the bootloader's log (common/image_check.c). A value outside the enum is the
+ * fault reaction (before: "corrupted result value", b18e3e9; fails on that code).
  */
 void testResultText()
 {
@@ -620,44 +664,110 @@ void testResultText()
         ok = ok && (std::strcmp(image_result_text(c.result), c.text) == 0);
     }
     report(ok, "image_result_text: all 11 results have their own text");
-    report((std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideA)), "corrupted result value") == 0) &&
-               (std::strcmp(image_result_text(static_cast<image_result_t>(kOutsideB)), "corrupted result value") == 0),
-           "image_result_text: a value outside image_result_t (11, 15) gives \"unknown\"");
+    bool all = true;
+    for (int outside : {kOutsideA, kOutsideB}) {
+        const char *volatile text = nullptr;
+        bool faulted = false;
+
+        faultClear();
+        FAULT_CATCH(faulted, text = image_result_text(static_cast<image_result_t>(outside)));
+        all = all && faulted && (text == nullptr) && (fault_calls == 1U);
+    }
+    report(all, "image_result_text: a value outside image_result_t (11, 15) -> fault reaction, no "
+                "text (was \"corrupted result value\")");
 }
 
 /**
- * @brief Checks otherSlot() (boot_slot.hpp) on A, B, none and values outside the enum.
+ * @brief Checks otherSlot() and toSlot() (boot_slot.hpp) on their values and on impossible ones.
  *
- * A gives B and B gives A. None, and any code that names no slot, gives none: before, they gave
- * slot A, a real slot, so a damaged code could be taken for the other slot of a pair.
+ * otherSlot: A gives B and B gives A; none, and any value outside the enum, is the fault reaction
+ * (before: none, and slot A before that; fails on the old code). toSlot: the three stored codes
+ * give their Slot; any other byte is the fault reaction (before: converted as it was; fails on
+ * the old code).
  */
 void testOtherSlot()
 {
     report((otherSlot(Slot::kA) == Slot::kB) && (otherSlot(Slot::kB) == Slot::kA),
            "otherSlot: A -> B, B -> A");
-    report((otherSlot(Slot::kNone) == Slot::kNone) && (otherSlot(toSlot(3U)) == Slot::kNone) &&
-               (otherSlot(toSlot(0xEEU)) == Slot::kNone) && (otherSlot(toSlot(0xFFU)) == Slot::kNone),
-           "otherSlot: none, 3, 0xEE and 0xFF -> none (not slot A)");
+    bool all = true;
+    for (uint8_t code : {uint8_t{0U}, uint8_t{3U}, uint8_t{0xEEU}, uint8_t{0xFFU}}) {
+        volatile Slot got = Slot::kA;
+        bool faulted = false;
+
+        faultClear();
+        FAULT_CATCH(faulted, got = otherSlot(static_cast<Slot>(code)));
+        all = all && faulted && (got == Slot::kA) && (fault_calls == 1U);
+    }
+    report(all, "otherSlot: none, 3, 0xEE and 0xFF -> fault reaction (was: none)");
+
+    report((toSlot(BOOT_SLOT_NONE) == Slot::kNone) && (toSlot(BOOT_SLOT_A) == Slot::kA) &&
+               (toSlot(BOOT_SLOT_B) == Slot::kB),
+           "toSlot: the stored codes 0, 1, 2 -> none, A, B");
+    all = true;
+    for (uint8_t code : {uint8_t{3U}, uint8_t{0xEEU}}) {
+        volatile Slot got = Slot::kA;
+        bool faulted = false;
+
+        faultClear();
+        FAULT_CATCH(faulted, got = toSlot(code));
+        all = all && faulted && (got == Slot::kA) && (fault_calls == 1U);
+    }
+    report(all, "toSlot: stored code 3 or 0xEE -> fault reaction (was: a Slot outside the enum)");
 }
 
 /**
- * @brief Checks that run() refuses an identifier outside UploadId and touches nothing.
+ * @brief run() and valuesFit() with an identifier outside UploadId: the fault reaction, and
+ * nothing touched.
  *
- * accept() cannot produce such a command (parse takes only 0x01 to 0x04), so this is the second
- * barrier, for a corrupted UpdateCommand. Passes if run() answers 0x06 and no page is erased
- * and nothing is programmed.
+ * accept() cannot produce such a command (parse takes only 0x01 to 0x04), so it can only be a
+ * corrupted UpdateCommand. Before, run() answered 0x06 and valuesFit() false (fails on the old
+ * code: no fault reaction).
  */
 void testRunOutsideEnum()
 {
     UpdateReceiver rx;
     UpdateCommand cmd{};
+    volatile AnswerCode code = AnswerCode::kSuccess;
+    volatile bool fits = true;
+    bool run_fault = false;
+    bool fit_fault = false;
 
     startRunningA(rx);
     cmd.id = static_cast<UploadId>(0x7FU);
     cmd.target = Slot::kB;
-    report((rx.run(cmd) == AnswerCode::kImpossible) && (fake.erases == 0U) &&
-               (fake.programs == 0U),
-           "run: an identifier outside UploadId (0x7F) -> 0x06, flash untouched");
+    faultClear();
+    FAULT_CATCH(run_fault, code = rx.run(cmd));
+    FAULT_CATCH(fit_fault, fits = rx.valuesFit(cmd));
+    report(run_fault && fit_fault && (code == AnswerCode::kSuccess) && fits &&
+               (fault_calls == 2U) && (fake.erases == 0U) && (fake.programs == 0U),
+           "run and valuesFit: an identifier outside UploadId (0x7F) -> fault reaction, flash "
+           "untouched (was: 0x06)");
+}
+
+/**
+ * @brief A command byte received from the link that is no upload identifier is input: refused
+ * 0x06 by sizeFits' default, never the fault reaction.
+ *
+ * The one switch that keeps a default (update_receiver.cpp, sizeFits, "input from the link").
+ */
+void testInputRefusedNotFault()
+{
+    UpdateReceiver rx;
+    std::array<uint8_t, 3> p = {0x05U, 0x01U, 0x00U};
+    UpdateCommand cmd{};
+    volatile bool parsed = true;
+    volatile AnswerCode code = AnswerCode::kSuccess;
+    bool faulted_parse = false;
+    bool faulted_accept = false;
+
+    startRunningA(rx);
+    faultClear();
+    FAULT_CATCH(faulted_parse, parsed = UpdateReceiver::parse(p.data(), 3U, cmd));
+    FAULT_CATCH(faulted_accept, code = rx.accept(p.data(), 3U, cmd));
+    report(!faulted_parse && !faulted_accept && !parsed && (code == AnswerCode::kImpossible) &&
+               (fault_calls == 0U),
+           "a received command byte 0x05 (no upload identifier): parse false, accept 0x06, no "
+           "fault reaction (input from the link)");
 }
 
 /* ---- Payload sizes and length bounds ------------------------------------------------- */
@@ -942,8 +1052,11 @@ uint32_t load(const char *dir, const char *name, SlotImage &buf)
  * wrong controller identity, a wrong start address and a flash read error during END are
  * refused with 0x08, 0x09, 0x0B, 0x0E and 0x08, with the rest of the flash untouched.
  *
+ * Decision M: the bench's last-resort image (kind last-resort) sent for slot B is refused 0x10,
+ * "image of the wrong kind for its place" (before: 0x08; fails on the old code).
+ *
  * @param[in] src_images   directory with firmware-A.img and firmware-B.img
- * @param[in] test_images  directory with firmware-B-wrong-key-a.img
+ * @param[in] test_images  directory with firmware-B-wrong-key-a.img and last-resort-v1.img
  */
 void testImages(const char *src_images, const char *test_images)
 {
@@ -951,12 +1064,14 @@ void testImages(const char *src_images, const char *test_images)
     static SlotImage b;
     static SlotImage bad_key;
     static SlotImage changed;
+    static SlotImage last_resort;
     uint32_t a_size = load(src_images, "firmware-A.img", a);
     uint32_t b_size = load(src_images, "firmware-B.img", b);
     uint32_t key_size = load(test_images, "firmware-B-wrong-key-a.img", bad_key);
+    uint32_t lr_size = load(test_images, "last-resort-v1.img", last_resort);
     UpdateReceiver rx;
 
-    if ((a_size == 0U) || (b_size == 0U) || (key_size == 0U)) {
+    if ((a_size == 0U) || (b_size == 0U) || (key_size == 0U) || (lr_size == 0U)) {
         report(false, "real images: could not read the image files");
         return;
     }
@@ -985,8 +1100,12 @@ void testImages(const char *src_images, const char *test_images)
     report(receivedThenRefused(upload(rx, a.data(), a_size, 5U), AnswerCode::kOtherSlot),
            "firmware-A.img (linked for slot A) into slot B: END REFUSED 0x0E");
 
+    report(receivedThenRefused(upload(rx, last_resort.data(), lr_size, 6U), AnswerCode::kWrongKind),
+           "last-resort-v1.img (kind last-resort) into slot B: END REFUSED 0x10, image of the "
+           "wrong kind (decision M; was 0x08)");
+
     report(othersUntouched(Slot::kB),
-           "after these five uploads: bootloader, slot A, last-resort and boot state untouched");
+           "after these six uploads: bootloader, slot A, last-resort and boot state untouched");
 
     startRunningA(rx);
     Answer a_ok = begin(rx, 8U, b_size);
@@ -1029,11 +1148,13 @@ int main(int argc, char **argv)
     testSlotChoice();
     testSlotOf();
     testAddressBarrier();
+    testBarrierCorruptTarget();
     testResultCodes();
     testResultCodeEach();
     testResultText();
     testOtherSlot();
     testRunOutsideEnum();
+    testInputRefusedNotFault();
     testPayloadSizes();
     testLengthBounds();
     testOffsets();

@@ -7,7 +7,7 @@ BUILD = build
 TOP  := $(abspath ../../..)
 MONO  = $(TOP)/third_party/monocypher
 
-SRCS = main.c clock.c uart.c handover.c watchdog.c \
+SRCS = main.c clock.c uart.c handover.c watchdog.c backup.c fault.c \
        ../common/image_check.c ../common/crc32.c ../common/flash.c ../common/boot_state.c
 SRCS_EXT = $(MONO)/monocypher.c $(MONO)/monocypher-ed25519.c
 HEADERS  = $(wildcard *.h)

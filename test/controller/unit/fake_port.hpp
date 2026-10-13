@@ -14,6 +14,7 @@
 #include <array>
 #include <cstdint>
 
+#include "backup_layout.h"
 #include "boot_slot.hpp"
 #include "boot_state.h"
 #include "layout.h"
@@ -48,6 +49,12 @@ struct Fake {
     uint32_t restarts;                            /* ModePort::restart() calls */
     uint32_t drains_at_restart;                   /* UartLink::waitSent() calls before it */
     uint32_t sent_at_restart;                     /* link bytes sent before it */
+    /* ModePort's TAMP backup registers (common/backup_layout.h): pair n is words 2n and 2n + 1.
+     * All 0 after fakeReset(): every pair broken, empty, as after an RTC domain reset. */
+    std::array<uint32_t, BACKUP_REGISTERS> backup;
+    bool backup_writable;                         /* false: every backup write fails */
+    uint32_t counted_restarts;                    /* ModePort::restartCounted() calls */
+    uint8_t fault_reason;                         /* the reason of the last one */
 };
 
 extern Fake fake;
@@ -56,5 +63,9 @@ extern Fake fake;
 void fakeReset();
 /* Number of bytes in [start, start + bytes) that differ from `value`. */
 uint32_t fakeCountNot(uint32_t start, uint32_t bytes, uint8_t value);
+/* Store `value` with its complement in backup pair `pair` / read a pair: true and the value if
+ * the two words are complements (fake_mode_port.cpp). */
+void fakeBackupSet(uint32_t pair, uint32_t value);
+bool fakeBackupGet(uint32_t pair, uint32_t &value);
 
 #endif /* FAKE_PORT_HPP */

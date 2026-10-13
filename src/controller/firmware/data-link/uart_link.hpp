@@ -18,11 +18,31 @@
 
 #include "frame.hpp"
 
+/* Data link A's speed (Interfaces Sec. 6.2). */
+constexpr uint32_t kBaudRate = 115200U;
+
 class UartLink {
 public:
-    /* USART2, its pins and its receive interrupt. Needs CoreClock::start() and
-     * CoreClock::startTick(). */
-    void init();
+    /**
+     * @brief The USART2 baud-rate divider for a kernel clock: BRR = kernel clock / baud, rounded.
+     *
+     * Oversampling by 16: BRR = kernel clock / baud [RM0440 Rev 9, Sec. 40.5.7, p. 1707-1708].
+     * USART2's kernel clock is PCLK1 after reset (USART2SEL = 00, Sec. 7.4.26, p. 324), and PCLK1
+     * is the core clock with the APB1 divider left at 1. 1476 at 170 MHz (0.02 % fast), 139 at
+     * 16 MHz (0.08 % slow), computed. A function of the clock, not one constant, since decision C
+     * (the firmware may run at 16 MHz after a clock fault).
+     *
+     * @param[in] kernel_hz  USART2 kernel clock in Hz
+     * @return the value for USART2_BRR
+     */
+    static constexpr uint32_t brrFor(uint32_t kernel_hz)
+    {
+        return (kernel_hz + (kBaudRate / 2U)) / kBaudRate;
+    }
+
+    /* USART2, its pins and its receive interrupt, at the core clock in use (core_hz from
+     * CoreClock::start()). Needs CoreClock::startTick(). */
+    void init(uint32_t core_hz);
 
     /* Take the bytes received so far through the frame parser. True when a frame that passed
      * every check is complete; `frame` then describes it until the next call. */

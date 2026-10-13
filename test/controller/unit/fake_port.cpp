@@ -70,7 +70,8 @@ bool inFlash(uint32_t address, uint32_t bytes)
  * @brief Resets the fake chip to its start state.
  *
  * Clears every counter and flag, fills each flash region with its own pattern, makes the boot
- * state valid with slot A confirmed and no trial, and allows writes to slot B only.
+ * state valid with slot A confirmed and no trial, and allows writes to slot B only. The backup
+ * registers are all 0 (every pair empty) and writable.
  */
 void fakeReset()
 {
@@ -84,6 +85,7 @@ void fakeReset()
     fake.state.confirmed = BOOT_SLOT_A;
     fake.state.trial = BOOT_SLOT_NONE;
     fake.allowed_slot = Slot::kB;
+    fake.backup_writable = true;
 }
 
 /**

@@ -14,12 +14,20 @@
  * Flash faults: Interfaces Sec. 4.2 has no code for "the flash did not take the write"; 0x08
  * "image damaged" is the nearest, since the copy in the slot can no longer be trusted. The
  * transfer is then closed; CANCEL or a new BEGIN starts over.
+ *
+ * Switches over an enum held in memory have no default label. No default: the compiler checks
+ * every case (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which
+ * calls the fault reaction (firmware/fault.hpp). A deliberate deviation from MISRA C:2012 Rule
+ * 16.4, whose purpose, handling a value outside the cases, the fault reaction meets. The one
+ * switch over a byte received from the link (sizeFits) keeps a refusing default: that byte is
+ * input, refused 0x06, not a fault.
  */
 #include "update_receiver.hpp"
 
 #include <array>
 #include <cstring>
 
+#include "fault.hpp"
 #include "image_format.h"
 #include "layout.h"
 #include "update_port.hpp"
@@ -71,7 +79,9 @@ uint16_t readU16(const uint8_t *bytes)
  *
  * All four UploadId values have their own case (-Wswitch-enum, common/build.mk). The default is
  * for a byte that is none of them: `id` arrives from the wire as a plain byte, so a value outside
- * the enum is the normal case here, not a corruption. It answers false: refused.
+ * the enum is the normal case here, not a corruption. It answers false: refused 0x06 by the
+ * caller. This is input from the link, so the owner's fault rule (firmware/fault.hpp) does not
+ * apply here.
  *
  * @param[in] id      command identifier, first payload byte
  * @param[in] length  payload bytes
@@ -87,22 +97,29 @@ bool sizeFits(uint8_t id, uint32_t length)
     case UploadId::kEnd:
     case UploadId::kCancel:
         return length == kShortPayload;
-    default:
-        return false;   /* a byte that is no upload identifier: see above */
+    default:   /* input from the link, not memory: refused, not a fault */
+        return false;
     }
 }
+
+}  // namespace
+
+/* ---- The rules ---------------------------------------------------------------------- */
 
 /**
  * @brief Runs the bootloader's checks on the image in a slot and returns the answer code.
  *
  * The bootloader's own checks, in its order (bootloader/main.c, image_passes): contents, then
- * both signatures, then any flash read error seen on the way.
+ * both signatures, then any flash read error seen on the way. A static member since decision F(a)
+ * (owner, 13 Oct 2026; before, private to this file): SWITCH checks the other slot with these
+ * same checks before it writes the boot state (mode-manager/mode_manager.cpp, runSwitch), so
+ * UPLOAD END and SWITCH cannot disagree on an image.
  *
  * @param[in] slot  slot holding the image (Slot::kA or Slot::kB)
  * @return kUpdateOk if the image passes, otherwise the refusal code for the first fault;
  *         AnswerCode::kDamaged if a flash read error was seen
  */
-AnswerCode checkSlot(Slot slot)
+AnswerCode UpdateReceiver::checkSlot(Slot slot)
 {
     uint32_t start = UpdateReceiver::slotStart(slot);
     const uint8_t *image = UpdatePort::flash(start);
@@ -119,10 +136,6 @@ AnswerCode checkSlot(Slot slot)
     }
     return UpdateReceiver::refusalFor(result);
 }
-
-}  // namespace
-
-/* ---- The rules ---------------------------------------------------------------------- */
 
 /**
  * @brief Finds the slot that contains a chip address.
@@ -145,18 +158,25 @@ Slot UpdateReceiver::slotOf(uint32_t address)
 /**
  * @brief Gives the first byte of a slot.
  *
- * @param[in] slot  Slot::kA or Slot::kB
- * @return chip address of the slot's first byte; 0 for any other value
+ * Slot::kNone has no first byte: 0, which every caller treats as "no slot" (ModeManager::selfTest
+ * fails, writeAllowed refuses, main.cpp reports no header). A value outside the Slot enum is a
+ * corrupted variable: the fault reaction (see the file comment). Before, it also gave 0.
+ *
+ * @param[in] slot  Slot::kNone, Slot::kA or Slot::kB
+ * @return chip address of the slot's first byte; 0 for Slot::kNone
+ * @note Does not return for a value outside Slot.
  */
 uint32_t UpdateReceiver::slotStart(Slot slot)
 {
-    if (slot == Slot::kA) {
+    switch (slot) {
+    case Slot::kA:
         return kSlotAStart;
-    }
-    if (slot == Slot::kB) {
+    case Slot::kB:
         return kSlotBStart;
+    case Slot::kNone:
+        return 0U;
     }
-    return 0U;
+    faultImpossibleValue("slotStart");   /* only a corrupted value reaches here */
 }
 
 /**
@@ -227,15 +247,16 @@ bool UpdateReceiver::writeAllowed(Slot target, Slot running, uint32_t address, u
  *   IMAGE_BAD_TARGET                          -> kOtherController (0x0B)
  *   IMAGE_BAD_START                           -> kOtherSlot (0x0E)
  *   IMAGE_EMPTY, _BAD_MAGIC, _BAD_FORMAT, _BAD_LENGTH, _BAD_BODY_CHECK -> kDamaged (0x08)
- *   IMAGE_BAD_KIND                            -> kDamaged (0x08), see below
- * Open (Interfaces gap): IMAGE_BAD_KIND (a bootloader or last-resort image sent for a main
- * slot) has no code in Sec. 4.2 that says "wrong kind". 0x08 "image damaged" is the nearest
- * refusal and is what this function gave before; no code is invented.
- * The default is only for a value outside the enum (a corrupted variable; MISRA C:2012
- * Rule 16.4): the image is refused, kDamaged.
+ *   IMAGE_BAD_KIND                            -> kWrongKind (0x10)
+ * IMAGE_BAD_KIND (a bootloader or last-resort image sent for a main slot) answers 0x10 "image of
+ * the wrong kind for its place", the code the Interfaces document added for it (Sec. 4.2, accepted
+ * by the owner 13 Oct 2026, decision M); before, it answered the nearest code, 0x08.
+ * A value outside the enum is a corrupted variable: the fault reaction (see the file comment);
+ * before, a default refused the image with 0x08.
  *
  * @param[in] result  result of image_check_contents or image_check_signatures
  * @return the answer code of the table above
+ * @note Does not return for a value outside image_result_t.
  */
 AnswerCode UpdateReceiver::refusalFor(image_result_t result)
 {
@@ -256,10 +277,9 @@ AnswerCode UpdateReceiver::refusalFor(image_result_t result)
     case IMAGE_BAD_BODY_CHECK:
         return AnswerCode::kDamaged;
     case IMAGE_BAD_KIND:
-        return AnswerCode::kDamaged;   /* no code for "wrong kind": nearest is 0x08 (see above) */
-    default:
-        return AnswerCode::kDamaged;   /* outside the enum only: refuse the image */
+        return AnswerCode::kWrongKind;
     }
+    faultImpossibleValue("refusalFor");   /* only a corrupted value reaches here */
 }
 
 /* ---- Checks on arrival -------------------------------------------------------------- */
@@ -351,11 +371,13 @@ bool UpdateReceiver::chunkFits(const UpdateCommand &cmd) const
  * receiving, same transfer, chunk fits. END: phase receiving, same transfer, all bytes
  * written. CANCEL: same transfer.
  *
- * All four UploadId values have their own case (-Wswitch-enum). The default is for a value
- * outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): the values do not fit.
+ * All four UploadId values have their own case (-Wswitch-enum). cmd.id was set by parse() only
+ * after sizeFits accepted the byte, so a value outside the enum is a corrupted variable: the fault
+ * reaction (see the file comment). Before, a default answered false (refused 0x06).
  *
  * @param[in] cmd  the command
  * @return true if the values fit, false otherwise
+ * @note Does not return for an identifier outside UploadId.
  */
 bool UpdateReceiver::valuesFit(const UpdateCommand &cmd) const
 {
@@ -369,9 +391,8 @@ bool UpdateReceiver::valuesFit(const UpdateCommand &cmd) const
         return (phase_ == UpdatePhase::kReceiving) && sameTransfer(cmd) && (written_ == length_);
     case UploadId::kCancel:
         return sameTransfer(cmd);
-    default:
-        return false;   /* outside the enum only: refuse */
     }
+    faultImpossibleValue("UpdateReceiver::valuesFit");   /* only a corrupted value reaches here */
 }
 
 /**
@@ -547,12 +568,13 @@ void UpdateReceiver::init(Slot running_slot)
 /**
  * @brief Runs a command that accept() accepted.
  *
- * All four UploadId values have their own case (-Wswitch-enum). The default is for a value
- * outside the enum (a corrupted variable; MISRA C:2012 Rule 16.4): nothing runs, kImpossible.
+ * All four UploadId values have their own case (-Wswitch-enum). accept() let only these four
+ * through, so a value outside the enum is a corrupted variable: the fault reaction (see the file
+ * comment), and nothing runs. Before, a default answered 0x06.
  *
  * @param[in] cmd  the accepted command
- * @return kUpdateOk, or the refusal code of the command's work (kDamaged or the END checks);
- *         AnswerCode::kImpossible for an identifier that is not an upload command
+ * @return kUpdateOk, or the refusal code of the command's work (kDamaged or the END checks)
+ * @note Does not return for an identifier outside UploadId.
  */
 AnswerCode UpdateReceiver::run(const UpdateCommand &cmd)
 {
@@ -565,7 +587,6 @@ AnswerCode UpdateReceiver::run(const UpdateCommand &cmd)
         return runEnd();
     case UploadId::kCancel:
         return runCancel();
-    default:
-        return AnswerCode::kImpossible;   /* outside the enum only: accept() takes these four */
     }
+    faultImpossibleValue("UpdateReceiver::run");   /* only a corrupted value reaches here */
 }

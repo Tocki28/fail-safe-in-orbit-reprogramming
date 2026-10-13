@@ -112,7 +112,9 @@ void FrameParser::startOver(uint8_t byte)
  *
  * This switch is on a byte count, not on an enum, so -Wswitch-enum does not apply and the
  * default is intended: it stands for every byte position that has no header check (most of
- * them), not for a forgotten case. No enumerator list exists to complete.
+ * them), not for a forgotten case. No enumerator list exists to complete. The bytes it judges are
+ * input from the link, not memory: a bad one drops the frame, never the fault reaction (owner,
+ * 13 Oct 2026; firmware/fault.hpp).
  *
  * @return true if the header is still acceptable; false if the last byte broke it
  */
@@ -127,8 +129,8 @@ bool FrameParser::headerSoFarOk() const
         return bytes_[kFrameOffsetVersion] == kFrameVersion;
     case kFrameOffsetLength + 2U:
         return readU16(&bytes_[kFrameOffsetLength]) <= kFramePayloadMax;
-    default:
-        return true;   /* intended: a byte position with no header check passes (see above) */
+    default:   /* input from the link: a byte position with no header check passes */
+        return true;
     }
 }
 

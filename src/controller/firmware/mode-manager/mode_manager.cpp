@@ -1,18 +1,32 @@
 /*
  * mode_manager.cpp — see mode_manager.hpp.
  *
- * Open items left here (each marked where it applies):
- *   - CONFIRM and SWITCH whose boot-state write fails are refused 0x06: the Interfaces document
- *     has no refusal code for a failed boot-state write.
- *   - A give-up whose boot-state write fails sends no EVENT 0x0008 and restarts anyway.
- *   - In OPERATE a failed self-test is reported in HEALTH only (last self-test 0x01); EVENT
- *     0x0004 and the response to it (REQ-038, REQ-041) come with the health monitor (step 2e).
+ * The owner's decisions of 13 Oct 2026 carried out here (letters of the controller audit):
+ *   B  the bootloader's restart count of this slot is cleared after kNormalRunMs of running;
+ *   C  a clock that fell back to 16 MHz is reported with EVENT 0x0001 at start;
+ *   E  SWITCH reads the boot state again and runs only from the confirmed slot with no trial;
+ *   F(a) SWITCH checks the other slot's image with UPLOAD END's checks before it writes;
+ *   G  a give-up whose boot-state write fails leaves a give-up request for the bootloader;
+ *   L  a failed self-test in OPERATE restarts the chip, counted by the bootloader;
+ *   N  SWITCH and CONFIRM answer 0x11 when the boot-state write fails;
+ *   O, P  the self-test design and the EVENT 0x000B detail codes are accepted as built;
+ *   check-result reporting: the bootloader's fall-back record goes out as EVENT 0x0002 once.
+ *
+ * Open item left here: a give-up whose boot-state write fails still sends no EVENT 0x0008, even
+ * when the give-up request was stored (decision G does not say; see giveUp).
+ *
+ * Switches over an enum have no default label. No default: the compiler checks every case
+ * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which calls the
+ * fault reaction (firmware/fault.hpp). A deliberate deviation from MISRA C:2012 Rule 16.4, whose
+ * purpose, handling a value outside the cases, the fault reaction meets.
  */
 #include "mode_manager.hpp"
 
 #include <array>
 
+#include "backup_layout.h"
 #include "crc32.h"
+#include "fault.hpp"
 #include "image_check.h"
 #include "image_format.h"
 #include "layout.h"
@@ -26,20 +40,59 @@ constexpr uint32_t kHeaderBytes = IMAGE_HEADER_BYTES;
  * (Interfaces Sec. 5.5, Figure 5). */
 constexpr uint32_t kBodyMaxBytes = SLOT_BYTES - IMAGE_HEADER_BYTES - IMAGE_SIGNATURES_BYTES;
 constexpr uint32_t kMsPerSecond = 1000U;
+/* EVENT 0x0002's detail: refused copy (1 byte), check result (1 byte) (Interfaces Sec. 5.4). */
+constexpr uint32_t kFallbackDetailBytes = 2U;
+/* The highest check-result code, "signature B" (Interfaces Sec. 5.4, "Check result" table). */
+constexpr uint8_t kCheckResultMax = 0x0AU;
 
 static_assert(kEventReportMaxBytes <= kSendPayloadMax, "an EVENT report must fit FrameSender");
 
 /**
  * @brief Returns the slot code the boot state stores for a slot (common/boot_state.h).
  *
- * The Slot enumerators carry the boot state's codes (boot_slot.hpp), so this is the stored byte.
+ * The Slot enumerators carry the boot state's codes (boot_slot.hpp). Every enumerator has its own
+ * case; a value outside the enum is a corrupted variable: the fault reaction (see the file
+ * comment). Before, a cast passed any value through into the boot-state record.
  *
  * @param[in]     slot  Slot::kNone, kA or kB
  * @return BOOT_SLOT_NONE, BOOT_SLOT_A or BOOT_SLOT_B
+ * @note Does not return for a value outside Slot.
  */
 uint8_t stateCode(Slot slot)
 {
-    return static_cast<uint8_t>(slot);
+    switch (slot) {
+    case Slot::kNone:
+        return BOOT_SLOT_NONE;
+    case Slot::kA:
+        return BOOT_SLOT_A;
+    case Slot::kB:
+        return BOOT_SLOT_B;
+    }
+    faultImpossibleValue("stateCode");   /* only a corrupted value reaches here */
+}
+
+/**
+ * @brief Returns the code a slot has in the bootloader's fall-back record: the HEALTH report's
+ * running-slot code (Interfaces Sec. 5.4; common/backup_layout.h).
+ *
+ * Slot::kNone gives 0, which no record holds, so a record never matches a firmware whose running
+ * slot is not known. A value outside the enum is a corrupted variable: the fault reaction.
+ *
+ * @param[in]     slot  Slot::kNone, kA or kB
+ * @return BACKUP_COPY_A, BACKUP_COPY_B, or 0 for Slot::kNone
+ * @note Does not return for a value outside Slot.
+ */
+uint8_t copyCode(Slot slot)
+{
+    switch (slot) {
+    case Slot::kNone:
+        return 0U;
+    case Slot::kA:
+        return BACKUP_COPY_A;
+    case Slot::kB:
+        return BACKUP_COPY_B;
+    }
+    faultImpossibleValue("copyCode");   /* only a corrupted value reaches here */
 }
 
 }  // namespace
@@ -50,14 +103,17 @@ uint8_t stateCode(Slot slot)
  *
  * TRIAL if the running slot is the boot state's trial slot, otherwise OPERATE (decided design,
  * step 2d). A boot state that cannot be read gives OPERATE: no trial is known. FALLBACK is a
- * later step. The trial time starts now: the firmware's start, not the bootloader's.
+ * later step. The trial time starts now: the firmware's start, not the bootloader's. The events of
+ * the start (clock fault, fall-back) go out on the first poll().
  *
  * The self-test runs at every start, in every mode (REQ-039); HEALTH reports its result.
  *
- * @param[in]     running  the slot this firmware runs from (UpdateReceiver::slotOf)
- * @param[in]     now_ms   milliseconds since start
+ * @param[in]     running      the slot this firmware runs from (UpdateReceiver::slotOf)
+ * @param[in]     now_ms       milliseconds since start
+ * @param[in]     clock_fault  true if the core clock fell back to 16 MHz (CoreClock::start,
+ *                             decision C)
  */
-void ModeManager::start(Slot running, uint32_t now_ms)
+void ModeManager::start(Slot running, uint32_t now_ms, bool clock_fault)
 {
     boot_state_t state{};
     bool valid = ModePort::readBootState(state);
@@ -68,6 +124,9 @@ void ModeManager::start(Slot running, uint32_t now_ms)
     trial_started_sent_ = false;
     tests_passed_sent_ = false;
     restart_due_ = false;
+    clock_fault_ = clock_fault;
+    start_events_sent_ = false;
+    restart_count_cleared_ = false;
     mode_ = (valid && in_slot && (toSlot(state.trial) == running)) ? HealthMode::kTrial
                                                                    : HealthMode::kOperate;
     self_test_passed_ = selfTest(running);
@@ -77,7 +136,7 @@ void ModeManager::start(Slot running, uint32_t now_ms)
  * @brief The self-test (REQ-039, trial test a of REQ-139): recomputes the CRC-32 of the
  * running image's body and compares it with the body check value in the image's own header.
  *
- * Proposal (TBR), awaiting the owner's acceptance. Header layout: common/image_format.h
+ * Accepted by the owner, 13 Oct 2026 (decision O). Header layout: common/image_format.h
  * (Interfaces Sec. 5.5, Figure 6); the same CRC-32 the bootloader checks before it starts the
  * image (common/image_check.c). The body length comes from the header, so it is bounded by the
  * slot before any body byte is read: a damaged length cannot make the check read past the slot.
@@ -175,7 +234,7 @@ uint16_t ModeManager::trialSecondsLeft(uint32_t now_ms) const
  *
  * @param[in]     code          the event code
  * @param[in]     detail        detail bytes; nullptr when detail_bytes is 0
- * @param[in]     detail_bytes  0 or 1 in this step; at most 32
+ * @param[in]     detail_bytes  0, 1 or 2 in this step; at most 32
  * @param[in]     now_ms        milliseconds since start (the report's controller clock time)
  */
 void ModeManager::sendEvent(EventCode code, const uint8_t *detail, uint32_t detail_bytes,
@@ -184,11 +243,97 @@ void ModeManager::sendEvent(EventCode code, const uint8_t *detail, uint32_t deta
     std::array<uint8_t, kEventReportMaxBytes> payload{};
     uint16_t length = HealthMonitor::eventReport(now_ms, code, detail, detail_bytes, payload);
 
-    /* 0 only for a detail above 32 bytes; every call here passes 0 or 1 byte. */
+    /* 0 only for a detail above 32 bytes; every call here passes 0, 1 or 2 bytes. */
     if (length == 0U) {
         return;
     }
     sender_.send(FrameType::kReport, payload.data(), length);
+}
+
+/**
+ * @brief Returns true if the bootloader's fall-back record describes this start: it names this
+ * firmware's slot as the copy started, a refused copy that is another one, and a check result in
+ * the table.
+ *
+ * The record is stored data read from the backup registers, so a value outside the codes fails
+ * this check and is dropped, never a fault (common/backup_layout.h). The bootloader clears the
+ * record at every start before it writes a new one, so a record for another start is a record
+ * that went bad, not an old one.
+ *
+ * @param[in]     record  the record as read
+ * @return true if every field is one of its codes and the started copy is this slot
+ */
+bool ModeManager::fallbackForThisStart(const FallbackRecord &record) const
+{
+    bool refused_ok = (record.refused == BACKUP_COPY_A) || (record.refused == BACKUP_COPY_B) ||
+                      (record.refused == BACKUP_COPY_LAST_RESORT);
+    uint8_t started = copyCode(running_);
+    return refused_ok && (started != 0U) && (record.started == started) &&
+           (record.refused != started) && (record.check <= kCheckResultMax);
+}
+
+/**
+ * @brief The events of a start, once, on the first poll(): EVENT 0x0001 after a clock fault
+ * (decision C), EVENT 0x0002 with the bootloader's fall-back record (Interfaces Sec. 5.4).
+ *
+ * EVENT 0x0001 "fault detected": Proposal (TBR), awaiting the owner's acceptance. Decision C left
+ * the choice of report to the builder. Why this one: the HEALTH report has no field for the
+ * clock; 0x0001 is the event for a fault the controller found and answered on its own (REQ-038),
+ * and running at 16 MHz is that answer. Not 0x0004: the self-test is the image check of decision
+ * O, which the clock does not fail. No detail is sent: the Interfaces table defines none for
+ * 0x0001, so the ground cannot yet tell a clock fault from another fault (a detail code would
+ * need the owner).
+ *
+ * EVENT 0x0002 "fall-back to the previous copy", detail refused copy (1) and check result (1): a
+ * main slot runs here, so a fall-back to it is a fall-back to the previous copy; 0x0003 is the
+ * last-resort firmware's to send. The record is cleared after it, so the event goes out once.
+ *
+ * @param[in]     now_ms  milliseconds since start
+ */
+void ModeManager::sendStartEvents(uint32_t now_ms)
+{
+    FallbackRecord record{};
+
+    if (start_events_sent_) {
+        return;
+    }
+    start_events_sent_ = true;
+    if (clock_fault_) {
+        sendEvent(EventCode::kFaultDetected, nullptr, 0U, now_ms);
+    }
+    if (!ModePort::readFallbackRecord(record)) {
+        return;
+    }
+    if (fallbackForThisStart(record)) {
+        const std::array<uint8_t, kFallbackDetailBytes> detail = {record.refused, record.check};
+        sendEvent(EventCode::kFallbackPrevious, detail.data(), kFallbackDetailBytes, now_ms);
+    }
+    /* Cleared whether it was sent or dropped. If the clear fails, the bootloader clears the
+     * record at the next start anyway (bootloader/main.c, clear_fallback_record), and this start
+     * does not read it again (start_events_sent_). */
+    (void)ModePort::clearFallbackRecord();
+}
+
+/**
+ * @brief Clears the bootloader's count of restarts of this slot once the firmware has run for
+ * kNormalRunMs (decision B).
+ *
+ * "Run normally": the main loop has called poll() for kNormalRunMs since start, so the clock, the
+ * tick and the loop work, and nothing restarted the chip in that time. One try: if the write
+ * fails the backup domain cannot be written, and a retry on every pass would not change that.
+ *
+ * @param[in]     now_ms  milliseconds since start
+ */
+void ModeManager::clearRestartCountWhenDue(uint32_t now_ms)
+{
+    /* Unsigned subtraction stays right when the millisecond count wraps. */
+    if (restart_count_cleared_ || ((now_ms - trial_start_ms_) < kNormalRunMs)) {
+        return;
+    }
+    restart_count_cleared_ = true;
+    /* If the clear fails (see above), the count stays: at worst this slot is skipped after fewer
+     * new restarts, the safe direction of decision B. */
+    (void)ModePort::clearRestartCount(stateCode(running_));
 }
 
 /**
@@ -214,18 +359,14 @@ void ModeManager::restartWhenSent()
  * trial, and a valid boot state's trial slot is always the one not confirmed
  * (common/boot_state.c, fields_valid). After the restart the bootloader starts the confirmed
  * slot, and never the given-up one again unless the operator orders it (bootloader/main.c,
- * REQ-019).
+ * REQ-019). TRIAL needs a running slot of A or B (start()), so otherSlot() always has an answer.
  *
- * If the running slot is not A or B, otherSlot() gives Slot::kNone (it used to give A), the
- * confirmed slot of the record is then none, and the boot-state write refuses the record
- * (common/boot_state.c, fields_valid): no EVENT, the chip restarts, the bootloader decides. Not
- * reachable through start(): TRIAL needs a running slot of A or B.
- *
- * Open: if the write fails, no EVENT 0x0008 is sent (the trial is not given up in the boot
- * state) and the chip restarts anyway. The bootloader counted this start before it ran
- * (bootloader/main.c, count_trial_start), so it starts the trial at most 3 times in all and
- * then gives it up itself (REQ-015). The Interfaces document has no event for "give-up could
- * not be stored".
+ * If the write fails (decision G): the give-up request is left in the backup registers, and the
+ * bootloader gives the trial up before it counts its next start (bootloader/main.c,
+ * apply_give_up_request). Before, nothing was left, and the trial could start again until the
+ * bootloader's start count ended it (REQ-015). If even the request cannot be stored, that start
+ * count still ends it. Open: no EVENT 0x0008 is sent when the write fails, even with the request
+ * stored; whether 0x0008 should then go out is for the owner (decision G does not say).
  *
  * @param[in]     now_ms  milliseconds since start
  * @note Does not return on the board.
@@ -239,33 +380,50 @@ void ModeManager::giveUp(uint32_t now_ms)
     state.failed_starts = 0U;
     if (ModePort::writeBootState(state)) {
         sendEvent(EventCode::kGivenUp, nullptr, 0U, now_ms);
+    } else {
+        /* Nowhere else to keep the give-up: if the request is not stored either, the
+         * bootloader's start count still ends the trial (REQ-015). */
+        (void)ModePort::leaveGiveUpRequest(stateCode(running_));
     }
     restartWhenSent();
 }
 
 /**
- * @brief The work of one main-loop pass: a restart after SWITCH, then in TRIAL the trial's
- * events, a failed test, and the time-out.
+ * @brief OPERATE's work on one pass: a failed self-test restarts the chip (decision L).
  *
- * Called after the frame of this pass was handled, so an answer always goes out before the
- * events and the restart it causes: UPLOAD END of a bad test image is answered REFUSED 0x08,
- * then EVENT 0x000B and 0x0008 follow on this pass.
+ * A failed self-test means the running image's body no longer matches its check value
+ * (selfTest). The restart makes the bootloader check the image again before it runs it: if the
+ * flash is damaged it is refused and the bootloader falls back; if the image passes there and
+ * fails here again, every restart is counted (decision B: the restart carries the fault mark) and
+ * the third starts the last-resort firmware, so the loop is bounded. EVENT 0x0004 "self-test
+ * failed" (Interfaces Sec. 5.4, REQ-039) goes out first, since the restart comes before the
+ * first HEALTH report could carry the result. Before, the failure was only reported in HEALTH
+ * and the firmware ran on.
  *
- * TRIAL, in order: EVENT 0x0006 once; a failed test: EVENT 0x000B with the test's number
- * (TrialTest), then the give-up (REQ-140); all tests passed: EVENT 0x000A once; trial time over
- * without CONFIRM: the give-up (REQ-013), with EVENT 0x0008 but no 0x000B.
+ * @param[in]     now_ms  milliseconds since start
+ * @note Does not return on the board when the self-test failed.
+ */
+void ModeManager::pollOperate(uint32_t now_ms)
+{
+    if (self_test_passed_) {
+        return;
+    }
+    sendEvent(EventCode::kSelfTestFailed, nullptr, 0U, now_ms);
+    (void)sender_.waitSent();   /* bounded (UartLink::waitSent); restart either way */
+    ModePort::restartCounted(BACKUP_FAULT_SELF_TEST);
+}
+
+/**
+ * @brief TRIAL's work on one pass: the trial's events, a failed test, and the time-out.
+ *
+ * In order: EVENT 0x0006 once; a failed test: EVENT 0x000B with the test's number (TrialTest),
+ * then the give-up (REQ-140); all tests passed: EVENT 0x000A once; trial time over without
+ * CONFIRM: the give-up (REQ-013), with EVENT 0x0008 but no 0x000B.
  *
  * @param[in]     now_ms  milliseconds since start
  */
-void ModeManager::poll(uint32_t now_ms)
+void ModeManager::pollTrial(uint32_t now_ms)
 {
-    if (restart_due_) {
-        restartWhenSent();
-        return;
-    }
-    if (mode_ != HealthMode::kTrial) {
-        return;
-    }
     if (!trial_started_sent_) {
         trial_started_sent_ = true;
         sendEvent(EventCode::kTrialStarted, nullptr, 0U, now_ms);
@@ -285,6 +443,42 @@ void ModeManager::poll(uint32_t now_ms)
     if ((now_ms - trial_start_ms_) >= kTrialMs) {
         giveUp(now_ms);
     }
+}
+
+/**
+ * @brief The work of one main-loop pass: a restart after SWITCH, the events of the start, the
+ * restart-count clear, then the mode's own work.
+ *
+ * Called after the frame of this pass was handled, so an answer always goes out before the
+ * events and the restart it causes: UPLOAD END of a bad test image is answered REFUSED 0x08,
+ * then EVENT 0x000B and 0x0008 follow on this pass.
+ *
+ * Every HealthMode has its own case (see the file comment). FALLBACK is a later step: this build
+ * never sets it, so a mode of FALLBACK is as impossible here as a corrupted value, and it is the
+ * fault reaction until the FALLBACK step gives it its own work.
+ *
+ * @param[in]     now_ms  milliseconds since start
+ * @note Does not return for the mode FALLBACK or a value outside HealthMode.
+ */
+void ModeManager::poll(uint32_t now_ms)
+{
+    if (restart_due_) {
+        restartWhenSent();
+        return;
+    }
+    sendStartEvents(now_ms);
+    clearRestartCountWhenDue(now_ms);
+    switch (mode_) {
+    case HealthMode::kOperate:
+        pollOperate(now_ms);
+        return;
+    case HealthMode::kTrial:
+        pollTrial(now_ms);
+        return;
+    case HealthMode::kFallback:
+        faultImpossibleValue("ModeManager::poll: FALLBACK is not set by this build");
+    }
+    faultImpossibleValue("ModeManager::poll");   /* only a corrupted value reaches here */
 }
 
 /**
@@ -360,18 +554,27 @@ AnswerCode ModeManager::acceptDangerous(const uint8_t *payload, uint16_t length,
  * @brief SWITCH, after RECEIVED (REQ-021): boot state confirmed = running slot, trial = the
  * other slot, failed starts = 0; the restart follows on the next pass (poll), after DONE.
  *
- * No other precondition, on purpose: the bootloader checks the image in the other slot at the
- * next start (origin, damage, target, slot; bootloader/main.c, image_passes) and gives the trial
- * up at once if it refuses the image, then starts the confirmed slot, this one. That check sees
- * the slot as it is at the start, after anything that happened since UPLOAD END, so
- * UpdateReceiver::imagePassed() is not asked: it would only repeat a check that is repeated
- * anyway, and it is forgotten at every restart.
+ * Before the write, in this order:
+ *   E: the boot state is read again; SWITCH proceeds only if it names the running slot as
+ *      confirmed and no trial is set. Otherwise 0x05, "not allowed in the current mode": the
+ *      command is right and armed, but the controller is not in the state SWITCH needs (it runs a
+ *      slot that is not the confirmed one, or a trial is already waiting, or the boot state
+ *      cannot be read, so neither is known). Not 0x06 (SWITCH has no values to be wrong), not
+ *      0x07 (that is for uploads during a trial, REQ-050), not 0x11 (nothing was written). Why
+ *      again: the mode was decided at start from the boot state as it was then;
+ *   F(a): the image in the other slot gets UPLOAD END's checks (UpdateReceiver::checkSlot:
+ *      contents, both signatures, flash read errors), and a refusal answers that check's code
+ *      (0x08, 0x09, 0x0B, 0x0E, 0x10). Why: the boot state must not name a trial that the
+ *      bootloader would refuse; the check sees the slot as it is now, after anything since END.
+ *      Time: END's checks took 0.081 s at 170 MHz on the bench (test/controller/results/
+ *      2026-10-12/step-2c-cpp-upload-probe.log, line 82), inside the watchdog's 1.88 s; at 16 MHz
+ *      after a clock fault, 10.6 times longer (computed), not measured: TBD.
+ * N: a failed boot-state write answers 0x11, "boot state could not be stored" (Interfaces Sec. 4.2,
+ * accepted 13 Oct 2026); before, 0x06. The chip does not restart: nothing changed.
  *
- * Open (Interfaces gap): no refusal code for a failed boot-state write. 0x06 is sent, and the
- * chip does not restart: nothing changed in the boot state.
- *
- * @return AnswerCode::kSuccess if the boot state was written; AnswerCode::kImpossible (0x06)
- *         if not, or if the running slot is not A or B
+ * @return AnswerCode::kSuccess if the boot state was written; kImpossible (0x06) if the running
+ *         slot is not A or B; kMode (0x05) per E; the image check's code per F(a);
+ *         kStateNotStored (0x11) if the write failed
  */
 AnswerCode ModeManager::runSwitch()
 {
@@ -380,11 +583,20 @@ AnswerCode ModeManager::runSwitch()
     if ((running_ != Slot::kA) && (running_ != Slot::kB)) {
         return AnswerCode::kImpossible;
     }
+    if (!ModePort::readBootState(state) || (toSlot(state.confirmed) != running_) ||
+        (toSlot(state.trial) != Slot::kNone)) {
+        return AnswerCode::kMode;
+    }
+    AnswerCode image = UpdateReceiver::checkSlot(otherSlot(running_));
+    if (image != kUpdateOk) {
+        return image;
+    }
+    state = boot_state_t{};
     state.confirmed = stateCode(running_);
     state.trial = stateCode(otherSlot(running_));
     state.failed_starts = 0U;
     if (!ModePort::writeBootState(state)) {
-        return AnswerCode::kImpossible;   /* Open (Interfaces gap): see above */
+        return AnswerCode::kStateNotStored;
     }
     restart_due_ = true;
     return AnswerCode::kSuccess;
@@ -395,12 +607,13 @@ AnswerCode ModeManager::runSwitch()
  * trial = none, failed starts = 0; on success EVENT 0x0007 "firmware confirmed" and mode
  * OPERATE (the trial timer stops), and the caller answers DONE 0x00.
  *
- * Open (Interfaces gap): no refusal code for a failed boot-state write. 0x06 is sent and the
- * mode stays TRIAL: the trial timer runs on, so the operator can ARM and CONFIRM again, and
- * without a CONFIRM the trial ends at its time limit (REQ-013).
+ * N: a failed boot-state write answers 0x11, "boot state could not be stored" (Interfaces
+ * Sec. 4.2, accepted 13 Oct 2026); before, 0x06. The mode stays TRIAL: the trial timer runs on,
+ * so the operator can ARM and CONFIRM again, and without a CONFIRM the trial ends at its time
+ * limit (REQ-013).
  *
  * @param[in]     now_ms  milliseconds since start
- * @return AnswerCode::kSuccess if the boot state was written; AnswerCode::kImpossible (0x06)
+ * @return AnswerCode::kSuccess if the boot state was written; AnswerCode::kStateNotStored (0x11)
  *         if not
  */
 AnswerCode ModeManager::runConfirm(uint32_t now_ms)
@@ -411,8 +624,7 @@ AnswerCode ModeManager::runConfirm(uint32_t now_ms)
     state.trial = BOOT_SLOT_NONE;
     state.failed_starts = 0U;
     if (!ModePort::writeBootState(state)) {
-        /* Open (Interfaces gap): no refusal code for a failed boot-state write. */
-        return AnswerCode::kImpossible;
+        return AnswerCode::kStateNotStored;
     }
     /* The boot state now names this slot confirmed: the trial is over, whatever happens to the
      * event below. */
@@ -424,9 +636,13 @@ AnswerCode ModeManager::runConfirm(uint32_t now_ms)
 /**
  * @brief Runs SWITCH or CONFIRM after acceptDangerous() accepted it and RECEIVED was sent.
  *
+ * acceptDangerous() lets only these two identifiers through, so any other value here is a
+ * corrupted variable: the fault reaction (firmware/fault.hpp). Before, it answered 0x06.
+ *
  * @param[in]     command  kCmdSwitch or kCmdConfirm
  * @param[in]     now_ms   milliseconds since start
  * @return AnswerCode::kSuccess (answer DONE 0x00), or the refusal code (answer REFUSED)
+ * @note Does not return for any other command.
  */
 AnswerCode ModeManager::runDangerous(uint8_t command, uint32_t now_ms)
 {
@@ -436,7 +652,7 @@ AnswerCode ModeManager::runDangerous(uint8_t command, uint32_t now_ms)
     if (command == kCmdConfirm) {
         return runConfirm(now_ms);
     }
-    return AnswerCode::kImpossible;   /* not reached: acceptDangerous() takes only these two */
+    faultImpossibleValue("ModeManager::runDangerous");   /* only a corrupted value reaches here */
 }
 
 /**

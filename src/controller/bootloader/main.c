@@ -10,14 +10,41 @@
  * slots (direct-xip)" and "Revert mechanism in direct-xip and ram-load mode"), plus the
  * last-resort firmware of Architecture Sec. 5.1.
  *
+ * The owner's decisions of 13 Oct 2026 carried out here (letters of the controller audit):
+ *   B     restarts of a firmware started as the confirmed slot are counted in the TAMP backup
+ *         registers; after CONFIRMED_RESTARTS_MAX in a row that slot is skipped and the
+ *         last-resort firmware starts (count_restart, confirmed_skipped; REQ-018);
+ *   D     a blank boot state gets the default, a damaged one starts only the last-resort
+ *         firmware (load_state);
+ *   F(b)  a trial slot is started only under a watchdog confirmed running
+ *         (hold_trial_without_watchdog);
+ *   G     the firmware's give-up request is applied before the start is counted
+ *         (apply_give_up_request);
+ *   I     the give-up and the default-state saves are tried twice and the result is logged
+ *         (save_state_retry);
+ *   check-result reporting: a copy refused before the one started is left in the backup
+ *         registers with its check result, for the firmware's EVENT 0x0002 or 0x0003
+ *         (leave_fallback_record; Interfaces Sec. 5.4);
+ *   faults: a value in memory that cannot exist calls fault_impossible_value (common/fault.h).
+ *
+ * Switches over an enum have no default label. No default: the compiler checks every case
+ * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch. This deviates on
+ * purpose from MISRA C:2012 Rule 16.4 (a default in every switch); the rule's purpose, handling a
+ * value outside the cases, is met by the fault reaction after the switch. The switches over a
+ * slot code (a uint8_t from boot_state.h, not an enum) follow the same pattern.
+ *
  * Every line on USART2 starts with "BL: ".
  */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
+#include "backup.h"
+#include "backup_layout.h"
 #include "boot_state.h"
 #include "clock.h"
+#include "fault.h"
 #include "flash.h"
 #include "handover.h"
 #include "image_check.h"
@@ -28,7 +55,27 @@
 #include "watchdog.h"
 
 /* Trial slot, confirmed slot, last-resort. */
-#define MAX_CANDIDATES  3U
+#define MAX_CANDIDATES          3U
+/* Restarts in a row of the firmware started as the confirmed slot, after which that slot is
+ * skipped and the last-resort firmware starts. Decision B (owner, 13 Oct 2026): "after 3 such
+ * restarts". The SRS gives REQ-018 no number of its own. */
+#define CONFIRMED_RESTARTS_MAX  3U
+/* The count is one byte of the RESTARTS pair (common/backup_layout.h), so it stops at 255. */
+#define RESTARTS_COUNT_MAX      0xFFU
+
+/* Check-result codes of a refused copy: Interfaces Sec. 5.4, "Check result" table, the first
+ * check the copy failed. One code per check of common/image_check.c, in the order it runs them. */
+#define CHECK_PASSED            0x00U   /* none: the copy passed */
+#define CHECK_EMPTY             0x01U   /* the copy is empty */
+#define CHECK_MAGIC             0x02U   /* proprietary string */
+#define CHECK_FORMAT            0x03U   /* format */
+#define CHECK_KIND              0x04U   /* kind */
+#define CHECK_TARGET            0x05U   /* target */
+#define CHECK_LENGTH            0x06U   /* length */
+#define CHECK_START             0x07U   /* start address outside the region */
+#define CHECK_BODY              0x08U   /* body check value */
+#define CHECK_SIGNATURE_A       0x09U   /* signature A */
+#define CHECK_SIGNATURE_B       0x0AU   /* signature B */
 
 typedef struct {
     const char *name;   /* for the log */
@@ -36,12 +83,27 @@ typedef struct {
     uint32_t bytes;     /* size of the region */
     uint8_t kind;       /* the only image kind this region may run */
     uint8_t slot;       /* BOOT_SLOT_A/B, or BOOT_SLOT_NONE for the last-resort region */
+    uint8_t copy;       /* its code in the fall-back record: the HEALTH report's running-slot
+                         * code (Interfaces Sec. 5.4): BACKUP_COPY_A, _B or _LAST_RESORT */
 } region_t;
 
-static const region_t REGION_A = {"slot A", SLOT_A_START, SLOT_BYTES, IMAGE_KIND_MAIN, BOOT_SLOT_A};
-static const region_t REGION_B = {"slot B", SLOT_B_START, SLOT_BYTES, IMAGE_KIND_MAIN, BOOT_SLOT_B};
+static const region_t REGION_A = {"slot A", SLOT_A_START, SLOT_BYTES, IMAGE_KIND_MAIN, BOOT_SLOT_A,
+                                  BACKUP_COPY_A};
+static const region_t REGION_B = {"slot B", SLOT_B_START, SLOT_BYTES, IMAGE_KIND_MAIN, BOOT_SLOT_B,
+                                  BACKUP_COPY_B};
 static const region_t REGION_LAST_RESORT = {"last-resort", LAST_RESORT_START, LAST_RESORT_BYTES,
-                                            IMAGE_KIND_LAST_RESORT, BOOT_SLOT_NONE};
+                                            IMAGE_KIND_LAST_RESORT, BOOT_SLOT_NONE,
+                                            BACKUP_COPY_LAST_RESORT};
+
+/* The cause of the last reset, from the flags of RCC_CSR [RM0440 Rev 9, Sec. 7.4.28,
+ * p. 327-328]. */
+typedef enum {
+    RESET_WATCHDOG = 0,   /* IWDGRSTF */
+    RESET_POWER_ON,       /* BORRSTF */
+    RESET_SOFTWARE,       /* SFTRSTF */
+    RESET_PIN,            /* PINRSTF only */
+    RESET_OTHER           /* none of these four */
+} reset_cause_t;
 
 /* ---- Log lines -------------------------------------------------------------------- */
 
@@ -64,14 +126,18 @@ static void log_text(const char *a, const char *b, const char *c)
 }
 
 /**
- * @brief Returns the text for a slot code.
+ * @brief Returns the text for a slot code: "A", "B" or "none".
  *
- * Each of the three codes has its own case. The default is only for a value that is none of
- * them (a corrupted variable; MISRA C:2012 Rule 16.4): it logs "corrupted slot code", and no longer "none",
- * so a damaged code is not read as "no trial".
+ * Every caller passes a code from a boot state that passed its checks (common/boot_state.c,
+ * fields_valid) or that this file set itself, so any other code is a corrupted value in memory
+ * and gets the fault reaction (owner's decision, 13 Oct 2026; the pattern is in the file
+ * comment). Before, it returned "corrupted slot code" (commit b18e3e9), and before that
+ * "unknown": a log line that went on as if the value were data. The fault reaction's own line
+ * now says "corrupted value in slot_letter".
  *
  * @param[in]     slot  BOOT_SLOT_A, BOOT_SLOT_B or BOOT_SLOT_NONE
- * @return "A", "B", "none", or "corrupted slot code" for any other value
+ * @return "A", "B" or "none"
+ * @note Does not return for any other code.
  */
 static const char *slot_letter(uint8_t slot)
 {
@@ -82,9 +148,35 @@ static const char *slot_letter(uint8_t slot)
         return "B";
     case BOOT_SLOT_NONE:
         return "none";
-    default:
-        return "corrupted slot code";   /* outside the three codes only: see above */
     }
+    fault_impossible_value("slot_letter");   /* only a corrupted value reaches here */
+}
+
+/**
+ * @brief Returns the text for a reset cause, for the start line.
+ *
+ * Every reset_cause_t value has its own case; a value outside the enum is a corrupted variable
+ * (the pattern is in the file comment).
+ *
+ * @param[in]     cause  the cause read_reset_cause found
+ * @return "watchdog", "power-on", "software", "reset pin" or "other"
+ * @note Does not return for a value outside reset_cause_t.
+ */
+static const char *reset_cause_text(reset_cause_t cause)
+{
+    switch (cause) {
+    case RESET_WATCHDOG:
+        return "watchdog";
+    case RESET_POWER_ON:
+        return "power-on";
+    case RESET_SOFTWARE:
+        return "software";
+    case RESET_PIN:
+        return "reset pin";
+    case RESET_OTHER:
+        return "other";
+    }
+    fault_impossible_value("reset_cause_text");   /* only a corrupted value reaches here */
 }
 
 /**
@@ -104,28 +196,33 @@ static void log_state(const boot_state_t *state)
 }
 
 /**
- * @brief Logs the cause of the last reset, then clears the reset flags.
+ * @brief Reads the cause of the last reset, clears the reset flags, logs the cause and returns
+ * it.
  *
- * Which reset brought us here; a watchdog restart is the evidence of a hung trial. Flags from
- * RCC_CSR [RM0440 Rev 9, Sec. 7.4.28, p. 327-328]. Internal resets are also driven out on the NRST
- * pin [RM0440 Rev 9, Sec. 7.1.2, p. 270], so the pin flag is looked at last.
+ * Which reset brought us here; a watchdog restart is the evidence of a hung firmware, and decision
+ * B counts it. The flags are read before RMVF clears them (decision B). Flags from RCC_CSR
+ * [RM0440 Rev 9, Sec. 7.4.28, p. 327-328]. Internal resets are also driven out on the NRST pin
+ * [RM0440 Rev 9, Sec. 7.1.2, p. 270], so the pin flag is looked at last.
+ *
+ * @return the cause of the last reset
  */
-static void log_reset_cause(void)
+static reset_cause_t read_reset_cause(void)
 {
     uint32_t csr = RCC->CSR;
-    const char *cause = "other";
+    reset_cause_t cause = RESET_OTHER;
 
     if ((csr & RCC_CSR_IWDGRSTF) != 0U) {
-        cause = "watchdog";
+        cause = RESET_WATCHDOG;
     } else if ((csr & RCC_CSR_BORRSTF) != 0U) {
-        cause = "power-on";
+        cause = RESET_POWER_ON;
     } else if ((csr & RCC_CSR_SFTRSTF) != 0U) {
-        cause = "software";
+        cause = RESET_SOFTWARE;
     } else if ((csr & RCC_CSR_PINRSTF) != 0U) {
-        cause = "reset pin";
+        cause = RESET_PIN;
     }
     RCC->CSR |= RCC_CSR_RMVF;   /* clear, so the next start reports only its own cause */
-    log_text("start, reset by ", cause, "");
+    log_text("start, reset by ", reset_cause_text(cause), "");
+    return cause;
 }
 
 /**
@@ -134,10 +231,10 @@ static void log_reset_cause(void)
  * Up to 32 printable characters of the build identifier (Interfaces Sec. 5.5, Figure 6).
  *
  * @param[in]     region  region the image is in; its name goes in the log
- * @param[in]     image   first byte of the image
  */
-static void log_accepted(const region_t *region, const uint8_t *image)
+static void log_accepted(const region_t *region)
 {
+    const uint8_t *image = flash_at(region->start);
     char build[IMAGE_BUILD_ID_BYTES + 1U];
     uint32_t n = 0U;
 
@@ -209,39 +306,80 @@ static bool save_state(boot_state_t *state)
 }
 
 /**
- * @brief Reads the boot state from flash, logs it and returns it.
+ * @brief Writes the boot state; if that fails, tries once more; logs the result (decision I).
  *
- * If no valid state is stored, logs that, sets confirmed slot A, no trial and 0 failed starts,
- * tries to save that state and returns it.
+ * Why a second try: a write can fail once and pass the next time (an error flag left set, a
+ * power dip during the erase); common/flash.c clears the error flags before every operation, and
+ * boot_state_write writes the copy that is not current again, so the second try starts clean.
+ * Why only one: a flash that refuses twice will not be cured by more tries, and every try stalls
+ * the start by up to one page erase, 24.47 ms [DS12589 Rev 6, Table 46, p. 107].
  *
- * @return the stored boot state, or the default state if none is valid
+ * @param[in,out] state  boot state to write; sequence number and check value are set
+ * @return true if the first or the second write succeeded, false if both failed
  */
-static boot_state_t load_state(void)
+static bool save_state_retry(boot_state_t *state)
 {
-    boot_state_t state;
-
-    if (boot_state_read(&state)) {
-        log_state(&state);
-        return state;
+    if (save_state(state)) {
+        return true;
     }
-    /* Blank (first start, or after a restore cleared it) or both copies damaged. */
-    log_text("no valid boot state; set to confirmed A, no trial", "", "");
-    state.confirmed = BOOT_SLOT_A;
-    state.trial = BOOT_SLOT_NONE;
-    state.failed_starts = 0U;
-    (void)save_state(&state);
-    return state;
+    log_text("boot state write: trying once more", "", "");
+    if (save_state(state)) {
+        log_text("boot state written on the second try", "", "");
+        return true;
+    }
+    log_text("boot state write failed again: the change holds for this start only", "", "");
+    return false;
+}
+
+/**
+ * @brief Reads the boot state and decides from it (decision D); logs what it found.
+ *
+ * VALID: the stored state is used. BLANK (both copies erased, as on a fresh chip or after a
+ * restore): confirmed A, no trial, 0 failed starts, as before; it is saved, tried twice
+ * (decision I). DAMAGED (no valid copy, and a copy that is not erased): false, so main() starts
+ * only the last-resort firmware. Why: the stored state is lost, and the default could start a
+ * slot the operator had given up (REQ-019); the last-resort firmware is the one copy that needs
+ * no boot state (Architecture Sec. 5.1).
+ *
+ * Every boot_state_load_t value has its own case (the pattern is in the file comment).
+ *
+ * @param[out]    state  the boot state to use; not meaningful when false is returned
+ * @return true if a state is to be used (VALID or BLANK), false if the boot state is damaged
+ * @note Does not return for a value outside boot_state_load_t.
+ */
+static bool load_state(boot_state_t *state)
+{
+    switch (boot_state_load(state)) {
+    case BOOT_STATE_VALID:
+        log_state(state);
+        return true;
+    case BOOT_STATE_BLANK:
+        log_text("boot state blank (both copies erased); set to confirmed A, no trial", "", "");
+        state->confirmed = BOOT_SLOT_A;
+        state->trial = BOOT_SLOT_NONE;
+        state->failed_starts = 0U;
+        /* The result is logged by save_state_retry. The default is used for this start either
+         * way; if it was not stored, the next start finds the copies blank and sets it again. */
+        (void)save_state_retry(state);
+        return true;
+    case BOOT_STATE_DAMAGED:
+        log_text("boot state damaged (no valid copy, a copy not erased): last-resort only", "",
+                 "");
+        return false;
+    }
+    fault_impossible_value("load_state");   /* only a corrupted value reaches here */
 }
 
 /**
  * @brief Ends the trial: logs the reason, clears the trial slot and the failed starts, saves the
- * state.
+ * state, tried twice (decision I).
  *
  * @param[in,out] state  boot state; trial and failed_starts are cleared
  * @param[in]     why    reason, for the log
- * @note The result of the save is not checked.
+ * @return true if the state was saved, false if both writes failed (the trial is then given up
+ *         in RAM only, for this start)
  */
-static void give_up_trial(boot_state_t *state, const char *why)
+static bool give_up_trial(boot_state_t *state, const char *why)
 {
     uart_put("BL: trial slot ");
     uart_put(slot_letter(state->trial));
@@ -250,7 +388,7 @@ static void give_up_trial(boot_state_t *state, const char *why)
     uart_put("\r\n");
     state->trial = BOOT_SLOT_NONE;
     state->failed_starts = 0U;
-    (void)save_state(state);
+    return save_state_retry(state);
 }
 
 /**
@@ -272,7 +410,9 @@ static void count_trial_start(boot_state_t *state)
         return;
     }
     if (state->failed_starts >= BOOT_STATE_MAX_STARTS) {
-        give_up_trial(state, "started too often without confirming itself");
+        /* Not started either way. If the save failed twice, the stored count is still at the
+         * limit, so the next start gives the trial up again. */
+        (void)give_up_trial(state, "started too often without confirming itself");
         return;
     }
     state->failed_starts++;
@@ -290,18 +430,185 @@ static void count_trial_start(boot_state_t *state)
     }
 }
 
+/**
+ * @brief Applies the firmware's give-up request, if one is stored: the trial it names is given up
+ * before this start is counted (decision G).
+ *
+ * The firmware leaves the request when its own boot-state write of a give-up fails
+ * (firmware/mode-manager/mode_manager.cpp, giveUp). Applied here, the trial is not started
+ * again, and its start is not counted as a failed start. The request is cleared once the give-up
+ * is saved; if the save fails twice it is kept, so the next start applies it again (the trial is
+ * not started on this start either: give_up_trial cleared it in RAM). A request that names no
+ * trial of this boot state (the boot-state write had succeeded after all, or the record is
+ * stale) is dropped. A broken pair reads as no request (bootloader/backup.c).
+ *
+ * @param[in,out] state  boot state; the trial is given up if the request names it
+ */
+static void apply_give_up_request(boot_state_t *state)
+{
+    uint32_t request = 0U;
+
+    if (!backup_read(BACKUP_PAIR_GIVE_UP, &request) || (request == 0U)) {
+        return;
+    }
+    if ((state->trial != BOOT_SLOT_NONE) && (request == state->trial)) {
+        if (!give_up_trial(state, "the firmware's give-up request")) {
+            log_text("give-up request kept for the next start", "", "");
+            return;
+        }
+    } else {
+        /* The stored value is printed as a number: it is data from the backup registers, not a
+         * checked slot code, so slot_letter (fault on any other code) is not asked. */
+        uart_put("BL: give-up request for slot code ");
+        uart_put_decimal(request);
+        uart_put(" names no trial: dropped\r\n");
+    }
+    if (!backup_write(BACKUP_PAIR_GIVE_UP, 0U)) {
+        log_text("give-up request could not be cleared", "", "");
+    }
+}
+
+/**
+ * @brief Holds a trial back for this start if the watchdog is not confirmed running
+ * (decision F(b)).
+ *
+ * A hung trial is ended only by the watchdog restart, which the next start counts as a failed
+ * start (REQ-014, REQ-016); without a running watchdog a hang would stop the chip for good. So
+ * the confirmed slot starts instead, and the log says why. Called before count_trial_start, so
+ * the held-back start is not counted, and in RAM only: the stored boot state keeps the trial,
+ * which the next start tries again.
+ *
+ * @param[in,out] state  boot state; trial is cleared in RAM if the watchdog is not running
+ */
+static void hold_trial_without_watchdog(boot_state_t *state)
+{
+    if ((state->trial == BOOT_SLOT_NONE) || watchdog_running()) {
+        return;
+    }
+    uart_put("BL: trial slot ");
+    uart_put(slot_letter(state->trial));
+    uart_put(" not started: watchdog not confirmed running (IWDG_SR not 0 or LSIRDY 0)\r\n");
+    state->trial = BOOT_SLOT_NONE;
+}
+
+/* ---- Restarts of the confirmed slot (decision B) ------------------------------------ */
+
+/**
+ * @brief Counts the restart that brought us here if decision B counts it, and clears the records
+ * of the start that just ended.
+ *
+ * Counted: a watchdog restart, or a software restart that the firmware marked as its fault
+ * reaction (FAULT pair: common/fault.h, or a failed self-test, decision L), of a firmware the
+ * bootloader had started as the confirmed slot (LAST_START pair). The count belongs to one slot:
+ * a counted restart of the other slot starts again at 1. Not counted:
+ *   - restarts of a trial (it has its own count of failed starts, REQ-015) or of the last-resort
+ *     firmware (nothing to fall back to);
+ *   - a power-on, a reset-pin reset, and a software restart without the mark (SWITCH, a trial's
+ *     give-up), which are not loops of a failing firmware;
+ *   - any restart while the bootloader itself ran: LAST_START is cleared here at every start and
+ *     written only just before the hand-over (note_start), so a hang or a fault of the
+ *     bootloader is never charged to a slot.
+ * The firmware clears the count after running normally for a set time (kNormalRunMs, 60 s bench
+ * value, firmware/mode-manager/mode_manager.hpp). A LAST_START value whose role or slot is none
+ * of the codes is stored data that failed its check: not counted, never a fault
+ * (common/backup_layout.h).
+ *
+ * @param[in]     cause  the cause of the last reset (read_reset_cause)
+ */
+static void count_restart(reset_cause_t cause)
+{
+    uint32_t last = 0U;
+    uint32_t fault = 0U;
+    bool last_known = backup_read(BACKUP_PAIR_LAST_START, &last);
+    bool fault_marked = backup_read(BACKUP_PAIR_FAULT, &fault) && (fault != 0U);
+    bool cleared = backup_write(BACKUP_PAIR_LAST_START, 0U);
+
+    cleared = backup_write(BACKUP_PAIR_FAULT, 0U) && cleared;
+    if (!cleared) {
+        log_text("backup registers not writable: restarts of the confirmed slot not counted", "",
+                 "");
+    }
+    if (fault_marked) {
+        uart_put("BL: the firmware restarted itself after a fault, reason ");
+        uart_put_decimal(fault);
+        uart_put("\r\n");
+    }
+
+    uint32_t role = (last >> BACKUP_START_ROLE_SHIFT) & BACKUP_BYTE_MASK;
+    uint32_t slot = last & BACKUP_BYTE_MASK;
+    bool counted_cause = (cause == RESET_WATCHDOG) || ((cause == RESET_SOFTWARE) && fault_marked);
+    if (!counted_cause || !last_known || (role != BACKUP_ROLE_CONFIRMED) ||
+        ((slot != BOOT_SLOT_A) && (slot != BOOT_SLOT_B))) {
+        return;
+    }
+
+    uint32_t record = 0U;
+    uint32_t count = 0U;
+    if (backup_read(BACKUP_PAIR_RESTARTS, &record) &&
+        (((record >> BACKUP_RESTARTS_SLOT_SHIFT) & BACKUP_BYTE_MASK) == slot)) {
+        count = record & BACKUP_BYTE_MASK;
+    }
+    if (count < RESTARTS_COUNT_MAX) {
+        count++;
+    }
+    uart_put("BL: confirmed slot ");
+    uart_put(slot_letter((uint8_t)slot));
+    uart_put(" restarted by ");
+    uart_put((cause == RESET_WATCHDOG) ? "the watchdog" : "its fault reaction");
+    uart_put(": ");
+    uart_put_decimal(count);
+    uart_put(" in a row\r\n");
+    if (!backup_write(BACKUP_PAIR_RESTARTS, (slot << BACKUP_RESTARTS_SLOT_SHIFT) | count)) {
+        log_text("restart count could not be stored", "", "");
+    }
+}
+
+/**
+ * @brief Returns true if the confirmed slot is to be skipped: its restarts in a row have reached
+ * CONFIRMED_RESTARTS_MAX (decision B, REQ-018). Logs it.
+ *
+ * Skipped means the candidates go on to the last-resort firmware (a set trial still comes first,
+ * with its own count). Only the count of the slot now confirmed matters: a record of the other
+ * slot is old. A broken pair reads as no count.
+ *
+ * @param[in]     state  boot state
+ * @return true if the confirmed slot is skipped on this start, false otherwise
+ */
+static bool confirmed_skipped(const boot_state_t *state)
+{
+    uint32_t record = 0U;
+
+    if (!backup_read(BACKUP_PAIR_RESTARTS, &record)) {
+        return false;
+    }
+    uint32_t slot = (record >> BACKUP_RESTARTS_SLOT_SHIFT) & BACKUP_BYTE_MASK;
+    uint32_t count = record & BACKUP_BYTE_MASK;
+    if ((slot != state->confirmed) || (count < CONFIRMED_RESTARTS_MAX)) {
+        return false;
+    }
+    uart_put("BL: confirmed slot ");
+    uart_put(slot_letter(state->confirmed));
+    uart_put(" skipped: restarted ");
+    uart_put_decimal(count);
+    uart_put(" times in a row without running normally\r\n");
+    return true;
+}
+
 /* ---- Candidates ------------------------------------------------------------------- */
 
 /**
- * @brief Returns the region of slot A or of slot B; NULL for any other slot code.
+ * @brief Returns the region of slot A or of slot B; any other code is a fault.
  *
- * Before, every code that was not A answered the region of slot B, so a damaged or empty code
- * started slot B. The caller (candidates) leaves a NULL out of the list, so a code that names
- * no slot is never started. A valid boot state never holds such a code (common/boot_state.c,
- * fields_valid); this is the second barrier if the variable is corrupted after the read.
+ * The callers ask only for a slot from a boot state that passed its checks (common/boot_state.c,
+ * fields_valid: confirmed A or B, trial none or the other slot), and only for the trial when one
+ * is set; the default state is set in this file. So any other code here is a corrupted value in
+ * memory: the fault reaction (owner's decision, 13 Oct 2026). Before, it returned NULL and the
+ * caller left the code out of the candidates, which carried on as if the value were data; before
+ * that, every code that was not A gave slot B.
  *
  * @param[in]     slot  BOOT_SLOT_A or BOOT_SLOT_B
- * @return region of the slot; NULL if slot is neither A nor B
+ * @return region of the slot
+ * @note Does not return for any other code.
  */
 static const region_t *slot_region(uint8_t slot)
 {
@@ -310,56 +617,72 @@ static const region_t *slot_region(uint8_t slot)
         return &REGION_A;
     case BOOT_SLOT_B:
         return &REGION_B;
-    default:
-        return NULL;   /* BOOT_SLOT_NONE has no slot region, and no other code is a slot */
     }
+    fault_impossible_value("slot_region");   /* only a corrupted value reaches here */
 }
 
 /**
- * @brief Returns the log text that says why a region is started: last resort, trial or confirmed.
+ * @brief Returns the role a region is started in: last resort, trial or confirmed
+ * (BACKUP_ROLE_..., common/backup_layout.h).
  *
  * @param[in]     region  region to be started
  * @param[in]     state   boot state
- * @return " (last resort)", " (trial)" or " (confirmed)"
+ * @return BACKUP_ROLE_LAST_RESORT, BACKUP_ROLE_TRIAL or BACKUP_ROLE_CONFIRMED
  */
-static const char *role(const region_t *region, const boot_state_t *state)
+static uint32_t role_code(const region_t *region, const boot_state_t *state)
 {
     if (region->slot == BOOT_SLOT_NONE) {
-        return " (last resort)";
+        return BACKUP_ROLE_LAST_RESORT;
     }
-    return (region->slot == state->trial) ? " (trial)" : " (confirmed)";
+    return (region->slot == state->trial) ? BACKUP_ROLE_TRIAL : BACKUP_ROLE_CONFIRMED;
+}
+
+/**
+ * @brief Returns the log text for a role: " (last resort)", " (trial)" or " (confirmed)".
+ *
+ * Every role role_code() returns has its own case; any other value is a corrupted variable (the
+ * pattern is in the file comment).
+ *
+ * @param[in]     role  BACKUP_ROLE_LAST_RESORT, BACKUP_ROLE_TRIAL or BACKUP_ROLE_CONFIRMED
+ * @return the text
+ * @note Does not return for any other value.
+ */
+static const char *role_text(uint32_t role)
+{
+    switch (role) {
+    case BACKUP_ROLE_LAST_RESORT:
+        return " (last resort)";
+    case BACKUP_ROLE_TRIAL:
+        return " (trial)";
+    case BACKUP_ROLE_CONFIRMED:
+        return " (confirmed)";
+    }
+    fault_impossible_value("role_text");   /* only a corrupted value reaches here */
 }
 
 /**
  * @brief The regions to try, in order; returns how many.
  *
- * The order is the trial slot (if a trial is set), the confirmed slot, the last-resort firmware.
- * A slot code that names no slot (slot_region gives NULL) is logged and left out, so it is never
- * started; the last-resort firmware is always the last entry.
+ * The order is the trial slot (if a trial is set), the confirmed slot (unless decision B skips
+ * it), the last-resort firmware, which is always the last entry.
  *
- * @param[in]     state  boot state
- * @param[out]    order  regions to try, first to last; room for MAX_CANDIDATES
+ * @param[in]     state           boot state
+ * @param[in]     skip_confirmed  true to leave the confirmed slot out (confirmed_skipped)
+ * @param[out]    order           regions to try, first to last; room for MAX_CANDIDATES
  * @return number of regions written to order (1 to MAX_CANDIDATES)
  */
-static uint32_t candidates(const boot_state_t *state, const region_t *order[MAX_CANDIDATES])
+static uint32_t candidates(const boot_state_t *state, bool skip_confirmed,
+                           const region_t *order[MAX_CANDIDATES])
 {
     uint32_t count = 0U;
 
     if (state->trial != BOOT_SLOT_NONE) {
-        const region_t *trial = slot_region(state->trial);
-        if (trial != NULL) {
-            order[count] = trial;
-            count++;
-        } else {
-            log_text("trial slot code names no slot: left out", "", "");
-        }
-    }
-    const region_t *confirmed = slot_region(state->confirmed);
-    if (confirmed != NULL) {
-        order[count] = confirmed;
+        order[count] = slot_region(state->trial);
         count++;
-    } else {
-        log_text("confirmed slot code names no slot: left out", "", "");
+    }
+    if (!skip_confirmed) {
+        order[count] = slot_region(state->confirmed);
+        count++;
     }
     order[count] = &REGION_LAST_RESORT;
     count++;
@@ -367,36 +690,185 @@ static uint32_t candidates(const boot_state_t *state, const region_t *order[MAX_
 }
 
 /**
+ * @brief Returns the code of the Interfaces "Check result" table for a result of the image
+ * checks (Interfaces Sec. 5.4).
+ *
+ * The table numbers the checks in the order common/image_check.c runs them, 0x00 for a copy that
+ * passed. Every image_result_t value has its own case, written out, so a result added later
+ * cannot fall into a wrong code (-Wswitch-enum); a value outside the enum is a corrupted variable
+ * (the pattern is in the file comment).
+ *
+ * @param[in]     result  result of image_check_contents or image_check_signatures
+ * @return CHECK_PASSED to CHECK_SIGNATURE_B
+ * @note Does not return for a value outside image_result_t.
+ */
+static uint8_t check_result_code(image_result_t result)
+{
+    switch (result) {
+    case IMAGE_OK:
+        return CHECK_PASSED;
+    case IMAGE_EMPTY:
+        return CHECK_EMPTY;
+    case IMAGE_BAD_MAGIC:
+        return CHECK_MAGIC;
+    case IMAGE_BAD_FORMAT:
+        return CHECK_FORMAT;
+    case IMAGE_BAD_KIND:
+        return CHECK_KIND;
+    case IMAGE_BAD_TARGET:
+        return CHECK_TARGET;
+    case IMAGE_BAD_LENGTH:
+        return CHECK_LENGTH;
+    case IMAGE_BAD_START:
+        return CHECK_START;
+    case IMAGE_BAD_BODY_CHECK:
+        return CHECK_BODY;
+    case IMAGE_BAD_SIGNATURE_A:
+        return CHECK_SIGNATURE_A;
+    case IMAGE_BAD_SIGNATURE_B:
+        return CHECK_SIGNATURE_B;
+    }
+    fault_impossible_value("check_result_code");   /* only a corrupted value reaches here */
+}
+
+/**
  * @brief All checks of image_check.c, plus flash read errors seen on the way.
  *
- * Logs the signature check time, then either the reason for a refusal or the acceptance.
+ * Logs the signature check time, then either the reason for a refusal or the acceptance. The
+ * image is read through flash_at() (common/flash.h).
  *
- * @param[in]     region  region whose image is checked
+ * @param[in]     region      region whose image is checked
+ * @param[out]    result      the first check that failed, or IMAGE_OK
+ * @param[out]    read_error  true if a flash read error (ECC) was seen during the checks
  * @return true if the image passed every check, false if it was refused
  */
-static bool image_passes(const region_t *region)
+static bool image_passes(const region_t *region, image_result_t *result, bool *read_error)
 {
-    const uint8_t *image = (const uint8_t *)(uintptr_t)region->start;
+    const uint8_t *image = flash_at(region->start);
     uint32_t signed_bytes = 0U;
 
     flash_ecc_clear();
-    image_result_t result =
+    *result =
         image_check_contents(image, region->start, region->bytes, region->kind, &signed_bytes);
-    if (result == IMAGE_OK) {
+    if (*result == IMAGE_OK) {
         uint32_t begin = cycles_now();
-        result = image_check_signatures(image, signed_bytes);
+        *result = image_check_signatures(image, signed_bytes);
         log_signature_time(region, cycles_now() - begin);
     }
-    if (flash_ecc_error_seen()) {
+    *read_error = flash_ecc_error_seen();
+    if (*read_error) {
         log_text(region->name, " refused: ", "flash read error (ECC)");
         return false;
     }
-    if (result != IMAGE_OK) {
-        log_text(region->name, " refused: ", image_result_text(result));
+    if (*result != IMAGE_OK) {
+        log_text(region->name, " refused: ", image_result_text(*result));
         return false;
     }
-    log_accepted(region, image);
+    log_accepted(region);
     return true;
+}
+
+/* ---- What the started firmware learns (backup registers) -------------------------- */
+
+/**
+ * @brief Clears the fall-back record, so it describes only this start.
+ *
+ * Cleared at every start, before any copy is checked: a record left by an earlier start (for the
+ * last-resort firmware, say, which may not have cleared it) can then never be reported by a
+ * firmware started later.
+ */
+static void clear_fallback_record(void)
+{
+    if (!backup_write(BACKUP_PAIR_FALLBACK, 0U)) {
+        log_text("fall-back record could not be cleared", "", "");
+    }
+}
+
+/**
+ * @brief Leaves the copy refused just before the one started, and its check result, for the
+ * firmware that starts (Interfaces Sec. 5.4, events 0x0002 and 0x0003, accepted 13 Oct 2026).
+ *
+ * The firmware sends EVENT 0x0002 (a main slot started: fall-back to the previous copy) or
+ * 0x0003 (the last-resort firmware started) with the 2-byte detail "refused copy, check result",
+ * once after its start, and clears the record. When two copies were refused (trial, then
+ * confirmed), the record names the second, the one the started copy replaced; the log has both.
+ *
+ * @param[in]     refused  region refused just before
+ * @param[in]     check    its check result (check_result_code)
+ * @param[in]     started  region about to start
+ */
+static void leave_fallback_record(const region_t *refused, uint8_t check, const region_t *started)
+{
+    uint32_t record = ((uint32_t)started->copy << BACKUP_FALLBACK_STARTED_SHIFT) |
+                      ((uint32_t)refused->copy << BACKUP_FALLBACK_REFUSED_SHIFT) | check;
+
+    if (!backup_write(BACKUP_PAIR_FALLBACK, record)) {
+        log_text("fall-back record could not be stored: no EVENT for this fall-back", "", "");
+    }
+}
+
+/**
+ * @brief Records what is started and in which role, for decision B's count at the next start.
+ *
+ * @param[in]     region  region about to start
+ * @param[in]     role    BACKUP_ROLE_... (role_code)
+ */
+static void note_start(const region_t *region, uint32_t role)
+{
+    if (!backup_write(BACKUP_PAIR_LAST_START, (role << BACKUP_START_ROLE_SHIFT) | region->slot)) {
+        log_text("start not recorded: a restart of this start will not be counted", "", "");
+    }
+}
+
+/**
+ * @brief Checks the regions in order and starts the first whose image passes.
+ *
+ * Before the jump: the fall-back record if a copy was refused just before (check-result
+ * reporting), the start record (decision B), the backup registers closed. A refused trial image
+ * will not change by itself, so the trial is given up at once. A copy refused only for a flash
+ * read error has no code in the "Check result" table (Interfaces Sec. 5.4): it is logged and
+ * leaves no record (open item for the owner).
+ *
+ * @param[in,out] state  boot state; the trial is given up if its image is refused
+ * @param[in]     order  regions to try, first to last
+ * @param[in]     count  number of regions in order
+ * @note Returns only if no region passes; otherwise it does not return (handover_start).
+ */
+static void start_first_passing(boot_state_t *state, const region_t *const order[],
+                                uint32_t count)
+{
+    const region_t *refused = NULL;
+    uint8_t refused_check = CHECK_PASSED;
+
+    for (uint32_t i = 0U; i < count; i++) {
+        image_result_t result = IMAGE_OK;
+        bool read_error = false;
+
+        watchdog_reload();   /* a full time-out for this candidate's checks */
+        if (image_passes(order[i], &result, &read_error)) {
+            uint32_t role = role_code(order[i], state);
+            if (refused != NULL) {
+                leave_fallback_record(refused, refused_check, order[i]);
+            }
+            note_start(order[i], role);
+            backup_close();
+            log_text("starting ", order[i]->name, role_text(role));
+            handover_start(order[i]->start + (uint32_t)IMAGE_CODE_OFFSET);
+        }
+        if (read_error && (result == IMAGE_OK)) {
+            log_text(order[i]->name, ": no check-result code for a flash read error, ",
+                     "no fall-back record");
+            refused = NULL;
+        } else {
+            refused = order[i];
+            refused_check = check_result_code(result);
+        }
+        if ((state->trial != BOOT_SLOT_NONE) && (order[i]->slot == state->trial)) {
+            /* The trial is not started on this start either way. If both saves fail, the next
+             * start checks the image again, refuses it again and gives the trial up again. */
+            (void)give_up_trial(state, "its image was refused");
+        }
+    }
 }
 
 /**
@@ -408,14 +880,18 @@ static bool image_passes(const region_t *region)
  *    and #5, decision A). The watchdog is reloaded before the boot-state writes (save_state),
  *    before each candidate's checks and in the park loop, never inside a wait.
  * 1. Starts the cycle counter and checks it counts, sets the clock to 170 MHz, starts the UART,
- *    logs the reset cause. A clock fault or a stopped cycle counter is logged and the bootloader
- *    carries on.
- * 2. Loads the boot state and counts this start if a trial is set.
- * 3. Takes the regions in order: trial slot (if set), confirmed slot, last-resort firmware.
- * 4. Starts the first region whose image passes all checks.
- * 5. Gives the trial up at once if the image of the trial slot is refused.
- * 6. If no image passes: logs that, turns the UART off and parks, reloading the watchdog on every
- *    pass, so the chip stays quiet and reachable through SWD as Architecture Sec. 5.1 decided.
+ *    reads and logs the reset cause. A clock fault or a stopped cycle counter is logged and the
+ *    bootloader carries on.
+ * 2. Opens the backup registers, counts a restart of the confirmed slot (decision B) and clears
+ *    the fall-back record.
+ * 3. Loads the boot state (decision D). Damaged: only the last-resort firmware is tried.
+ *    Otherwise: applies the firmware's give-up request (decision G), holds a trial back without a
+ *    running watchdog (decision F(b)), counts this start if a trial is set, and takes the regions
+ *    in order: trial slot (if set), confirmed slot (unless decision B skips it), last-resort.
+ * 4. Starts the first region whose image passes all checks; a refused trial is given up at once.
+ * 5. If no image passes: logs that, closes the backup registers, turns the UART off and parks,
+ *    reloading the watchdog on every pass, so the chip stays quiet and reachable through SWD as
+ *    Architecture Sec. 5.1 decided.
  *
  * @return Does not return.
  */
@@ -425,7 +901,7 @@ int main(void)
     bool cycles_ok = cycles_start();
     bool clock_ok = clock_to_170mhz();
     uart_init();
-    log_reset_cause();
+    reset_cause_t cause = read_reset_cause();
     if (!cycles_ok) {
         log_text("cycle counter not counting: waits are held by their pass limits only", "", "");
     }
@@ -434,31 +910,35 @@ int main(void)
         log_text("clock fault, ", (clock_hz() == HSI16_HZ) ? "running at 16 MHz" : "clock not known", "");
     }
 
-    boot_state_t state = load_state();
-    count_trial_start(&state);
+    backup_open();
+    count_restart(cause);
+    clear_fallback_record();
 
+    boot_state_t state;
     const region_t *order[MAX_CANDIDATES];
-    uint32_t count = candidates(&state, order);
+    uint32_t count;
 
-    for (uint32_t i = 0U; i < count; i++) {
-        watchdog_reload();   /* a full time-out for this candidate's checks */
-        if (image_passes(order[i])) {
-            log_text("starting ", order[i]->name, role(order[i], &state));
-            handover_start(order[i]->start + (uint32_t)IMAGE_CODE_OFFSET);
-        }
-        /* A refused trial image will not change by itself: give the trial up now. */
-        if ((state.trial != BOOT_SLOT_NONE) && (order[i]->slot == state.trial)) {
-            give_up_trial(&state, "its image was refused");
-        }
+    /* All zero: BOOT_SLOT_NONE in both slot fields, for the damaged case below. */
+    memset(&state, 0, sizeof state);
+    if (load_state(&state)) {
+        apply_give_up_request(&state);
+        hold_trial_without_watchdog(&state);
+        count_trial_start(&state);
+        count = candidates(&state, confirmed_skipped(&state), order);
+    } else {
+        order[0] = &REGION_LAST_RESORT;
+        count = 1U;
     }
+    start_first_passing(&state, order, count);
 
     /* Nothing passed. Drive nothing and park, so the chip stays quiet and reachable through SWD
      * for the onboard computer's restore (Architecture Sec. 5.1). The watchdog keeps running
      * (it cannot be stopped [RM0440 Rev 9, Sec. 35.3.1, p. 1557]) and is reloaded on every pass:
      * the park is deliberate, so it must not end in a reset. */
     log_text("no firmware can run", "", "");
+    backup_close();
     uart_off();
-    for (;;) {
+    for (;;) {   /* endless: the park, until the onboard computer restores the chip over SWD */
         watchdog_reload();
     }
 }

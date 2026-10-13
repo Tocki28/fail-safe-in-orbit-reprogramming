@@ -15,6 +15,8 @@ void uart_init(void);
 void uart_put(const char *text);
 /* Send a number as decimal digits. */
 void uart_put_decimal(uint32_t value);
+/* Wait, bounded, until the last bit has left; USART2 stays on. Used before a software reset. */
+void uart_wait_sent(void);
 /* Wait until the last bit has left, then put USART2 and GPIOA back to their reset state. */
 void uart_off(void);
 

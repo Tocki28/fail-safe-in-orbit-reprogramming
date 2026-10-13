@@ -1,11 +1,17 @@
 /*
  * health_monitor.cpp — the HEALTH and EVENT report payloads (see health_monitor.hpp for the
  * layouts).
+ *
+ * The switch over Slot has no default label. No default: the compiler checks every case
+ * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which calls the
+ * fault reaction. A deliberate deviation from MISRA C:2012 Rule 16.4, whose purpose, handling a
+ * value outside the cases, the fault reaction meets (firmware/fault.hpp).
  */
 #include "health_monitor.hpp"
 
 #include <cstring>
 
+#include "fault.hpp"
 #include "image_check.h"
 #include "image_format.h"
 
@@ -62,15 +68,27 @@ void writeU32(uint8_t *bytes, uint32_t value)
 /**
  * @brief Convert a boot slot to its report code.
  *
+ * Slot::kNone is the running slot when the vector table lies in neither slot
+ * (UpdateReceiver::slotOf); this build always runs from A or B, and the report then carries the
+ * code 0x00, which the report table does not list (health_monitor.hpp, ReportSlot::kUnknown). A
+ * value outside the Slot enum is a corrupted variable: the fault reaction (firmware/fault.hpp).
+ * Before, an if-chain gave kUnknown for it too, a normal-looking report field.
+ *
  * @param[in] slot  the slot
- * @return the report code for slot A or B; the unknown code for any other value
+ * @return the report code for slot A or B; ReportSlot::kUnknown for Slot::kNone
+ * @note Does not return for a value outside Slot.
  */
 ReportSlot slotCode(Slot slot)
 {
-    if (slot == Slot::kA) {
+    switch (slot) {
+    case Slot::kA:
         return ReportSlot::kA;
+    case Slot::kB:
+        return ReportSlot::kB;
+    case Slot::kNone:
+        return ReportSlot::kUnknown;
     }
-    return (slot == Slot::kB) ? ReportSlot::kB : ReportSlot::kUnknown;
+    faultImpossibleValue("slotCode");   /* only a corrupted value reaches here */
 }
 
 }  // namespace

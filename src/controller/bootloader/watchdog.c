@@ -114,6 +114,29 @@ void watchdog_reload(void)
 }
 
 /**
+ * @brief Returns true if the watchdog is confirmed running: its register updates have settled and
+ * the LSI that clocks it is ready.
+ *
+ * Decision F(b), owner, 13 Oct 2026: a trial slot is started only under a running watchdog,
+ * because the watchdog restart is what ends a hung trial and lets the bootloader count it as a
+ * failed start (REQ-014, REQ-016, REQ-022). The two bits:
+ *   - IWDG_SR = 0: PVU, RVU and WVU are clear, so the prescaler and reload values written by
+ *     watchdog_start_long have reached the counter's own voltage domain [RM0440 Rev 9,
+ *     Sec. 35.4.4, p. 1562]; that transfer is clocked by the LSI, so it ends only while the LSI
+ *     runs;
+ *   - LSIRDY = 1 in RCC_CSR: the LSI oscillator is stable [RM0440 Rev 9, Sec. 7.4.28, p. 328]. A
+ *     started IWDG forces the LSI on [RM0440 Rev 9, Sec. 7.2.14, p. 282].
+ * Read once, without a wait: watchdog_start_long already waited (bounded) for the update, and
+ * main() calls this after the clock, the UART and the boot-state read, far later.
+ *
+ * @return true if both bits say the watchdog runs, false otherwise
+ */
+bool watchdog_running(void)
+{
+    return (IWDG->SR == 0U) && ((RCC->CSR & RCC_CSR_LSIRDY) != 0U);
+}
+
+/**
  * @brief Sets the firmware's time-out of about 2 s on the running IWDG, then reloads.
  *
  * Unlock key, prescaler /32, reload value 1999, bounded wait for the update, reload

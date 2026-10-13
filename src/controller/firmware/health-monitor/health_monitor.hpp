@@ -59,6 +59,10 @@ constexpr uint32_t kEventReportMaxBytes = kEventHeadBytes + kEventDetailMax;
 
 /* The event codes the controller sends in this step (Interfaces Sec. 5.4, event code table). */
 enum class EventCode : uint16_t {
+    kFaultDetected = 0x0001U,      /* no detail: the clock fault of decision C (core_clock.hpp) */
+    kFallbackPrevious = 0x0002U,   /* detail: refused copy (1), check result (1) */
+    kSelfTestFailed = 0x0004U,     /* no detail: decision L, a failed self-test in OPERATE */
+    kMemoryChanged = 0x0005U,      /* no detail: the fault reaction (firmware/fault.hpp) */
     kTrialStarted = 0x0006U,
     kConfirmed = 0x0007U,
     kGivenUp = 0x0008U,

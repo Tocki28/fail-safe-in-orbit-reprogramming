@@ -5,7 +5,10 @@
  * single bit error makes it armed).
  *
  * The REQ-137 test flips every bit of the stored object, one at a time, from each state the
- * object can be in, and asks the arming check whether it is armed.
+ * object can be in, and asks the arming check whether it is armed. Since the owner's fault
+ * decision of 13 Oct 2026 a broken pair or an unknown state word is the fault reaction
+ * (firmware/fault.hpp), so every flipped copy must end there and none may read as armed. Before,
+ * a flipped copy read as "not armed" (0x01); these tests fail on that code (no fault reaction).
  *
  * Run: make -C test/controller unit. Prints PASS or FAIL per test; exit status 1 on a failure.
  */
@@ -16,6 +19,7 @@
 #include <type_traits>
 
 #include "arm_state.hpp"
+#include "fake_fault.hpp"
 #include "frame.hpp"
 
 namespace {
@@ -162,17 +166,45 @@ void testExpireWhenDue()
            "millisecond count has wrapped to the ARM's own time");
 }
 
+/* What the flipped copies of one state did. */
+struct FlipCount {
+    uint32_t armed;     /* copies that let SWITCH 7 or CONFIRM 7 through */
+    uint32_t faulted;   /* copies that ended in the fault reaction */
+};
+
 /**
- * @brief Flips every bit of `start`, one at a time, and counts the copies the check finds armed.
+ * @brief Runs one damaged copy through expireWhenDue and the arming check, catching the fault
+ * reaction.
  *
- * Each flipped copy is also passed through expireWhenDue, which must not turn it armed either.
+ * @param[in]     copy     the damaged arm state
+ * @param[in,out] counts   armed and faulted, each raised by one when it happened
+ */
+void runDamaged(ArmState &copy, FlipCount &counts)
+{
+    volatile bool passes = false;
+    bool faulted = false;
+
+    FAULT_CATCH(faulted, {
+        copy.expireWhenDue(kArmedAt + 1U);
+        passes = (copy.check(kSwitch, kSeq, kArmedAt + 1U) == AnswerCode::kSuccess) ||
+                 (copy.check(kConfirm, kSeq, kArmedAt + 1U) == AnswerCode::kSuccess);
+    });
+    counts.armed += passes ? 1U : 0U;
+    counts.faulted += faulted ? 1U : 0U;
+}
+
+/**
+ * @brief Flips every bit of `start`, one at a time, and counts what the flipped copies did.
+ *
+ * Each flipped copy goes through expireWhenDue (called on every main-loop pass) and the arming
+ * check.
  *
  * @param[in]     start  the state to damage
- * @return number of single-bit flips after which SWITCH 7 or CONFIRM 7 passes the check
+ * @return the counts: armed must be 0, faulted must be the number of bits
  */
-uint32_t armedAfterFlips(const ArmState &start)
+FlipCount flips(const ArmState &start)
 {
-    uint32_t armed = 0U;
+    FlipCount counts{0U, 0U};
     Raw raw{};
 
     for (uint32_t bit = 0U; bit < (sizeof(ArmState) * kBitsPerByte); bit++) {
@@ -181,12 +213,22 @@ uint32_t armedAfterFlips(const ArmState &start)
         raw[bit / kBitsPerByte] = static_cast<uint8_t>(raw[bit / kBitsPerByte] ^
                                                        (1U << (bit % kBitsPerByte)));
         std::memcpy(&copy, raw.data(), sizeof(ArmState));
-        copy.expireWhenDue(kArmedAt + 1U);
-        bool passes = (copy.check(kSwitch, kSeq, kArmedAt + 1U) == AnswerCode::kSuccess) ||
-                      (copy.check(kConfirm, kSeq, kArmedAt + 1U) == AnswerCode::kSuccess);
-        armed += passes ? 1U : 0U;
+        runDamaged(copy, counts);
     }
-    return armed;
+    return counts;
+}
+
+/**
+ * @brief Returns true if every flipped copy of `start` faulted and none read as armed.
+ *
+ * @param[in]     start  the state to damage
+ * @param[in]     bits   number of bits flipped in turn
+ * @return true if so
+ */
+bool allFaultNoneArmed(const ArmState &start, uint32_t bits)
+{
+    FlipCount c = flips(start);
+    return (c.armed == 0U) && (c.faulted == bits);
 }
 
 /**
@@ -206,21 +248,21 @@ void testBitFlips()
 
     std::snprintf(line, sizeof line,
                   "REQ-137: each of the %u bits flipped in turn, from disarmed (start), disarmed "
-                  "(used up) and expired: never armed",
+                  "(used up) and expired: fault reaction every time, never armed",
                   bits);
-    report((armedAfterFlips(disarmed) == 0U) && (armedAfterFlips(used) == 0U) &&
-               (armedAfterFlips(expired) == 0U),
+    report(allFaultNoneArmed(disarmed, bits) && allFaultNoneArmed(used, bits) &&
+               allFaultNoneArmed(expired, bits),
            line);
 
     std::snprintf(line, sizeof line,
-                  "REQ-137: each of the %u bits flipped in turn, from armed for SWITCH 7: the flip "
-                  "disarms it every time (fails safe)",
+                  "REQ-137: each of the %u bits flipped in turn, from armed for SWITCH 7: fault "
+                  "reaction every time (was: read as not armed)",
                   bits);
-    report(armedAfterFlips(armed) == 0U, line);
+    report(allFaultNoneArmed(armed, bits), line);
 
     /* The same bit flipped in the state word and in its complement keeps the pair matched; the
-     * code words still keep it from reading as armed (16 bits apart, arm_state.hpp). */
-    uint32_t armed_pairs = 0U;
+     * state word is then no code word (16 bits apart, arm_state.hpp): the fault reaction. */
+    FlipCount pairs{0U, 0U};
     for (uint32_t bit = 0U; bit < 32U; bit++) {
         Raw raw{};
         ArmState copy;
@@ -230,11 +272,11 @@ void testBitFlips()
         raw[4U + (bit / kBitsPerByte)] = static_cast<uint8_t>(raw[4U + (bit / kBitsPerByte)] ^
                                                               (1U << (bit % kBitsPerByte)));
         std::memcpy(&copy, raw.data(), sizeof(ArmState));
-        armed_pairs += (copy.check(0U, 0U, 0U) == AnswerCode::kSuccess) ? 1U : 0U;
+        runDamaged(copy, pairs);
     }
-    report(armed_pairs == 0U,
+    report((pairs.armed == 0U) && (pairs.faulted == 32U),
            "the same bit flipped in the state word and its complement (32 cases, from "
-           "disarmed): never armed");
+           "disarmed): the state word is no code word -> fault reaction, never armed");
 }
 
 }  // namespace

@@ -8,7 +8,8 @@
  * watchdog_reload writes 0xAAAA; watchdog_set_firmware_timeout sets prescaler /32 (PR = 3) and
  * reload 1999 (about 2 s) without the start key, then reloads, and also ends with a dead cycle
  * counter. Before decision A the bootloader's watchdog_start (in handover.c) was static, started
- * at the hand-over and waited on the cycle counter alone.
+ * at the hand-over and waited on the cycle counter alone. watchdog_running (decision F(b)) is
+ * true only with the IWDG status register 0 and LSIRDY set in RCC_CSR.
  *
  * Built with the Mac's cc and the undefined-behaviour sanitizer. Run: make -C test/controller
  * unit. Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -21,6 +22,7 @@
 #include "watchdog.h"
 
 IWDG_TypeDef fake_iwdg;
+RCC_TypeDef fake_rcc;
 
 #define HISTORY_MAX 4096U
 static uint32_t history[HISTORY_MAX];
@@ -79,6 +81,7 @@ static void report(bool ok, const char *name)
 static void reset_rig(void)
 {
     memset(&fake_iwdg, 0, sizeof fake_iwdg);
+    memset(&fake_rcc, 0, sizeof fake_rcc);
     history_length = 0U;
     cycles_value = 0U;
 }
@@ -193,6 +196,31 @@ static void test_firmware_timeout_bounded(void)
 }
 
 /**
+ * @brief watchdog_running (decision F(b)): true only with IWDG_SR = 0 and LSIRDY = 1.
+ *
+ * Each of the three update bits (PVU, RVU, WVU [RM0440 Rev 9, Sec. 35.4.4, p. 1562]) left set, or
+ * LSIRDY clear [RM0440 Rev 9, Sec. 7.4.28, p. 328], must answer false. Fails on the old code: the
+ * function did not exist, and the bootloader started a trial without asking.
+ */
+static void test_running(void)
+{
+    const uint32_t update_bits[3] = {0x1U, 0x2U, 0x4U};
+    bool any_true = false;
+
+    reset_rig();
+    fake_rcc.CSR = RCC_CSR_LSIRDY;
+    report(watchdog_running(), "watchdog_running: IWDG_SR = 0 and LSIRDY = 1 -> true");
+    for (uint32_t i = 0U; i < 3U; i++) {
+        fake_iwdg.SR = update_bits[i];
+        any_true = any_true || watchdog_running();
+    }
+    fake_iwdg.SR = 0U;
+    fake_rcc.CSR = 0U;
+    report(!any_true && !watchdog_running(),
+           "watchdog_running: PVU, RVU or WVU set, or LSIRDY = 0 -> false (trial not started)");
+}
+
+/**
  * @brief Runs the tests and prints the totals.
  *
  * @return 0 if every test passed, 1 otherwise
@@ -204,6 +232,7 @@ int main(void)
     test_reload();
     test_firmware_timeout();
     test_firmware_timeout_bounded();
+    test_running();
     if (failures == 0U) {
         printf("watchdog unit tests: all %u passed\n", tests);
         return 0;

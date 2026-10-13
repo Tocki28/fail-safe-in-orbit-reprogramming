@@ -41,6 +41,12 @@ void flash_ecc_clear(void);
  * memcmp of the callers still catch the damaged data. */
 bool flash_ecc_error_seen(void);
 
+/* Where a program reads the flash byte at chip address `address`: the flash is read in place at
+ * its own address [RM0440 Rev 9, Table 28, p. 189]. One function for every flash read of the
+ * bootloader and of boot_state.c, so the host tests can serve those reads from a RAM copy
+ * (test/controller/unit/boot_stubs). */
+const uint8_t *flash_at(uint32_t address);
+
 #ifdef __cplusplus
 }
 #endif

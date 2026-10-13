@@ -33,10 +33,18 @@ CPU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 
 # -ffunction-sections/-fdata-sections + --gc-sections: unused functions are dropped.
 # -fstack-usage: writes each function's stack use to a .su file next to its object.
+# C warnings: the same strict set as the C++ code below (owner, 13 Oct 2026; code rule D1):
+#   -Wpedantic       ISO C11 only, no compiler extensions used by accident
+#   -Wconversion     an implicit conversion that can change a value (e.g. uint32_t to uint8_t)
+#   -Wsign-conversion  an implicit change of sign (int to unsigned and back)
+#   -Wshadow         a local name that hides another
+# ST's device headers and Arm's CMSIS headers come in through -isystem, as for C++: their own
+# warnings are theirs, not ours (measured on 13 Oct 2026: the flags above give 18 warnings in
+# CMSIS core_cm4.h and none in our C code). Our code is still held to every warning by -Werror.
+CWARNINGS = -Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion -Wshadow -Wswitch-enum
 CFLAGS = $(CPU) $(OPT) -g3 -std=c11 -DSTM32G431xx $(DEFS) \
-         -I$(DEV)/Include -I$(CUBE)/Drivers/CMSIS/Include -I$(COMMON) $(INCLUDES) \
-         -ffunction-sections -fdata-sections -fstack-usage -Wall -Wextra \
-         -Wswitch-enum
+         -isystem $(DEV)/Include -isystem $(CUBE)/Drivers/CMSIS/Include -I$(COMMON) $(INCLUDES) \
+         -ffunction-sections -fdata-sections -fstack-usage $(CWARNINGS)
 # C++17 for the main firmware, with what a small controller cannot afford switched off:
 #   -fno-exceptions         no throw, no unwinding code; failures are return values, as in C
 #   -fno-rtti               no type information tables (no dynamic_cast, no typeid)

@@ -31,6 +31,10 @@ else
 endif
 
 # mode=UR: connect while the chip is held in reset, so a running watchdog cannot restart it
-# during programming (after reset the watchdog is off until the bootloader starts it).
+# during programming. The bootloader starts the independent watchdog as the first line of its
+# main() (bootloader/main.c, decision A), so it runs within microseconds of any start; once
+# running it cannot be stopped [RM0440 Rev 9, Sec. 35.3.1, p. 1557], and the firmware keeps it
+# with a time-out of about 2 s (bootloader/watchdog.c). Connected under reset, the core is
+# halted before that first line, so no code starts the watchdog while the programmer works.
 CLI     = "$(PROG)" -c port=SWD mode=UR
 W_BL    = -w $(BL) $(ADDR_BL) -v

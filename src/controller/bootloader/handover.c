@@ -43,7 +43,6 @@ void handover_start(uint32_t vector_table)
     /* Load the program's stack pointer and branch to its reset handler. In assembly, because
      * C code could still use the old stack between those two steps. */
     __asm volatile("msr msp, %0\n\tbx %1" : : "r"(stack_top), "r"(reset_handler) : "memory");
-    for (;;) {
-        /* Not reached. */
+    for (;;) {   /* endless: not reached, the branch above does not come back; it marks noreturn */
     }
 }

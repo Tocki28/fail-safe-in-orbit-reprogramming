@@ -191,7 +191,7 @@ bool clock_to_170mhz(void)
 {
     /* PWR registers ignore writes until their bus clock is on. */
     RCC->APB1ENR1 |= RCC_APB1ENR1_PWREN;
-    (void)RCC->APB1ENR1;
+    (void)RCC->APB1ENR1;   /* read back, value not needed: the clock runs before PWR is written */
 
     /* Range 1 normal -> boost mode, steps 1-5 [RM0440 Rev 9, Sec. 6.1.5, p. 233];
      * above 150 MHz boost mode is needed [RM0440 Rev 9, Table 38, p. 232]. */
@@ -240,6 +240,9 @@ void clock_back_to_reset(void)
     (void)wait_bits(&RCC->CR, RCC_CR_PLLRDY, 0U);   /* the PLL stops within a few cycles */
     RCC->PLLCFGR = PLLCFGR_RESET_VALUE;
     FLASH->ACR &= ~FLASH_ACR_PRFTEN;
+    /* Result not needed: the core already runs from HSI16, where any number of wait states is
+     * allowed [RM0440 Rev 9, Table 29, p. 190]; if the read-back times out, the next program
+     * starts with more wait states than it needs, slower but correct. */
     (void)set_flash_latency(FLASH_ACR_LATENCY_1WS);
     /* Boost -> normal mode: set R1MODE; 16 MHz is far below the 150 MHz normal-mode limit
      * [RM0440 Rev 9, Sec. 6.1.5, p. 233]. R1MODE = 1 is also its reset value (p. 267). */

@@ -11,12 +11,18 @@
 #ifndef WATCHDOG_H
 #define WATCHDOG_H
 
+#include <stdbool.h>
+
 /* Start the IWDG with the long time-out (prescaler /256, reload 0xFFF, about 32 s). Works also
  * when the hardware-watchdog option bit has started it at power-on. Call first in main(). */
 void watchdog_start_long(void);
 
 /* Reload the counter: another full time-out from now. Call between steps, never in a wait. */
 void watchdog_reload(void);
+
+/* True if the watchdog is confirmed running: IWDG_SR is 0 (updates settled) and LSIRDY is 1
+ * (decision F(b): no trial start otherwise). */
+bool watchdog_running(void);
 
 /* Set the firmware's time-out (about 2 s) on the running watchdog, then reload. Used by the
  * hand-over, once, just before the jump. */

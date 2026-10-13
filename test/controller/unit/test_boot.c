@@ -1,15 +1,24 @@
 /*
- * test_boot.c — host unit tests of the bootloader's slot handling (src/controller/bootloader/
- * main.c: slot_region, candidates, slot_letter) and of boot_state_other_slot (src/controller/
- * common/boot_state.c), for slot codes that name no slot.
+ * test_boot.c — host unit tests of the bootloader's own functions (src/controller/bootloader/
+ * main.c: slot_region, candidates, slot_letter, check_result_code, reset_cause_text, role_text)
+ * and of common/boot_state.c (boot_state_other_slot, the start-count bound, and decision D's
+ * blank/damaged decision, boot_state_classify and boot_state_load).
  *
  * The bootloader's own main.c is included here, so the tests call the code that runs on the
  * board, static functions and all. Its main() is renamed and never called. The chip is replaced
- * by unit/boot_stubs: ST's device header by a RAM register, the UART by a text buffer.
+ * by unit/boot_stubs: ST's device header by a RAM register, the UART by a text buffer, the flash
+ * by a RAM copy behind flash_at(), the fault reaction by a stand-in that records the call and
+ * leaves by longjmp.
  *
- * The rule under test: a slot code that is not BOOT_SLOT_A or BOOT_SLOT_B names no slot. It was
- * taken for slot B (slot_region) or slot A (boot_state_other_slot); now it is left out of the
- * candidates, and the bootloader falls back to the last-resort firmware (REQ-019).
+ * The rules under test:
+ *   - a value in memory that cannot exist is a fault (owner's decision, 13 Oct 2026): every
+ *     function above that switches over a slot code or an enum calls the fault reaction for a
+ *     value outside its cases, and does nothing else (no log line of a normal value, no region);
+ *   - a value read from flash that fails its check is damage, never a fault (point 4 of the same
+ *     decision): boot_state_classify answers DAMAGED;
+ *   - decision D: both copies erased -> BLANK; a copy written but not valid, with no valid copy ->
+ *     DAMAGED;
+ *   - the check-result codes of Interfaces Sec. 5.4 ("Check result" table).
  *
  * Built with the Mac's cc and the undefined-behaviour sanitizer. Run: make -C test/controller
  * unit. Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -22,6 +31,7 @@
 #include <string.h>
 
 #include "boot_stubs.h"
+#include "crc32.h"
 
 static uint32_t failures;
 static uint32_t tests;
@@ -42,6 +52,29 @@ static void report(bool ok, const char *name)
 }
 
 /**
+ * @brief Clears the fault record and the UART text before a call that may fault.
+ */
+static void fresh(void)
+{
+    fault_clear();
+    uart_log_clear();
+}
+
+/**
+ * @brief Returns true if a run ended in the fault reaction, called once at `where`, with nothing
+ * logged before it.
+ *
+ * @param[in]     ended  how the run ended (RUN_CATCH)
+ * @param[in]     where  the function name the fault reaction must have been given
+ * @return true if so
+ */
+static bool faulted_only(int ended, const char *where)
+{
+    return (ended == RUN_FAULT) && (fault_calls == 1U) && (strcmp(fault_where, where) == 0) &&
+           (uart_log[0] == '\0');
+}
+
+/**
  * @brief Returns true if a region is the one with the given name.
  *
  * @param[in]     region  region to look at; may be NULL
@@ -54,17 +87,28 @@ static bool is_region(const region_t *region, const char *name)
 }
 
 /**
- * @brief slot_region: A and B give their regions; none and codes that name no slot give NULL.
+ * @brief slot_region: A and B give their regions; any other code is the fault reaction.
  *
- * Before, every code that was not A gave the region of slot B.
+ * Before (until this change): NULL for none and for codes that name no slot, and the caller left
+ * them out; before that, slot B. Fails on the old code: no fault reaction is called.
  */
 static void test_slot_region(void)
 {
+    const uint8_t bad[] = {BOOT_SLOT_NONE, 3U, 0xEEU, 0xFFU};
+    bool all = true;
+
     report((slot_region(BOOT_SLOT_A) == &REGION_A) && (slot_region(BOOT_SLOT_B) == &REGION_B),
            "slot_region: A -> region A, B -> region B");
-    report((slot_region(BOOT_SLOT_NONE) == NULL) && (slot_region(3U) == NULL) &&
-               (slot_region(0xEEU) == NULL) && (slot_region(0xFFU) == NULL),
-           "slot_region: none, 3, 0xEE and 0xFF -> NULL (not region B)");
+    for (uint32_t i = 0U; i < (uint32_t)(sizeof bad / sizeof bad[0]); i++) {
+        const region_t *volatile got = NULL;
+        int ended = 0;
+
+        fresh();
+        RUN_CATCH(ended, got = slot_region(bad[i]));
+        all = all && faulted_only(ended, "slot_region") && (got == NULL);
+    }
+    report(all, "slot_region: none, 3, 0xEE, 0xFF -> fault reaction, no region returned (was "
+                "NULL)");
 }
 
 /**
@@ -72,89 +116,116 @@ static void test_slot_region(void)
  *
  * @param[in]     confirmed  confirmed slot code
  * @param[in]     trial      trial slot code
+ * @param[in]     skip       skip_confirmed (decision B)
  * @param[out]    order      the regions listed
  * @return number of regions listed
  */
-static uint32_t list_for(uint8_t confirmed, uint8_t trial, const region_t *order[MAX_CANDIDATES])
+static uint32_t list_for(uint8_t confirmed, uint8_t trial, bool skip,
+                         const region_t *order[MAX_CANDIDATES])
 {
     boot_state_t state;
 
     memset(&state, 0, sizeof state);
     state.confirmed = confirmed;
     state.trial = trial;
-    uart_log_clear();
-    return candidates(&state, order);
+    return candidates(&state, skip, order);
 }
 
 /**
- * @brief candidates(): the order for valid states, and a code that names no slot is left out.
+ * @brief candidates(): the order for valid states, decision B's skip, and a code that names no
+ * slot is a fault.
  *
- * Before, a damaged confirmed or trial code started slot B; now only the real slots and the
- * last-resort firmware are listed, and the log says which code was left out.
+ * Before, a damaged confirmed or trial code was left out with a log line, and the list went on
+ * (last-resort only). Fails on the old code: no fault reaction; the skip parameter did not exist.
  */
 static void test_candidates(void)
 {
     const region_t *order[MAX_CANDIDATES];
     uint32_t n;
+    int ended = 0;
 
-    n = list_for(BOOT_SLOT_A, BOOT_SLOT_NONE, order);
+    n = list_for(BOOT_SLOT_A, BOOT_SLOT_NONE, false, order);
     report((n == 2U) && is_region(order[0], "slot A") && is_region(order[1], "last-resort"),
            "candidates: confirmed A, no trial -> slot A, last-resort");
-    n = list_for(BOOT_SLOT_B, BOOT_SLOT_A, order);
+    n = list_for(BOOT_SLOT_B, BOOT_SLOT_A, false, order);
     report((n == 3U) && is_region(order[0], "slot A") && is_region(order[1], "slot B") &&
                is_region(order[2], "last-resort"),
            "candidates: confirmed B, trial A -> slot A, slot B, last-resort");
-    n = list_for(BOOT_SLOT_A, BOOT_SLOT_B, order);
+    n = list_for(BOOT_SLOT_A, BOOT_SLOT_B, false, order);
     report((n == 3U) && is_region(order[0], "slot B") && is_region(order[1], "slot A") &&
                is_region(order[2], "last-resort"),
            "candidates: confirmed A, trial B -> slot B, slot A, last-resort");
+    n = list_for(BOOT_SLOT_A, BOOT_SLOT_NONE, true, order);
+    report((n == 1U) && is_region(order[0], "last-resort"),
+           "candidates, decision B: confirmed A skipped, no trial -> last-resort only");
+    n = list_for(BOOT_SLOT_A, BOOT_SLOT_B, true, order);
+    report((n == 2U) && is_region(order[0], "slot B") && is_region(order[1], "last-resort"),
+           "candidates, decision B: confirmed A skipped, trial B -> slot B, last-resort");
 
-    n = list_for(0xEEU, BOOT_SLOT_NONE, order);
-    report((n == 1U) && is_region(order[0], "last-resort") &&
-               (strstr(uart_log, "confirmed slot code names no slot") != NULL),
-           "candidates: confirmed code 0xEE -> last-resort only (not slot B), logged");
-    n = list_for(BOOT_SLOT_NONE, BOOT_SLOT_NONE, order);
-    report((n == 1U) && is_region(order[0], "last-resort"),
-           "candidates: confirmed code none -> last-resort only (not slot B)");
-    n = list_for(BOOT_SLOT_A, 0xEEU, order);
-    report((n == 2U) && is_region(order[0], "slot A") && is_region(order[1], "last-resort") &&
-               (strstr(uart_log, "trial slot code names no slot") != NULL),
-           "candidates: trial code 0xEE -> trial left out (not slot B), logged");
-    n = list_for(3U, 0xFFU, order);
-    report((n == 1U) && is_region(order[0], "last-resort"),
-           "candidates: both codes name no slot -> last-resort only");
+    volatile uint32_t got = 99U;
+    fresh();
+    RUN_CATCH(ended, got = list_for(0xEEU, BOOT_SLOT_NONE, false, order));
+    report(faulted_only(ended, "slot_region") && (got == 99U),
+           "candidates: confirmed code 0xEE -> fault reaction, no list (was: last-resort only)");
+    fresh();
+    RUN_CATCH(ended, got = list_for(BOOT_SLOT_NONE, BOOT_SLOT_NONE, false, order));
+    report(faulted_only(ended, "slot_region") && (got == 99U),
+           "candidates: confirmed code none -> fault reaction (was: last-resort only)");
+    fresh();
+    RUN_CATCH(ended, got = list_for(BOOT_SLOT_A, 0xEEU, false, order));
+    report(faulted_only(ended, "slot_region") && (got == 99U),
+           "candidates: trial code 0xEE -> fault reaction (was: trial left out, slot A, "
+           "last-resort)");
 }
 
 /**
- * @brief slot_letter: A, B and none have their own text; a code that is none of them is "corrupted slot code".
+ * @brief slot_letter: A, B and none have their own text; any other code is the fault reaction.
  *
- * Before, any other code was logged as "none", which reads as "no trial".
+ * Before: "corrupted slot code" (b18e3e9), and "unknown" before that, logged as if it were data.
+ * Fails on the old code: it returned a text.
  */
 static void test_slot_letter(void)
 {
+    const uint8_t bad[] = {3U, 0xEEU};
+    bool all = true;
+
     report((strcmp(slot_letter(BOOT_SLOT_A), "A") == 0) &&
                (strcmp(slot_letter(BOOT_SLOT_B), "B") == 0) &&
                (strcmp(slot_letter(BOOT_SLOT_NONE), "none") == 0),
            "slot_letter: A, B and none have their own text");
-    report((strcmp(slot_letter(3U), "corrupted slot code") == 0) &&
-           (strcmp(slot_letter(0xEEU), "corrupted slot code") == 0),
-           "slot_letter: 3 and 0xEE -> \"unknown\" (not \"none\")");
+    for (uint32_t i = 0U; i < 2U; i++) {
+        const char *volatile text = NULL;
+        int ended = 0;
+
+        fresh();
+        RUN_CATCH(ended, text = slot_letter(bad[i]));
+        all = all && faulted_only(ended, "slot_letter") && (text == NULL);
+    }
+    report(all, "slot_letter: 3 and 0xEE -> fault reaction, no text (was \"corrupted slot code\")");
 }
 
 /**
- * @brief boot_state_other_slot: A gives B, B gives A; none and other codes give none.
+ * @brief boot_state_other_slot: A gives B, B gives A; none and other codes are the fault reaction.
  *
- * Before, every code that was not A gave A.
+ * Before: BOOT_SLOT_NONE for them, and slot A before that. Fails on the old code: no fault.
  */
 static void test_other_slot(void)
 {
+    const uint8_t bad[] = {BOOT_SLOT_NONE, 3U, 0xEEU};
+    bool all = true;
+
     report((boot_state_other_slot(BOOT_SLOT_A) == BOOT_SLOT_B) &&
                (boot_state_other_slot(BOOT_SLOT_B) == BOOT_SLOT_A),
            "boot_state_other_slot: A -> B, B -> A");
-    report((boot_state_other_slot(BOOT_SLOT_NONE) == BOOT_SLOT_NONE) &&
-               (boot_state_other_slot(3U) == BOOT_SLOT_NONE) &&
-               (boot_state_other_slot(0xEEU) == BOOT_SLOT_NONE),
-           "boot_state_other_slot: none, 3 and 0xEE -> none (not slot A)");
+    for (uint32_t i = 0U; i < 3U; i++) {
+        volatile uint8_t got = 0x55U;
+        int ended = 0;
+
+        fresh();
+        RUN_CATCH(ended, got = boot_state_other_slot(bad[i]));
+        all = all && faulted_only(ended, "boot_state_other_slot") && (got == 0x55U);
+    }
+    report(all, "boot_state_other_slot: none, 3, 0xEE -> fault reaction (was: none)");
 }
 
 /**
@@ -180,17 +251,224 @@ static void test_start_count_bound(void)
 }
 
 /**
+ * @brief Returns a boot-state record with a right check value (CRC-32 of its first 12 bytes,
+ * common/boot_state.h).
+ *
+ * @param[in]     sequence   sequence number
+ * @param[in]     confirmed  confirmed slot code
+ * @param[in]     trial      trial slot code
+ * @param[in]     starts     failed starts
+ * @return the record
+ */
+static boot_state_t record_of(uint32_t sequence, uint8_t confirmed, uint8_t trial, uint8_t starts)
+{
+    boot_state_t r;
+
+    memset(&r, 0, sizeof r);
+    r.sequence = sequence;
+    r.confirmed = confirmed;
+    r.trial = trial;
+    r.failed_starts = starts;
+    r.check = crc32_compute((const uint8_t *)&r, (uint32_t)offsetof(boot_state_t, check));
+    return r;
+}
+
+/**
+ * @brief Returns a record as erased flash leaves it: 16 bytes 0xFF.
+ *
+ * @return the record
+ */
+static boot_state_t erased_record(void)
+{
+    boot_state_t r;
+
+    memset(&r, 0xFF, sizeof r);
+    return r;
+}
+
+/**
+ * @brief Classifies two records, both read without a flash error.
+ *
+ * @param[in]     c0   copy 0
+ * @param[in]     c1   copy 1
+ * @param[out]    out  the state, for BOOT_STATE_VALID
+ * @return what boot_state_classify says
+ */
+static boot_state_load_t classify2(boot_state_t c0, boot_state_t c1, boot_state_t *out)
+{
+    const boot_state_t copies[2] = {c0, c1};
+    const bool readable[2] = {true, true};
+
+    return boot_state_classify(copies, readable, out);
+}
+
+/**
+ * @brief Decision D on records in RAM: blank, damaged, valid; and a damaged field from flash is
+ * damage, not a fault.
+ *
+ * Before decision D the bootloader could not tell blank from damaged (boot_state_read gave false
+ * for both, and both got the default state). Fails on the old code: boot_state_classify did not
+ * exist.
+ */
+static void test_classify(void)
+{
+    boot_state_t out;
+    boot_state_t bad_crc = record_of(5U, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    int ended = 0;
+
+    bad_crc.check ^= 1U;
+    report(classify2(erased_record(), erased_record(), &out) == BOOT_STATE_BLANK,
+           "D: both copies erased (16 x 0xFF) -> BLANK (default state)");
+    report(classify2(erased_record(), bad_crc, &out) == BOOT_STATE_DAMAGED,
+           "D: one copy erased, the other written with a wrong check value -> DAMAGED");
+    report(classify2(bad_crc, bad_crc, &out) == BOOT_STATE_DAMAGED,
+           "D: both copies written, both failing their check -> DAMAGED");
+
+    boot_state_t good = record_of(7U, BOOT_SLOT_B, BOOT_SLOT_A, 2U);
+    memset(&out, 0, sizeof out);
+    report((classify2(erased_record(), good, &out) == BOOT_STATE_VALID) &&
+               (memcmp(&out, &good, sizeof out) == 0),
+           "D: one copy erased, the other valid -> VALID with that copy");
+    boot_state_t older = record_of(6U, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    memset(&out, 0, sizeof out);
+    report((classify2(bad_crc, older, &out) == BOOT_STATE_VALID) && (out.sequence == 6U) &&
+               (classify2(older, good, &out) == BOOT_STATE_VALID) && (out.sequence == 7U),
+           "D: one damaged and one valid -> VALID; two valid -> the higher sequence number");
+
+    const boot_state_t copies[2] = {erased_record(), erased_record()};
+    const bool ecc_on_0[2] = {false, true};
+    report(boot_state_classify(copies, ecc_on_0, &out) == BOOT_STATE_DAMAGED,
+           "D: both erased, but copy 0 read with a flash ECC error -> DAMAGED, not BLANK");
+
+    /* A record from flash with a right check value but a confirmed code that names no slot. */
+    boot_state_t odd = record_of(9U, 0xEEU, BOOT_SLOT_NONE, 0U);
+    volatile boot_state_load_t got = BOOT_STATE_VALID;
+    fresh();
+    RUN_CATCH(ended, got = classify2(odd, erased_record(), &out));
+    report((ended == 0) && (got == BOOT_STATE_DAMAGED) && (fault_calls == 0U),
+           "a record from flash with confirmed 0xEE (check value right) -> DAMAGED, no fault "
+           "(flash data is checked, not a fault; fields_valid checks confirmed first)");
+}
+
+/**
+ * @brief Decision D through boot_state_load on the RAM flash (flash_at): the real reads of
+ * common/boot_state.c.
+ *
+ * Fails on the old code: boot_state_load did not exist (boot_state_read gave false for both the
+ * blank and the damaged case).
+ */
+static void test_load_from_flash(void)
+{
+    const uint32_t copy1 = (uint32_t)BOOT_STATE_COPY_1 - (uint32_t)FLASH_START;
+    boot_state_t out;
+    boot_state_t good = record_of(3U, BOOT_SLOT_A, BOOT_SLOT_B, 1U);
+
+    stub_flash_reset();
+    report(boot_state_load(&out) == BOOT_STATE_BLANK,
+           "D, from flash: both copies erased -> BLANK");
+    memcpy(&stub_flash[copy1], &good, sizeof good);
+    memset(&out, 0, sizeof out);
+    report((boot_state_load(&out) == BOOT_STATE_VALID) && (out.confirmed == BOOT_SLOT_A) &&
+               (out.trial == BOOT_SLOT_B) && (out.failed_starts == 1U),
+           "D, from flash: copy 1 valid -> VALID, confirmed A, trial B, 1 start");
+    stub_flash[copy1 + 4U] = 0x00U;   /* the confirmed byte: the check value no longer matches */
+    report(boot_state_load(&out) == BOOT_STATE_DAMAGED,
+           "D, from flash: copy 1 written but damaged, copy 0 erased -> DAMAGED");
+    stub_flash_reset();
+    stub_ecc_address = BOOT_STATE_COPY_0;
+    report(boot_state_load(&out) == BOOT_STATE_DAMAGED,
+           "D, from flash: both erased, copy 0 read with an ECC error -> DAMAGED");
+    stub_flash_reset();
+}
+
+/**
+ * @brief check_result_code: the 11 image check results give the 11 codes of the Interfaces
+ * "Check result" table; a value outside the enum is the fault reaction.
+ *
+ * The expected codes are written from the Interfaces Sec. 5.4 table, not from main.c's macros.
+ * Fails on the old code: the function did not exist.
+ */
+static void test_check_result_code(void)
+{
+    struct {
+        image_result_t result;
+        uint8_t code;
+    } const cases[] = {
+        {IMAGE_OK, 0x00U},
+        {IMAGE_EMPTY, 0x01U},
+        {IMAGE_BAD_MAGIC, 0x02U},
+        {IMAGE_BAD_FORMAT, 0x03U},
+        {IMAGE_BAD_KIND, 0x04U},
+        {IMAGE_BAD_TARGET, 0x05U},
+        {IMAGE_BAD_LENGTH, 0x06U},
+        {IMAGE_BAD_START, 0x07U},
+        {IMAGE_BAD_BODY_CHECK, 0x08U},
+        {IMAGE_BAD_SIGNATURE_A, 0x09U},
+        {IMAGE_BAD_SIGNATURE_B, 0x0AU},
+    };
+    const int outside[] = {11, 15};
+    bool ok = true;
+    bool all = true;
+
+    for (uint32_t i = 0U; i < (uint32_t)(sizeof cases / sizeof cases[0]); i++) {
+        ok = ok && (check_result_code(cases[i].result) == cases[i].code);
+    }
+    report(ok, "check_result_code: the 11 results -> 0x00 to 0x0A (Interfaces Sec. 5.4 table)");
+    for (uint32_t i = 0U; i < 2U; i++) {
+        volatile uint8_t got = 0x55U;
+        int ended = 0;
+
+        fresh();
+        RUN_CATCH(ended, got = check_result_code((image_result_t)outside[i]));
+        all = all && faulted_only(ended, "check_result_code") && (got == 0x55U);
+    }
+    report(all, "check_result_code: a value outside image_result_t (11, 15) -> fault reaction");
+}
+
+/**
+ * @brief reset_cause_text and role_text: every value has its text; a corrupted value is the fault
+ * reaction. Both are new with this change (no old code to fail).
+ */
+static void test_texts(void)
+{
+    const char *volatile text = NULL;
+    int ended = 0;
+
+    report((strcmp(reset_cause_text(RESET_WATCHDOG), "watchdog") == 0) &&
+               (strcmp(reset_cause_text(RESET_POWER_ON), "power-on") == 0) &&
+               (strcmp(reset_cause_text(RESET_SOFTWARE), "software") == 0) &&
+               (strcmp(reset_cause_text(RESET_PIN), "reset pin") == 0) &&
+               (strcmp(reset_cause_text(RESET_OTHER), "other") == 0) &&
+               (strcmp(role_text(BACKUP_ROLE_CONFIRMED), " (confirmed)") == 0) &&
+               (strcmp(role_text(BACKUP_ROLE_TRIAL), " (trial)") == 0) &&
+               (strcmp(role_text(BACKUP_ROLE_LAST_RESORT), " (last resort)") == 0),
+           "reset_cause_text and role_text: every value has its own text");
+    fresh();
+    RUN_CATCH(ended, text = reset_cause_text((reset_cause_t)9));
+    bool cause_fault = faulted_only(ended, "reset_cause_text") && (text == NULL);
+    fresh();
+    RUN_CATCH(ended, text = role_text(7U));
+    report(cause_fault && faulted_only(ended, "role_text") && (text == NULL),
+           "reset_cause_text(9) and role_text(7): fault reaction, no text");
+}
+
+/**
  * @brief Runs the tests and prints the totals.
  *
  * @return 0 if every test passed, 1 otherwise
  */
 int main(void)
 {
+    stub_flash_reset();
     test_slot_region();
     test_candidates();
     test_slot_letter();
     test_other_slot();
     test_start_count_bound();
+    test_classify();
+    test_load_from_flash();
+    test_check_result_code();
+    test_texts();
     if (failures == 0U) {
         printf("bootloader unit tests: all %u passed\n", tests);
         return 0;

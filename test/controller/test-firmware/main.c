@@ -9,7 +9,8 @@
  *   hang     it stops reloading the watchdog and loops, so the watchdog restarts the chip
  *            and the bootloader counts a failed start.
  * It runs on HSI16, the clock the bootloader hands over (bootloader/handover.h). It shares no
- * code with the bootloader except the boot-state module it must use to confirm.
+ * code with the bootloader except the boot-state module it must use to confirm, and so it also
+ * defines the fault reaction that module calls for an impossible value (common/fault.h).
  *
  * Build flags (Makefile):
  *   APP_SLOT     BOOT_SLOT_A, BOOT_SLOT_B, or BOOT_SLOT_NONE for the last-resort build
@@ -21,6 +22,7 @@
 #include <stdint.h>
 
 #include "boot_state.h"
+#include "fault.h"
 #include "layout.h"
 #include "stm32g4xx.h"
 
@@ -42,6 +44,12 @@
 #define DECISION_SECOND    3U
 #define DECIMAL_DIGITS     10U
 
+/**
+ * @brief Starts USART2 transmit on PA2 at 115200 baud from HSI16.
+ *
+ * The same register steps as the bootloader's uart_init (bootloader/uart.c), with the divider
+ * for 16 MHz: this test application never changes the clock.
+ */
 static void uart_init(void)
 {
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
@@ -53,6 +61,15 @@ static void uart_init(void)
     USART2->CR1 = USART_CR1_TE | USART_CR1_UE;
 }
 
+/**
+ * @brief Sends one character on USART2, waiting for TXE.
+ *
+ * TXE: TDR has moved to the shift register [RM0440 Rev 9, Sec. 40.8.10, p. 1767]. The wait has no
+ * limit of its own: a test application on the bench; the watchdog the bootloader started ends a
+ * transmitter that never empties.
+ *
+ * @param[in]     c  character to send
+ */
 static void put_char(char c)
 {
     while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0U) {
@@ -60,6 +77,11 @@ static void put_char(char c)
     USART2->TDR = (uint8_t)c;
 }
 
+/**
+ * @brief Sends a zero-terminated string on USART2.
+ *
+ * @param[in]     text  string to send
+ */
 static void put_text(const char *text)
 {
     while (*text != '\0') {
@@ -68,6 +90,11 @@ static void put_text(const char *text)
     }
 }
 
+/**
+ * @brief Sends a number on USART2 as decimal digits without leading zeros.
+ *
+ * @param[in]     value  number to send
+ */
 static void put_decimal(uint32_t value)
 {
     char digits[DECIMAL_DIGITS];
@@ -84,7 +111,11 @@ static void put_decimal(uint32_t value)
     }
 }
 
-/* One line: "APP <slot> v<version> <what>". */
+/**
+ * @brief Sends one line: "APP <slot> v<version> <what>".
+ *
+ * @param[in]     what  text after the version
+ */
 static void say(const char *what)
 {
     put_text("APP " APP_NAME " v");
@@ -94,6 +125,13 @@ static void say(const char *what)
     put_text("\r\n");
 }
 
+/**
+ * @brief Waits 1 s: 1000 SysTick COUNTFLAGs of 1 ms each.
+ *
+ * COUNTFLAG is set each time the count reaches 0 and cleared by the read [Arm DUI 0553A,
+ * Sec. 4.4.1, p. 4-33 to 4-34]. The waits have no limit of their own: a stopped SysTick is ended
+ * by the watchdog the bootloader started.
+ */
 static void wait_one_second(void)
 {
     for (uint32_t ms = 0U; ms < MS_PER_SECOND; ms++) {
@@ -102,8 +140,12 @@ static void wait_one_second(void)
     }
 }
 
-/* Only the trial slot confirms itself; a slot running as confirmed or as fallback must not
- * touch the record, or it could confirm a trial that never ran. */
+/**
+ * @brief Confirms this slot in the boot state if it is the trial slot.
+ *
+ * Only the trial slot confirms itself; a slot running as confirmed or as fallback must not
+ * touch the record, or it could confirm a trial that never ran.
+ */
 static void confirm_if_trial(void)
 {
     boot_state_t state;
@@ -125,6 +167,31 @@ static void confirm_if_trial(void)
     say(boot_state_write(&state) ? "confirmed itself" : "confirm FAILED: boot state write");
 }
 
+/**
+ * @brief The fault reaction for common/boot_state.c (common/fault.h): one line, then a software
+ * reset.
+ *
+ * The test application needs only what the bench sees: the line says where, and the reset
+ * (CMSIS NVIC_SystemReset, SYSRESETREQ [Arm DUI 0553A, Sec. 4.3.5, Table 4-17, p. 4-17]) hands
+ * back to the bootloader, which reads everything again.
+ *
+ * @param[in]     where  the function that found the impossible value
+ * @note Does not return.
+ */
+void fault_impossible_value(const char *where)
+{
+    say("corrupted value; restarting");
+    put_text(where);
+    put_text("\r\n");
+    NVIC_SystemReset();
+}
+
+/**
+ * @brief Prints a line every second, reloads the watchdog, and after 3 s confirms itself or
+ * hangs, by build flag.
+ *
+ * @note Does not return.
+ */
 int main(void)
 {
     /* Own vector table, also when started by a debugger instead of the bootloader. */
@@ -134,12 +201,12 @@ int main(void)
     SysTick->VAL = 0U;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;   /* no interrupt */
 
-    for (uint32_t second = 1U;; second++) {
+    for (uint32_t second = 1U;; second++) {   /* endless: the application's main loop */
         say("running");
         if (second == DECISION_SECOND) {
             if (APP_HANG != 0) {
                 say("hanging: watchdog no longer reloaded");
-                for (;;) {
+                for (;;) {   /* endless: the planned hang; the watchdog restarts the chip */
                 }
             }
             confirm_if_trial();

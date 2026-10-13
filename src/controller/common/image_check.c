@@ -5,8 +5,12 @@
 #include "image_check.h"
 
 #include <stdbool.h>
+#if !defined(STM32G431xx)
+#include <stdlib.h>   /* abort(), for the host-only fallback at the end of this file */
+#endif
 
 #include "crc32.h"
+#include "fault.h"
 #include "image_format.h"
 #include "keys.h"
 #include "layout.h"
@@ -143,17 +147,27 @@ image_result_t image_check_signatures(const uint8_t *image, uint32_t signed_byte
     return IMAGE_OK;
 }
 
+/*
+ * Switches over an enum in this file have no default label. No default: the compiler checks
+ * every case (-Wswitch, -Werror); only a corrupted value reaches the line after the switch. This
+ * deviates on purpose from MISRA C:2012 Rule 16.4 (a default in every switch): the rule's purpose,
+ * handling a value outside the cases, is met by the fault reaction after the switch
+ * (common/fault.h; owner's decision of 13 Oct 2026).
+ */
+
 /**
  * @brief Returns the short text for a check result, for the log.
  *
- * Every image_result_t value has its own case, so -Wswitch-enum (common/build.mk) stops the
- * build when a value is added and this table is not. The default is only for a value outside the
- * enum (a corrupted variable; MISRA C:2012 Rule 16.4 asks for a default in every switch): it
- * logs "corrupted result value", so the log says what happened. The image is still refused:
- * image_passes() starts an image only on IMAGE_OK.
+ * Every image_result_t value has its own case that returns, so -Wswitch-enum (common/build.mk)
+ * stops the build when a value is added and this table is not. A value outside the enum is a
+ * corrupted variable and gets the fault reaction (see the comment above). Before, it returned
+ * "corrupted result value" (commit b18e3e9), and before that "unknown": a normal-looking text for
+ * a value that cannot exist. The fault reaction's own log line now says "corrupted value in
+ * image_result_text".
  *
  * @param[in]     result  result of a check
- * @return text for the result; "corrupted result value" for a value outside image_result_t
+ * @return text for the result
+ * @note Does not return for a value outside image_result_t.
  */
 const char *image_result_text(image_result_t result)
 {
@@ -169,6 +183,30 @@ const char *image_result_text(image_result_t result)
     case IMAGE_BAD_BODY_CHECK:  return "body check value";
     case IMAGE_BAD_SIGNATURE_A: return "signature A";
     case IMAGE_BAD_SIGNATURE_B: return "signature B";
-    default:                    return "corrupted result value";   /* outside the enum only */
     }
+    fault_impossible_value("image_result_text");   /* only a corrupted value reaches here */
 }
+
+#if !defined(STM32G431xx)
+/* Weak: a host test's own stand-in replaces this definition (see below). The attribute sits on
+ * this declaration, which the compilers apply to the definition that follows. */
+__attribute__((weak)) void fault_impossible_value(const char *where);
+
+/**
+ * @brief Host-only fallback of the fault reaction: stops the host process.
+ *
+ * Why it exists: tools/check_images.py compiles this file with crc32.c alone into a library
+ * (libimagecheck.so) for the image host check, and a library with an undefined function does not
+ * link on this computer. Every chip build defines STM32G431xx (common/build.mk, CFLAGS), so no
+ * program on the board contains this; each defines its own fault_impossible_value
+ * (common/fault.h). Weak, so a host test's own stand-in (test/controller/unit) replaces it.
+ *
+ * @param[in]     where  the function that found the impossible value (not used)
+ * @note Does not return: abort() ends the process.
+ */
+void fault_impossible_value(const char *where)
+{
+    (void)where;   /* nothing to report it to in a host library: the process stops */
+    abort();
+}
+#endif

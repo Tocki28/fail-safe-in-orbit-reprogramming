@@ -12,25 +12,22 @@
 #include "uart_link.hpp"
 
 #include "core_clock.hpp"
+#include "fault.hpp"
 #include "stm32g4xx.h"
 
 namespace {
 
-constexpr uint32_t kBaudRate = 115200U;
-/* Oversampling by 16: BRR = kernel clock / baud [RM0440 Rev 9, Sec. 40.5.7, p. 1707-1708].
- * USART2's kernel clock is PCLK1 after reset (USART2SEL = 00, Sec. 7.4.26, p. 324), and PCLK1
- * = 170 MHz with the APB1 divider left at 1. Rounded: 1476, 0.02 % fast. */
-constexpr uint32_t kBrrValue = (kCoreClockHz + (kBaudRate / 2U)) / kBaudRate;
 /* PA2 = USART2_TX and PA3 = USART2_RX, both alternate function 7 [DS12589 Rev 6, Table 13,
  * p. 61]; on this board both reach the ST-LINK (SB1, SB12 ON) [UM2397 Rev 2, Table 9, p. 17]. */
 constexpr uint32_t kAf7Usart2 = 7U;
 constexpr uint32_t kGpioModeAf = 2U;
 /* One byte needs 86.8 us on the line; 1 ms without the transmit register emptying means the
- * transmitter has stopped. */
+ * transmitter has stopped. Counted in cycles: 1 ms at 170 MHz, 10.6 ms at 16 MHz after a clock
+ * fault (decision C), still far inside the watchdog's 1.88 s. */
 constexpr uint32_t kSendByteTimeoutCycles = kCyclesPerMs;
 /* After send() returns, at most two bytes are still on their way: one in TDR and one in the
  * shift register (send() writes TDR only once TXE says it is empty). Two bytes need 174 us on
- * the line; 2 ms is over ten times that. */
+ * the line; 2 ms is over ten times that (21.3 ms at 16 MHz, computed: 340 000 / 16 MHz). */
 constexpr uint32_t kDrainTimeoutCycles = 2U * kCyclesPerMs;
 /* Backstop for a cycle counter that has stopped (CoreClock::start() checks it counts at start,
  * but it could stop later): as many passes of the wait loop as cycles above. A pass reads the
@@ -39,7 +36,8 @@ constexpr uint32_t kDrainTimeoutCycles = 2U * kCyclesPerMs;
  * the wait lasts at least as many cycles as the limit, 1 ms and 2 ms at 170 MHz. The longest it
  * can take is the passes x (cycles per pass): TBD, not measured. It stays inside the
  * watchdog's 1.88 s (bootloader/watchdog.c) as long as a pass takes under 1.88 s x 170 MHz /
- * 340 000 passes = 940 cycles (computed, for the longer of the two waits). */
+ * 340 000 passes = 940 cycles (computed, for the longer of the two waits); at 16 MHz after a
+ * clock fault the bound is 1.88 s x 16 MHz / 340 000 = 88 cycles per pass (computed). */
 constexpr uint32_t kSendByteTimeoutPasses = kSendByteTimeoutCycles;
 constexpr uint32_t kDrainTimeoutPasses = kDrainTimeoutCycles;
 
@@ -73,11 +71,19 @@ bool waitTransmitEmpty()
  *        interrupt on.
  *
  * Enables the GPIOA and USART2 clocks, selects alternate function 7 on PA2 and PA3, writes the
- * baud rate and enables transmitter, receiver and the receive interrupt, then enables the
- * USART2 interrupt in the NVIC.
+ * baud rate divider for the clock in use (brrFor; decision C: 1476 at 170 MHz, 139 at 16 MHz
+ * after a clock fault) and enables transmitter, receiver and the receive interrupt, then enables
+ * the USART2 interrupt in the NVIC. core_hz can only be one of the two clocks CoreClock::start
+ * returns; any other value is a corrupted variable: the fault reaction (firmware/fault.hpp).
+ *
+ * @param[in] core_hz  the core clock in use, kCoreClockHz or kHsi16Hz (CoreClock::start)
+ * @note Does not return for any other core_hz.
  */
-void UartLink::init()
+void UartLink::init(uint32_t core_hz)
 {
+    if ((core_hz != kCoreClockHz) && (core_hz != kHsi16Hz)) {
+        faultImpossibleValue("UartLink::init");
+    }
     parser_.reset();
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN;
     RCC->APB1ENR1 |= RCC_APB1ENR1_USART2EN;
@@ -93,7 +99,7 @@ void UartLink::init()
      * bits, no parity, FIFO off, 1 stop bit (STOP = 00, p. 1749). With the FIFO off, RXNE means
      * one byte waits in RDR. Only the speed and the enables are written: transmitter, receiver,
      * receive interrupt [RM0440 Rev 9, Sec. 40.8.2, p. 1746]. */
-    USART2->BRR = kBrrValue;
+    USART2->BRR = brrFor(core_hz);
     USART2->CR1 = USART_CR1_RXNEIE_RXFNEIE | USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
     NVIC_EnableIRQ(USART2_IRQn);
 }

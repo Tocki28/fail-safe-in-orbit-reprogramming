@@ -42,15 +42,33 @@ typedef struct {
     uint32_t check;         /* CRC-32 of the 12 bytes above (REQ-136) */
 } boot_state_t;
 
+/* What the two stored copies hold (decision D, owner, 13 Oct 2026). Every enumerator is a value
+ * the bootloader acts on (bootloader/main.c, load_state). */
+typedef enum {
+    BOOT_STATE_VALID = 0,   /* a copy passed its checks; the newest such copy is used */
+    BOOT_STATE_BLANK,       /* both records erased (all 16 bytes 0xFF): never written */
+    BOOT_STATE_DAMAGED      /* no valid copy, and at least one copy is not erased */
+} boot_state_load_t;
+
 /* Fill *state from the newest valid copy. False if neither copy is valid. */
 bool boot_state_read(boot_state_t *state);
+
+/* Read both copies and say which of the three cases above holds; on BOOT_STATE_VALID *state is
+ * the newest valid copy, otherwise *state is not written. */
+boot_state_load_t boot_state_load(boot_state_t *state);
+
+/* The decision of boot_state_load on two records already read: readable[i] is false when the
+ * read of copy i saw a flash ECC error. Has no flash access, so the host tests call it directly. */
+boot_state_load_t boot_state_classify(const boot_state_t copies[2], const bool readable[2],
+                                      boot_state_t *state);
 
 /* Store confirmed, trial and failed_starts from *state. Sets state->sequence and
  * state->check to the values written. False if the flash reported an error or the
  * read-back did not match. */
 bool boot_state_write(boot_state_t *state);
 
-/* The other slot of the pair: A for B, B for A, BOOT_SLOT_NONE for any other code. */
+/* The other slot of the pair: A for B, B for A. Any other code is a corrupted value: the fault
+ * reaction (common/fault.h). */
 uint8_t boot_state_other_slot(uint8_t slot);
 
 #ifdef __cplusplus

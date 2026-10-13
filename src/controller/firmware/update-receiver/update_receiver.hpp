@@ -88,8 +88,8 @@ public:
         return running_;
     }
 
-    /* After END (phase kClosed): its checks passed. Step 2d does not use it for SWITCH: the
-     * bootloader checks the image at the next start (mode-manager/mode_manager.cpp, runSwitch). */
+    /* After END (phase kClosed): its checks passed. Not used for SWITCH: SWITCH checks the slot
+     * again as it is now (checkSlot, decision F(a); mode-manager/mode_manager.cpp, runSwitch). */
     bool imagePassed() const
     {
         return image_passed_;
@@ -117,10 +117,18 @@ public:
     /* The answer code for a result of the image checks (common/image_check.h). */
     static AnswerCode refusalFor(image_result_t result);
 
+    /* The bootloader's checks on the image in slot A or B: kUpdateOk or the refusal code (UPLOAD
+     * END, and SWITCH since decision F(a)). */
+    static AnswerCode checkSlot(Slot slot);
+
+    /* The command's values against the transfer state (accept() asks it). Public since the
+     * owner's fault decision of 13 Oct 2026, so the unit tests can drive its fault path: accept()
+     * never hands it an identifier outside UploadId. */
+    bool valuesFit(const UpdateCommand &cmd) const;
+
 private:
     bool sameTransfer(const UpdateCommand &cmd) const;
     bool chunkFits(const UpdateCommand &cmd) const;
-    bool valuesFit(const UpdateCommand &cmd) const;
     bool erasePage(uint32_t page) const;
     bool writeChunk(uint32_t address, const UpdateCommand &cmd) const;
     AnswerCode runBegin(const UpdateCommand &cmd);

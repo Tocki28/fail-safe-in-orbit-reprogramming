@@ -103,6 +103,8 @@ enum class [[nodiscard]] AnswerCode : uint8_t {
     kOtherController = 0x0BU,   /* image built for another controller (REQ-046) */
     kOtherSlot = 0x0EU,         /* image built for the other slot (REQ-005) */
     kTestsNotPassed = 0x0FU,    /* trial tests not passed (REQ-012) */
+    kWrongKind = 0x10U,         /* image of the wrong kind for its place (REQ-005, REQ-008) */
+    kStateNotStored = 0x11U,    /* boot state could not be stored (REQ-012, REQ-021) */
 };
 
 /* One frame's fields. payload points at length bytes. */

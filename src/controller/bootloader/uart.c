@@ -150,15 +150,28 @@ void uart_put_decimal(uint32_t value)
 }
 
 /**
+ * @brief Waits, bounded, until the last bit has left USART2; the UART stays on.
+ *
+ * TC: the shift register is empty, the last stop bit is out [RM0440 Rev 9, Sec. 40.5.5,
+ * p. 1699]. Why: the fault reaction (bootloader/fault.c) resets the chip right after its log
+ * line, and a reset in the middle of a byte would cut the line short. The wait is bounded by
+ * wait_flag (BYTE_TIMEOUT_CYCLES or BYTE_TIMEOUT_PASSES), so a stalled transmitter cannot hold
+ * the chip; after a stall TC may never come and the wait just ends.
+ */
+void uart_wait_sent(void)
+{
+    /* Bounded; the caller resets or turns the UART off either way. */
+    (void)wait_flag(USART_ISR_TC);
+}
+
+/**
  * @brief Waits for the last bit to leave, then resets USART2 and GPIOA and turns their clocks off.
  *
  * Leaves the SWD pins connected.
  */
 void uart_off(void)
 {
-    /* TC: the shift register is empty, the last stop bit is out [RM0440 Rev 9, Sec. 40.5.5,
-     * p. 1699]. After a stall it may never come; the bounded wait then just ends. */
-    (void)wait_flag(USART_ISR_TC);
+    uart_wait_sent();
     pulse_reset(&RCC->APB1RSTR1, RCC_APB1RSTR1_USART2RST);
     /* GPIOA's reset state keeps PA13/PA14 (SWD) in alternate-function mode (MODER reset value
      * 0xABFF FFFF [RM0440 Rev 9, Sec. 9.4.1, p. 355]), so a debugger stays connected. */

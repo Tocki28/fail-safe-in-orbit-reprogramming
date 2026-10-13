@@ -10,7 +10,10 @@
  *
  * REQ-137, no single bit error makes it armed: every stored word sits next to its bitwise
  * complement, and the state counts only while every pair matches. One flipped bit breaks its
- * pair, and a broken pair reads as "not armed". The state word itself is a code word: disarmed
+ * pair, and a broken pair is the fault reaction (firmware/fault.hpp; owner's decision of 13 Oct
+ * 2026: a value that cannot exist is a fault). Before, a broken pair read as "not armed", a
+ * refusal: a normal-looking answer for corrupted memory. The state word itself is a code word:
+ * disarmed
  * 0x00000000, armed 0xA5C33C5A, expired 0x3C5AA5C3. Any two differ in 16 bits, and each is
  * 16 bits away from the other's complement, so turning one valid state into another takes 32
  * flipped bits (16 in the word, the same 16 in its complement). Rejected: a plain bool
@@ -33,7 +36,8 @@ constexpr uint8_t kCmdArm = 0x0DU;
 constexpr uint16_t kArmPayloadBytes = 6U;
 
 /* How long an ARM stays valid: 30 s from its arrival. Bench value for TBD-arm (REQ-030,
- * Interfaces Sec. 5.2). Proposal (TBR), awaiting the owner's acceptance. */
+ * Interfaces Sec. 5.2). Accepted by the owner, 13 Oct 2026 (decision Q), as the bench value; the
+ * flight value stays TBD-arm. */
 constexpr uint32_t kArmExpiryMs = 30000U;
 
 /* The fields of one ARM command. */
@@ -64,6 +68,7 @@ public:
 
 private:
     [[nodiscard]] bool pairsMatch() const;
+    void checkIntact() const;
     void store(uint32_t state, uint32_t command, uint32_t sequence, uint32_t armed_ms);
 
     /* Code words of the state (see the file comment). */

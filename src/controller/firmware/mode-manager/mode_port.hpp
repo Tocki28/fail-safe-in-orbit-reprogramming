@@ -1,11 +1,13 @@
 /*
  * mode_port.hpp — everything the mode manager needs from the chip, in one list: the boot state
- * (read and write), the running image in flash (self-test), flash read errors, the restart.
+ * (read and write), the running image in flash (self-test), flash read errors, the TAMP backup
+ * registers it shares with the bootloader (common/backup_layout.h), and the restarts.
  *
- * On the board: mode_port.cpp, which passes each call to common/boot_state.c, common/flash.c
- * or the core's reset. In the host unit tests: test/controller/unit/fake_mode_port.cpp, which
- * works on the same RAM copy of the flash as the update receiver's fake (fake_port.cpp), counts
- * boot-state writes and restarts, and can make a write fail.
+ * On the board: mode_port.cpp, which passes each call to common/boot_state.c, common/flash.c,
+ * the backup registers or the core's reset. In the host unit tests:
+ * test/controller/unit/fake_mode_port.cpp, which works on the same RAM copy of the flash as the
+ * update receiver's fake (fake_port.cpp), keeps the backup registers as RAM, counts boot-state
+ * writes and restarts, and can make a write fail.
  *
  * C++: a struct of static functions and the build picks the body, as for the update receiver
  * (update-receiver/update_port.hpp says why not virtual functions or a template). The mode
@@ -18,6 +20,13 @@
 #include <cstdint>
 
 #include "boot_state.h"
+
+/* The bootloader's fall-back record, as read from the FALLBACK pair (common/backup_layout.h). */
+struct FallbackRecord {
+    uint8_t refused;   /* refused copy: 0x01 slot A, 0x02 slot B, 0x03 last-resort */
+    uint8_t check;     /* its check result, Interfaces Sec. 5.4 "Check result" table */
+    uint8_t started;   /* copy started, same codes as refused */
+};
 
 struct ModePort {
     ModePort() = delete;
@@ -39,6 +48,23 @@ struct ModePort {
 
     /** @brief Restart the chip. On the board it does not return; the host fake returns. */
     static void restart();
+
+    /** @brief Leave the give-up request for `slot_code` (decision G). True if read back. */
+    [[nodiscard]] static bool leaveGiveUpRequest(uint8_t slot_code);
+
+    /** @brief Read the bootloader's fall-back record. False if none is stored. */
+    [[nodiscard]] static bool readFallbackRecord(FallbackRecord &record);
+
+    /** @brief Clear the fall-back record. True if read back. */
+    [[nodiscard]] static bool clearFallbackRecord();
+
+    /** @brief Clear decision B's restart count if it belongs to `slot_code`. True unless the
+     *  write failed. */
+    [[nodiscard]] static bool clearRestartCount(uint8_t slot_code);
+
+    /** @brief Mark the restart as a fault reaction (`reason`, BACKUP_FAULT_...), then restart. On
+     *  the board it does not return; the host fake returns. */
+    static void restartCounted(uint8_t reason);
 };
 
 #endif /* MODE_PORT_HPP */

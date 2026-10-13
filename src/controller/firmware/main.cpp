@@ -40,14 +40,17 @@
 #include <cstdint>
 
 #include "arm_state.hpp"
+#include "backup_layout.h"
 #include "boot_slot.hpp"
 #include "boot_state.h"
 #include "core_clock.hpp"
+#include "fault.hpp"
 #include "frame.hpp"
 #include "frame_sender.hpp"
 #include "health_monitor.hpp"
 #include "layout.h"
 #include "mode_manager.hpp"
+#include "mode_port.hpp"
 #include "stm32g4xx.h"
 #include "test_image.hpp"
 #include "uart_link.hpp"
@@ -80,6 +83,14 @@ FrameSender sender{uart_link};
 TestImage test_image;
 ModeManager mode_manager{sender, test_image};
 ArmState arm_state;
+
+/* The function that found the last impossible value (faultImpossibleValue), for a debugger: no
+ * detail is defined for EVENT 0x0005 (Interfaces Sec. 5.4). volatile: written just before the
+ * reset, so the compiler must not drop the write. */
+const char *volatile fault_where = nullptr;
+/* True once the fault reaction has begun: a second fault found while it sends its EVENT goes
+ * straight to the restart instead of starting the reaction again (no recursion). */
+bool in_fault = false;
 
 /**
  * @brief An UPLOAD command for the update receiver: REFUSED on arrival, or RECEIVED, the work,
@@ -274,6 +285,56 @@ void sendHealthWhenDue()
 
 }  // namespace
 
+/**
+ * @brief The firmware's fault reaction (firmware/fault.hpp): EVENT 0x0005, a bounded wait for the
+ * UART, then a restart counted by the bootloader.
+ *
+ * Owner's decision, 13 Oct 2026: a value in memory that cannot exist is a fault, never data, and
+ * the reaction is a restart; REQ-041: detect a change in its own memory and return to a known
+ * safe state. EVENT 0x0005 "change in memory detected" (Interfaces Sec. 5.4) goes out with no
+ * detail bytes, because the Interfaces document defines none for it (a 1-byte location code
+ * would need the owner's acceptance); `where` stays in fault_where for a debugger. The restart
+ * carries the fault mark in the backup registers (ModePort::restartCounted), so the bootloader
+ * counts it like a watchdog restart of the confirmed slot (decision B) and a loop of such
+ * restarts ends in the last-resort firmware. A fault found while the EVENT is being sent skips
+ * the EVENT (in_fault). Defined here because the frame sender it sends through lives here.
+ *
+ * @param[in]     where  the function that found the impossible value
+ * @note Does not return.
+ */
+void faultImpossibleValue(const char *where)
+{
+    fault_where = where;
+    if (!in_fault) {
+        in_fault = true;
+        std::array<uint8_t, kEventReportMaxBytes> payload{};
+        uint16_t length = HealthMonitor::eventReport(core_clock.tickMs(), EventCode::kMemoryChanged,
+                                                     nullptr, 0U, payload);
+        if (length != 0U) {
+            sender.send(FrameType::kReport, payload.data(), length);
+        }
+        (void)sender.waitSent();   /* bounded (UartLink::waitSent); restart either way */
+    }
+    ModePort::restartCounted(BACKUP_FAULT_IMPOSSIBLE_VALUE);
+    for (;;) {   /* endless: not reached, restartCounted resets the chip; it marks noreturn */
+    }
+}
+
+/**
+ * @brief The fault reaction for the shared C code (common/fault.h): forwards to
+ * faultImpossibleValue.
+ *
+ * common/image_check.c and common/boot_state.c call this C name for their own impossible values;
+ * extern "C" keeps the plain name the C code links against.
+ *
+ * @param[in]     where  the function that found the impossible value
+ * @note Does not return.
+ */
+extern "C" void fault_impossible_value(const char *where)
+{
+    faultImpossibleValue(where);
+}
+
 /*
  * Interrupt handlers. Names fixed by ST's vector table (startup_stm32g431xx.s): it lists these
  * exact names, each as a weak alias of Default_Handler (an endless loop). C++ changes a
@@ -313,9 +374,13 @@ extern "C" void USART2_IRQHandler(void)
  *
  * Order at start: vector table, running slot, clock, tick, link, then the mode manager, which
  * reads the boot state and runs the self-test (REQ-039). The loop: watchdog, arm expiry, the
- * link and its commands, the mode manager (trial events, give-up, restart), the HEALTH report.
- * The mode manager comes after the commands, so an answer goes out before the events and the
- * restart it causes.
+ * link and its commands, the mode manager (start events, trial events, give-up, restart), the
+ * HEALTH report. The mode manager comes after the commands, so an answer goes out before the
+ * events and the restart it causes.
+ *
+ * Decision C: the tick and the UART are set from the clock CoreClock::start() reports in use,
+ * 170 MHz or 16 MHz after a clock fault, and the mode manager sends EVENT 0x0001 for the fault.
+ * Before, a clock fault stopped the firmware until the watchdog restarted it.
  *
  * @note Does not return.
  */
@@ -326,18 +391,20 @@ int main()
     SCB->VTOR = static_cast<uint32_t>(CODE_START);
     Slot running = UpdateReceiver::slotOf(SCB->VTOR);
     updater.init(running);
-    if (!CoreClock::start()) {
-        /* No usable clock, so no usable link. Stop reloading the watchdog: it restarts the
-         * chip within ~2 s (REQ-022). */
-        for (;;) {
+    uint32_t core_hz = CoreClock::start();
+    if (core_hz == 0U) {
+        /* No usable clock (a dead cycle counter, or the switch back to HSI16 did not finish), so
+         * no usable link. Stop reloading the watchdog: it restarts the chip within ~2 s
+         * (REQ-022), and the bootloader counts that restart (decision B). */
+        for (;;) {   /* endless: no usable clock; the watchdog restarts the chip */
         }
     }
-    CoreClock::startTick();
-    uart_link.init();
-    mode_manager.start(running, core_clock.tickMs());
+    CoreClock::startTick(core_hz);
+    uart_link.init(core_hz);
+    mode_manager.start(running, core_clock.tickMs(), core_hz != kCoreClockHz);
 
-    /* The one endless loop; the watchdog bounds every pass. */
-    for (;;) {
+    /* The one main loop; the watchdog bounds every pass. */
+    for (;;) {   /* endless: the main loop; the watchdog bounds every pass */
         Frame frame{};
 
         watchdog.reloadWhenDue(core_clock.tickMs());

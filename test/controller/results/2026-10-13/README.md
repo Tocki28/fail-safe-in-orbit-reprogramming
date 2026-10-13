@@ -26,3 +26,17 @@ after it was written (`scenario-2-diagnostic.log`). The check now waits, bounded
 transfer to finish. Measured settle time: 12.65 to 12.76 ms in all runs of scenarios 2, 4 and 7.
 
 Measured: two signature checks take 37.6 to 39.8 ms at 170 MHz (Monocypher 4.0.2, -O2).
+
+## Build step 2d — trial, trial tests, ARM, SWITCH and CONFIRM (commit 5e9bdbc)
+
+Board: bootloader + firmware A (confirmed), written with `make -C src/controller flash-firmware`
+before each run; `make -C test/controller trial-probe SCENARIO=<name>` acts as the onboard
+computer over data link A.
+
+| Scenario | Result | Log |
+|---|---|---|
+| confirm | PASS: firmware-B uploaded (3.0 s); SWITCH without ARM refused 0x01; ARM + SWITCH: DONE, restart, slot B on trial (EVENT 0x0006, HEALTH TRIAL, 119 s left); ARM + CONFIRM before the test image refused 0x0F; test image accepted, EVENT 0x000A; CONFIRM without ARM and with an ARM naming another sequence number refused 0x01; ARM + CONFIRM: EVENT 0x0007 before DONE; HEALTH OPERATE on slot B | `step-2d-trial-confirm.log` |
+| bad-image | PASS: test image with a wrong check value refused 0x08 at END; EVENT 0x000B detail 0x03, then EVENT 0x0008; restart; boot state confirmed A, no trial; HEALTH OPERATE on slot A | `step-2d-trial-bad-image.log` |
+| timeout | PASS: trial tests passed, no CONFIRM; EVENT 0x0008 119.7 s after EVENT 0x0006 (limit 120 s), no EVENT 0x000B; slot A back in OPERATE | `step-2d-trial-timeout.log` |
+
+Measured: two signature checks of the 17.8 KB firmware image take 68.0 to 68.1 ms at 170 MHz.

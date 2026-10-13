@@ -1,0 +1,53 @@
+/Library/Developer/CommandLineTools/usr/bin/make -C /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller images
+/Library/Developer/CommandLineTools/usr/bin/make -C bootloader
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C firmware SLOT=A
+make[2]: Nothing to be done for `all'.
+/Library/Developer/CommandLineTools/usr/bin/make -C firmware SLOT=B
+make[2]: Nothing to be done for `all'.
+mkdir -p build/images
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin firmware/build/A/firmware.bin --kind main --slot A --version 1 --build-id "5e9bdbc firmware A" --out build/images/firmware-A.img
+build/images/firmware-A.img: main v1 for slot A at 0x08006000, 19836 of 40960 bytes, body CRC 0x66dcf9ec
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_image.py --key-a /Users/mingw/lodestar-prep/keys-dev/key-a.pem --key-b /Users/mingw/lodestar-prep/keys-dev/key-b.pem --bin firmware/build/B/firmware.bin --kind main --slot B --version 1 --build-id "5e9bdbc firmware B" --out build/images/firmware-B.img
+build/images/firmware-B.img: main v1 for slot B at 0x08010000, 19836 of 40960 bytes, body CRC 0xb1e8bf22
+/Users/mingw/lodestar-prep/.venv/bin/python /Users/mingw/lodestar-prep/failsafe-remote-controller/tools/make_boot_state.py --confirmed A --out build/images/state-confirmed-A.bin
+build/images/state-confirmed-A.bin: confirmed A, trial none, failed starts 0, sequence 1 -> write at 0x0801e000
+/Users/mingw/lodestar-prep/.venv/bin/python trial_probe.py /dev/cu.usbmodem143403 --images /Users/mingw/lodestar-prep/failsafe-remote-controller/src/controller/build/images --scenario confirm 
+      HEALTH: mode OPERATE, running slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 1 s
+PASS  start: HEALTH OPERATE from slot A or B (flash-firmware first otherwise)
+running slot A; trial of slot B; scenario confirm
+---- firmware-B.img into slot B
+      4096 of 19836 bytes
+      8192 of 19836 bytes
+      12288 of 19836 bytes
+      16384 of 19836 bytes
+PASS  firmware-B.img uploaded: every command DONE 0x00 (stopped at END: RECEIVED 0x00, DONE 0x00; 3.0 s)
+---- SWITCH
+PASS  SWITCH without ARM: REFUSED 0x01 (got REFUSED 0x01)
+PASS  ARM naming SWITCH: RECEIVED 0x00, DONE 0x00 (got RECEIVED 0x00, DONE 0x00)
+PASS  SWITCH after its ARM: RECEIVED 0x00, DONE 0x00 (got RECEIVED 0x00, DONE 0x00)
+---- restart into slot B (trial)
+text  BL: start, reset by software
+text  BL: boot state: confirmed A, trial B, failed starts 0
+text  BL: watchdog running (update settled in 12795 us)
+text  BL: trial slot B, start 1 of 3
+text  BL: slot B signature check: 68065 us (11571127 cycles at 170 MHz)
+text  BL: slot B accepted: version 1, build 5e9bdbc firmware B
+text  BL: starting slot B (trial)
+PASS  after the restart: EVENT 0x0006 trial started
+      HEALTH: mode TRIAL, running slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00, controller time 1 s
+PASS  HEALTH: TRIAL, slot B, failed starts 1, trial time left 1-120 s, last self-test 0x00 PASSED
+---- CONFIRM before the test image
+PASS  ARM + CONFIRM before the test image: REFUSED 0x0f (got REFUSED 0x0f)
+---- test image
+PASS  test image, right check value: END DONE 0x00 (got at END: RECEIVED 0x00, DONE 0x00)
+PASS  EVENT 0x000A trial tests passed
+PASS  CONFIRM without ARM: REFUSED 0x01 (got REFUSED 0x01)
+PASS  ARM naming CONFIRM with seq 99: RECEIVED 0x00, DONE 0x00 (got RECEIVED 0x00, DONE 0x00)
+PASS  CONFIRM with another sequence number than the ARM's: REFUSED 0x01 (got REFUSED 0x01)
+---- ARM + CONFIRM
+PASS  ARM + CONFIRM: RECEIVED 0x00, DONE 0x00 (got RECEIVED 0x00, DONE 0x00)
+PASS  EVENT 0x0007 firmware confirmed, before CONFIRM's DONE
+      HEALTH: mode OPERATE, running slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00, controller time 2 s
+PASS  HEALTH: OPERATE, slot B, trial time left 0, failed starts 0
+trial probe: all passed

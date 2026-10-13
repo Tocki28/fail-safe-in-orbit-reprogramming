@@ -235,7 +235,8 @@ void Updater::onGroundReadable(uint64_t now_ms)
  * itself goes out when its turn comes (sendNext). The ARM is used up only once the command is
  * queued, so a full queue (REFUSED 0x05) does not waste it. Before that: the controller's allowed
  * list (REFUSED 0x06), a ground sequence number used before by an ARM or dangerous command
- * (REFUSED 0x04, REQ-065), and a delivery or test image in the way (REFUSED 0x05, ARM kept).
+ * (other bytes: REFUSED 0x04, REQ-065; the same bytes: RECEIVED or ALREADY DONE, REQ-031), and a
+ * delivery or test image in the way (REFUSED 0x05, ARM kept).
  * The ARM's arrival time travels with the command so that sendNext can check its age again.
  *
  * @param[in]     c  the command frame; c.payload is valid during the call
@@ -263,10 +264,7 @@ void Updater::onGroundCommand(const frame::Frame & c)
   bool armed = false;
   uint64_t arm_at_ms = 0;
   if (isDangerous(id)) {
-    if (used_.contains(c.sequence)) {
-      logging::line("ground: dangerous command 0x%02x sequence %u: that sequence number was used "
-        "before; refused 0x04", id, c.sequence);
-      refused(c.sequence, answer::kOldCommand);
+    if (answerRepeat(c)) {
       return;
     }
     uint8_t code = armCheck(c);
@@ -292,7 +290,12 @@ void Updater::onGroundCommand(const frame::Frame & c)
   }
   if (armed) {
     arm_.held = false;
-    used_.add(c.sequence);
+    // controllerCommandOk limited the length to what the ring holds (static_assert in
+    // command_gate.cpp).
+    if (!used_.add(c.sequence, c.payload, c.length)) {
+      logging::line("ground: dangerous command 0x%02x sequence %u: payload too long for the used "
+        "sequence ring; not remembered", id, c.sequence);
+    }
   }
   sendNext();
 }
@@ -330,13 +333,15 @@ void Updater::onGroundArm(const frame::Frame & c)
     refused(c.sequence, answer::kImpossible);
     return;
   }
-  if (used_.contains(c.sequence)) {
-    logging::line("ground: ARM sequence %u: that sequence number was used before; refused 0x04",
-      c.sequence);
-    refused(c.sequence, answer::kOldCommand);
+  if (answerRepeat(c)) {
     return;
   }
-  used_.add(c.sequence);
+  if (!used_.add(c.sequence, c.payload, c.length)) {
+    logging::line("ground: ARM sequence %u: payload too long for the used sequence ring; refused "
+      "0x06", c.sequence);
+    refused(c.sequence, answer::kImpossible);
+    return;
+  }
   arm_.held = true;
   arm_.identifier = c.payload[1];
   arm_.command_sequence = bytes::readU32(&c.payload[2]);
@@ -346,6 +351,67 @@ void Updater::onGroundArm(const frame::Frame & c)
     static_cast<unsigned long long>(config::kArmExpiryMs));
   received(c.sequence);
   done(c.sequence);
+  used_.finish(c.sequence, true);   // RECEIVED and DONE are both sent: a resend is ALREADY DONE
+}
+
+/**
+ * @brief Answers an ARM or dangerous command whose ground sequence number is already remembered.
+ *
+ * The ground console resends a command with the same sequence number and the same bytes when its
+ * answer is lost, so that the receiver can recognise the repeat and run the command once
+ * (Interfaces Sec. 4.2, REQ-031). Same bytes, first one ended DONE: ALREADY DONE, nothing else
+ * (nothing goes to the controller, no ARM is held). Same bytes, first one not ended: RECEIVED
+ * only; its final answer follows. Same bytes, first one ended REFUSED: REFUSED 0x04, because
+ * ALREADY DONE would tell the ground the command ran (open: the owner has not decided this
+ * case). Other bytes under a used number: REFUSED 0x04, a replay (REQ-065). A new number: not
+ * handled here.
+ *
+ * @param[in]     c  the ARM or dangerous command frame
+ * @return true: it was a repeat and has been answered; false: a new sequence number, go on
+ */
+bool Updater::answerRepeat(const frame::Frame & c)
+{
+  switch (used_.check(c.sequence, c.payload, c.length)) {
+    case UsedSequences::Repeat::kNew:
+      return false;
+    case UsedSequences::Repeat::kSameDone:
+      logging::line("ground: sequence %u sent again with the same bytes after it finished; "
+        "answered ALREADY DONE, nothing else done", c.sequence);
+      (void)gate_.answer(c.sequence, answer::kAlreadyDone, answer::kSuccess);
+      return true;
+    case UsedSequences::Repeat::kSamePending:
+      logging::line("ground: sequence %u sent again with the same bytes while it has not "
+        "finished; answered RECEIVED, nothing else done", c.sequence);
+      received(c.sequence);
+      return true;
+    case UsedSequences::Repeat::kSameRefused:
+    case UsedSequences::Repeat::kDifferent:
+      logging::line("ground: sequence %u: that sequence number was used before (other bytes, or "
+        "the first was refused); refused 0x04", c.sequence);
+      refused(c.sequence, answer::kOldCommand);
+      return true;
+  }
+  // Not reached: a value of Repeat that is none of the above is corrupted memory; the command
+  // is refused rather than run (the updater has no fault reaction yet, open).
+  refused(c.sequence, answer::kOldCommand);
+  return true;
+}
+
+/**
+ * @brief Answers REFUSED to a queued dangerous command and marks it finished in the used ring.
+ *
+ * A dangerous command that was accepted (queued, remembered) and then refused before or while
+ * going to the controller has ended: a resend with the same bytes must be refused 0x04, not
+ * answered RECEIVED for ever (Interfaces Sec. 4.2, REQ-031).
+ *
+ * @param[in]     sequence  the ground command's sequence number
+ * @param[in]     code      the refusal reason (protocol.hpp)
+ * @return nothing
+ */
+void Updater::refusedQueued(uint32_t sequence, uint8_t code)
+{
+  refused(sequence, code);
+  used_.finish(sequence, false);
 }
 
 /**
@@ -758,6 +824,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
         "ground sequence %u", a.kind, a.code, a.answered, ground_sequence);
       (void)gate_.answer(ground_sequence, a.kind, a.code);
       if (final) {
+        used_.finish(ground_sequence, a.kind != answer::kRefused);
         table_.remove(a.answered);
       }
     } else {
@@ -774,6 +841,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
         if (final) {
           logging::line("controller: answer 0x%02x code 0x%02x to ground sequence %u", a.kind,
             a.code, ground_sequence);
+          used_.finish(ground_sequence, a.kind != answer::kRefused);
           table_.remove(a.answered);
         }
       }
@@ -797,7 +865,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
           logging::line("controller: ARM sequence %u answered 0x%02x code 0x%02x; ground command "
             "sequence %u refused 0x%02x and not sent", a.answered, a.kind, a.code,
             queue_.front().ground_sequence, code);
-          refused(queue_.front().ground_sequence, code);
+          refusedQueued(queue_.front().ground_sequence, code);
           queue_.pop();
           pair_ = PairStage::kNone;
         } else {
@@ -881,7 +949,7 @@ void Updater::sendQueued()
     // look for a mode problem.
     logging::line("ground command 0x%02x sequence %u not passed on: data link A cannot send; "
       "refused 0xfd", id, c.ground_sequence);
-    refused(c.ground_sequence, answer::kCannotSendBench);
+    refusedQueued(c.ground_sequence, answer::kCannotSendBench);
   }
   queue_.pop();
 }
@@ -915,7 +983,7 @@ void Updater::sendArm()
   } else {
     logging::line("ARM for ground command 0x%02x sequence %u not sent: data link A cannot "
       "send; refused 0xfd", c.payload[0], c.ground_sequence);
-    refused(c.ground_sequence, answer::kCannotSendBench);
+    refusedQueued(c.ground_sequence, answer::kCannotSendBench);
     queue_.pop();
   }
 }
@@ -979,7 +1047,7 @@ void Updater::sendNext()
         "when its turn came; refused 0x02 and dropped", front.payload[0], front.ground_sequence,
         static_cast<unsigned long long>(now_ms_ - front.arm_at_ms),
         static_cast<unsigned long long>(config::kArmExpiryMs));
-      refused(front.ground_sequence, answer::kArmExpired);
+      refusedQueued(front.ground_sequence, answer::kArmExpired);
       queue_.pop();
       continue;
     }
@@ -1029,7 +1097,7 @@ void Updater::onTimeout()
       logging::line("controller: no answer to ARM sequence %u in time; the ground command sequence "
         "%u is not sent; refused 0xff (controller did not answer)", sequence,
         queue_.front().ground_sequence);
-      refused(queue_.front().ground_sequence, answer::kNoAnswerBench);
+      refusedQueued(queue_.front().ground_sequence, answer::kNoAnswerBench);
       queue_.pop();
       pair_ = PairStage::kNone;
       break;

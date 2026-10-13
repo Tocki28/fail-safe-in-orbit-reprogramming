@@ -59,7 +59,13 @@
  *     sendArm), against the time its ARM arrived: older than kArmExpiryMs -> REFUSED 0x02 and the
  *     command is dropped (REQ-030).
  *   - A ground sequence number that an accepted ARM or dangerous command used before (the last 64)
- *     is refused 0x04 (REQ-065).
+ *     with other payload bytes is refused 0x04 (REQ-065). With the same bytes it is a resend after
+ *     a lost answer (Interfaces Sec. 4.2, REQ-031; owner, 13 Oct 2026): once the first has ended
+ *     DONE it is answered ALREADY DONE and nothing else happens (no ARM held, nothing sent to the
+ *     controller); while the first has not ended it is answered RECEIVED and the first one's final
+ *     answer follows as usual. A first that ended REFUSED is answered REFUSED 0x04, never ALREADY
+ *     DONE, which would tell the ground the command ran (open: the owner has not decided this
+ *     case).
  *   - When an armed command's turn comes (sendNext), the pair goes out: an ARM naming the
  *     sequence number the command will carry on data link A, then the command. The ARM's
  *     answers are the onboard computer's own and do not go to the ground; if the controller
@@ -157,6 +163,8 @@ private:
   void onGroundArm(const frame::Frame & c);
   uint8_t armCheck(const frame::Frame & c);
   bool dangerousBusy() const;
+  bool answerRepeat(const frame::Frame & c);
+  void refusedQueued(uint32_t sequence, uint8_t code);
   void sendArm();
   void sendQueued();
   void onOnboardCommand(const frame::Frame & c);

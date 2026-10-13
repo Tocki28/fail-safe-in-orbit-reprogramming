@@ -13,9 +13,12 @@
  *     REQ-064, REQ-127 and REQ-129 are not met for commands. Firmware images are still checked
  *     for both signatures (image_checker.hpp);
  *   - old commands sent again (REQ-065) are caught for ARMs and dangerous commands only, and
- *     only the last 64 (UsedSequences); no ALREADY DONE (REQ-031), no expiry check (REQ-066):
- *     the ground console restarts its counter at 1 and the board's clock is not set from
- *     ground time;
+ *     only the last 64 (UsedSequences). A command sent again with the same sequence number and the
+ *     same bytes is not an old command but a resend after a lost answer: ALREADY DONE once it
+ *     has finished, RECEIVED while it has not (REQ-031, Interfaces Sec. 4.2; owner, 13 Oct 2026).
+ *     That holds for ARMs and dangerous commands only: other ground commands are not recognised
+ *     as repeats. No expiry check (REQ-066): the ground console restarts its counter at 1 and
+ *     the board's clock is not set from ground time;
  *   - REQ-067 (commands only from the radio link) stands only as "only from this UDP port".
  */
 #ifndef FSIR_UPDATER_COMMAND_GATE_HPP
@@ -134,20 +137,47 @@ private:
 };
 
 // The ground sequence numbers of the ARMs and dangerous commands accepted since start, the last
-// config::kUsedSequenceCount of them. A repeat is refused 0x04 (REQ-065).
+// config::kUsedSequenceCount of them, each with its payload bytes and how it ended. A repeat
+// with other bytes is refused 0x04 (REQ-065); a repeat with the same bytes is a resend after a
+// lost answer (REQ-031, Interfaces Sec. 4.2) and is answered from the entry's state.
 class UsedSequences
 {
 public:
+  // What an incoming ARM or dangerous command is, compared with the ring.
+  enum class Repeat : uint8_t
+  {
+    kNew,            // sequence number not in the ring
+    kSamePending,    // same number, same bytes, first one not finished: answer RECEIVED
+    kSameDone,       // same number, same bytes, first one ended DONE: answer ALREADY DONE
+    kSameRefused,    // same number, same bytes, first one ended REFUSED: not ALREADY DONE
+    kDifferent,      // same number, other bytes: REFUSED 0x04
+  };
+
   UsedSequences();
-  bool contains(uint32_t sequence) const;
-  // Replaces the oldest when full.
-  void add(uint32_t sequence);
+  // Compares a command with the ring; changes nothing.
+  Repeat check(uint32_t sequence, const uint8_t * payload, uint16_t length) const;
+  // Replaces the oldest when full; the new entry is pending. False (nothing stored) when the
+  // payload is longer than config::kUsedPayloadMax.
+  [[nodiscard]] bool add(uint32_t sequence, const uint8_t * payload, uint16_t length);
+  // The entry's final answer has gone to the ground: done = DONE or ALREADY DONE, else REFUSED.
+  // Only a pending entry changes.
+  void finish(uint32_t sequence, bool done);
 
 private:
+  enum class State : uint8_t
+  {
+    kPending,
+    kDone,
+    kRefused,
+  };
+
   struct Entry
   {
     bool used;
+    State state;
     uint32_t sequence;
+    uint16_t length;
+    std::array<uint8_t, config::kUsedPayloadMax> payload;
   };
   std::array<Entry, config::kUsedSequenceCount> entries_;
   size_t next_;

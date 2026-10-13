@@ -107,11 +107,17 @@ constexpr size_t kForwardQueueSize = 8;
 // Data-link sequence number -> ground sequence number, for answers to forwarded commands.
 // Kept after a timeout so that a late answer still reaches the ground; the oldest is replaced.
 constexpr size_t kForwardTableSize = 16;
-// Ground sequence numbers already used by an ARM or a dangerous command since start; a repeat
-// is refused 0x04 (REQ-065). Bench choice: a ring of the last 64; the oldest is forgotten, so
-// a replay older than 64 such commands is not caught (open: REQ-065 keeps the counter over
-// restarts).
+// Ground sequence numbers already used by an ARM or a dangerous command since start, with the
+// command's payload and whether it has finished. A repeat with other bytes is refused 0x04
+// (REQ-065); a repeat with the same bytes is answered RECEIVED or ALREADY DONE (REQ-031, Interfaces
+// Sec. 4.2). Bench choice: a ring of the last 64; the oldest is forgotten, so a replay older than
+// 64 such commands is not caught (open: REQ-065 keeps the counter over restarts).
 constexpr size_t kUsedSequenceCount = 64;
+// The most payload bytes the ring keeps per entry: the longest ARM or dangerous command the
+// updater accepts is the ARM, command::kArmBytes = 6 (protocol.hpp; SET CONTROLLER TIME has 5).
+// The bytes are kept as they are, not as a digest: 6 bytes are smaller than a SHA-256 (32), need
+// no crypto library in the command gate, and cannot collide, so "same bytes" is exact.
+constexpr size_t kUsedPayloadMax = 6;
 // The "dropped datagram" log lines on the ground link: at most one per this many ms, so a
 // flood of bad datagrams cannot fill the log (audit finding #8).
 constexpr uint64_t kDropLogEveryMs = 1000;

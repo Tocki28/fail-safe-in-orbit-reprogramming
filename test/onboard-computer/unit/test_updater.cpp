@@ -1618,8 +1618,8 @@ void testArmPairing(const std::string & scratch)
   // 3. The ARM is used up.
   ok = rig.fromGround(kDest, 7, {command::kSwitch});
   g = rig.groundAnswers();
-  report(ok && g.size() == 1 && has(g, 7, answer::kRefused, 0x04) && quiet(rig),
-    "arm: the same SWITCH 7 again: REFUSED 0x04 (sequence number used before; owner's decision 5), nothing sent");
+  report(ok && g.size() == 1 && has(g, 7, answer::kAlreadyDone, 0) && quiet(rig),
+    "arm: the same SWITCH 7 again: ALREADY DONE (a resend of a finished command; REQ-031, owner 13 Oct), nothing sent");
 
   // 4. Refusals 0x06.
   ok = rig.fromGround(kDest, 20, armPayload(0x23, 9)) && rig.fromGround(kDest, 21, armPayload(command::kArm, 9)) &&
@@ -1969,16 +1969,16 @@ void testUsedSequences(const std::string & scratch)
   // The captured pair sent again.
   ok = rig.fromGround(kDest, 10, armOf(command::kSwitch, 11));
   std::vector<GroundAnswer> g = rig.groundAnswers();
-  report(ok && g.size() == 1 && hasAnswer(g, 10, answer::kRefused, answer::kOldCommand),
-    "used sequences: the same ARM sequence number again: REFUSED 0x04, not held");
+  report(ok && g.size() == 1 && hasAnswer(g, 10, answer::kAlreadyDone, 0),
+    "used sequences: the same ARM again (same bytes): ALREADY DONE, not held (REQ-031, owner 13 Oct)");
   ok = rig.fromGround(kDest, 11, {command::kSwitch});
   g = rig.groundAnswers();
-  report(ok && hasAnswer(g, 11, answer::kRefused, answer::kOldCommand) && quiet(rig),
-    "used sequences: the replayed SWITCH: REFUSED 0x04, nothing sent");
+  report(ok && hasAnswer(g, 11, answer::kAlreadyDone, 0) && quiet(rig),
+    "used sequences: the captured SWITCH again (same bytes): ALREADY DONE, nothing sent");
   // A fresh ARM for the old command's number does not bring it back.
   ok = rig.fromGround(kDest, 12, armOf(command::kSwitch, 11)) &&
        rig.fromGround(kDest, 11, {command::kSwitch});
-  report(ok && hasAnswer(rig.groundAnswers(), 11, answer::kRefused, answer::kOldCommand) && quiet(rig),
+  report(ok && hasAnswer(rig.groundAnswers(), 11, answer::kAlreadyDone, 0) && quiet(rig),
     "used sequences: a new ARM naming the used sequence number 11 does not let SWITCH 11 run again");
   // The ring holds 64: after 64 newer ones, number 10 is forgotten.
   for (uint32_t i = 0; i < config::kUsedSequenceCount; i++) {
@@ -1990,9 +1990,196 @@ void testUsedSequences(const std::string & scratch)
   report(ok && hasAnswer(g, 10, answer::kDone, 0),
     "used sequences: the memory is the last 64 (bench choice): after 64 newer ones the oldest is forgotten");
   UsedSequences ring;
-  for (uint32_t i = 0; i < 100; i++) { ring.add(i); }
-  report(!ring.contains(35) && ring.contains(36) && ring.contains(99) && !ring.contains(100),
+  for (uint32_t i = 0; i < 100; i++) {
+    const uint8_t byte = static_cast<uint8_t>(i);
+    ok = ring.add(i, &byte, 1) && ok;
+  }
+  const uint8_t b35 = 35;
+  const uint8_t b36 = 36;
+  const uint8_t b99 = 99;
+  const uint8_t b100 = 100;
+  using Repeat = UsedSequences::Repeat;
+  report(ok && ring.check(35, &b35, 1) == Repeat::kNew && ring.check(36, &b36, 1) == Repeat::kSamePending &&
+         ring.check(99, &b99, 1) == Repeat::kSamePending && ring.check(100, &b100, 1) == Repeat::kNew,
     "used sequences: ring keeps exactly the last 64 of 100");
+  const std::array<uint8_t, config::kUsedPayloadMax + 1> too_long{};
+  report(!ring.add(500, too_long.data(), static_cast<uint16_t>(too_long.size())) &&
+         ring.check(500, too_long.data(), 1) == Repeat::kNew,
+    "used sequences: a payload longer than the ring keeps is not stored");
+}
+
+/**
+ * @brief REQ-031: an ARM or dangerous command sent again after a lost answer runs once.
+ *
+ * The ground console resends a command with the same sequence number and the same bytes when
+ * its answer is lost (Interfaces Sec. 4.2). Cases: (1) a finished ARM and SWITCH sent again are
+ * answered ALREADY DONE and nothing reaches the controller a second time; (2) a SWITCH sent
+ * again while still queued, while its ARM is outstanding and while it is outstanding is answered
+ * RECEIVED only, and the controller's one final answer follows; (3) the same number with other
+ * bytes is REFUSED 0x04 and changes nothing; (4) a first one that ended REFUSED is not turned
+ * into ALREADY DONE by a resend (REFUSED 0x04), after the controller refused the command and
+ * after it refused the ARM.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testResendAfterLostAnswer(const std::string & scratch)
+{
+  const uint32_t kDest = frame::kDestController;
+  auto count = [](const std::vector<GroundAnswer> & v, uint32_t answered, uint8_t kind) {
+    size_t n = 0;
+    for (const GroundAnswer & a : v) {
+      n += (a.answered == answered && a.kind == kind) ? 1U : 0U;
+    }
+    return n;
+  };
+  auto finals = [&count](const std::vector<GroundAnswer> & v, uint32_t answered) {
+    return count(v, answered, answer::kDone) + count(v, answered, answer::kRefused) +
+           count(v, answered, answer::kAlreadyDone);
+  };
+
+  // 1. ARM and SWITCH answered, the answers "lost", both sent again.
+  std::string dir = scratch + "/resend1";
+  removeTree(dir);
+  {
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "resend: rig did not open"); return; }
+    std::vector<SentFrame> sent;
+    SentFrame f{};
+    bool ok = rig.fromGround(kDest, 10, armOf(command::kSwitch, 11)) &&
+              rig.fromGround(kDest, 11, {command::kSwitch}) && rig.tick(f);
+    sent.push_back(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    ok = ok && rig.tick(f);
+    sent.push_back(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    (void)rig.groundAnswers();   // the answers the ground never saw
+    ok = ok && rig.fromGround(kDest, 10, armOf(command::kSwitch, 11));
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 10, answer::kAlreadyDone, 0) && quiet(rig),
+      "resend: the finished ARM sent again: ALREADY DONE only, nothing sent to the controller");
+    ok = rig.fromGround(kDest, 11, {command::kSwitch});
+    g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 11, answer::kAlreadyDone, 0) && quiet(rig),
+      "resend: the finished SWITCH sent again: ALREADY DONE only, nothing sent to the controller");
+    size_t arms = 0;
+    size_t switches = 0;
+    for (const SentFrame & s : sent) {
+      arms += (s.payload[0] == command::kArm) ? 1U : 0U;
+      switches += (s.payload[0] == command::kSwitch) ? 1U : 0U;
+    }
+    report(sent.size() == 2 && arms == 1 && switches == 1,
+      "resend: the controller got the ARM and the SWITCH exactly once");
+  }
+
+  // 2. SWITCH sent again while it is queued, while its ARM is out, and while it is out.
+  dir = scratch + "/resend2";
+  removeTree(dir);
+  {
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "resend: rig 2 did not open"); return; }
+    std::vector<SentFrame> sent;
+    SentFrame f{};
+    // GET STATUS from the ground keeps data link A busy, so the SWITCH waits in the queue.
+    bool ok = rig.fromGround(kDest, 5, {command::kGetStatus}) && rig.tick(f);
+    SentFrame status = f;
+    ok = ok && rig.fromGround(kDest, 20, armOf(command::kSwitch, 21)) &&
+         rig.fromGround(kDest, 21, {command::kSwitch});
+    (void)rig.groundAnswers();
+    ok = ok && quiet(rig);
+    ok = ok && rig.fromGround(kDest, 21, {command::kSwitch});
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 21, answer::kReceived, 0) && quiet(rig),
+      "resend: SWITCH sent again while queued: RECEIVED only, nothing sent");
+    rig.answer(status.sequence, answer::kDone, 0);
+    ok = rig.tick(f) && f.payload[0] == command::kArm;
+    sent.push_back(f);
+    SentFrame arm = f;
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 21, {command::kSwitch});
+    g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 21, answer::kReceived, 0) && quiet(rig),
+      "resend: SWITCH sent again while its ARM is outstanding: RECEIVED only, nothing sent");
+    rig.answer(arm.sequence, answer::kDone, 0);
+    ok = rig.tick(f) && f.payload[0] == command::kSwitch;
+    sent.push_back(f);
+    SentFrame sw = f;
+    ok = ok && rig.fromGround(kDest, 21, {command::kSwitch});
+    g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 21, answer::kReceived, 0) && quiet(rig),
+      "resend: SWITCH sent again while it is outstanding: RECEIVED only, nothing sent");
+    rig.answer(sw.sequence, answer::kReceived, 0);
+    rig.answer(sw.sequence, answer::kDone, 0);
+    g = rig.groundAnswers();
+    report(finals(g, 21) == 1 && hasAnswer(g, 21, answer::kDone, 0),
+      "resend: exactly one final answer, DONE, follows for SWITCH 21");
+    size_t switches = 0;
+    for (const SentFrame & s : sent) {
+      switches += (s.payload[0] == command::kSwitch) ? 1U : 0U;
+    }
+    ok = rig.fromGround(kDest, 21, {command::kSwitch});
+    g = rig.groundAnswers();
+    report(switches == 1 && ok && g.size() == 1 && hasAnswer(g, 21, answer::kAlreadyDone, 0) && quiet(rig),
+      "resend: the controller got SWITCH 21 once; sent again after DONE: ALREADY DONE");
+  }
+
+  // 3. The same number with other bytes.
+  dir = scratch + "/resend3";
+  removeTree(dir);
+  {
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "resend: rig 3 did not open"); return; }
+    SentFrame f{};
+    bool ok = rig.fromGround(kDest, 30, armOf(command::kSwitch, 31));
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 30, armOf(command::kSwitch, 32));
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 30, answer::kRefused, answer::kOldCommand) && quiet(rig),
+      "resend: ARM 30 again naming another sequence number: REFUSED 0x04");
+    ok = rig.fromGround(kDest, 31, {command::kSwitch}) && rig.tick(f) && f.payload[0] == command::kArm;
+    SentFrame arm = f;
+    (void)rig.groundAnswers();
+    report(ok, "resend: the refused ARM replaced nothing: SWITCH 31 still goes out with its ARM");
+    ok = rig.fromGround(kDest, 31, {command::kReturnToPrevious});
+    g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 31, answer::kRefused, answer::kOldCommand) && quiet(rig),
+      "resend: number 31 again with another command: REFUSED 0x04");
+    rig.answer(arm.sequence, answer::kDone, 0);
+    ok = rig.tick(f) && f.payload[0] == command::kSwitch;
+    rig.answer(f.sequence, answer::kDone, 0);
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 31, {command::kSwitch});
+    g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 31, answer::kAlreadyDone, 0) && quiet(rig),
+      "resend: the refused repeat did not change the first one: SWITCH 31 again is ALREADY DONE");
+  }
+
+  // 4. A first one that ended REFUSED is never ALREADY DONE.
+  dir = scratch + "/resend4";
+  removeTree(dir);
+  {
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) { report(false, "resend: rig 4 did not open"); return; }
+    SentFrame f{};
+    bool ok = rig.fromGround(kDest, 40, armOf(command::kSwitch, 41)) &&
+              rig.fromGround(kDest, 41, {command::kSwitch}) && rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    ok = ok && rig.tick(f);
+    rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 41, {command::kSwitch});
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 41, answer::kRefused, answer::kOldCommand) && quiet(rig),
+      "resend: SWITCH refused by the controller, sent again: REFUSED 0x04, not ALREADY DONE");
+    ok = rig.fromGround(kDest, 50, armOf(command::kSwitch, 51)) &&
+         rig.fromGround(kDest, 51, {command::kSwitch}) && rig.tick(f);
+    rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, 51, {command::kSwitch});
+    g = rig.groundAnswers();
+    report(ok && g.size() == 1 && hasAnswer(g, 51, answer::kRefused, answer::kOldCommand) && quiet(rig),
+      "resend: SWITCH whose ARM the controller refused, sent again: REFUSED 0x04, not RECEIVED");
+  }
 }
 
 /**
@@ -3072,6 +3259,7 @@ int main(int argc, char ** argv)
   testControllerAllowedList(argv[4]);
   testAlreadyDone(argv[1], argv[4]);
   testUsedSequences(argv[4]);
+  testResendAfterLostAnswer(argv[4]);
   testTestImageOnEvent(argv[4]);
   testTrialWatch();
   testRestartRunner(argv[4]);

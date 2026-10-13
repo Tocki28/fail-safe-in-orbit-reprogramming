@@ -9,6 +9,7 @@
 
 #include "clock.hpp"
 #include "log.hpp"
+#include "protocol.hpp"
 
 namespace
 {
@@ -478,37 +479,103 @@ void ForwardTable::remove(uint32_t link_sequence)
   }
 }
 
+static_assert(config::kUsedPayloadMax >= command::kArmBytes &&
+              config::kUsedPayloadMax >= command::kSetControllerTimeBytes &&
+              config::kUsedPayloadMax >= command::kStartFailedBytes,
+  "the ring must hold the longest ARM or dangerous command (Interfaces Sec. 5.1 table)");
+
 UsedSequences::UsedSequences()
 : entries_{}, next_(0)
 {
 }
 
 /**
- * @brief Tells whether a ground sequence number is among the last config::kUsedSequenceCount used.
+ * @brief Compares an ARM or dangerous command with the ring of the last config::kUsedSequenceCount.
  *
- * @param[in]     sequence  the ground sequence number of a command
- * @return true: used before (a repeat, REFUSED 0x04, REQ-065); false: not in the ring
+ * Tells a resend after a lost answer from an old command sent again: the ground console resends
+ * with the same sequence number and the same bytes so that the receiver can recognise the repeat
+ * (Interfaces Sec. 4.2, REQ-031), while a different command under a used number is the replay
+ * REQ-065 refuses. The state says whether the first one has finished, which decides RECEIVED or
+ * ALREADY DONE. An entry is never changed here.
+ *
+ * @param[in]     sequence  the ground sequence number of the command
+ * @param[in]     payload   the command's payload bytes (length of them valid)
+ * @param[in]     length    number of payload bytes
+ * @return kNew: not in the ring; kSamePending, kSameDone, kSameRefused: same number and bytes,
+ *         by how the first ended; kDifferent: same number, other bytes (REFUSED 0x04, REQ-065)
  */
-bool UsedSequences::contains(uint32_t sequence) const
+UsedSequences::Repeat UsedSequences::check(uint32_t sequence, const uint8_t * payload,
+  uint16_t length) const
 {
   for (const Entry & entry : entries_) {
-    if (entry.used && entry.sequence == sequence) {
-      return true;
+    if (!entry.used || entry.sequence != sequence) {
+      continue;
     }
+    if (entry.length != length || length > entry.payload.size() ||
+        std::memcmp(entry.payload.data(), payload, length) != 0) {
+      return Repeat::kDifferent;
+    }
+    if (entry.state == State::kPending) {
+      return Repeat::kSamePending;
+    }
+    if (entry.state == State::kDone) {
+      return Repeat::kSameDone;
+    }
+    if (entry.state == State::kRefused) {
+      return Repeat::kSameRefused;
+    }
+    // A state that cannot exist is corrupted memory (code rules B1). The updater has no fault
+    // reaction yet (open), so this fails closed: the command is refused 0x04, never ALREADY DONE.
+    return Repeat::kDifferent;
   }
-  return false;
+  return Repeat::kNew;
 }
 
 /**
- * @brief Remembers a ground sequence number as used.
+ * @brief Remembers an accepted ARM or dangerous command: its number, its bytes, not finished yet.
  *
- * Replaces the oldest entry when the ring of config::kUsedSequenceCount is full (REQ-065).
+ * Replaces the oldest entry when the ring of config::kUsedSequenceCount is full (REQ-065). The
+ * bytes are kept so that a resend can be told from a different command under the same number
+ * (REQ-031). A payload longer than config::kUsedPayloadMax cannot be an ARM or dangerous command
+ * the updater accepts; nothing is stored then.
  *
- * @param[in]     sequence  the ground sequence number of an accepted ARM or dangerous command
+ * @param[in]     sequence  the ground sequence number of the command
+ * @param[in]     payload   the command's payload bytes
+ * @param[in]     length    number of payload bytes
+ * @return true: stored; false: the payload was too long, nothing stored
+ */
+bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t length)
+{
+  if (length > config::kUsedPayloadMax) {
+    return false;
+  }
+  Entry & entry = entries_[next_];
+  entry.used = true;
+  entry.state = State::kPending;
+  entry.sequence = sequence;
+  entry.length = length;
+  std::memcpy(entry.payload.data(), payload, length);
+  next_ = (next_ + 1) % entries_.size();
+  return true;
+}
+
+/**
+ * @brief Marks a remembered command finished: its final answer has gone to the ground.
+ *
+ * Why: a resend of a finished command is answered ALREADY DONE without running it again, a resend
+ * of an unfinished one only RECEIVED (REQ-031). Only a pending entry changes, so a later answer
+ * under the same number cannot overwrite how the first ended. Does nothing when no entry has the
+ * number (a command that is not an ARM or dangerous command).
+ *
+ * @param[in]     sequence  the ground sequence number of the command
+ * @param[in]     done      true: it ended DONE or ALREADY DONE; false: it ended REFUSED
  * @return nothing
  */
-void UsedSequences::add(uint32_t sequence)
+void UsedSequences::finish(uint32_t sequence, bool done)
 {
-  entries_[next_] = Entry{true, sequence};
-  next_ = (next_ + 1) % entries_.size();
+  for (Entry & entry : entries_) {
+    if (entry.used && entry.sequence == sequence && entry.state == State::kPending) {
+      entry.state = done ? State::kDone : State::kRefused;
+    }
+  }
 }

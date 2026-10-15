@@ -1,0 +1,29 @@
+# mac 2026-10-16 00:03:42 EEST; kill case k5-operate: SIGKILL to fsir-updater's MainPID 6 s after
+# the first journal line matching: GET STATUS sequence [0-9]+ \(beat\)|controller: answer
+# console and images 4d6f5e8; updater 6b0888f8 (4d6f5e8); board journal from 2026-10-15 21:03:40 UTC
+$ console.py status --seconds 4
+report  HEALTH  #210 onboard t=1792098222 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #211 onboard t=1792098223 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #212 onboard t=1792098224 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #213 onboard t=1792098225 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+console exit=0  mac 00:03:48
+watcher: MainPID 17465 at 21:03:48.839, sending SIGKILL to it
+watcher: kill exit 0
+# fsir-updater journal (board UTC):
+2026-10-15T21:03:42.331171+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   206.786] ground link: answers and reports now go to 192.168.7.85:57690
+2026-10-15T21:03:42.331171+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   206.786] ground: command 0x25 sequence 1791888632 for the controller (1 payload bytes)
+2026-10-15T21:03:42.331171+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   206.786] ground command 0x25 sequence 1791888632 passed on to the controller as sequence 384
+2026-10-15T21:03:42.337831+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   206.793] controller: answer 0x02 code 0x00 to ground sequence 1791888632
+2026-10-15T21:03:48.897435+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Main process exited, code=killed, status=9/KILL
+2026-10-15T21:03:48.898200+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Failed with result 'signal'.
+2026-10-15T21:03:50.042112+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Scheduled restart job, restart counter is at 1.
+2026-10-15T21:03:50.066072+00:00 stm32mp2unknownunknown systemd[1]: Started fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+2026-10-15T21:03:50.077924+00:00 stm32mp2unknownunknown fsir-updater[17775]: [     0.005] limits: no record, starting with minimum version 1, controller identity 0x0431
+2026-10-15T21:03:50.078996+00:00 stm32mp2unknownunknown fsir-updater[17775]: [     0.007] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+2026-10-15T21:03:50.079431+00:00 stm32mp2unknownunknown fsir-updater[17775]: [     0.007] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T21:03:50.134182+00:00 stm32mp2unknownunknown fsir-updater[17775]: [     0.062] controller heard
+2026-10-15T21:03:50.789330+00:00 stm32mp2unknownunknown fsir-updater[17775]: [     0.717] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+2026-10-15T21:03:50.789330+00:00 stm32mp2unknownunknown fsir-updater[17775]: [     0.717] reports: no ground has spoken yet; reports are dropped until one does
+# service: MainPID=17775 NRestarts=1 ActiveState=active 
+#5 onboard 1792098234 controller 71 OPERATE slot B failed 0
+damaged frames: 0

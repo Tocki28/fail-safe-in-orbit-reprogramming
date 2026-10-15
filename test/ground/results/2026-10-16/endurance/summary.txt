@@ -1,0 +1,7 @@
+# summary recomputed from endurance-log.txt (the run's own summary used a wrong pattern for the
+# confirm line and counted every cycle as failed; the per-cycle records are as written)
+cycles: 100; passing (exit 0 and UPDATE CONFIRMED): 100; not passing: 0
+duration per cycle, Mac wall time incl. console start: fastest 7.62 s, median 8.10 s, slowest 12.42 s
+update time printed by the console: fastest 7.5 s, median 7.9 s, slowest 12.3 s
+slots after each cycle alternate A/B every time: True
+first cycle start 00:34:24, last cycle start 00:48:08

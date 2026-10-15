@@ -1,0 +1,35 @@
+# mac 2026-10-16 00:08:06 EEST; power cut pc1-deliver-1: hub 1-1 port 1 off 1.0 s after the first journal
+# line matching: DELIVER image 43: ; off for 3 s; everything at 4d6f5e8, updater 6b0888f8
+# board journal from 2026-10-15 21:08:04 UTC
+$ console.py deliver --number 43
+report  HEALTH  #109 onboard t=1792098486 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+watcher: port off at 21:08:07.795
+watcher: off exit 0
+FAILED: DELIVER (seq 1791888962) REFUSED 0xff: bench: the controller did not answer within its timeout
+console exit=1  mac 00:08:11
+watcher: port on at 21:08:11.377, exit 0
+# fsir-updater journal (board UTC):
+2026-10-15T21:08:04.018761+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   104.448] ground: command 0x03 sequence 1791888961 for the onboard computer (3 payload bytes)
+2026-10-15T21:08:04.044912+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   104.475] UPLOAD END image 43: checks passed (kind 0x02, version 1); stored
+2026-10-15T21:08:06.366253+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   106.796] ground link: answers and reports now go to 192.168.7.85:56397
+2026-10-15T21:08:06.366253+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   106.796] ground: command 0x05 sequence 1791888962 for the onboard computer (3 payload bytes)
+2026-10-15T21:08:06.369220+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   106.799] DELIVER image 43: 20424 bytes, version 1, to the controller
+2026-10-15T21:08:07.882499+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   108.307] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+2026-10-15T21:08:08.883594+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   109.313] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+2026-10-15T21:08:09.839110+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   110.269] DELIVER image 43: refused 0xff (controller did not answer (bench code)) after 7936 of 20424 bytes
+2026-10-15T21:08:09.840424+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   110.269] data link A: sending sequence 97 failed
+2026-10-15T21:08:11.848242+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   112.278] data link A: sending sequence 98 failed
+2026-10-15T21:08:12.858366+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   113.288] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:08:12.909513+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   113.339] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T21:08:13.048890+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   113.479] controller heard again after 5 s of silence
+# after power returned (mac 00:08:21):
+#118 onboard 1792098501 controller 9 OPERATE slot B failed 0
+damaged frames: 0
+slot B (confirmed): region 0x08010000, 20424 bytes: IDENTICAL to /root/bench-images-4d6f5e8/firmware-B.img
+last-resort: region 0x0801A000, 1736 bytes: IDENTICAL to /root/bench-images-4d6f5e8/last-resort-v1.img
+$ console.py deliver --number 43   (repeat after the cut)
+report  HEALTH  #120 onboard t=1792098503 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #121 onboard t=1792098504 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #122 onboard t=1792098505 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.11 s
+exit=0

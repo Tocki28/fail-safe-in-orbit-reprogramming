@@ -1,0 +1,12 @@
+# mac 2026-10-16 00:26:01 EEST; power cut pc2-trial-cut-3: hub 1-1 port 1 off 5 s after the first journal
+# line matching: EVENT 0x0006; off for 3 s; everything at 4d6f5e8, updater 6b0888f8
+# board journal from 2026-10-15 21:25:59 UTC
+$ console.py pc2-trial-cut-3 EVENT 0x0006 5 3
+usage: console.py [-h] [--host HOST] [--port PORT] [--local-port LOCAL_PORT]
+                  [--radio-loss P] [--timeout TIMEOUT] [--first-seq FIRST_SEQ]
+                  [--seq-file SEQ_FILE] [--seed SEED] [--check-tool PATH]
+                  {status,upload,deliver,switch,update,confirm,return} ...
+console.py: error: argument cmd: invalid choice: 'pc2-trial-cut-3' (choose from 'status', 'upload', 'deliver', 'switch', 'update', 'confirm', 'return')
+console exit=2  mac 00:26:03
+# fsir-updater journal (board UTC):
+-- No entries --

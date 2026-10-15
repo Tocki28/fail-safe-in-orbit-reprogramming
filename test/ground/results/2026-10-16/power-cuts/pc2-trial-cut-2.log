@@ -1,0 +1,14 @@
+# mac 2026-10-16 00:20:53 EEST; power cut pc2-trial-cut-2: hub 1-1 port 1 off 5 s after the first journal
+# line matching: EVENT 0x0006; off for 3 s; everything at 4d6f5e8, updater 6b0888f8
+# board journal from 2026-10-15 21:20:50 UTC
+$ console.py pc2-trial-cut-2 EVENT 0x0006 5 3
+usage: console.py [-h] [--host HOST] [--port PORT] [--local-port LOCAL_PORT]
+                  [--radio-loss P] [--timeout TIMEOUT] [--first-seq FIRST_SEQ]
+                  [--seq-file SEQ_FILE] [--seed SEED] [--check-tool PATH]
+                  {status,upload,deliver,switch,update,confirm,return} ...
+console.py: error: argument cmd: invalid choice: 'pc2-trial-cut-2' (choose from 'status', 'upload', 'deliver', 'switch', 'update', 'confirm', 'return')
+console exit=2  mac 00:20:55
+# fsir-updater journal (board UTC):
+2026-10-15T21:22:42.814347+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   983.244] controller: EVENT 0x0008 (firmware given up)
+2026-10-15T21:22:42.840685+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   983.254] EVENT 0x0008 (firmware given up): the delivered image 43 was deleted from storage (image-00043.img)
+2026-10-15T21:22:43.936866+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   984.367] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00

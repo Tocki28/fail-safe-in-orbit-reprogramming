@@ -1,0 +1,106 @@
+# mac 2026-10-16 00:01:03 EEST; REQ-057: fault-location pair planted over SWD (BKP10R 0x00000008, BKP11R 0xfffffff7, PWR_CR1 DBP set for the write and cleared after), then restore.sh full with the 4d6f5e8 images (the separated bootloader of 1ba9c79)
+$ console.py status --seconds 30   (started 2 s before the restore)
+report  EVENT   #47 onboard t=1792098065 0x0005 change in memory detected at 0x08 (bootloader boot state: slot code is not A or B), found by the bootloader, 0 more after it
+report  HEALTH  #48 onboard t=1792098066 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #49 onboard t=1792098067 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #50 onboard t=1792098068 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #51 onboard t=1792098069 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #52 onboard t=1792098070 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #53 onboard t=1792098071 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #54 onboard t=1792098072 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #55 onboard t=1792098073 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #56 onboard t=1792098074 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #57 onboard t=1792098075 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #58 onboard t=1792098076 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #59 onboard t=1792098077 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #60 onboard t=1792098078 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #61 onboard t=1792098079 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #62 onboard t=1792098080 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #63 onboard t=1792098081 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #64 onboard t=1792098082 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #65 onboard t=1792098083 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #66 onboard t=1792098084 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #67 onboard t=1792098085 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #68 onboard t=1792098086 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #69 onboard t=1792098087 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #70 onboard t=1792098088 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #71 onboard t=1792098089 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #72 onboard t=1792098090 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+restore start 21:01:01.471
+check: bootloader image /root/bench-images-4d6f5e8/bootloader.img 21476 bytes: image check passed: /tmp/restore.UDz5ct/bootloader.img: kind bootloader, version 1, 21476 bytes, both signatures valid; limits: default, no record, minimum version 1, identity 0x0431
+check: last-resort image /root/bench-images-4d6f5e8/last-resort-v1.img 1736 bytes: image check passed: /tmp/restore.UDz5ct/last-resort.img: kind last-resort, version 1, 1736 bytes, both signatures valid; limits: default, no record, minimum version 1, identity 0x0431
+check: main firmware image /root/bench-images-4d6f5e8/firmware-A.img 20424 bytes: image check passed: /tmp/restore.UDz5ct/main.img: kind main, version 1, 20424 bytes, both signatures valid; limits: default, no record, minimum version 1, identity 0x0431
+RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+exit=0 end 21:01:05.501
+# OpenOCD log of this restore (LOG=/root/restore-full-2.log):
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+Info : auto-selecting first available session transport "hla_swd". To override use 'transport select <transport>'.
+Info : The selected transport took over low-level target control. The results might differ compared to plain JTAG/SWD
+srst_only separate srst_nogate srst_open_drain connect_assert_srst
+
+STEP: connect
+Info : clock speed 2000 kHz
+Info : STLINK V3J16M9 (API v3) VID:PID 0483:374E
+Info : Target voltage: 3.294807
+Info : [stm32g4x.cpu] Cortex-M4 r0p1 processor detected
+Info : [stm32g4x.cpu] target has 6 breakpoints, 4 watchpoints
+Info : starting gdb server for stm32g4x.cpu on 3333
+Info : Listening on port 3333 for gdb connections
+STEPDONE: connect
+STEP: halt under reset
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+[stm32g4x.cpu] halted due to debug-request, current mode: Thread 
+xPSR: 0x01000000 pc: 0x0800409c msp: 0x20008000
+STEPDONE: halt under reset
+STEP: erase last-resort region
+Info : device idcode = 0x20036468 (STM32G43/G44xx - Rev 'unknown' : 0x2003)
+Info : RDP level 0 (0xAA)
+Info : flash size = 128 KiB
+Info : flash mode : single-bank
+STEPDONE: erase last-resort region
+STEP: write last-resort
+STEPDONE: write last-resort
+STEP: verify last-resort
+STEPDONE: verify last-resort
+STEP: erase bootloader region
+STEPDONE: erase bootloader region
+STEP: write bootloader
+Info : Padding image section 0 at 0x08005324 with 4 bytes (bank write end alignment)
+STEPDONE: write bootloader
+STEP: verify bootloader
+Info : Padding image section 0 at 0x08005324 with 4 bytes (bank write end alignment)
+STEPDONE: verify bootloader
+STEP: erase slot B
+STEPDONE: erase slot B
+STEP: read back slot B erased
+STEPDONE: read back slot B erased
+STEP: erase slot A
+STEPDONE: erase slot A
+STEP: read back slot A erased
+STEPDONE: read back slot A erased
+STEP: erase boot state (REQ-057)
+STEPDONE: erase boot state (REQ-057)
+STEP: read back boot state erased
+STEPDONE: read back boot state erased
+STEP: write main firmware (REQ-121)
+STEPDONE: write main firmware (REQ-121)
+STEP: verify main firmware
+STEPDONE: verify main firmware
+STEP: reset and run
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+Info : Unable to match requested speed 2000 kHz, using 1000 kHz
+STEPDONE: reset and run
+shutdown command invoked
+# fsir-updater journal 21:00:55-21:01:35 UTC:
+2026-10-15T21:01:01.380539+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    45.835] ground link: answers and reports now go to 192.168.7.85:62490
+2026-10-15T21:01:01.380539+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    45.835] ground: command 0x25 sequence 1791888363 for the controller (1 payload bytes)
+2026-10-15T21:01:01.380539+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    45.835] ground command 0x25 sequence 1791888363 passed on to the controller as sequence 25
+2026-10-15T21:01:01.387137+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    45.842] controller: answer 0x02 code 0x00 to ground sequence 1791888363
+2026-10-15T21:01:04.597779+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    49.052] controller: no answer to GET STATUS sequence 26 (beat) in time
+2026-10-15T21:01:05.537716+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    49.992] controller: EVENT 0x0005 (change in memory detected) at 0x08 (bootloader boot state: slot code is not A or B), found by the bootloader, 0 more after it
+2026-10-15T21:01:06.526962+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    50.982] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+2026-10-15T21:01:06.627441+00:00 stm32mp2unknownunknown fsir-updater[17465]: [    51.082] controller: no answer to GET STATUS sequence 27 (beat) in time

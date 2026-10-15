@@ -1,0 +1,18 @@
+# mac 2026-10-16 00:33:25 EEST; pc4-switch-count-write: power cut 0 s after the line: command 0x20 sequence [0-9]+ passed on; 4d6f5e8
+$ console.py switch
+switch  sent, answered DONE
+console exit=0
+watcher: matched at 21:33:25.778
+watcher: port off (uhubctl returned) at 21:33:25.966
+watcher: port on at 21:33:29.399
+# journal (board UTC, precise):
+2026-10-15T21:33:25.482527+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1625.912] ground command 0x20 sequence 1791889149 passed on to the controller as sequence 1515
+2026-10-15T21:33:25.598740+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1626.028] controller: answer 0x02 code 0x00 to ground sequence 1791889149
+2026-10-15T21:33:25.772985+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1626.202] controller: EVENT 0x0006 (trial started)
+2026-10-15T21:33:30.798229+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1631.228] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:33:31.114100+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1631.543] controller heard again after 5 s of silence
+2026-10-15T21:33:31.114100+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1631.543] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 2, trial time left 119 s, self-test 0x00
+2026-10-15T21:33:31.252244+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1631.682] controller: EVENT 0x000a (trial tests passed)
+# after (mac 00:33:41):
+#1609 onboard 1792100021 controller 11 TRIAL slot A failed 2
+damaged frames: 0

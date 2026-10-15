@@ -1,0 +1,31 @@
+# mac 2026-10-16 00:20:33 EEST; power cut pc2-trial-cut-1: hub 1-1 port 1 off 5 s after the first journal
+# line matching: EVENT 0x0006; off for 3 s; everything at 4d6f5e8, updater 6b0888f8
+# board journal from 2026-10-15 21:20:30 UTC
+$ console.py switch
+switch  sent, answered DONE
+console exit=0  mac 00:20:35
+watcher: port off at 21:20:38.795
+watcher: off exit 0
+watcher: port on at 21:20:42.455, exit 0
+# fsir-updater journal (board UTC):
+2026-10-15T21:20:33.049591+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.479] ground link: answers and reports now go to 192.168.7.85:59888
+2026-10-15T21:20:33.049591+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.479] ground: command 0x0d sequence 1791888976 for the controller (6 payload bytes)
+2026-10-15T21:20:33.051255+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.479] ground: ARM sequence 1791888976 held for command 0x20, ground sequence 1791888977 (valid 30000 ms)
+2026-10-15T21:20:33.051255+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.481] ground: command 0x20 sequence 1791888977 for the controller (1 payload bytes)
+2026-10-15T21:20:33.051255+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.481] ARM sequence 956 sent for ground command 0x20 sequence 1791888977, which will carry sequence 957
+2026-10-15T21:20:33.058256+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.488] ground command 0x20 sequence 1791888977 passed on to the controller as sequence 957
+2026-10-15T21:20:33.172059+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.602] controller: answer 0x02 code 0x00 to ground sequence 1791888977
+2026-10-15T21:20:33.346357+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.776] controller: EVENT 0x0006 (trial started)
+2026-10-15T21:20:34.335794+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   854.765] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+2026-10-15T21:20:34.337805+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   854.766] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+2026-10-15T21:20:34.471439+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   854.901] test image: done; the controller accepted UPLOAD END
+2026-10-15T21:20:34.474370+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   854.904] controller: EVENT 0x000a (trial tests passed)
+2026-10-15T21:20:38.938235+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   859.267] data link A: sending sequence 966 failed
+2026-10-15T21:20:38.938235+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   859.364] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+2026-10-15T21:20:39.944122+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   860.374] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+2026-10-15T21:20:40.848715+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   861.278] data link A: sending sequence 967 failed
+2026-10-15T21:20:42.858280+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   863.288] data link A: sending sequence 968 failed
+2026-10-15T21:20:43.364303+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   863.794] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:20:43.969219+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   864.399] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T21:20:44.135953+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   864.566] controller heard again after 5 s of silence
+2026-10-15T21:20:44.135953+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   864.566] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 2, trial time left 119 s, self-test 0x00

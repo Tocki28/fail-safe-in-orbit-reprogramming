@@ -1,0 +1,29 @@
+# mac 2026-10-16 00:19:28 EEST; power cut pc1-deliver-2: hub 1-1 port 1 off 0.3 s after the first journal
+# line matching: DELIVER image 43: ; off for 3 s; everything at 4d6f5e8, updater 6b0888f8
+# board journal from 2026-10-15 21:19:26 UTC
+$ console.py deliver --number 43
+watcher: port off at 21:19:29.346
+watcher: off exit 0
+FAILED: DELIVER (seq 1791888970) REFUSED 0xff: bench: the controller did not answer within its timeout
+console exit=1  mac 00:19:33
+watcher: port on at 21:19:32.950, exit 0
+# fsir-updater journal (board UTC):
+2026-10-15T21:19:28.542726+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   788.972] ground link: answers and reports now go to 192.168.7.85:51939
+2026-10-15T21:19:28.542726+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   788.972] ground: command 0x05 sequence 1791888970 for the onboard computer (3 payload bytes)
+2026-10-15T21:19:28.545564+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   788.975] DELIVER image 43: 20424 bytes, version 1, to the controller
+2026-10-15T21:19:29.434422+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   789.862] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+2026-10-15T21:19:30.437838+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   790.868] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+2026-10-15T21:19:31.394290+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   791.824] DELIVER image 43: refused 0xff (controller did not answer (bench code)) after 2816 of 20424 bytes
+2026-10-15T21:19:31.395616+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   791.824] data link A: sending sequence 690 failed
+2026-10-15T21:19:33.404540+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   793.834] data link A: sending sequence 691 failed
+2026-10-15T21:19:34.362818+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   794.793] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:19:34.464211+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   794.894] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T21:19:34.621108+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   795.051] controller heard again after 5 s of silence
+# after power returned (mac 00:19:43):
+#795 onboard 1792099182 controller 9 OPERATE slot B failed 0
+damaged frames: 0
+slot B (confirmed): region 0x08010000, 20424 bytes: IDENTICAL to /root/bench-images-4d6f5e8/firmware-B.img
+last-resort: region 0x0801A000, 1736 bytes: IDENTICAL to /root/bench-images-4d6f5e8/last-resort-v1.img
+$ console.py deliver --number 43   (repeat after the cut)
+deliver complete in 3.11 s
+exit=0

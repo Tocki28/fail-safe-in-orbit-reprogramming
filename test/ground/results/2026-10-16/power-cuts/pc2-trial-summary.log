@@ -1,0 +1,15 @@
+# three power cuts during a trial; journal from 2026-10-15 21:20:30 UTC (trial, events, HEALTH lines):
+2026-10-15T21:20:33.346357+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   853.776] controller: EVENT 0x0006 (trial started)
+2026-10-15T21:20:34.335794+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   854.765] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+2026-10-15T21:20:34.474370+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   854.904] controller: EVENT 0x000a (trial tests passed)
+2026-10-15T21:20:43.364303+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   863.794] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:20:44.135953+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   864.566] controller heard again after 5 s of silence
+2026-10-15T21:20:44.135953+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   864.566] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 2, trial time left 119 s, self-test 0x00
+2026-10-15T21:22:42.814347+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   983.244] controller: EVENT 0x0008 (firmware given up)
+2026-10-15T21:22:42.840685+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   983.254] EVENT 0x0008 (firmware given up): the delivered image 43 was deleted from storage (image-00043.img)
+2026-10-15T21:22:43.936866+00:00 stm32mp2unknownunknown fsir-updater[18037]: [   984.367] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+# after the third cut (mac 00:31:10):
+#1474 onboard 1792099869 controller 508 OPERATE slot B failed 0
+damaged frames: 0
+slot B (previous, confirmed): region 0x08010000, 20424 bytes: IDENTICAL to /root/bench-images-4d6f5e8/firmware-B.img
+last-resort: region 0x0801A000, 1736 bytes: IDENTICAL to /root/bench-images-4d6f5e8/last-resort-v1.img

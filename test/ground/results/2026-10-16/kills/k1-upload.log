@@ -1,0 +1,108 @@
+# mac 2026-10-16 00:04:10 EEST; kill case k1-upload: SIGKILL to fsir-updater's MainPID 0.3 s after
+# the first journal line matching: UPLOAD BEGIN image 41
+# console and images 4d6f5e8; updater 6b0888f8 (4d6f5e8); board journal from 2026-10-15 21:04:08 UTC
+$ console.py upload <checkout of 4d6f5e8>/src/controller/build/images/firmware-A.img --number 41
+upload  256/20424 bytes (1 %)   upload  512/20424 bytes (2 %)   upload  768/20424 bytes (3 %)   upload  1024/20424 bytes (5 %)   upload  1280/20424 bytes (6 %)   upload  1536/20424 bytes (7 %)   upload  1792/20424 bytes (8 %)   upload  2048/20424 bytes (10 %)   upload  2304/20424 bytes (11 %)   upload  2560/20424 bytes (12 %)   upload  2816/20424 bytes (13 %)   upload  3072/20424 bytes (15 %)   upload  3328/20424 bytes (16 %)   upload  3584/20424 bytes (17 %)   upload  3840/20424 bytes (18 %)   upload  4096/20424 bytes (20 %)   upload  4352/20424 bytes (21 %)   upload  4608/20424 bytes (22 %)   upload  4864/20424 bytes (23 %)   upload  5120/20424 bytes (25 %)   upload  5376/20424 bytes (26 %)   upload  5632/20424 bytes (27 %)   upload  5888/20424 bytes (28 %)   upload  6144/20424 bytes (30 %)   upload  6400/20424 bytes (31 %)   upload  6656/20424 bytes (32 %)   upload  6912/20424 bytes (33 %)   upload  7168/20424 bytes (35 %)   upload  7424/20424 bytes (36 %)   upload  7680/20424 bytes (37 %)   upload  7936/20424 bytes (38 %)   upload  8192/20424 bytes (40 %)   upload  8448/20424 bytes (41 %)   upload  8704/20424 bytes (42 %)   upload  8960/20424 bytes (43 %)   upload  9216/20424 bytes (45 %)   upload  9472/20424 bytes (46 %)   upload  9728/20424 bytes (47 %)   upload  9984/20424 bytes (48 %)   upload  10240/20424 bytes (50 %)   upload  10496/20424 bytes (51 %)   upload  10752/20424 bytes (52 %)   report  HEALTH  #21 onboard t=1792098250 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+upload  11008/20424 bytes (53 %)   upload  11264/20424 bytes (55 %)   upload  11520/20424 bytes (56 %)   upload  11776/20424 bytes (57 %)   upload  12032/20424 bytes (58 %)   upload  12288/20424 bytes (60 %)   upload  12544/20424 bytes (61 %)   upload  12800/20424 bytes (62 %)   upload  13056/20424 bytes (63 %)   upload  13312/20424 bytes (65 %)   upload  13568/20424 bytes (66 %)   upload  13824/20424 bytes (67 %)   upload  14080/20424 bytes (68 %)   upload  14336/20424 bytes (70 %)   upload  14592/20424 bytes (71 %)   upload  14848/20424 bytes (72 %)   upload  15104/20424 bytes (73 %)   upload  15360/20424 bytes (75 %)   upload  15616/20424 bytes (76 %)   upload  15872/20424 bytes (77 %)   upload  16128/20424 bytes (78 %)   upload  16384/20424 bytes (80 %)   upload  16640/20424 bytes (81 %)   upload  16896/20424 bytes (82 %)   watcher: MainPID 17775 at 21:04:10.945, sending SIGKILL to it
+watcher: kill exit 0
+no answer to UPLOAD CHUNK offset 16896 (seq 1791888701) within 3 s, sending again
+waiting: seq 1791888701 UPLOAD CHUNK offset 16896, sent 3.0 s ago, RECEIVED yes
+FAILED: UPLOAD CHUNK offset 16896 (seq 1791888701) REFUSED 0x06: Impossible values, or an unknown command; bytes before offset 16896 were accepted; the chunk at 16896 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 41 --offset 16896`; if that is refused 0x06, run `upload IMAGE --number 41` from the start (no --offset)
+console exit=1  mac 00:04:16
+# fsir-updater journal (board UTC):
+2026-10-15T21:04:10.335927+00:00 stm32mp2unknownunknown fsir-updater[17775]: [    20.263] ground link: answers and reports now go to 192.168.7.85:49697
+2026-10-15T21:04:10.335927+00:00 stm32mp2unknownunknown fsir-updater[17775]: [    20.263] ground: command 0x01 sequence 1791888634 for the onboard computer (7 payload bytes)
+2026-10-15T21:04:10.349054+00:00 stm32mp2unknownunknown fsir-updater[17775]: [    20.277] UPLOAD BEGIN image 41, 20424 bytes: starting at byte 0
+2026-10-15T21:04:11.003551+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Main process exited, code=killed, status=9/KILL
+2026-10-15T21:04:11.004261+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Failed with result 'signal'.
+2026-10-15T21:04:12.042015+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Scheduled restart job, restart counter is at 2.
+2026-10-15T21:04:12.066794+00:00 stm32mp2unknownunknown systemd[1]: Started fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+2026-10-15T21:04:12.080114+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     0.006] limits: no record, starting with minimum version 1, controller identity 0x0431
+2026-10-15T21:04:12.080114+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     0.006] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+2026-10-15T21:04:12.081526+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     0.006] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T21:04:12.135431+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     0.061] controller heard
+2026-10-15T21:04:12.723362+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     0.649] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+2026-10-15T21:04:12.723362+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     0.649] reports: no ground has spoken yet; reports are dropped until one does
+2026-10-15T21:04:13.943269+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     1.869] ground link: answers and reports now go to 192.168.7.85:49697
+2026-10-15T21:04:13.944951+00:00 stm32mp2unknownunknown fsir-updater[17825]: [     1.869] UPLOAD CHUNK image 41 at 16896 (256 bytes): refused 0x06; 0 bytes stored
+# service: MainPID=17825 NRestarts=2 ActiveState=active 
+
+# resume, following the console's advice (mac 00:04:30)
+$ console.py upload firmware-A.img --number 41 --offset 16896
+FAILED: UPLOAD CHUNK offset 16896 (seq 1791888702) REFUSED 0x06: Impossible values, or an unknown command; bytes before offset 16896 were accepted; the chunk at 16896 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 41 --offset 16896`; if that is refused 0x06, run `upload IMAGE --number 41` from the start (no --offset)
+exit=1
+$ console.py upload firmware-A.img --number 41
+upload  256/20424 bytes (1 %)   upload  512/20424 bytes (2 %)   upload  768/20424 bytes (3 %)   upload  1024/20424 bytes (5 %)   upload  1280/20424 bytes (6 %)   upload  1536/20424 bytes (7 %)   upload  1792/20424 bytes (8 %)   upload  2048/20424 bytes (10 %)   upload  2304/20424 bytes (11 %)   upload  2560/20424 bytes (12 %)   upload  2816/20424 bytes (13 %)   upload  3072/20424 bytes (15 %)   upload  3328/20424 bytes (16 %)   upload  3584/20424 bytes (17 %)   upload  3840/20424 bytes (18 %)   upload  4096/20424 bytes (20 %)   upload  4352/20424 bytes (21 %)   upload  4608/20424 bytes (22 %)   upload  4864/20424 bytes (23 %)   upload  5120/20424 bytes (25 %)   upload  5376/20424 bytes (26 %)   upload  5632/20424 bytes (27 %)   upload  5888/20424 bytes (28 %)   upload  6144/20424 bytes (30 %)   upload  6400/20424 bytes (31 %)   upload  6656/20424 bytes (32 %)   upload  6912/20424 bytes (33 %)   upload  7168/20424 bytes (35 %)   upload  7424/20424 bytes (36 %)   upload  7680/20424 bytes (37 %)   upload  7936/20424 bytes (38 %)   upload  8192/20424 bytes (40 %)   upload  8448/20424 bytes (41 %)   upload  8704/20424 bytes (42 %)   upload  8960/20424 bytes (43 %)   upload  9216/20424 bytes (45 %)   upload  9472/20424 bytes (46 %)   upload  9728/20424 bytes (47 %)   upload  9984/20424 bytes (48 %)   upload  10240/20424 bytes (50 %)   upload  10496/20424 bytes (51 %)   upload  10752/20424 bytes (52 %)   upload  11008/20424 bytes (53 %)   upload  11264/20424 bytes (55 %)   upload  11520/20424 bytes (56 %)   upload  11776/20424 bytes (57 %)   upload  12032/20424 bytes (58 %)   upload  12288/20424 bytes (60 %)   upload  12544/20424 bytes (61 %)   upload  12800/20424 bytes (62 %)   upload  13056/20424 bytes (63 %)   upload  13312/20424 bytes (65 %)   upload  13568/20424 bytes (66 %)   upload  13824/20424 bytes (67 %)   upload  14080/20424 bytes (68 %)   upload  14336/20424 bytes (70 %)   upload  14592/20424 bytes (71 %)   upload  14848/20424 bytes (72 %)   upload  15104/20424 bytes (73 %)   upload  15360/20424 bytes (75 %)   upload  15616/20424 bytes (76 %)   upload  15872/20424 bytes (77 %)   upload  16128/20424 bytes (78 %)   upload  16384/20424 bytes (80 %)   upload  16640/20424 bytes (81 %)   upload  16896/20424 bytes (82 %)   upload  17152/20424 bytes (83 %)   upload  17408/20424 bytes (85 %)   upload  17664/20424 bytes (86 %)   upload  17920/20424 bytes (87 %)   upload  18176/20424 bytes (88 %)   upload  18432/20424 bytes (90 %)   upload  18688/20424 bytes (91 %)   upload  18944/20424 bytes (92 %)   upload  19200/20424 bytes (94 %)   upload  19456/20424 bytes (95 %)   upload  19712/20424 bytes (96 %)   upload  19968/20424 bytes (97 %)   upload  20224/20424 bytes (99 %)   upload  20424/20424 bytes (100 %)   
+upload  complete, 20424 bytes in 0.25 s
+exit=0
+# journal from 2026-10-15 21:04:28:
+[    16.854] UPLOAD CHUNK image 41 at 16896 (256 bytes): refused 0x06; 0 bytes stored
+[    16.990] UPLOAD BEGIN image 41, 20424 bytes: resuming at byte 17152
+[    16.992] UPLOAD CHUNK image 41 at 0: already stored
+[    16.993] UPLOAD CHUNK image 41 at 256: already stored
+[    16.995] UPLOAD CHUNK image 41 at 512: already stored
+[    16.996] UPLOAD CHUNK image 41 at 768: already stored
+[    16.998] UPLOAD CHUNK image 41 at 1024: already stored
+[    16.999] UPLOAD CHUNK image 41 at 1280: already stored
+[    17.001] UPLOAD CHUNK image 41 at 1536: already stored
+[    17.002] UPLOAD CHUNK image 41 at 1792: already stored
+[    17.003] UPLOAD CHUNK image 41 at 2048: already stored
+[    17.005] UPLOAD CHUNK image 41 at 2304: already stored
+[    17.006] UPLOAD CHUNK image 41 at 2560: already stored
+[    17.007] UPLOAD CHUNK image 41 at 2816: already stored
+[    17.009] UPLOAD CHUNK image 41 at 3072: already stored
+[    17.011] UPLOAD CHUNK image 41 at 3328: already stored
+[    17.012] UPLOAD CHUNK image 41 at 3584: already stored
+[    17.013] UPLOAD CHUNK image 41 at 3840: already stored
+[    17.015] UPLOAD CHUNK image 41 at 4096: already stored
+[    17.016] UPLOAD CHUNK image 41 at 4352: already stored
+[    17.017] UPLOAD CHUNK image 41 at 4608: already stored
+[    17.019] UPLOAD CHUNK image 41 at 4864: already stored
+[    17.020] UPLOAD CHUNK image 41 at 5120: already stored
+[    17.021] UPLOAD CHUNK image 41 at 5376: already stored
+[    17.023] UPLOAD CHUNK image 41 at 5632: already stored
+[    17.024] UPLOAD CHUNK image 41 at 5888: already stored
+[    17.025] UPLOAD CHUNK image 41 at 6144: already stored
+[    17.027] UPLOAD CHUNK image 41 at 6400: already stored
+[    17.028] UPLOAD CHUNK image 41 at 6656: already stored
+[    17.029] UPLOAD CHUNK image 41 at 6912: already stored
+[    17.031] UPLOAD CHUNK image 41 at 7168: already stored
+[    17.033] UPLOAD CHUNK image 41 at 7424: already stored
+[    17.034] UPLOAD CHUNK image 41 at 7680: already stored
+[    17.035] UPLOAD CHUNK image 41 at 7936: already stored
+[    17.036] UPLOAD CHUNK image 41 at 8192: already stored
+[    17.038] UPLOAD CHUNK image 41 at 8448: already stored
+[    17.039] UPLOAD CHUNK image 41 at 8704: already stored
+[    17.040] UPLOAD CHUNK image 41 at 8960: already stored
+[    17.042] UPLOAD CHUNK image 41 at 9216: already stored
+[    17.043] UPLOAD CHUNK image 41 at 9472: already stored
+[    17.044] UPLOAD CHUNK image 41 at 9728: already stored
+[    17.046] UPLOAD CHUNK image 41 at 9984: already stored
+[    17.047] UPLOAD CHUNK image 41 at 10240: already stored
+[    17.048] UPLOAD CHUNK image 41 at 10496: already stored
+[    17.050] UPLOAD CHUNK image 41 at 10752: already stored
+[    17.052] UPLOAD CHUNK image 41 at 11008: already stored
+[    17.053] UPLOAD CHUNK image 41 at 11264: already stored
+[    17.054] UPLOAD CHUNK image 41 at 11520: already stored
+[    17.056] UPLOAD CHUNK image 41 at 11776: already stored
+[    17.057] UPLOAD CHUNK image 41 at 12032: already stored
+[    17.058] UPLOAD CHUNK image 41 at 12288: already stored
+[    17.060] UPLOAD CHUNK image 41 at 12544: already stored
+[    17.061] UPLOAD CHUNK image 41 at 12800: already stored
+[    17.063] UPLOAD CHUNK image 41 at 13056: already stored
+[    17.064] UPLOAD CHUNK image 41 at 13312: already stored
+[    17.065] UPLOAD CHUNK image 41 at 13568: already stored
+[    17.067] UPLOAD CHUNK image 41 at 13824: already stored
+[    17.068] UPLOAD CHUNK image 41 at 14080: already stored
+[    17.069] UPLOAD CHUNK image 41 at 14336: already stored
+[    17.070] UPLOAD CHUNK image 41 at 14592: already stored
+[    17.072] UPLOAD CHUNK image 41 at 14848: already stored
+[    17.074] UPLOAD CHUNK image 41 at 15104: already stored
+[    17.075] UPLOAD CHUNK image 41 at 15360: already stored
+[    17.076] UPLOAD CHUNK image 41 at 15616: already stored
+[    17.078] UPLOAD CHUNK image 41 at 15872: already stored
+[    17.079] UPLOAD CHUNK image 41 at 16128: already stored
+[    17.080] UPLOAD CHUNK image 41 at 16384: already stored
+[    17.081] UPLOAD CHUNK image 41 at 16640: already stored
+[    17.083] UPLOAD CHUNK image 41 at 16896: already stored
+[    17.221] UPLOAD END image 41: checks passed (kind 0x02, version 1); stored

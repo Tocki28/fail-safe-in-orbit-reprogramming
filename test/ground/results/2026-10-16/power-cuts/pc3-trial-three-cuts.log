@@ -1,0 +1,31 @@
+# mac 2026-10-16 00:31:41 EEST; three power cuts in one trial; 4d6f5e8; journal from 2026-10-15 21:31:39 UTC
+$ console.py switch
+switch  sent, answered DONE
+console exit=0
+watcher: cut 1: port off at 21:31:47.295
+watcher: cut 1: port on at 21:31:50.901
+watcher: cut 2: port off at 21:31:57.618
+watcher: cut 2: port on at 21:32:01.251
+watcher: cut 3: port off at 21:32:08.296
+watcher: cut 3: port on at 21:32:11.898
+watcher: sequence ended at 21:32:11
+# journal (board UTC): events, HEALTH, silence
+2026-10-15T21:31:41.827703+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1522.257] controller: EVENT 0x0006 (trial started)
+2026-10-15T21:31:42.816712+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1523.246] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+2026-10-15T21:31:42.818665+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1523.247] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+2026-10-15T21:31:42.952692+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1523.382] test image: done; the controller accepted UPLOAD END
+2026-10-15T21:31:42.955685+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1523.385] controller: EVENT 0x000a (trial tests passed)
+2026-10-15T21:31:52.352857+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1532.783] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:31:52.612185+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1533.042] controller heard again after 5 s of silence
+2026-10-15T21:31:52.612185+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1533.042] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 2, trial time left 119 s, self-test 0x00
+2026-10-15T21:32:02.632844+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1543.063] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:32:02.961740+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1543.391] controller heard again after 5 s of silence
+2026-10-15T21:32:02.961740+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1543.391] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 3, trial time left 119 s, self-test 0x00
+2026-10-15T21:32:12.968925+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1553.399] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T21:32:13.616420+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1554.046] controller heard again after 5 s of silence
+2026-10-15T21:32:13.616420+00:00 stm32mp2unknownunknown fsir-updater[18037]: [  1554.046] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+# after the sequence (mac 00:32:26):
+#1537 onboard 1792099945 controller 13 OPERATE slot B failed 0
+damaged frames: 0
+slot B (previous, confirmed): region 0x08010000, 20424 bytes: IDENTICAL to /root/bench-images-4d6f5e8/firmware-B.img
+last-resort: region 0x0801A000, 1736 bytes: IDENTICAL to /root/bench-images-4d6f5e8/last-resort-v1.img

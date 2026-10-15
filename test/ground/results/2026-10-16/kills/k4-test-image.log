@@ -1,0 +1,35 @@
+# mac 2026-10-16 00:06:16 EEST; kill case k4-test-image: SIGKILL to fsir-updater's MainPID 0 s after
+# the first journal line matching: test image: 1024 bytes
+# console and images 4d6f5e8; updater 6b0888f8 (4d6f5e8); board journal from 2026-10-15 21:06:14 UTC
+$ console.py switch
+switch  sent, answered DONE
+console exit=0  mac 00:06:18
+watcher: MainPID 17971 at 21:06:18.341, sending SIGKILL to it
+watcher: kill exit 0
+# fsir-updater journal (board UTC):
+2026-10-15T21:06:14.274331+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    26.195] DELIVER image 42: done; the controller accepted UPLOAD END
+2026-10-15T21:06:16.597887+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.519] ground link: answers and reports now go to 192.168.7.85:65078
+2026-10-15T21:06:16.597887+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.519] ground: command 0x0d sequence 1791888874 for the controller (6 payload bytes)
+2026-10-15T21:06:16.599908+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.519] ground: ARM sequence 1791888874 held for command 0x20, ground sequence 1791888875 (valid 30000 ms)
+2026-10-15T21:06:16.599908+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.520] ground: command 0x20 sequence 1791888875 for the controller (1 payload bytes)
+2026-10-15T21:06:16.599908+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.520] ARM sequence 106 sent for ground command 0x20 sequence 1791888875, which will carry sequence 107
+2026-10-15T21:06:16.606807+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.528] ground command 0x20 sequence 1791888875 passed on to the controller as sequence 107
+2026-10-15T21:06:16.724023+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.645] controller: answer 0x02 code 0x00 to ground sequence 1791888875
+2026-10-15T21:06:16.898254+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    28.819] controller: EVENT 0x0006 (trial started)
+2026-10-15T21:06:17.887210+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    29.808] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+2026-10-15T21:06:17.889026+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    29.808] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+2026-10-15T21:06:18.021978+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    29.943] test image: done; the controller accepted UPLOAD END
+2026-10-15T21:06:18.024934+00:00 stm32mp2unknownunknown fsir-updater[17971]: [    29.946] controller: EVENT 0x000a (trial tests passed)
+2026-10-15T21:06:18.403466+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Main process exited, code=killed, status=9/KILL
+2026-10-15T21:06:18.404208+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Failed with result 'signal'.
+2026-10-15T21:06:19.542268+00:00 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Scheduled restart job, restart counter is at 5.
+2026-10-15T21:06:19.558417+00:00 stm32mp2unknownunknown systemd[1]: Started fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+2026-10-15T21:06:19.575747+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.005] limits: no record, starting with minimum version 1, controller identity 0x0431
+2026-10-15T21:06:19.575747+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.005] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+2026-10-15T21:06:19.577188+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.006] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T21:06:19.631438+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.061] controller heard
+2026-10-15T21:06:19.881497+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.311] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 117 s, self-test 0x00
+2026-10-15T21:06:19.881497+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.311] reports: no ground has spoken yet; reports are dropped until one does
+2026-10-15T21:06:19.881497+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.311] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+2026-10-15T21:06:20.019235+00:00 stm32mp2unknownunknown fsir-updater[18037]: [     0.449] test image: done; the controller accepted UPLOAD END
+# service: MainPID=18037 NRestarts=5 ActiveState=active 

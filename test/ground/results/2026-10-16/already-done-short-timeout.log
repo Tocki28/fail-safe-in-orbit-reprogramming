@@ -1,0 +1,88 @@
+# mac 2026-10-16 00:02:41 EEST; ALREADY DONE: switch with --timeout 0.05, confirm with --timeout 0.02; 4d6f5e8 everywhere
+$ upload firmware-B.img --number 40; deliver --number 40
+upload  complete, 20424 bytes in 0.95 s
+report  HEALTH  #146 onboard t=1792098160 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #147 onboard t=1792098161 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #148 onboard t=1792098162 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.11 s
+$ console.py --timeout 0.05 switch
+no answer to SWITCH (seq 1791888626) within 0.05 s, sending again
+waiting: seq 1791888626 SWITCH, sent 0.1 s ago, RECEIVED yes
+no answer to SWITCH (seq 1791888626) within 0.05 s, sending again
+waiting: seq 1791888626 SWITCH, sent 0.1 s ago, RECEIVED yes
+switch  sent, answered DONE
+exit=0
+$ console.py status --seconds 5
+report  EVENT   #149 onboard t=1792098163 0x0006 trial started
+report  EVENT   #152 onboard t=1792098166 0x000a trial tests passed
+$ console.py --timeout 0.02 confirm
+no answer to CONFIRM (seq 1791888629) within 0.02 s, sending again
+waiting: seq 1791888629 CONFIRM, sent 0.0 s ago, RECEIVED yes
+no answer to CONFIRM (seq 1791888629) within 0.02 s, sending again
+waiting: seq 1791888629 CONFIRM, sent 0.0 s ago, RECEIVED yes
+report  EVENT   #169 onboard t=1792098182 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #170 onboard t=1792098182 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+CONFIRMED: EVENT 0x0007 seen; slot B version 1 in OPERATE
+exit=0
+$ console.py status --seconds 4
+report  HEALTH  #173 onboard t=1792098185 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #174 onboard t=1792098186 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+# fsir-updater journal (board UTC) from 2026-10-15 21:02:39:
+2026-10-15T21:02:39.388274+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   143.842] ground link: answers and reports now go to 192.168.7.85:55562
+2026-10-15T21:02:39.388274+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   143.843] ground: command 0x01 sequence 1791888542 for the onboard computer (7 payload bytes)
+2026-10-15T21:02:39.400057+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   143.855] UPLOAD BEGIN image 40, 20424 bytes: starting at byte 0
+2026-10-15T21:02:40.314662+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   144.769] ground: command 0x03 sequence 1791888623 for the onboard computer (3 payload bytes)
+2026-10-15T21:02:40.339989+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   144.795] UPLOAD END image 40: checks passed (kind 0x02, version 1); stored
+2026-10-15T21:02:40.452931+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   144.907] ground link: answers and reports now go to 192.168.7.85:49654
+2026-10-15T21:02:40.452931+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   144.907] ground: command 0x05 sequence 1791888624 for the onboard computer (3 payload bytes)
+2026-10-15T21:02:40.457162+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   144.912] DELIVER image 40: 20424 bytes, version 1, to the controller
+2026-10-15T21:02:43.559834+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.015] DELIVER image 40: done; the controller accepted UPLOAD END
+2026-10-15T21:02:43.672712+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.127] ground link: answers and reports now go to 192.168.7.85:49394
+2026-10-15T21:02:43.672712+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.127] ground: command 0x0d sequence 1791888625 for the controller (6 payload bytes)
+2026-10-15T21:02:43.672712+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.127] ground: ARM sequence 1791888625 held for command 0x20, ground sequence 1791888626 (valid 30000 ms)
+2026-10-15T21:02:43.673980+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.129] ground: command 0x20 sequence 1791888626 for the controller (1 payload bytes)
+2026-10-15T21:02:43.674265+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.129] ARM sequence 343 sent for ground command 0x20 sequence 1791888626, which will carry sequence 344
+2026-10-15T21:02:43.681165+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.136] ground command 0x20 sequence 1791888626 passed on to the controller as sequence 344
+2026-10-15T21:02:43.727172+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.182] ground: command 0x20 sequence 1791888626 for the controller (1 payload bytes)
+2026-10-15T21:02:43.727557+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.182] ground: sequence 1791888626 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:02:43.779083+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.234] ground: command 0x20 sequence 1791888626 for the controller (1 payload bytes)
+2026-10-15T21:02:43.779426+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.234] ground: sequence 1791888626 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:02:43.795132+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.250] controller: answer 0x02 code 0x00 to ground sequence 1791888626
+2026-10-15T21:02:43.907605+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.362] ground link: answers and reports now go to 192.168.7.85:60046
+2026-10-15T21:02:43.907605+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.362] ground: command 0x25 sequence 1791888627 for the controller (1 payload bytes)
+2026-10-15T21:02:43.907605+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.362] ground command 0x25 sequence 1791888627 passed on to the controller as sequence 345
+2026-10-15T21:02:43.969192+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   148.424] controller: EVENT 0x0006 (trial started)
+2026-10-15T21:02:44.958498+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   149.413] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+2026-10-15T21:02:45.913658+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   150.368] controller: no last answer to sequence 345 in time; the ground gets none (a late one is still passed on)
+2026-10-15T21:02:45.914200+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   150.368] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+2026-10-15T21:02:46.046237+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   150.501] test image: done; the controller accepted UPLOAD END
+2026-10-15T21:02:46.049191+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   150.504] controller: EVENT 0x000a (trial tests passed)
+2026-10-15T21:02:46.908675+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   151.363] ground: command 0x25 sequence 1791888627 for the controller (1 payload bytes)
+2026-10-15T21:02:46.908675+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   151.363] ground: sequence 1791888627 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:02:49.910982+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   154.366] ground: command 0x25 sequence 1791888627 for the controller (1 payload bytes)
+2026-10-15T21:02:49.910982+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   154.366] ground: sequence 1791888627 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:02:52.911769+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   157.366] ground: command 0x25 sequence 1791888627 for the controller (1 payload bytes)
+2026-10-15T21:02:52.911769+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   157.366] ground: sequence 1791888627 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:02:55.914398+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   160.369] ground: command 0x25 sequence 1791888627 for the controller (1 payload bytes)
+2026-10-15T21:02:55.914398+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   160.369] ground: sequence 1791888627 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:02:58.917000+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   163.372] ground: command 0x25 sequence 1791888627 for the controller (1 payload bytes)
+2026-10-15T21:02:58.917000+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   163.372] ground: sequence 1791888627 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:03:02.022870+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.477] ground link: answers and reports now go to 192.168.7.85:58499
+2026-10-15T21:03:02.022870+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.477] ground: command 0x0d sequence 1791888628 for the controller (6 payload bytes)
+2026-10-15T21:03:02.022870+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.477] ground: ARM sequence 1791888628 held for command 0x26, ground sequence 1791888629 (valid 30000 ms)
+2026-10-15T21:03:02.024802+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.479] ground: command 0x26 sequence 1791888629 for the controller (1 payload bytes)
+2026-10-15T21:03:02.024802+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.479] ARM sequence 360 sent for ground command 0x26 sequence 1791888629, which will carry sequence 361
+2026-10-15T21:03:02.031465+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.486] ground command 0x26 sequence 1791888629 passed on to the controller as sequence 361
+2026-10-15T21:03:02.045387+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.500] ground: command 0x26 sequence 1791888629 for the controller (1 payload bytes)
+2026-10-15T21:03:02.045387+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.500] ground: sequence 1791888629 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:03:02.061262+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.516] controller: EVENT 0x0007 (firmware confirmed)
+2026-10-15T21:03:02.070307+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.525] EVENT 0x0007 (firmware confirmed): the delivered image 40 was deleted from storage (image-00040.img)
+2026-10-15T21:03:02.070307+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.525] ground: command 0x26 sequence 1791888629 for the controller (1 payload bytes)
+2026-10-15T21:03:02.070307+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.525] ground: sequence 1791888629 sent again with the same bytes while it has not finished; answered RECEIVED, nothing else done
+2026-10-15T21:03:02.070307+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   166.525] controller: answer 0x02 code 0x00 to ground sequence 1791888629
+2026-10-15T21:03:02.925715+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   167.380] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+2026-10-15T21:03:03.039184+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   167.494] ground link: answers and reports now go to 192.168.7.85:63084
+2026-10-15T21:03:03.039184+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   167.494] ground: command 0x25 sequence 1791888630 for the controller (1 payload bytes)
+2026-10-15T21:03:03.039184+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   167.494] ground command 0x25 sequence 1791888630 passed on to the controller as sequence 363
+2026-10-15T21:03:03.045691+00:00 stm32mp2unknownunknown fsir-updater[17465]: [   167.500] controller: answer 0x02 code 0x00 to ground sequence 1791888630

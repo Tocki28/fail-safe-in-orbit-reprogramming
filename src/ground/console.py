@@ -148,6 +148,12 @@ FAULT_LOCATION = {
     0x05: ("SLOT_REGION", "bootloader: slot code is not A or B"),
     0x06: ("ROLE_TEXT", "bootloader: start role is not confirmed, trial or last resort"),
     0x07: ("CHECK_RESULT_CODE", "bootloader: image check result outside its list"),
+    # 0x08-0x0A: fault_codes.h lines 82-91 (REQ-119, owner's decision 35, 15 Oct 2026).
+    0x08: ("BL_BOOT_STATE_OTHER_SLOT", "bootloader boot state: slot code is not A or B"),
+    0x09: ("BL_IMAGE_RESULT_TEXT",
+          "bootloader image check: image check result outside its list"),
+    0x0A: ("BL_IMAGE_CHECK_CONTENTS",
+          "bootloader image check: region size smaller than the image header"),
     0x10: ("IMAGE_RESULT_TEXT", "image check (both programs): image check result outside its list"),
     0x11: ("BOOT_STATE_OTHER_SLOT", "boot state (both programs): slot code is not A or B"),
     0x20: ("TO_SLOT", "boot slot: stored slot code is not none, A or B"),

@@ -84,6 +84,8 @@ const char * refusalName(uint8_t code)
     case answer::kTrialTestsNotPassed: return "trial tests not passed";
     case answer::kWrongKind:          return "image of the wrong kind for its place";
     case answer::kBootStateNotStored: return "boot state could not be stored";
+    // REQ-051; owner decision 21, 15 Oct 2026; Interfaces Sec. 4.2 row pending (TBD)
+    case answer::kCancelled:          return "delivery cancelled by the operator";
     case answer::kNoAnswerBench:      return "controller did not answer (bench code)";
     case answer::kStorageBench:       return "onboard storage failed (bench code)";
     case answer::kCannotSendBench:    return "data link A cannot send (bench code)";
@@ -154,7 +156,7 @@ constexpr std::array<CodeText, 1> kFaultKinds = {{
  * the header; testFaultCodes in test_updater.cpp fails when a code is missing or extra here.
  * The words are short: the program and function, then what is impossible there.
  */
-constexpr std::array<CodeText, 25> kFaultLocations = {{
+constexpr std::array<CodeText, 28> kFaultLocations = {{
   {0x01U, "bootloader backup: pair number past the last pair"},                 // VALUE_INDEX
   {0x02U, "bootloader: slot code is not A, B or none"},                         // SLOT_LETTER
   {0x03U, "bootloader: reset cause outside its list"},                          // RESET_CAUSE_TEXT
@@ -162,6 +164,10 @@ constexpr std::array<CodeText, 25> kFaultLocations = {{
   {0x05U, "bootloader: slot code is not A or B"},                               // SLOT_REGION
   {0x06U, "bootloader: start role is not confirmed, trial or last resort"},     // ROLE_TEXT
   {0x07U, "bootloader: image check result outside its list"},                   // CHECK_RESULT_CODE
+  // 0x08-0x0A: fault_codes.h lines 82-91 (REQ-119, owner's decision 35, 15 Oct 2026).
+  {0x08U, "bootloader boot state: slot code is not A or B"},                    // BL_BOOT_STATE_OTHER_SLOT
+  {0x09U, "bootloader image check: image check result outside its list"},       // BL_IMAGE_RESULT_TEXT
+  {0x0AU, "bootloader image check: region size smaller than the image header"},  // BL_IMAGE_CHECK_CONTENTS
   {0x10U, "image check (both programs): image check result outside its list"},  // IMAGE_RESULT_TEXT
   {0x11U, "boot state (both programs): slot code is not A or B"},               // BOOT_STATE_OTHER_SLOT
   {0x20U, "boot slot: stored slot code is not none, A or B"},                   // TO_SLOT

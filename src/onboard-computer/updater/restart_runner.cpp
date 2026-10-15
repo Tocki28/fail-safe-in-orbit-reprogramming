@@ -13,6 +13,8 @@ extern "C" char ** environ;
 namespace
 {
 
+// The reset request's contract with restore.sh (restore.sh in mode "reset" prints these lines).
+constexpr const char * kResetArgument = "reset";
 constexpr const char * kResultDone = "RESTORE DONE: reset";
 constexpr const char * kResultAfterReset = "RESTORE FAILED: after reset";
 constexpr size_t kMaxReadsPerPoll = 64;   // bounds drain(): 64 x 512 bytes is far more than one line
@@ -30,7 +32,32 @@ constexpr size_t kMaxReadsPerPoll = 64;   // bounds drain(): 64 x 512 bytes is f
 bool startsWord(const char * text, const char * prefix)
 {
   size_t n = std::strlen(prefix);
+  if (n == 0) {
+    return false;   // no prefix: no match (a request without an "after" line)
+  }
   return std::strncmp(text, prefix, n) == 0 && (text[n] == '\0' || text[n] == ' ');
+}
+
+/**
+ * @brief Copies a text into a fixed buffer if it fits with its zero.
+ *
+ * @param[out]    dst       the buffer
+ * @param[in]     dst_size  its size
+ * @param[in]     src       the text; null counts as empty
+ * @return true: copied; false: it does not fit (dst is then empty)
+ */
+bool copyText(char * dst, size_t dst_size, const char * src)
+{
+  dst[0] = '\0';
+  if (src == nullptr) {
+    return true;
+  }
+  size_t n = ::strnlen(src, dst_size);
+  if (n >= dst_size) {
+    return false;
+  }
+  std::memcpy(dst, src, n + 1);
+  return true;
 }
 
 }  // namespace
@@ -46,7 +73,7 @@ bool startsWord(const char * text, const char * prefix)
 RestartRunner::RestartRunner(const char * script, uint64_t deadline_ms, uint64_t kill_grace_ms)
 : script_((script != nullptr) ? script : ""), deadline_ms_(deadline_ms), kill_grace_ms_(kill_grace_ms),
   pid_(-1), out_fd_(-1), started_ms_(0), term_ms_(0), kill_ms_(0), term_sent_(false),
-  kill_sent_(false), output_{}, output_size_(0), output_cut_(false)
+  kill_sent_(false), done_prefix_{}, after_prefix_{}, output_{}, output_size_(0), output_cut_(false)
 {
 }
 
@@ -114,7 +141,32 @@ void RestartRunner::closePipe()
 }
 
 /**
- * @brief Starts "script reset" as a child in its own process group; returns at once.
+ * @brief Gives the decision-H request: "script reset" and its two result lines.
+ *
+ * The strings are constants that live for the whole run; the request holds pointers to them.
+ *
+ * @return the request for restore.sh in mode reset
+ */
+RestartRunner::Request RestartRunner::resetRequest()
+{
+  static const char * const kArgs[] = {kResetArgument, nullptr};
+  return Request{kArgs, kResultDone, kResultAfterReset};
+}
+
+/**
+ * @brief Starts "script reset"; the request of the trial overrun path.
+ *
+ * @param[in]     now_ms  current time, ms; the deadline counts from here
+ * @param[out]    error   errno value of the failure when false is returned; 0 otherwise
+ * @return true: the child runs; false: not configured, already running, or it could not be started
+ */
+bool RestartRunner::start(uint64_t now_ms, int & error)
+{
+  return start(resetRequest(), now_ms, error);
+}
+
+/**
+ * @brief Starts "script <arguments>" as a child in its own process group; returns at once.
  *
  * posix_spawn, not fork: it reports a missing or non-executable script as an error here, and
  * leaves no half-started child. The child gets stdin from /dev/null and stdout into a pipe the
@@ -123,11 +175,14 @@ void RestartRunner::closePipe()
  * Its own process group lets the deadline's KILL reach OpenOCD too (decision H, accepted 13 Oct
  * 2026).
  *
- * @param[in]     now_ms  current time, ms; the deadline counts from here
- * @param[out]    error   errno value of the failure when false is returned; 0 otherwise
- * @return true: the child runs; false: not configured, already running, or it could not be started
+ * @param[in]     request  the arguments and result lines (copied here; the caller's strings need
+ *                         not outlive the call); invalid: EINVAL, nothing is started
+ * @param[in]     now_ms   current time, ms; the deadline counts from here
+ * @param[out]    error    errno value of the failure when false is returned; 0 otherwise
+ * @return true: the child runs; false: not configured, already running, a bad request, or it
+ *         could not be started
  */
-bool RestartRunner::start(uint64_t now_ms, int & error)
+bool RestartRunner::start(const Request & request, uint64_t now_ms, int & error)
 {
   error = 0;
   if (!configured()) {
@@ -138,6 +193,33 @@ bool RestartRunner::start(uint64_t now_ms, int & error)
     error = EBUSY;
     return false;
   }
+  // The request is validated and copied before anything is started (code rules B4). argv holds
+  // the script's name, the arguments, and the end marker.
+  std::array<std::array<char, kArgBytes>, kArgsMax> arg_text{};
+  std::array<char *, kArgsMax + 2> argv{};
+  size_t arg_count = 0;
+  bool request_ok = (request.done_prefix != nullptr);
+  while (request_ok && request.args != nullptr && request.args[arg_count] != nullptr) {
+    request_ok = arg_count < kArgsMax &&
+                 copyText(arg_text[arg_count].data(), kArgBytes, request.args[arg_count]);
+    if (request_ok) {
+      arg_count++;
+    }
+  }
+  std::array<char, kPrefixBytes> done_copy{};
+  std::array<char, kPrefixBytes> after_copy{};
+  request_ok = request_ok && copyText(done_copy.data(), done_copy.size(), request.done_prefix) &&
+               done_copy[0] != '\0' &&
+               copyText(after_copy.data(), after_copy.size(), request.after_prefix);
+  if (!request_ok) {
+    error = EINVAL;
+    return false;
+  }
+  argv[0] = const_cast<char *>(script_.c_str());
+  for (size_t i = 0; i < arg_count; i++) {
+    argv[i + 1] = arg_text[i].data();
+  }
+  argv[arg_count + 1] = nullptr;
   int fds[2] = {-1, -1};
   if (::pipe(fds) != 0) {
     error = errno;
@@ -189,8 +271,7 @@ bool RestartRunner::start(uint64_t now_ms, int & error)
   }
   pid_t pid = -1;
   if (rc == 0) {
-    char * argv[3] = {const_cast<char *>(script_.c_str()), const_cast<char *>("reset"), nullptr};
-    rc = ::posix_spawn(&pid, script_.c_str(), &actions, &attr, argv, environ);
+    rc = ::posix_spawn(&pid, script_.c_str(), &actions, &attr, argv.data(), environ);
   }
   if (have_actions) {
     (void)::posix_spawn_file_actions_destroy(&actions);   // frees memory only; nothing to recover
@@ -205,6 +286,8 @@ bool RestartRunner::start(uint64_t now_ms, int & error)
     return false;
   }
   pid_ = pid;
+  done_prefix_ = done_copy;
+  after_prefix_ = after_copy;
   out_fd_ = fds[0];
   started_ms_ = now_ms;
   term_ms_ = 0;
@@ -255,9 +338,13 @@ void RestartRunner::drain()
 /**
  * @brief Turns the end of the child into an Outcome and returns to the idle state.
  *
- * Takes the last "RESTORE " line of the output. kDone needs that line to be "RESTORE DONE: reset"
- * and exit status 0; kFailedAfterReset needs "RESTORE FAILED: after reset"; every other case,
- * including no line at all, is kFailed: the reset is not shown to have happened.
+ * The result line is the last non-empty line the script printed on stdout, the only stream the
+ * runner captures (stderr stays the updater's journal). The line is kept in outcome.line in
+ * every case. kDone needs that line to start with the request's done prefix and exit status 0;
+ * kFailedAfterReset needs the request's after prefix (when it has one); every other case,
+ * including no line at all, is kFailed: the step is not shown to have happened. The line is
+ * not tied to any text: the prefixes are the request's, so a mode other than reset can have
+ * its own. A line whose start was cut off by the bounded buffer is not taken as a line.
  *
  * @param[in]     status  the wait status from waitpid; ignored when reaped is false
  * @param[in]     reaped  true: waitpid returned the child; false: the child was given up unreaped
@@ -278,7 +365,8 @@ void RestartRunner::finish(int status, bool reaped, Outcome & outcome)
   const char * last = nullptr;
   for (size_t i = 0; i < output_size_; i++) {   // bounded by the buffer
     bool line_start = (i == 0 && !output_cut_) || (i > 0 && output_[i - 1] == '\n');
-    if (line_start && std::strncmp(&output_[i], "RESTORE ", 8) == 0) {
+    bool empty = (output_[i] == '\n' || output_[i] == '\r');   // a blank line is not a result
+    if (line_start && !empty && output_[i] != '\0') {
       last = &output_[i];
     }
   }
@@ -290,9 +378,9 @@ void RestartRunner::finish(int status, bool reaped, Outcome & outcome)
     }
   }
   outcome.result = Result::kFailed;
-  if (startsWord(outcome.line.data(), kResultDone) && outcome.exit_code == 0) {
+  if (startsWord(outcome.line.data(), done_prefix_.data()) && outcome.exit_code == 0) {
     outcome.result = Result::kDone;
-  } else if (startsWord(outcome.line.data(), kResultAfterReset)) {
+  } else if (startsWord(outcome.line.data(), after_prefix_.data())) {
     outcome.result = Result::kFailedAfterReset;
   }
   closePipe();

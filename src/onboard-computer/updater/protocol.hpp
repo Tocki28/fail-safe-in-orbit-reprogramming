@@ -22,6 +22,14 @@ constexpr uint8_t kUploadChunk = 0x02;    // image number (2), offset (4), data 
 constexpr uint8_t kUploadEnd = 0x03;      // image number (2)
 constexpr uint8_t kUploadCancel = 0x04;   // image number (2)
 constexpr uint8_t kDeliver = 0x05;        // image number (2)
+// The onboard computer's own dangerous commands (Interfaces Sec. 5.1 table, "Dangerous: YES").
+// SET LIMITS (0x06) has a handler (owner decision 24, 15 Oct 2026); the others have none yet:
+// after the arming check they are refused 0x06 "not built" (Updater::runOnboardDangerous).
+constexpr uint8_t kSetLimits = 0x06;      // minimum version (4), controller identity (2); dangerous
+constexpr uint8_t kRestore = 0x07;        // none; dangerous
+constexpr uint8_t kReprogram = 0x08;      // image number (2), region (1); dangerous
+constexpr uint8_t kSetOnboardTime = 0x09;   // ground time (4); dangerous
+constexpr uint8_t kReplaceKey = 0x0C;     // which key (1), new key (32); dangerous
 constexpr uint8_t kArm = 0x0D;            // command identifier (1), its sequence number (4)
 constexpr uint8_t kSwitch = 0x20;         // none; dangerous
 constexpr uint8_t kReturnToPrevious = 0x21;   // none; dangerous
@@ -49,6 +57,15 @@ constexpr size_t kArmBytes = kIdBytes + 1 + 4;   // ARM: command identifier (1),
 // Controller commands (Interfaces Sec. 5.1 table, rows 0x20 to 0x26), identifier then fields.
 constexpr size_t kStartFailedBytes = kIdBytes + 1;          // which copy (1)
 constexpr size_t kSetControllerTimeBytes = kIdBytes + 4;    // ground time (4)
+// The onboard computer's dangerous commands (Interfaces Sec. 5.1 table, rows 0x06 to 0x0C).
+constexpr size_t kSetLimitsBytes = kIdBytes + 4 + 2;        // minimum version (4), identity (2)
+constexpr size_t kSetLimitsVersionAt = kIdBytes;            // offset of the minimum version (4)
+constexpr size_t kSetLimitsIdentityAt = kIdBytes + 4;       // offset of the controller identity (2)
+constexpr size_t kRestoreBytes = kIdBytes;                  // none
+constexpr size_t kReprogramBytes = kIdBytes + 2 + 1;        // image number (2), region (1)
+constexpr size_t kSetOnboardTimeBytes = kIdBytes + 4;       // ground time (4)
+constexpr size_t kNewKeyBytes = 32;                         // new key (32), same row
+constexpr size_t kReplaceKeyBytes = kIdBytes + 1 + kNewKeyBytes;   // which key (1), new key (32)
 
 }  // namespace command
 
@@ -76,10 +93,15 @@ constexpr uint8_t kImpossible = 0x06;         // impossible values, or an unknow
 constexpr uint8_t kTrialRunning = 0x07;       // no new firmware during a trial; REQ-050
 constexpr uint8_t kImageDamaged = 0x08;       // REQ-005, REQ-044
 constexpr uint8_t kNotFromOperator = 0x09;    // REQ-006, REQ-043
+constexpr uint8_t kOlderThanMinimum = 0x0A;   // "Image older than the minimum version"; REQ-045
 constexpr uint8_t kOtherController = 0x0B;    // REQ-046
 constexpr uint8_t kTrialTestsNotPassed = 0x0F;   // "Trial tests not passed"; REQ-012
 constexpr uint8_t kWrongKind = 0x10;          // "Image of the wrong kind for its place"; REQ-005, REQ-008
 constexpr uint8_t kBootStateNotStored = 0x11; // "Boot state could not be stored"; REQ-012, REQ-021
+// "Delivery cancelled by the operator": the answer to a DELIVER that an UPLOAD CANCEL for the same
+// image stopped (REQ-051). Owner decision 21, 15 Oct 2026; Interfaces Sec. 4.2 row to be added
+// (the table ends at 0x11 today, so 0x12 is the next free code).
+constexpr uint8_t kCancelled = 0x12;
 
 // BENCH ONLY, not in the Interfaces table. Sec. 4.2 has no reason for "the onboard computer
 // could not do it", yet a delivery must end with DONE or REFUSED (REQ-033) and the ground

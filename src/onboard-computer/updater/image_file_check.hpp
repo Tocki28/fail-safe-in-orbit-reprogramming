@@ -12,6 +12,11 @@
  * signatures, the body check value, the length, the target and the kind. Beyond the upload
  * checks it also demands that the file is the kind asked for and fits the flash region of that
  * kind (layout.h), because the restore script writes it into that region.
+ *
+ * Limits (owner decision 24, 15 Oct 2026): the check applies the minimum version and the
+ * controller identity stored in the data directory's "limits" record when it can be read; else
+ * minimum version 1 and identity 0x0431, and the result line says which (main.cpp; TBR, awaiting
+ * the owner's acceptance).
  */
 #ifndef FSIR_UPDATER_IMAGE_FILE_CHECK_HPP
 #define FSIR_UPDATER_IMAGE_FILE_CHECK_HPP
@@ -26,6 +31,12 @@
 
 // Reads FILE and runs the checker. Returns true only when the image passes and is of the
 // kind asked for; line receives one line of text (no newline) with the reason either way.
+// The limits (minimum version, controller identity: owner decision 24, 15 Oct 2026) are the ones
+// given; the line ends with "; limits: <limits_note>, minimum version N, identity 0xNNNN".
+[[nodiscard]] bool checkImageFile(const char * path, uint8_t kind, const ImageChecker & checker,
+  const ImageLimits & limits, const char * limits_note, char * line, size_t line_bytes);
+
+// The same with the default limits (defaultImageLimits()), noted "default limits, none given".
 [[nodiscard]] bool checkImageFile(const char * path, uint8_t kind, const ImageChecker & checker,
   char * line, size_t line_bytes);
 

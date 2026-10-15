@@ -133,20 +133,58 @@ bool ImageChecker::ready() const
 }
 
 /**
+ * @brief Gives the limits of a first start: minimum version 1, identity 0x0431, usable.
+ *
+ * Owner decision 24 (15 Oct 2026) fixes the minimum version at 1 when no limits record exists. The
+ * identity 0x0431 is a Proposal (TBR), awaiting the owner's acceptance: it is the target the image
+ * checker demanded before decision 24 (config::kDefaultControllerIdentity).
+ *
+ * @return the default limits
+ */
+ImageLimits defaultImageLimits()
+{
+  return ImageLimits{config::kDefaultMinimumVersion, config::kDefaultControllerIdentity, true};
+}
+
+/**
+ * @brief Decides whether an image may be stored and delivered, with the default limits.
+ *
+ * For callers with no limits to apply. The updater passes the stored limits to the three-argument
+ * form instead.
+ *
+ * @param[in] image  the whole image: header, body, Signature A, Signature B
+ * @param[in] size  size of image, bytes
+ * @return the verdict of check(image, size, defaultImageLimits())
+ */
+ImageVerdict ImageChecker::check(const uint8_t * image, size_t size) const
+{
+  return check(image, size, defaultImageLimits());
+}
+
+/**
  * @brief Decides whether a firmware image may be stored and delivered.
  *
  * Runs the checks in the order listed in image_checker.hpp, cheapest first, and stops at the first
  * that fails. The verdict carries the refusal code of Interfaces Sec. 4.2 and a reason for the log.
- * The header Length is checked against the size before any byte of the body is read.
+ * The header Length is checked against the size before any byte of the body is read. Limits that
+ * are not usable (a damaged limits record) refuse every image 0x0A first (fail closed, TBR). The
+ * header target must equal the limits' identity (0x0B, REQ-046) and the header version must not be
+ * below the minimum (0x0A, REQ-045); the target is tested first.
  *
  * @param[in] image  the whole image: header, body, Signature A, Signature B
  * @param[in] size  size of image, bytes
+ * @param[in] limits  the minimum version and the controller identity to hold the image to
  * @return verdict: code answer::kSuccess with the header's kind and version if every check passed; otherwise the refusal code and reason
  */
-ImageVerdict ImageChecker::check(const uint8_t * image, size_t size) const
+ImageVerdict ImageChecker::check(const uint8_t * image, size_t size,
+  const ImageLimits & limits) const
 {
   if (!ready()) {
     return refused(answer::kNotFromOperator, "no checking keys");
+  }
+  if (!limits.usable) {
+    return refused(answer::kOlderThanMinimum,
+      "limits record damaged: no image is accepted until SET LIMITS writes a good one");
   }
   // Too short to hold a header and two signatures; also guards every read below.
   if (size <= config::kImageOverheadBytes || size > config::kMaxImageBytes) {
@@ -162,8 +200,11 @@ ImageVerdict ImageChecker::check(const uint8_t * image, size_t size) const
   if (!kindKnown(kind)) {
     return refused(answer::kImpossible, "kind");
   }
-  if (bytes::readU16(&image[IMAGE_OFFSET_TARGET]) != IMAGE_TARGET_CONTROLLER) {
+  if (bytes::readU16(&image[IMAGE_OFFSET_TARGET]) != limits.identity) {
     return refused(answer::kOtherController, "target");
+  }
+  if (bytes::readU32(&image[IMAGE_OFFSET_VERSION]) < limits.minimum_version) {
+    return refused(answer::kOlderThanMinimum, "version below the minimum");
   }
   // Length is checked against the size before any byte of the body is read.
   uint32_t body = bytes::readU32(&image[IMAGE_OFFSET_LENGTH]);

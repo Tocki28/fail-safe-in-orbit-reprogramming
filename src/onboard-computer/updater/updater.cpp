@@ -21,7 +21,9 @@ constexpr uint32_t kNoExpiry = 0xFFFFFFFFU;
  * @brief Tells whether a command to the onboard computer is a known one with the payload length its fields need.
  *
  * The checks on arrival for commands to the onboard computer: a command built on the bench,
- * with the payload length its fields need (Interfaces Sec. 5.1).
+ * with the payload length its fields need (Interfaces Sec. 5.1). The dangerous commands 0x06 to
+ * 0x09 and 0x0C pass here with their lengths, and are then checked against an ARM
+ * (isOnboardDangerous); they have no handler yet.
  *
  * @param[in] id  the command identifier, payload byte 0
  * @param[in] length  payload length of the command, in bytes
@@ -41,10 +43,20 @@ bool arrivalOk(uint8_t id, uint16_t length)
       return length == command::kImageNumberOnlyBytes;
     case command::kGetStatus:
       return length == command::kGetStatusBytes;
-    case command::kArm:   // an ARM for the onboard computer's own commands: not built
+    case command::kSetLimits:
+      return length == command::kSetLimitsBytes;
+    case command::kRestore:
+      return length == command::kRestoreBytes;
+    case command::kReprogram:
+      return length == command::kReprogramBytes;
+    case command::kSetOnboardTime:
+      return length == command::kSetOnboardTimeBytes;
+    case command::kReplaceKey:
+      return length == command::kReplaceKeyBytes;
+    case command::kArm:   // handled before this test (onGroundArm), which checks its own length
       return false;
   }
-  // Every other identifier (0x06 to 0x0C are not built on the bench, the rest unknown).
+  // input from the link: every other identifier (0x0A, 0x0B are not built, the rest unknown).
   return false;
 }
 
@@ -121,6 +133,22 @@ bool isDangerous(uint8_t id)
 }
 
 /**
+ * @brief Tells whether a command to the onboard computer is one that needs an ARM.
+ *
+ * The "Dangerous: YES" rows for the onboard computer in the Interfaces command table [Sec. 5.1]:
+ * SET LIMITS (0x06), RESTORE (0x07), REPROGRAM (0x08), SET ONBOARD TIME (0x09), REPLACE KEY
+ * (0x0C); REQ-029, REQ-112.
+ *
+ * @param[in]     id  the command identifier, payload byte 0
+ * @return true: dangerous, needs an ARM; false: not
+ */
+bool isOnboardDangerous(uint8_t id)
+{
+  return id == command::kSetLimits || id == command::kRestore || id == command::kReprogram ||
+         id == command::kSetOnboardTime || id == command::kReplaceKey;
+}
+
+/**
  * @brief Reads the image number from an UPLOAD or DELIVER command.
  *
  * The number sits in the payload right after the identifier byte (command::kIdBytes).
@@ -140,7 +168,8 @@ uint16_t imageNumber(const frame::Frame & c)
  *        store and the controller watch.
  *
  * The test-image trigger starts with no trial seen: nothing is sent before a HEALTH report
- * shows mode TRIAL (Interfaces Sec. 5.4).
+ * shows mode TRIAL (Interfaces Sec. 5.4). The image limits are read from the "limits" record of
+ * the store's data directory and given to the store (loadLimits; owner decision 24, 15 Oct 2026).
  *
  * @param[in]     gate     the ground link (answers, reports, commands)
  * @param[in]     link     data link A, one command at a time
@@ -162,9 +191,54 @@ Updater::Updater(CommandGate & gate, DataLink & link, UploadStore & store,
   beat_ms_(beat_ms), next_beat_ms_(0), now_ms_(0), sender_(Sender::kNone), reports_dropped_(0),
   queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), trial_watch_(config::kTrialMs, config::kTrialMarginMs),
   restart_(restart_script, restart_deadline_ms, config::kRestartKillGraceMs), used_(),
+  repeats_(),
+  limits_file_(store.directory(), config::kLimitsRecordName, config::kLimitsRecordBytes),
+  cancel_requested_(false), cancel_sequence_(0), have_delivered_(false), delivered_number_(0),
   test_image_running_(false), payload_{},
   report_{}
 {
+  loadLimits();
+}
+
+/**
+ * @brief Reads the "limits" record and gives the limits to the store.
+ *
+ * Owner decision 24, 15 Oct 2026.
+ *
+ * Called once, by the constructor. A good record gives its minimum version and controller
+ * identity. No record (first start) gives minimum version 1 and identity 0x0431 (REQ-053; the
+ * identity is a Proposal, TBR, awaiting the owner's acceptance: it is the target the image
+ * checker demanded before decision 24). A damaged record (RECORD_DAMAGED) fails closed: the limits
+ * are not usable, every upload (at UPLOAD END) and every delivery is refused 0x0A, and the log
+ * says why, until a SET LIMITS writes a good record (TBR, awaiting the owner's acceptance). A
+ * record that cannot be read at all (RECORD_ERROR) is treated the same way (TBR).
+ *
+ * @return nothing
+ */
+void Updater::loadLimits()
+{
+  ImageLimits limits{};
+  int error = 0;
+  limits_record::Source source = limits_record::load(limits_file_, limits, error);
+  store_.setLimits(limits);
+  switch (source) {
+    case limits_record::Source::kStored:
+      logging::line("limits: stored record, minimum version %u, controller identity 0x%04x",
+        limits.minimum_version, limits.identity);
+      return;
+    case limits_record::Source::kNoRecord:
+      logging::line("limits: no record, starting with minimum version %u, controller identity "
+        "0x%04x", limits.minimum_version, limits.identity);
+      return;
+    case limits_record::Source::kDamaged:
+      logging::line("limits: record damaged; refusing every upload and delivery 0x0a until SET "
+        "LIMITS writes a good one");
+      return;
+    case limits_record::Source::kUnreadable:
+      logging::line("limits: record unreadable (%s); refusing every upload and delivery 0x0a "
+        "until SET LIMITS writes a good one", std::strerror(error));
+      return;
+  }
 }
 
 // ---- Answers to the ground ---------------------------------------------------------------
@@ -209,6 +283,54 @@ void Updater::refused(uint32_t sequence, uint8_t code)
   (void)gate_.answer(sequence, answer::kRefused, code);
 }
 
+/**
+ * @brief Marks a command finished in both repeat memories.
+ *
+ * The final answer has gone to the ground. A resend with the same bytes is then answered from the
+ * entry: ALREADY DONE after DONE, the same code after REFUSED (REQ-031, owner decision 26).
+ * Only a pending entry of that sequence number changes, so it is harmless for a command that is
+ * in neither memory (one refused on arrival).
+ *
+ * @param[in] sequence  the ground command's sequence number
+ * @param[in] done  true: it ended DONE; false: it ended REFUSED
+ * @param[in] refusal_code  the REFUSED code that went to the ground (ignored when done)
+ * @return nothing
+ */
+void Updater::finishCommand(uint32_t sequence, bool done, uint8_t refusal_code)
+{
+  used_.finish(sequence, done, refusal_code);
+  repeats_.finish(sequence, done, refusal_code);
+}
+
+/**
+ * @brief Answers a ground command DONE and marks it finished in the repeat memories.
+ *
+ * @param[in] sequence  the ground command's sequence number
+ * @return nothing
+ */
+void Updater::endDone(uint32_t sequence)
+{
+  done(sequence);
+  finishCommand(sequence, true, 0);
+}
+
+/**
+ * @brief Answers a ground command REFUSED and marks it finished in the repeat memories.
+ *
+ * A command that was accepted (remembered) and then refused before or while it went to the
+ * controller has ended: a resend with the same bytes is refused with the same code, not answered
+ * RECEIVED for ever (Interfaces Sec. 4.2, REQ-031).
+ *
+ * @param[in] sequence  the ground command's sequence number
+ * @param[in] code  the refusal reason (protocol.hpp)
+ * @return nothing
+ */
+void Updater::endRefused(uint32_t sequence, uint8_t code)
+{
+  refused(sequence, code);
+  finishCommand(sequence, false, code);
+}
+
 // ---- From the ground ---------------------------------------------------------------------
 
 /**
@@ -238,7 +360,9 @@ void Updater::onGroundReadable(uint64_t now_ms)
  * queued, so a full queue (REFUSED 0x05) does not waste it. Before that: the controller's allowed
  * list (REFUSED 0x06), a ground sequence number used before by an ARM or dangerous command
  * (other bytes: REFUSED 0x04, REQ-065; the same bytes: RECEIVED or ALREADY DONE, REQ-031), and a
- * delivery or test image in the way (REFUSED 0x05, ARM kept).
+ * delivery or test image in the way (REFUSED 0x05, ARM kept). A command that is no ARM and not
+ * dangerous (LEAVE FALLBACK, GET STATUS) is checked for a repeat in the other memory, RepeatMemory,
+ * and remembered there once queued (owner decision 26, 15 Oct 2026).
  * The ARM's arrival time travels with the command so that sendNext can check its age again.
  *
  * @param[in]     c  the command frame; c.payload is valid during the call
@@ -265,8 +389,11 @@ void Updater::onGroundCommand(const frame::Frame & c)
   }
   bool armed = false;
   uint64_t arm_at_ms = 0;
+  if (!isDangerous(id) && answerRepeat(c, repeats_, used_)) {
+    return;   // a repeat of a command that is no ARM and not dangerous (decision 26)
+  }
   if (isDangerous(id)) {
-    if (answerRepeat(c)) {
+    if (answerRepeat(c, used_, repeats_)) {
       return;
     }
     uint8_t code = armCheck(c);
@@ -298,6 +425,11 @@ void Updater::onGroundCommand(const frame::Frame & c)
       logging::line("ground: dangerous command 0x%02x sequence %u: payload too long for the used "
         "sequence ring; not remembered", id, c.sequence);
     }
+  } else if (!isDangerous(id) && !repeats_.add(c.sequence, c.payload, c.length)) {
+    // controllerCommandOk limited the length to what RepeatMemory holds (static_assert in
+    // command_gate.cpp).
+    logging::line("ground: command 0x%02x sequence %u: payload too long for the repeat memory; "
+      "not remembered", id, c.sequence);
   }
   sendNext();
 }
@@ -317,25 +449,33 @@ bool Updater::dangerousBusy() const
 }
 
 /**
- * @brief Takes a ground ARM for the controller: checks it, holds it, answers RECEIVED and DONE.
+ * @brief Takes a ground ARM for the controller or the onboard computer: checks it, holds it,
+ *        answers RECEIVED and DONE.
  *
  * The ARM is not passed on: the controller would see a sequence number that is the ground's,
  * not the one its dangerous command will carry on data link A [Interfaces, Sec. 5.2]. One ARM
- * is held; a new one replaces the old.
+ * is held; a new one replaces the old. The destination decides which identifiers it may name:
+ * Destination 0x02, the controller's dangerous commands (isDangerous); Destination 0x01, the
+ * onboard computer's (isOnboardDangerous). Both kinds share the one held ARM and the same
+ * kArmExpiryMs (TBR, awaiting the owner's acceptance: the identifiers cannot overlap, so a second
+ * slot would only allow two ARMs at once, which Sec. 5.2 does not ask for).
  *
- * @param[in]     c  the ARM frame (Destination 0x02, payload 0x0D, identifier (1), sequence (4))
+ * @param[in]     c  the ARM frame (Destination 0x01 or 0x02, payload 0x0D, identifier (1),
+ *                   sequence (4))
  * @return nothing
  */
 void Updater::onGroundArm(const frame::Frame & c)
 {
-  if (c.length != command::kArmBytes || !isDangerous(c.payload[1])) {
+  bool onboard = (c.destination == frame::kDestOnboard);
+  if (c.length != command::kArmBytes ||
+      !(onboard ? isOnboardDangerous(c.payload[1]) : isDangerous(c.payload[1]))) {
     logging::line("ground: ARM sequence %u names 0x%02x or has %u payload bytes: not a dangerous "
-      "command of the controller; refused 0x06", c.sequence,
-      (c.length > 1) ? c.payload[1] : 0, c.length);
+      "command of the %s; refused 0x06", c.sequence,
+      (c.length > 1) ? c.payload[1] : 0, c.length, onboard ? "onboard computer" : "controller");
     refused(c.sequence, answer::kImpossible);
     return;
   }
-  if (answerRepeat(c)) {
+  if (answerRepeat(c, used_, repeats_)) {
     return;
   }
   if (!used_.add(c.sequence, c.payload, c.length)) {
@@ -353,11 +493,12 @@ void Updater::onGroundArm(const frame::Frame & c)
     static_cast<unsigned long long>(config::kArmExpiryMs));
   received(c.sequence);
   done(c.sequence);
-  used_.finish(c.sequence, true, 0);   // RECEIVED and DONE are both sent: a resend is ALREADY DONE
+  finishCommand(c.sequence, true, 0);   // RECEIVED and DONE are both sent: a resend is ALREADY DONE
 }
 
+template <typename Own, typename Other>
 /**
- * @brief Answers an ARM or dangerous command whose ground sequence number is already remembered.
+ * @brief Answers a ground command whose sequence number is already remembered.
  *
  * The ground console resends a command with the same sequence number and the same bytes when its
  * answer is lost, so that the receiver can recognise the repeat and run the command once
@@ -366,61 +507,59 @@ void Updater::onGroundArm(const frame::Frame & c)
  * only; its final answer follows. Same bytes, first one ended REFUSED: REFUSED with the same
  * code, nothing sent to the controller, so the operator learns the real reason and is never told
  * the command ran (owner decided, 13 Oct 2026). Other bytes under a used number: REFUSED 0x04,
- * a replay (REQ-065). A new number: not
- * handled here.
+ * a replay (REQ-065). A new number: not handled here.
  *
- * @param[in]     c  the ARM or dangerous command frame
+ * Owner decision 26 (15 Oct 2026) keeps two memories: UsedSequences for ARMs and dangerous
+ * commands, RepeatMemory for every other command. A command is compared with its own memory
+ * first. If its number is new there but sits in the other memory, the bytes cannot be the same
+ * (the other memory holds the other kind of command), so it is refused 0x04 like any other bytes
+ * under a used number. The answers go out directly, not through endRefused: they must not finish
+ * the entry of the first command.
+ *
+ * @param[in]     c      the ground command frame
+ * @param[in]     own    the memory this kind of command belongs to
+ * @param[in]     other  the other memory
  * @return true: it was a repeat and has been answered; false: a new sequence number, go on
  */
-bool Updater::answerRepeat(const frame::Frame & c)
+bool Updater::answerRepeat(const frame::Frame & c, const Own & own, const Other & other)
 {
   uint8_t refusal_code = answer::kOldCommand;
-  switch (used_.check(c.sequence, c.payload, c.length, refusal_code)) {
-    case UsedSequences::Repeat::kNew:
+  uint8_t unused_code = 0;
+  if (other.check(c.sequence, c.payload, c.length, unused_code) != SequenceRepeat::kNew) {
+    logging::line("ground: sequence %u: that sequence number was used before by a command of the "
+      "other kind (other bytes); refused 0x04", c.sequence);
+    (void)gate_.answer(c.sequence, answer::kRefused, answer::kOldCommand);
+    return true;
+  }
+  switch (own.check(c.sequence, c.payload, c.length, refusal_code)) {
+    case SequenceRepeat::kNew:
       return false;
-    case UsedSequences::Repeat::kSameDone:
+    case SequenceRepeat::kSameDone:
       logging::line("ground: sequence %u sent again with the same bytes after it finished; "
         "answered ALREADY DONE, nothing else done", c.sequence);
       (void)gate_.answer(c.sequence, answer::kAlreadyDone, answer::kSuccess);
       return true;
-    case UsedSequences::Repeat::kSamePending:
+    case SequenceRepeat::kSamePending:
       logging::line("ground: sequence %u sent again with the same bytes while it has not "
         "finished; answered RECEIVED, nothing else done", c.sequence);
       received(c.sequence);
       return true;
-    case UsedSequences::Repeat::kSameRefused:
+    case SequenceRepeat::kSameRefused:
       logging::line("ground: sequence %u sent again with the same bytes after it was refused "
         "0x%02x; refused 0x%02x again, nothing else done", c.sequence, refusal_code,
         refusal_code);
       refused(c.sequence, refusal_code);
       return true;
-    case UsedSequences::Repeat::kDifferent:
+    case SequenceRepeat::kDifferent:
       logging::line("ground: sequence %u: that sequence number was used before (other bytes); "
         "refused 0x04", c.sequence);
       refused(c.sequence, answer::kOldCommand);
       return true;
   }
-  // Not reached: a value of Repeat that is none of the above is corrupted memory; the command
-  // is refused rather than run (the updater has no fault reaction yet, open).
+  // Not reached: a value of SequenceRepeat that is none of the above is corrupted memory; the
+  // command is refused rather than run (the updater has no fault reaction yet, open).
   refused(c.sequence, answer::kOldCommand);
   return true;
-}
-
-/**
- * @brief Answers REFUSED to a queued dangerous command and marks it finished in the used ring.
- *
- * A dangerous command that was accepted (queued, remembered) and then refused before or while
- * going to the controller has ended: a resend with the same bytes is refused with the same code,
- * not answered RECEIVED for ever (Interfaces Sec. 4.2, REQ-031).
- *
- * @param[in]     sequence  the ground command's sequence number
- * @param[in]     code      the refusal reason (protocol.hpp)
- * @return nothing
- */
-void Updater::refusedQueued(uint32_t sequence, uint8_t code)
-{
-  refused(sequence, code);
-  used_.finish(sequence, false, code);
 }
 
 /**
@@ -455,9 +594,10 @@ uint8_t Updater::armCheck(const frame::Frame & c)
 /**
  * @brief Runs a ground command addressed to the onboard computer.
  *
- * A command that fails the arrival checks (arrivalOk) is answered REFUSED 0x06 only. Any other is
- * answered RECEIVED, then run, and ends in DONE or REFUSED (Interfaces Sec. 4.2, REQ-033). An
- * image number 0xFFFF (the test image's) is refused 0x06 on arrival.
+ * A command that fails the arrival checks (arrivalOk) is answered REFUSED 0x06 only, and is not
+ * remembered. Any other is checked for a repeat (RepeatMemory, owner decision 26; the dangerous
+ * ones in UsedSequences), then answered RECEIVED, run, and ends in DONE or REFUSED (Interfaces
+ * Sec. 4.2, REQ-033). An image number 0xFFFF (the test image's) is refused 0x06 on arrival.
  *
  * @param[in] c  the command frame
  * @return nothing
@@ -465,6 +605,10 @@ uint8_t Updater::armCheck(const frame::Frame & c)
 void Updater::onOnboardCommand(const frame::Frame & c)
 {
   uint8_t id = (c.length > 0) ? c.payload[0] : 0;
+  if (id == command::kArm) {
+    onGroundArm(c);   // answers by itself, RECEIVED and DONE or REFUSED 0x06; no RECEIVED first
+    return;
+  }
   if (!arrivalOk(id, c.length)) {
     logging::line("ground: command 0x%02x with %u payload bytes is not one the onboard "
       "computer runs; refused 0x06", id, c.length);
@@ -479,6 +623,22 @@ void Updater::onOnboardCommand(const frame::Frame & c)
     refused(c.sequence, answer::kImpossible);
     return;
   }
+  if (isOnboardDangerous(id)) {
+    onboardDangerous(c);
+    return;
+  }
+  // Every other command to the onboard computer is remembered too (owner decision 26, 15 Oct
+  // 2026): a resend with the same bytes is not run again.
+  if (answerRepeat(c, repeats_, used_)) {
+    return;
+  }
+  if (!repeats_.add(c.sequence, c.payload, c.length)) {
+    // arrivalOk limited the length to what RepeatMemory holds (static_assert in command_gate.cpp).
+    logging::line("ground: command 0x%02x sequence %u: payload too long for the repeat memory; "
+      "refused 0x06", id, c.sequence);
+    refused(c.sequence, answer::kImpossible);
+    return;
+  }
   received(c.sequence);
   switch (id) {
     case command::kUploadBegin:   uploadBegin(c);  return;
@@ -487,9 +647,137 @@ void Updater::onOnboardCommand(const frame::Frame & c)
     case command::kUploadCancel:  uploadCancel(c); return;
     case command::kDeliver:       deliver(c);      return;
     case command::kGetStatus:     getStatus(c);    return;
+    case command::kSetLimits:
+    case command::kRestore:
+    case command::kReprogram:
+    case command::kSetOnboardTime:
+    case command::kReplaceKey:
     case command::kArm:           break;
   }
-  refused(c.sequence, answer::kImpossible);   // not reached: arrivalOk lets only the six above in
+  // Not reached: arrivalOk lets only the six above in, and the dangerous ones went to
+  // onboardDangerous, the ARM to onGroundArm.
+  endRefused(c.sequence, answer::kImpossible);
+}
+
+/**
+ * @brief Runs a ground dangerous command for the onboard computer: ARM check, then its handler.
+ *
+ * Order of checks (Interfaces Sec. 5.2; REQ-029, REQ-030, REQ-112): 1. a repeat of a used
+ * sequence number (answerRepeat: ALREADY DONE, RECEIVED, the first one's REFUSED code, or
+ * REFUSED 0x04); 2. a held ARM naming this identifier and this ground sequence number, else
+ * REFUSED 0x01 (the ARM stays held); 3. the ARM no older than kArmExpiryMs, else REFUSED 0x02
+ * (the ARM is dropped); 4. the ARM is used up, the sequence number is remembered, and
+ * runOnboardDangerous runs. Like a dangerous command for the controller, a refusal before step 4
+ * is REFUSED only, with no RECEIVED first. The handler's code ends the command: DONE for
+ * answer::kSuccess, else REFUSED with that code, which the ring keeps so that a resend is refused
+ * the same way (REQ-031). RECEIVED before a handler that takes time is the handler's decision
+ * (TBR: none exists yet).
+ *
+ * @param[in]     c  the command frame; its identifier passed isOnboardDangerous and arrivalOk
+ * @return nothing
+ */
+void Updater::onboardDangerous(const frame::Frame & c)
+{
+  uint8_t id = c.payload[0];
+  if (answerRepeat(c, used_, repeats_)) {
+    return;
+  }
+  uint8_t code = armCheck(c);
+  if (code != answer::kSuccess) {
+    refused(c.sequence, code);
+    return;
+  }
+  arm_.held = false;   // used up: it allowed this one command
+  if (!used_.add(c.sequence, c.payload, c.length)) {
+    // arrivalOk limited the length to what the ring holds (static_assert in command_gate.cpp).
+    logging::line("ground: dangerous command 0x%02x sequence %u: payload too long for the used "
+      "sequence ring; not remembered", id, c.sequence);
+  }
+  code = runOnboardDangerous(id, c.payload, c.length);
+  if (code == answer::kSuccess) {
+    endDone(c.sequence);
+    return;
+  }
+  endRefused(c.sequence, code);
+}
+
+/**
+ * @brief Runs an armed dangerous command of the onboard computer: SET LIMITS has a handler, the
+ *        other four do not yet.
+ *
+ * The place where the later decisions fill in RESTORE, REPROGRAM, SET ONBOARD TIME and REPLACE KEY
+ * (REQ-055, REQ-058, REQ-073, REQ-084). SET LIMITS (0x06) is built (owner decision 24, 15 Oct
+ * 2026; runSetLimits). Until the others are built each is answered REFUSED 0x06 "not built", after
+ * the arming check, so the order of the checks shows. The identifier reached here passed
+ * isOnboardDangerous, so any other value is not expected; it is refused 0x06 and logged.
+ *
+ * @param[in]     id       the command identifier, payload byte 0; one of the five dangerous ones
+ * @param[in]     payload  the command's payload bytes (length of them valid)
+ * @param[in]     length   number of payload bytes; already checked against the command's fields
+ * @return answer::kSuccess: the command ran; otherwise the refusal reason (protocol.hpp)
+ */
+uint8_t Updater::runOnboardDangerous(uint8_t id, const uint8_t * payload, uint16_t length)
+{
+  switch (id) {
+    case command::kSetLimits:
+      return runSetLimits(payload, length);
+    case command::kRestore:
+    case command::kReprogram:
+    case command::kSetOnboardTime:
+    case command::kReplaceKey:
+      logging::line("ground: dangerous command 0x%02x passed the ARM check; not built: refused "
+        "0x06", id);
+      return answer::kImpossible;
+  }
+  // input from the link: not one of the five; isOnboardDangerous let only those through
+  logging::line("ground: command 0x%02x is not a dangerous command of the onboard computer; "
+    "refused 0x06", id);
+  return answer::kImpossible;
+}
+
+/**
+ * @brief Runs SET LIMITS: keeps a new minimum version and controller identity (decision 24).
+ *
+ * Owner decision 24 (15 Oct 2026; REQ-045, REQ-053). The fields are minimum version (4) and
+ * controller identity (2), little-endian (Interfaces Sec. 5.1 table, row 0x06). The limits are
+ * written as the "limits" DurableRecord first; only when that succeeded are they given to the
+ * store and DONE is answered, so an answer of DONE means the record is on storage (REQ-034). A
+ * write that fails answers REFUSED 0xFE (the onboard computer's storage failed, protocol.hpp) and
+ * leaves the limits in force as they were; a record whose write failed only at the final
+ * directory flush may already hold the new values on storage (durable_record.hpp), and is read
+ * again at the next start. Lowering the minimum needs only the ARM that got here. A good write
+ * also ends a fail-closed state (a damaged record at start): the limits are usable again. No
+ * range is checked on either field (TBR, awaiting the owner's acceptance: decision 24 names none;
+ * identity 0 or a very high minimum make every image refused, the safe direction).
+ *
+ * @param[in]     payload  the command's payload bytes
+ * @param[in]     length   number of payload bytes; must be command::kSetLimitsBytes
+ * @return answer::kSuccess: written and in force; answer::kImpossible: wrong length (not expected,
+ *         arrivalOk checked it); answer::kStorageBench: the record could not be written
+ */
+uint8_t Updater::runSetLimits(const uint8_t * payload, uint16_t length)
+{
+  if (length != command::kSetLimitsBytes) {
+    logging::line("SET LIMITS: %u payload bytes, not %zu; refused 0x06", length,
+      command::kSetLimitsBytes);
+    return answer::kImpossible;
+  }
+  ImageLimits next{bytes::readU32(&payload[command::kSetLimitsVersionAt]),
+                   bytes::readU16(&payload[command::kSetLimitsIdentityAt]), true};
+  int error = 0;
+  if (!limits_record::save(limits_file_, next, error)) {
+    logging::line("SET LIMITS: minimum version %u, controller identity 0x%04x: the limits record "
+      "could not be written (%s); refused 0xfe, the limits in force are unchanged",
+      next.minimum_version, next.identity, std::strerror(error));
+    return answer::kStorageBench;
+  }
+  const ImageLimits before = store_.limits();
+  store_.setLimits(next);
+  logging::line("SET LIMITS: minimum version %u, controller identity 0x%04x written and in force "
+    "(before: %s, minimum version %u, controller identity 0x%04x)", next.minimum_version,
+    next.identity, before.usable ? "usable" : "not usable", before.minimum_version,
+    before.identity);
+  return answer::kSuccess;
 }
 
 /**
@@ -508,12 +796,12 @@ void Updater::uploadBegin(const frame::Frame & c)
   uint8_t code = store_.begin(number, length, stored);
   if (code != answer::kSuccess) {
     logging::line("UPLOAD BEGIN image %u, %u bytes: refused 0x%02x", number, length, code);
-    refused(c.sequence, code);
+    endRefused(c.sequence, code);
     return;
   }
   logging::line("UPLOAD BEGIN image %u, %u bytes: %s at byte %u", number, length,
     (stored > 0) ? "resuming" : "starting", stored);
-  done(c.sequence);
+  endDone(c.sequence);
 }
 
 /**
@@ -535,13 +823,13 @@ void Updater::uploadChunk(const frame::Frame & c)
   if (code != answer::kSuccess) {
     logging::line("UPLOAD CHUNK image %u at %u (%zu bytes): refused 0x%02x; %u bytes stored",
       number, offset, size, code, store_.stored());
-    refused(c.sequence, code);
+    endRefused(c.sequence, code);
     return;
   }
   if (!written) {
     logging::line("UPLOAD CHUNK image %u at %u: already stored", number, offset);
   }
-  done(c.sequence);
+  endDone(c.sequence);
 }
 
 /**
@@ -559,18 +847,26 @@ void Updater::uploadEnd(const frame::Frame & c)
   uint8_t code = store_.end(number, checker_, verdict);
   if (code != answer::kSuccess) {
     logging::line("UPLOAD END image %u: refused 0x%02x (%s)", number, code, verdict.reason);
-    refused(c.sequence, code);
+    endRefused(c.sequence, code);
     return;
   }
   logging::line("UPLOAD END image %u: checks passed (kind 0x%02x, version %u); stored", number,
     verdict.kind, verdict.version);
-  done(c.sequence);
+  endDone(c.sequence);
 }
 
 /**
- * @brief Runs UPLOAD CANCEL: removes the stored bytes of the image.
+ * @brief Runs UPLOAD CANCEL: removes the stored bytes of the image; stops its delivery if one runs.
  *
- * Answers DONE.
+ * Image not being delivered: removes its .part and .img files and answers DONE. Image being
+ * delivered (owner decision 21, 15 Oct 2026; REQ-051): the delivery stops after the step in
+ * flight (stop-and-wait, data_link.hpp), the onboard computer sends UPLOAD CANCEL to the
+ * controller (which erases the slot's first page, update_receiver.cpp runCancel), and then
+ * finishCancelledDelivery answers the running DELIVER REFUSED 0x12 and this command. The answer to
+ * this command is therefore not given here; RECEIVED has gone already. A second UPLOAD CANCEL for
+ * the same delivery, under another sequence number, while the first one is being carried out, is
+ * refused 0x05 (bench choice, as for a second DELIVER: Sec. 4.2 has no reason for "busy"; TBR,
+ * awaiting the owner's acceptance).
  *
  * @param[in] c  the UPLOAD CANCEL command frame
  * @return nothing
@@ -578,9 +874,86 @@ void Updater::uploadEnd(const frame::Frame & c)
 void Updater::uploadCancel(const frame::Frame & c)
 {
   uint16_t number = imageNumber(c);
+  if (delivery_.active() && !test_image_running_ && delivery_.number() == number) {
+    if (cancel_requested_) {
+      logging::line("UPLOAD CANCEL image %u sequence %u: the delivery is already being cancelled; "
+        "refused 0x05", number, c.sequence);
+      endRefused(c.sequence, answer::kNotInThisMode);
+      return;
+    }
+    cancel_requested_ = true;
+    cancel_sequence_ = c.sequence;
+    logging::line("UPLOAD CANCEL image %u: the delivery of this image runs; it stops after the "
+      "step in flight", number);
+    sendNext();   // link A idle: the UPLOAD CANCEL to the controller goes at once
+    return;
+  }
   (void)store_.cancel(number);
   logging::line("UPLOAD CANCEL image %u: stored bytes removed", number);
-  done(c.sequence);
+  endDone(c.sequence);
+}
+
+/**
+ * @brief Sends UPLOAD CANCEL to the controller for the delivery being cancelled (decision 21).
+ *
+ * The step in flight has ended (its answer, or its timeout); this is the next frame instead of
+ * the delivery's next step. It carries the DELIVER's expiry like the delivery's other frames. If
+ * data link A cannot send, the cancel ends at once with the bench code 0xFD (protocol.hpp).
+ *
+ * @return nothing
+ */
+void Updater::sendDeliveryCancel()
+{
+  std::array<uint8_t, command::kImageNumberOnlyBytes> cancel{};
+  cancel[0] = command::kUploadCancel;
+  bytes::writeU16(&cancel[command::kIdBytes], delivery_.number());
+  uint32_t sequence = 0;
+  if (link_.sendCommand(cancel.data(), static_cast<uint16_t>(cancel.size()), delivery_.expiry(),
+        config::kAnswerTimeoutMs, now_ms_, sequence)) {
+    sender_ = Sender::kDeliveryCancel;
+    logging::line("DELIVER image %u: UPLOAD CANCEL sent to the controller as sequence %u",
+      delivery_.number(), sequence);
+    return;
+  }
+  logging::line("DELIVER image %u: data link A cannot send the UPLOAD CANCEL", delivery_.number());
+  finishCancelledDelivery(answer::kCannotSendBench);
+}
+
+/**
+ * @brief Ends a delivery the operator cancelled: answers the DELIVER, then the UPLOAD CANCEL.
+ *
+ * Owner decision 21 (15 Oct 2026; REQ-051): the running DELIVER is answered REFUSED 0x12
+ * "delivery cancelled by the operator" (answer::kCancelled). The stored bytes of the image are
+ * removed, as for any UPLOAD CANCEL (REQ-052). The UPLOAD CANCEL itself is then answered DONE when
+ * the controller accepted its UPLOAD CANCEL; if the controller refused it, did not answer, or the
+ * link could not send, it is answered REFUSED with that code (the controller's code, 0xFF or 0xFD),
+ * because DONE would tell the operator the slot was erased. TBR, awaiting the owner's acceptance:
+ * decision 21 names only the DONE case. The DELIVER is refused 0x12 in every case.
+ *
+ * @param[in]     controller_code  answer::kSuccess if the controller answered DONE to the
+ *                UPLOAD CANCEL, else its refusal code, answer::kNoAnswerBench or
+ *                answer::kCannotSendBench
+ * @return nothing
+ */
+void Updater::finishCancelledDelivery(uint8_t controller_code)
+{
+  uint16_t number = delivery_.number();
+  logging::line("DELIVER image %u: refused 0x%02x (delivery cancelled by the operator) after "
+    "%zu of %zu bytes", number, answer::kCancelled, delivery_.sent(), delivery_.size());
+  endRefused(delivery_.groundSequence(), answer::kCancelled);
+  (void)store_.cancel(number);
+  if (controller_code == answer::kSuccess) {
+    logging::line("UPLOAD CANCEL image %u: the controller accepted UPLOAD CANCEL; stored bytes "
+      "removed", number);
+    endDone(cancel_sequence_);
+  } else {
+    logging::line("UPLOAD CANCEL image %u: the controller's UPLOAD CANCEL ended with code 0x%02x "
+      "(%s); stored bytes removed, refused 0x%02x", number, controller_code,
+      refusalName(controller_code), controller_code);
+    endRefused(cancel_sequence_, controller_code);
+  }
+  cancel_requested_ = false;
+  delivery_.stop();
 }
 
 /**
@@ -623,7 +996,7 @@ void Updater::deliver(const frame::Frame & c)
   if (delivery_.active()) {
     logging::line("DELIVER image %u: refused 0x05: the delivery of image %u still runs", number,
       delivery_.number());
-    refused(c.sequence, answer::kNotInThisMode);
+    endRefused(c.sequence, answer::kNotInThisMode);
     return;
   }
   uint8_t code = deliveryModeCheck();
@@ -640,27 +1013,28 @@ void Updater::deliver(const frame::Frame & c)
       logging::line("DELIVER image %u: refused 0x%02x: controller mode %s", number, code,
         modeName(reports_.lastHealth().mode));
     }
-    refused(c.sequence, code);
+    endRefused(c.sequence, code);
     return;
   }
   size_t size = 0;
   if (!store_.load(number, delivery_.buffer(), delivery_.capacity(), size)) {
     logging::line("DELIVER image %u: refused 0x06: no checked image of that number", number);
-    refused(c.sequence, answer::kImpossible);
+    endRefused(c.sequence, answer::kImpossible);
     return;
   }
-  // REQ-047: checked again after its last transfer (here: from storage), just before delivery.
-  ImageVerdict verdict = checker_.check(delivery_.buffer(), size);
+  // REQ-047: checked again after its last transfer (here: from storage), just before delivery,
+  // against the limits in force now (owner decision 24, 15 Oct 2026).
+  ImageVerdict verdict = checker_.check(delivery_.buffer(), size, store_.limits());
   if (verdict.code != answer::kSuccess) {
     logging::line("DELIVER image %u: refused 0x%02x: check before delivery failed (%s)", number,
       verdict.code, verdict.reason);
-    refused(c.sequence, verdict.code);
+    endRefused(c.sequence, verdict.code);
     return;
   }
   if (verdict.kind != IMAGE_KIND_MAIN) {
     logging::line("DELIVER image %u: refused 0x06: kind 0x%02x; only main firmware is delivered",
       number, verdict.kind);
-    refused(c.sequence, answer::kImpossible);
+    endRefused(c.sequence, answer::kImpossible);
     return;
   }
   logging::line("DELIVER image %u: %zu bytes, version %u, to the controller", number, size,
@@ -685,7 +1059,7 @@ void Updater::getStatus(const frame::Frame & c)
     watch_.silent() ? "silent" : "heard",
     reports_.haveHealth() ? modeName(reports_.lastHealth().mode) : "none",
     link_.sentCount(), link_.receivedCount(), reports_.lastNumber());
-  done(c.sequence);
+  endDone(c.sequence);
 }
 
 /**
@@ -718,11 +1092,13 @@ void Updater::finishDelivery(Delivery::Step step, uint8_t code)
   } else if (step == Delivery::Step::kDone) {
     logging::line("DELIVER image %u: done; the controller accepted UPLOAD END",
       delivery_.number());
-    done(delivery_.groundSequence());
+    have_delivered_ = true;   // owner decision 22: its file is deleted when the firmware settles
+    delivered_number_ = delivery_.number();
+    endDone(delivery_.groundSequence());
   } else {
     logging::line("DELIVER image %u: refused 0x%02x (%s) after %zu of %zu bytes",
       delivery_.number(), code, refusalName(code), delivery_.sent(), delivery_.size());
-    refused(delivery_.groundSequence(), code);
+    endRefused(delivery_.groundSequence(), code);
   }
   delivery_.stop();
 }
@@ -833,7 +1209,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
         "ground sequence %u", a.kind, a.code, a.answered, ground_sequence);
       (void)gate_.answer(ground_sequence, a.kind, a.code);
       if (final) {
-        used_.finish(ground_sequence, a.kind != answer::kRefused, a.code);
+        finishCommand(ground_sequence, a.kind != answer::kRefused, a.code);
         table_.remove(a.answered);
       }
     } else {
@@ -850,18 +1226,35 @@ void Updater::onControllerAnswer(const frame::Answer & a)
         if (final) {
           logging::line("controller: answer 0x%02x code 0x%02x to ground sequence %u", a.kind,
             a.code, ground_sequence);
-          used_.finish(ground_sequence, a.kind != answer::kRefused, a.code);
+          finishCommand(ground_sequence, a.kind != answer::kRefused, a.code);
           table_.remove(a.answered);
         }
       }
       break;
     case Sender::kDelivery:
-      if (final) {
+      if (final && cancel_requested_) {
+        // Decision 21: the step in flight has ended; whatever its result, the delivery stops here
+        // and the next frame is UPLOAD CANCEL (sendNext).
+        logging::line("controller: answer 0x%02x code 0x%02x to the delivery step in flight; the "
+          "delivery is being cancelled, so the step's result is not used", a.kind, a.code);
+      } else if (final) {
         uint8_t code = answer::kSuccess;
         Delivery::Step step = delivery_.onFinalAnswer(a.kind, a.code, code);
         if (step != Delivery::Step::kContinue) {
           finishDelivery(step, code);
         }
+      }
+      break;
+    case Sender::kDeliveryCancel:
+      if (final) {
+        // ALREADY DONE to the cancel can only be a sequence-number clash (the updater sends each
+        // frame once): a refusal, 0x04, as for the delivery's other steps
+        // (Delivery::onFinalAnswer).
+        uint8_t code = (a.kind == answer::kRefused) ? a.code
+                     : (a.kind == answer::kAlreadyDone) ? answer::kOldCommand : answer::kSuccess;
+        logging::line("controller: answer 0x%02x code 0x%02x to the UPLOAD CANCEL of the delivery",
+          a.kind, a.code);
+        finishCancelledDelivery(code);
       }
       break;
     case Sender::kArm:
@@ -874,7 +1267,7 @@ void Updater::onControllerAnswer(const frame::Answer & a)
           logging::line("controller: ARM sequence %u answered 0x%02x code 0x%02x; ground command "
             "sequence %u refused 0x%02x and not sent", a.answered, a.kind, a.code,
             queue_.front().ground_sequence, code);
-          refusedQueued(queue_.front().ground_sequence, code);
+          endRefused(queue_.front().ground_sequence, code);
           queue_.pop();
           pair_ = PairStage::kNone;
         } else {
@@ -889,6 +1282,39 @@ void Updater::onControllerAnswer(const frame::Answer & a)
   if (final) {
     link_.release();
     sender_ = Sender::kNone;
+  }
+}
+
+/**
+ * @brief Deletes the stored image of the last delivery once the controller's firmware is settled.
+ *
+ * Owner decision 22 (15 Oct 2026; REQ-052): EVENT 0x0007 (firmware confirmed) or 0x0008 (firmware
+ * given up) after a delivery means the update has ended, so the onboard computer frees the
+ * storage of the image it last delivered (image-n.img) and logs it. "Last delivered" is the image
+ * of the last ground DELIVER that ended DONE (TBR, awaiting the owner's acceptance: the decision
+ * does not say whether a delivery that was refused counts). Only the .img goes; a .part file of an
+ * upload in progress stays (UploadStore::removeImage). An image refused at UPLOAD END was removed
+ * there already (update_manager.cpp). Kept in RAM, so a restart of the updater forgets which image
+ * was delivered (TBR). One delivery is deleted once: a second EVENT finds nothing to delete.
+ *
+ * @param[in]     code  report::kEventFirmwareConfirmed or report::kEventFirmwareGivenUp
+ * @return nothing
+ */
+void Updater::onFirmwareSettled(uint16_t code)
+{
+  const char * what = eventName(code);
+  if (!have_delivered_) {
+    logging::line("EVENT 0x%04x (%s): no delivered image to delete", code, what);
+    return;
+  }
+  uint16_t number = delivered_number_;
+  have_delivered_ = false;
+  if (store_.removeImage(number)) {
+    logging::line("EVENT 0x%04x (%s): the delivered image %u was deleted from storage "
+      "(image-%05u.img)", code, what, number, static_cast<unsigned>(number));
+  } else {
+    logging::line("EVENT 0x%04x (%s): the delivered image %u could not be deleted, or was already "
+      "gone (image-%05u.img)", code, what, number, static_cast<unsigned>(number));
   }
 }
 
@@ -917,6 +1343,8 @@ void Updater::onControllerReport(const frame::Frame & f)
     uint16_t code = bytes::readU16(&f.payload[report::kOffsetEventCode]);
     if (code == report::kEventTrialStarted) {
       test_trigger_.onTrialStartedEvent();
+    } else if (code == report::kEventFirmwareConfirmed || code == report::kEventFirmwareGivenUp) {
+      onFirmwareSettled(code);
     }
   }
   trialWatch(&f);   // decision H, separable: see trialWatch
@@ -958,7 +1386,7 @@ void Updater::sendQueued()
     // look for a mode problem.
     logging::line("ground command 0x%02x sequence %u not passed on: data link A cannot send; "
       "refused 0xfd", id, c.ground_sequence);
-    refusedQueued(c.ground_sequence, answer::kCannotSendBench);
+    endRefused(c.ground_sequence, answer::kCannotSendBench);
   }
   queue_.pop();
 }
@@ -992,7 +1420,7 @@ void Updater::sendArm()
   } else {
     logging::line("ARM for ground command 0x%02x sequence %u not sent: data link A cannot "
       "send; refused 0xfd", c.payload[0], c.ground_sequence);
-    refusedQueued(c.ground_sequence, answer::kCannotSendBench);
+    endRefused(c.ground_sequence, answer::kCannotSendBench);
     queue_.pop();
   }
 }
@@ -1035,6 +1463,10 @@ void Updater::sendNext()
   }
 
   if (delivery_.active()) {
+    if (cancel_requested_) {
+      sendDeliveryCancel();   // decision 21: instead of the delivery's next step
+      return;
+    }
     uint16_t length = delivery_.next(payload_.data(), payload_.size(), timeout_ms);
     if (length == 0 || !link_.sendCommand(payload_.data(), length, delivery_.expiry(),
                          timeout_ms, now_ms_, sequence)) {
@@ -1056,7 +1488,7 @@ void Updater::sendNext()
         "when its turn came; refused 0x02 and dropped", front.payload[0], front.ground_sequence,
         static_cast<unsigned long long>(now_ms_ - front.arm_at_ms),
         static_cast<unsigned long long>(config::kArmExpiryMs));
-      refusedQueued(front.ground_sequence, answer::kArmExpired);
+      endRefused(front.ground_sequence, answer::kArmExpired);
       queue_.pop();
       continue;
     }
@@ -1098,7 +1530,18 @@ void Updater::onTimeout()
       break;
     case Sender::kDelivery:
       logging::line("controller: no last answer to sequence %u (delivery) in time", sequence);
-      finishDelivery(Delivery::Step::kRefused, answer::kNoAnswerBench);
+      if (cancel_requested_) {
+        // Decision 21: the step in flight ended without an answer; the cancel goes next (sendNext).
+        logging::line("controller: the delivery is being cancelled, so the missing answer is not "
+          "a failure of the delivery");
+      } else {
+        finishDelivery(Delivery::Step::kRefused, answer::kNoAnswerBench);
+      }
+      break;
+    case Sender::kDeliveryCancel:
+      logging::line("controller: no answer to the UPLOAD CANCEL of the delivery, sequence %u, in "
+        "time", sequence);
+      finishCancelledDelivery(answer::kNoAnswerBench);
       break;
     case Sender::kArm:
       // Decision S (accepted by the owner, 13 Oct 2026): the operator who sent a dangerous
@@ -1106,7 +1549,7 @@ void Updater::onTimeout()
       logging::line("controller: no answer to ARM sequence %u in time; the ground command sequence "
         "%u is not sent; refused 0xff (controller did not answer)", sequence,
         queue_.front().ground_sequence);
-      refusedQueued(queue_.front().ground_sequence, answer::kNoAnswerBench);
+      endRefused(queue_.front().ground_sequence, answer::kNoAnswerBench);
       queue_.pop();
       pair_ = PairStage::kNone;
       break;

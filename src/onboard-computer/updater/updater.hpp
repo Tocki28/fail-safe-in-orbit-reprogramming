@@ -9,8 +9,19 @@
  *     that fails them is answered REFUSED 0x06 only, as the controller does
  *     (src/controller/firmware/main.c at commit 5c0b5f8); every other command is answered
  *     RECEIVED, then DONE or
- *     REFUSED (Interfaces Sec. 4.2, REQ-033). Commands 0x06 to 0x0D (SET LIMITS to ARM) are
- *     not built on the bench: REFUSED 0x06.
+ *     REFUSED (Interfaces Sec. 4.2, REQ-033). The ARM (0x0D) and the dangerous commands 0x06,
+ *     0x07, 0x08, 0x09 and 0x0C are checked against an ARM as described below. SET LIMITS (0x06)
+ *     has a handler (owner decision 24, 15 Oct 2026, below); 0x07, 0x08, 0x09 and 0x0C have none
+ *     yet: REFUSED 0x06 after the arming check. 0x0A and 0x0B are not built: REFUSED 0x06.
+ *   Repeats (owner decision 26, 15 Oct 2026; REQ-065, REQ-031): every command that passed the
+ *     arrival checks is remembered by its ground sequence number and its exact bytes. The ARMs and
+ *     dangerous commands are kept in UsedSequences (the last 64), all others in RepeatMemory (the
+ *     last 256), so that upload traffic cannot push the dangerous ones out. The same number and
+ *     bytes again: ALREADY DONE if the first one ended DONE, the first one's refusal code if it
+ *     was refused, RECEIVED while it still runs; nothing is run twice. The same number with other
+ *     bytes, or a number held by the other memory: REFUSED 0x04. A command refused on arrival
+ *     (unknown, wrong length, image number 0xFFFF, not on the controller's list, queue full) is
+ *     not remembered. The memories are lost at a restart (accepted risk, decision 26).
  *   Destination 0x02 (controller): only the controller's own commands, 0x20 to 0x26 with the
  *     payload length each needs (Interfaces Sec. 5.1 table), plus the ARM above; every other
  *     identifier, including UPLOAD BEGIN, CHUNK, END and CANCEL (0x01 to 0x04), is refused 0x06:
@@ -26,6 +37,26 @@
  *   answers: to the command outstanding on data link A; reports: numbered, stamped and sent
  *   to the ground (report_store.hpp). Any good frame tells the controller watch it is alive.
  *
+ * IMAGE LIMITS (owner decision 24, 15 Oct 2026; REQ-045, REQ-046, REQ-053): the minimum version
+ *   and the controller identity are kept in the "limits" record of the data directory
+ *   (limits_record.hpp) and read when the Updater is made. No record: minimum version 1, identity
+ *   0x0431 (Proposal, TBR). SET LIMITS (ARM first; lowering needs nothing more) writes the record,
+ *   and answers DONE only after it is written (REQ-034); a failed write is REFUSED 0xFE and the
+ *   limits stay. UPLOAD END and DELIVER's check (REQ-047) refuse an image below the minimum with
+ *   0x0A and one for another identity with 0x0B. A damaged limits record fails closed (TBR): both
+ *   refuse every image 0x0A, and the log says why, until a SET LIMITS writes a good record.
+ *
+ * AFTER A DELIVERY (owner decision 22, 15 Oct 2026; REQ-052): when the controller reports EVENT
+ *   0x0007 (firmware confirmed) or 0x0008 (firmware given up), the image of the last ground
+ *   DELIVER that ended DONE is deleted (image-n.img) and the deletion is logged. A .part file of
+ *   an upload in progress is never deleted. An image refused at UPLOAD END is removed there.
+ *
+ * CANCEL OF A DELIVERY (owner decision 21, 15 Oct 2026; REQ-051): UPLOAD CANCEL for the image
+ *   being delivered stops the delivery after the step in flight (stop-and-wait), sends UPLOAD
+ *   CANCEL to the controller, answers the running DELIVER REFUSED 0x12 (answer::kCancelled) and
+ *   then answers the UPLOAD CANCEL (DONE if the controller accepted its UPLOAD CANCEL; else the
+ *   controller's code, 0xFF or 0xFD: TBR). The image's stored bytes are removed.
+ *
  * DELIVER (REQ-047, REQ-048, REQ-050):
  *   1. a delivery already running: REFUSED 0x05 (bench choice, as above);
  *   2. the controller's mode, from the last HEALTH report: TRIAL -> REFUSED 0x07 (REQ-050).
@@ -33,7 +64,8 @@
  *      in the last 5 s, or another mode -> REFUSED 0x05 (bench choice: the onboard computer
  *      cannot show that no trial runs, so it does not deliver);
  *   3. no stored image of that number -> REFUSED 0x06;
- *   4. the image checked again, just before delivery (REQ-047) -> its refusal reason; only
+ *   4. the image checked again, just before delivery (REQ-047), against the limits -> its
+ *      refusal reason; only
  *      main firmware (kind 0x02) goes through an update -> REFUSED 0x06 otherwise;
  *   5. UPLOAD BEGIN, CHUNKs, END to the controller (update_manager.hpp); DONE when the
  *      controller's END is DONE; REFUSED with the controller's code if it refuses any step;
@@ -44,10 +76,15 @@
  * ARM AND DANGEROUS COMMANDS (Interfaces Sec. 5.2; REQ-029, REQ-030, REQ-112):
  *   The controller sees the onboard computer's sequence numbers, not the ground's (data_link.hpp),
  *   so the onboard computer pairs the ground's ARM with its command.
- *   - A ground ARM for the controller (Destination 0x02, 0x0D, identifier of the dangerous
- *     command (1), its ground sequence number (4)) is not passed on. The identifier must be a
- *     dangerous command of the controller (0x20, 0x21, 0x22, 0x24, 0x26, Sec. 5.1 table), else
- *     REFUSED 0x06. One ARM is held; a new one replaces it. Answer: RECEIVED, then DONE.
+ *   - A ground ARM (Destination 0x02 or 0x01, 0x0D, identifier of the dangerous command (1), its
+ *     ground sequence number (4)) is not passed on. The identifier must be a dangerous command of
+ *     the destination: the controller's (0x20, 0x21, 0x22, 0x24, 0x26, Sec. 5.1 table) or the
+ *     onboard computer's (0x06, 0x07, 0x08, 0x09, 0x0C), else REFUSED 0x06. One ARM is held, for
+ *     either destination; a new one replaces it. Answer: RECEIVED, then DONE.
+ *   - A ground dangerous command for the onboard computer is checked in the same way (repeat,
+ *     then REFUSED 0x01, then REFUSED 0x02); with a valid ARM the ARM is used up and
+ *     runOnboardDangerous answers (SET LIMITS runs; the other four are REFUSED 0x06 "not built"
+ *     until a handler exists). It never touches data link A.
  *   - A ground dangerous command for the controller: no held ARM naming its identifier and its
  *     ground sequence number -> REFUSED 0x01 (the ARM stays held; it allows that one command
  *     only); the ARM older than kArmExpiryMs -> REFUSED 0x02 (it is dropped). Otherwise the ARM
@@ -105,8 +142,10 @@
 #include "command_gate.hpp"
 #include "controller_watch.hpp"
 #include "data_link.hpp"
+#include "durable_record.hpp"
 #include "frame.hpp"
 #include "image_checker.hpp"
+#include "limits_record.hpp"
 #include "protocol.hpp"
 #include "report_store.hpp"
 #include "restart_runner.hpp"
@@ -141,6 +180,7 @@ private:
     kDelivery,   // a step of DELIVER
     kBeat,       // the onboard computer's own GET STATUS
     kArm,        // the ARM of an ARM/command pair, the onboard computer's own
+    kDeliveryCancel,   // the UPLOAD CANCEL ending a cancelled delivery (decision 21)
   };
 
   // Where an ARM/command pair has got to. The queue's front is the command (armed) throughout.
@@ -163,9 +203,20 @@ private:
   void onGroundCommand(const frame::Frame & c);
   void onGroundArm(const frame::Frame & c);
   uint8_t armCheck(const frame::Frame & c);
+  void onboardDangerous(const frame::Frame & c);
+  uint8_t runOnboardDangerous(uint8_t id, const uint8_t * payload, uint16_t length);
+  uint8_t runSetLimits(const uint8_t * payload, uint16_t length);   // decision 24
+  void loadLimits();   // decision 24: reads the "limits" record at start
   bool dangerousBusy() const;
-  bool answerRepeat(const frame::Frame & c);
-  void refusedQueued(uint32_t sequence, uint8_t code);
+  // own: the memory this kind of command belongs to; other: the other one (decision 26).
+  template <typename Own, typename Other>
+  bool answerRepeat(const frame::Frame & c, const Own & own, const Other & other);
+  void endDone(uint32_t sequence);   // DONE to the ground; the command is finished in the memories
+  void endRefused(uint32_t sequence, uint8_t code);   // REFUSED likewise
+  void finishCommand(uint32_t sequence, bool done, uint8_t refusal_code);
+  void onFirmwareSettled(uint16_t code);   // decision 22
+  void sendDeliveryCancel();   // decision 21
+  void finishCancelledDelivery(uint8_t controller_code);   // decision 21
   void sendArm();
   void sendQueued();
   void onOnboardCommand(const frame::Frame & c);
@@ -213,7 +264,13 @@ private:
   TestImageTrigger test_trigger_;
   TrialWatch trial_watch_;   // decision H, separable
   RestartRunner restart_;    // decision H: restore.sh reset as a child process
-  UsedSequences used_;
+  UsedSequences used_;        // ARMs and dangerous commands, the last 64
+  RepeatMemory repeats_;      // every other ground command, the last 256 (decision 26)
+  DurableRecord limits_file_; // the "limits" record in the data directory (decision 24)
+  bool cancel_requested_;     // decision 21: an UPLOAD CANCEL waits for the delivery to stop
+  uint32_t cancel_sequence_;  // ground sequence number of that UPLOAD CANCEL
+  bool have_delivered_;       // decision 22: a DELIVER ended DONE; its image is not yet deleted
+  uint16_t delivered_number_; // the image number of that delivery
   bool test_image_running_;   // delivery_ carries the test image, not a ground DELIVER
   std::array<uint8_t, frame::kPayloadMax> payload_;
   std::array<uint8_t, report::kEventMaxBytes> report_;

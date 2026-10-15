@@ -34,7 +34,10 @@ Checks (PASS or FAIL each; exit status 1 if any fails):
   a damaged datagram: no answer; an unknown command: REFUSED 0x06 only;
   the controller silent for 6 s: "controller silent" logged (REQ-061), DELIVER refused 0x05,
   then "controller heard again";
-  SIGTERM: the updater stops with exit status 0.
+  SIGTERM: the updater stops with exit status 0;
+  image limits (owner decision 24, 15 Oct 2026): SET LIMITS with its ARM answers DONE only, an
+  image below the minimum is refused 0x0A at UPLOAD END, and the check-only mode
+  (--check-image) reports the limits it applied: none stored, stored, or a damaged record.
 
 Usage: bench_test.py UPDATER FIRMWARE_B FLIPPED_IMAGE WRONG_KEY_IMAGE WORKDIR
 Standard library only.
@@ -63,7 +66,13 @@ FINAL = (DONE, REFUSED, ALREADY_DONE)
 KIND = {RECEIVED: "RECEIVED", DONE: "DONE", REFUSED: "REFUSED", ALREADY_DONE: "ALREADY DONE"}
 
 UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END, UPLOAD_CANCEL, DELIVER = 0x01, 0x02, 0x03, 0x04, 0x05
-REPLACE_KEY, ARM, SWITCH, GET_STATUS = 0x0C, 0x0D, 0x20, 0x25
+SET_LIMITS, REPLACE_KEY, ARM, SWITCH, GET_STATUS = 0x06, 0x0C, 0x0D, 0x20, 0x25
+# The default controller identity (config.hpp kDefaultControllerIdentity, image_format.h
+# IMAGE_TARGET_CONTROLLER) and the minimum version of the Makefile's images: firmware-B.img is
+# version 1, slotB-v2.img is version 2 (the batch-1 brief).
+IDENTITY = 0x0431
+VERSION_FIRMWARE_B, VERSION_SLOT_B_V2 = 1, 2
+CHECK_TIMEOUT_S = 30   # bench choice: the check of one image takes well under a second
 CHUNK = 256
 EXPIRY = 0xFFFFFFFF
 
@@ -675,6 +684,92 @@ def sigpipe_phase(updater, work, checks):
                 proc.kill()
 
 
+def check_image(updater, image_path, data_dir):
+    """Runs the check-only mode of the updater on one image.
+
+    `fsir-updater --check-image FILE --kind main --data-dir DIR` prints one line and exits 0 when
+    the image passes, 1 when it does not (image_file_check.hpp).
+
+    Args:
+        updater: path of the host fsir-updater
+        image_path: the image file
+        data_dir: the data directory whose `limits` record the check applies
+
+    Returns:
+        (exit status, the text printed on stdout and stderr, stripped).
+    """
+    done = subprocess.run([updater, "--check-image", image_path, "--kind", "main", "--data-dir",
+                           data_dir], capture_output=True, text=True, timeout=CHECK_TIMEOUT_S)
+    return done.returncode, (done.stdout + done.stderr).strip()
+
+
+def limits_phase(updater, work, fw_b_path, v2_path, checks):
+    """Owner decision 24: SET LIMITS over the ground link, the limits at UPLOAD END, --check-image.
+
+    Defects caught: SET LIMITS answered RECEIVED first or not DONE; the limits not applied at
+    UPLOAD END (an image below the minimum accepted); the check-only mode silent about which
+    limits it applied, or accepting an image below the stored minimum, or failing when the record
+    is damaged (the restore script must still be able to check an image).
+
+    Args:
+        updater: path of the host fsir-updater
+        work: scratch directory
+        fw_b_path: firmware-B.img (version 1)
+        v2_path: slotB-v2.img (version 2)
+        checks: the Checks counter
+
+    Returns:
+        None.
+    """
+    fw_b = open(fw_b_path, "rb").read()
+    bench = Bench(updater, work, "limits")
+    try:
+        bench.start(checks)
+        ground = bench.ground
+        default_tail = f"minimum version {VERSION_FIRMWARE_B}, identity 0x{IDENTITY:04x}"
+        stored_tail = f"minimum version {VERSION_SLOT_B_V2}, identity 0x{IDENTITY:04x}"
+
+        code, out = check_image(updater, fw_b_path, bench.data_dir)
+        checks.report(code == 0 and "; limits: default, no record, " in out
+                      and out.endswith(default_tail),
+                      f"--check-image, no limits record: passes, says default "
+                      f"({code}: {out[-90:]})")
+
+        arm_seq = ground.seq + 1
+        ground.command(ONBOARD, bytes([ARM, SET_LIMITS]) + struct.pack("<I", arm_seq + 1))
+        _, a = ground.command(ONBOARD, bytes([SET_LIMITS]) + struct.pack("<IH", VERSION_SLOT_B_V2,
+                                                                         IDENTITY))
+        checks.report(a == [(DONE, 0)], f"SET LIMITS minimum {VERSION_SLOT_B_V2} with its ARM: "
+                      f"{show(a)} only (no RECEIVED first)")
+
+        _, a = ground.command(ONBOARD, struct.pack("<BHI", UPLOAD_BEGIN, 2, len(fw_b)))
+        upload(ground, 2, fw_b)
+        _, a = ground.command(ONBOARD, struct.pack("<BH", UPLOAD_END, 2))
+        checks.report(a == [(RECEIVED, 0), (REFUSED, 0x0A)],
+                      f"version 1 image at UPLOAD END, minimum 2: {show(a)}")
+
+        code, out = check_image(updater, fw_b_path, bench.data_dir)
+        checks.report(code == 1 and "FAILED" in out and "version below the minimum (refusal 0x0a)"
+                      in out and f"; limits: stored record, {stored_tail}" in out,
+                      f"--check-image, version 1 image, minimum 2: exit {code}, refused 0x0a "
+                      f"({out[-120:]})")
+        code, out = check_image(updater, v2_path, bench.data_dir)
+        checks.report(code == 0 and out.endswith(f"; limits: stored record, {stored_tail}"),
+                      f"--check-image, version 2 image, minimum 2: passes ({code}: {out[-90:]})")
+
+        damaged_dir = os.path.join(work, "limits-damaged")
+        os.makedirs(damaged_dir)
+        with open(os.path.join(damaged_dir, "limits"), "wb") as f:
+            f.write(b"garbage")
+        code, out = check_image(updater, fw_b_path, damaged_dir)
+        checks.report(code == 0 and "; limits: default, record damaged, " in out
+                      and out.endswith(default_tail),
+                      f"--check-image, damaged limits record: passes with the defaults and says "
+                      f"so ({code}: {out[-90:]})")
+    finally:
+        bench.stop(checks)
+
+
 def main():
     """Runs the whole bench test.
 
@@ -706,8 +801,16 @@ def main():
         # ---- The onboard computer's own commands -----------------------------------------
         seq, a = ground.command(ONBOARD, bytes([GET_STATUS]))
         checks.report(a == ok_rr, f"GET STATUS to the onboard computer: {show(a)}")
-        seq, a = ground.command(ONBOARD, bytes([REPLACE_KEY]) + bytes(33))
-        checks.report(a == [(REFUSED, 0x06)], f"REPLACE KEY (not on the bench): {show(a)} only")
+        # REPLACE KEY is not built. Since arming for the onboard dangerous commands exists
+        # (REQ-112) the arming check comes first: no ARM is REFUSED 0x01; with a valid ARM naming
+        # it, the command reaches "not built", REFUSED 0x06.
+        replace_key = bytes([REPLACE_KEY]) + bytes(33)   # which key (1), new key (32)
+        seq, a = ground.command(ONBOARD, replace_key)
+        checks.report(a == [(REFUSED, 0x01)], f"REPLACE KEY without an ARM: {show(a)} only")
+        ground.command(ONBOARD, bytes([ARM, REPLACE_KEY]) + struct.pack("<I", ground.seq + 2))
+        seq, a = ground.command(ONBOARD, replace_key)
+        checks.report(a == [(REFUSED, 0x06)],
+                      f"REPLACE KEY with a valid ARM naming it (not built): {show(a)} only")
         bad = ground.send(ONBOARD, bytes([GET_STATUS]), damage=True)
         time.sleep(0.5)
         checks.report(ground.answers(bad) == [], "a datagram with a bad check value: no answer")
@@ -878,6 +981,8 @@ def main():
 
     beat_phase(updater, work, checks)
     sigpipe_phase(updater, work, checks)
+    limits_phase(updater, work, fw_b_path, os.path.join(os.path.dirname(wrong_key_path),
+                                                        "slotB-v2.img"), checks)
     print("bench test:", "all passed" if checks.failed == 0 else f"{checks.failed} FAILED")
     return 1 if checks.failed else 0
 

@@ -15,8 +15,10 @@ reports. Parts: `updater.hpp`. Bench build, STM32MP257F board (Linux, 64-bit ARM
 
 ## Check-only mode (used by the restore script)
     fsir-updater --check-image FILE --kind bootloader|main|last-resort
-Runs the checks of an upload (both Ed25519 signatures, damage, target, kind, length) on one file
-and prints one line. Exit 0: passed; 1: refused (the line says why); 2: usage; 3: keys unusable.
+Runs the checks of an upload (both Ed25519 signatures, damage, target, minimum version, kind, length)
+on one file and prints one line. The minimum version and controller identity are the stored ones (the
+`limits` record in `--data-dir`) when it can be read, else minimum version 1 and identity 0x0431; the
+line ends with which (owner decision 24, 15 Oct 2026; TBR). Exit 0: passed; 1: refused (the line says why); 2: usage; 3: keys unusable.
 
 ## Restart of the controller when a trial overruns (decision H, accepted by the owner, 13 Oct 2026)
 If no EVENT 0x0007 or 0x0008 arrives within the trial time plus margin (120 s + 30 s, bench values;

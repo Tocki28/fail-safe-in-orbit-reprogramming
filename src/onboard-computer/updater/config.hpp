@@ -121,10 +121,46 @@ constexpr size_t kForwardTableSize = 16;
 // 64 such commands is not caught (open: REQ-065 keeps the counter over restarts).
 constexpr size_t kUsedSequenceCount = 64;
 // The most payload bytes the ring keeps per entry: the longest ARM or dangerous command the
-// updater accepts is the ARM, command::kArmBytes = 6 (protocol.hpp; SET CONTROLLER TIME has 5).
-// The bytes are kept as they are, not as a digest: 6 bytes are smaller than a SHA-256 (32), need
-// no crypto library in the command gate, and cannot collide, so "same bytes" is exact.
-constexpr size_t kUsedPayloadMax = 6;
+// updater accepts is REPLACE KEY, command::kReplaceKeyBytes = 34 (identifier 1, which key 1, new
+// key 32; Interfaces Sec. 5.1 table row 0x0C). The ARM has 6 (command::kArmBytes) and SET
+// CONTROLLER TIME 5. Raised from 6 to 34 so that the onboard computer's own dangerous commands
+// (0x06 to 0x09, 0x0C) get the same resend behaviour as the controller's (REQ-031, REQ-065);
+// command_gate.cpp has a static_assert against the protocol.hpp sizes. The bytes are kept as
+// they are, not as a digest: that needs no crypto library in the command gate and cannot
+// collide, so "same bytes" is exact. Open (TBR, awaiting the
+// owner's acceptance): the ring then holds a replacement key's bytes in RAM for as long as the
+// entry lives (64 entries); a digest would not.
+constexpr size_t kUsedPayloadMax = 34;
+// Ground sequence numbers already used by every OTHER ground command (not an ARM or a dangerous
+// one) since start, with the command's exact payload and whether it has finished (owner decision
+// 26, 15 Oct 2026; REQ-065, REQ-031). A separate memory from the 64 above, so that upload traffic
+// (an image is up to 40 KB in 256-byte chunks, 160 UPLOAD CHUNKs at least) cannot push the
+// dangerous commands out of theirs. 256: the owner's number, decision 26. Lost at a restart
+// (accepted risk, decision 26).
+constexpr size_t kRepeatCount = 256;
+// The most payload bytes that memory keeps per entry: the longest ground command is UPLOAD CHUNK,
+// identifier 1 + image number 2 + offset 4 + data up to 256 = 263 bytes (Interfaces Sec. 5.1
+// table, row 0x02; command::kUploadChunkHeadBytes + kChunkBytes, checked by a static_assert in
+// command_gate.cpp). Bytes are kept exactly (decision 26). RAM taken by the 256 entries: see the
+// static_assert on sizeof(RepeatMemory) in command_gate.cpp (about 70 KB, measured, not guessed).
+constexpr size_t kRepeatPayloadMax = 263;
+
+// ---- Image limits (owner decision 24, 15 Oct 2026; REQ-045, REQ-046, REQ-053) -----------------
+// The limits are kept in the data directory as a DurableRecord (durable_record.hpp) of this name,
+// 6 bytes: minimum version (4, little-endian), controller identity (2, little-endian), the field
+// order of SET LIMITS (Interfaces Sec. 5.1 table, row 0x06).
+constexpr const char * kLimitsRecordName = "limits";
+constexpr size_t kLimitsRecordBytes = 6;
+// With no record the onboard computer starts with minimum version 1 (owner decision 24, 15 Oct
+// 2026).
+constexpr uint32_t kDefaultMinimumVersion = 1U;
+// With no record the controller identity is 0x0431. Proposal (TBR), awaiting the owner's
+// acceptance: 0x0431 is the target the image checker demands today (image_checker.cpp), copied
+// from IMAGE_TARGET_CONTROLLER (image_format.h).
+constexpr uint16_t kDefaultControllerIdentity = static_cast<uint16_t>(IMAGE_TARGET_CONTROLLER);
+static_assert(kDefaultControllerIdentity == 0x0431U,
+  "the proposed default identity is the target the image checker demanded before decision 24");
+
 // The "dropped datagram" log lines on the ground link: at most one per this many ms, so a
 // flood of bad datagrams cannot fill the log (audit finding #8).
 constexpr uint64_t kDropLogEveryMs = 1000;

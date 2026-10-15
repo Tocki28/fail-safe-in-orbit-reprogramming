@@ -12,13 +12,18 @@
  *   - no radio envelope (Interfaces Sec. 4.1): commands are neither encrypted nor signed, so
  *     REQ-064, REQ-127 and REQ-129 are not met for commands. Firmware images are still checked
  *     for both signatures (image_checker.hpp);
- *   - old commands sent again (REQ-065) are caught for ARMs and dangerous commands only, and
- *     only the last 64 (UsedSequences). A command sent again with the same sequence number and the
- *     same bytes is not an old command but a resend after a lost answer: ALREADY DONE once it
- *     has finished, RECEIVED while it has not (REQ-031, Interfaces Sec. 4.2; owner, 13 Oct 2026).
- *     That holds for ARMs and dangerous commands only: other ground commands are not recognised
- *     as repeats. No expiry check (REQ-066): the ground console restarts its counter at 1 and
- *     the board's clock is not set from ground time;
+ *   - old commands sent again (REQ-065) are caught for every ground command, in two memories
+ *     kept apart so that upload traffic cannot push the dangerous commands out (owner decision 26,
+ *     15 Oct 2026): UsedSequences holds the last 64 ARMs and dangerous commands, RepeatMemory the
+ *     last 256 of all other ground commands. A command sent again with the same sequence number
+ *     and the same bytes is not an old command but a resend after a lost answer: ALREADY DONE once
+ *     it has finished, the first refusal code again if it was refused, RECEIVED while it has not
+ *     finished (REQ-031, Interfaces Sec. 4.2; owner, 13 Oct 2026, and decision 26). The same
+ *     number with other bytes is refused 0x04 (REQ-065). Neither memory is kept across a restart
+ *     (accepted risk, decision 26). No expiry check (REQ-066): the ground console keeps its
+ *     counter across runs now (src/ground/console.py header), so that is not the reason; the
+ *     reason is that the board's clock is not set from ground time (decision 25 builds that), so
+ *     expiry is still not checked (owner decision 42, 15 Oct 2026);
  *   - REQ-067 (commands only from the radio link) stands only as "only from this UDP port".
  */
 #ifndef FSIR_UPDATER_COMMAND_GATE_HPP
@@ -136,30 +141,40 @@ private:
   size_t next_;
 };
 
-// The ground sequence numbers of the ARMs and dangerous commands accepted since start, the last
-// config::kUsedSequenceCount of them, each with its payload bytes and how it ended. A repeat
-// with other bytes is refused 0x04 (REQ-065); a repeat with the same bytes is a resend after a
-// lost answer (REQ-031, Interfaces Sec. 4.2) and is answered from the entry's state.
-class UsedSequences
+// How an incoming command compares with a memory of earlier ones (SequenceMemory::check).
+enum class SequenceRepeat : uint8_t
+{
+  kNew,            // sequence number not in the memory
+  kSamePending,    // same number, same bytes, first one not finished: answer RECEIVED
+  kSameDone,       // same number, same bytes, first one ended DONE: answer ALREADY DONE
+  kSameRefused,    // same number, same bytes, first one ended REFUSED: REFUSED, same code
+  kDifferent,      // same number, other bytes: REFUSED 0x04
+};
+
+// The ground sequence numbers of commands accepted since start, the last Count of them, each
+// with its payload bytes (up to PayloadMax) and how it ended. A repeat with other bytes is
+// refused 0x04 (REQ-065); a repeat with the same bytes is a resend after a lost answer (REQ-031,
+// Interfaces Sec. 4.2) and is answered from the entry's state. One template, two instances
+// (owner decision 26, 15 Oct 2026):
+//   UsedSequences  the ARMs and dangerous commands: the last config::kUsedSequenceCount (64),
+//                  unchanged from before decision 26;
+//   RepeatMemory   every other ground command: the last config::kRepeatCount (256), with room for
+//                  the longest, an UPLOAD CHUNK (config::kRepeatPayloadMax).
+// The bytes are kept exactly, never as a digest, so "same bytes" is exact. The memories are in
+// RAM and are lost at a restart (accepted risk, decision 26).
+template <size_t Count, size_t PayloadMax>
+class SequenceMemory
 {
 public:
-  // What an incoming ARM or dangerous command is, compared with the ring.
-  enum class Repeat : uint8_t
-  {
-    kNew,            // sequence number not in the ring
-    kSamePending,    // same number, same bytes, first one not finished: answer RECEIVED
-    kSameDone,       // same number, same bytes, first one ended DONE: answer ALREADY DONE
-    kSameRefused,    // same number, same bytes, first one ended REFUSED: REFUSED, same code
-    kDifferent,      // same number, other bytes: REFUSED 0x04
-  };
+  using Repeat = SequenceRepeat;
 
-  UsedSequences();
-  // Compares a command with the ring; changes nothing. For kSameRefused, refusal_code is the
+  SequenceMemory();
+  // Compares a command with the memory; changes nothing. For kSameRefused, refusal_code is the
   // code the first one was refused with; otherwise it is not written.
   Repeat check(uint32_t sequence, const uint8_t * payload, uint16_t length,
     uint8_t & refusal_code) const;
   // Replaces the oldest when full; the new entry is pending. False (nothing stored) when the
-  // payload is longer than config::kUsedPayloadMax.
+  // payload is longer than PayloadMax.
   [[nodiscard]] bool add(uint32_t sequence, const uint8_t * payload, uint16_t length);
   // The entry's final answer has gone to the ground: done = DONE or ALREADY DONE, else REFUSED
   // with this code (kept, so that a resend learns the real reason). Only a pending entry changes.
@@ -180,10 +195,13 @@ private:
     uint32_t sequence;
     uint16_t length;
     uint8_t refusal_code;   // the code of the final REFUSED; meaningful in State::kRefused only
-    std::array<uint8_t, config::kUsedPayloadMax> payload;
+    std::array<uint8_t, PayloadMax> payload;
   };
-  std::array<Entry, config::kUsedSequenceCount> entries_;
+  std::array<Entry, Count> entries_;
   size_t next_;
 };
+
+using UsedSequences = SequenceMemory<config::kUsedSequenceCount, config::kUsedPayloadMax>;
+using RepeatMemory = SequenceMemory<config::kRepeatCount, config::kRepeatPayloadMax>;
 
 #endif  // FSIR_UPDATER_COMMAND_GATE_HPP

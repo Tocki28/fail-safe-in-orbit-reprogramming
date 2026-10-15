@@ -3,12 +3,20 @@
  * blocking the updater's loop (decision H, accepted by the owner, 13 Oct 2026; Interfaces
  * Sec. 5.4 event 0x0106; REQ-013, REQ-061, REQ-124).
  *
+ * What is run is a request: the script's argument list and the result line prefixes that count
+ * as "done" and "failed after the reset step". The decision-H request is resetRequest(), the
+ * argument "reset" with the lines below; start(now_ms, error) without a request runs it, so
+ * the overrun path is unchanged. Another mode (restore.sh full ...) is another request, run by
+ * the same runner with the same time limits, output handling and process-group kill.
+ *
  * The script is restore.sh in mode "reset" (src/onboard-computer/restore/restore.sh): OpenOCD
  * "init; reset run; shutdown" over SWD under the restore script's own reset configuration and
  * time limit. It prints one result line on stdout:
  *   RESTORE DONE: reset                 the controller was reset and runs
  *   RESTORE FAILED: after reset (...)   the reset ran, then OpenOCD did not end cleanly
  *   RESTORE FAILED: <step> (...)        the reset is not shown to have happened
+ * The result line is the last non-empty line on stdout, whatever its text; it is judged only
+ * against the request's prefixes. stderr is not captured (it stays the updater's journal).
  * "The reset happened" is therefore true for the first two lines only. A run that ended with no
  * line (killed, crashed, script not found) is "not shown to have happened": the updater sends
  * nothing to the ground that it cannot back.
@@ -35,9 +43,28 @@ class RestartRunner
 public:
   enum class Result : uint8_t
   {
-    kDone,               // "RESTORE DONE: reset" and exit status 0: the controller was reset
-    kFailedAfterReset,   // "RESTORE FAILED: after reset": the reset ran, the OpenOCD run then failed
+    kDone,               // last line starts with done_prefix, exit status 0
+    kFailedAfterReset,   // last line starts with after_prefix: the step ran, then failed
     kFailed,             // anything else: the reset is not shown to have happened
+  };
+
+  // The most arguments after the script's own name, and the longest one with its zero. Bench
+  // choices (TBR, awaiting the owner's acceptance): "reset" is one argument of 6 bytes; a full
+  // run names a mode, an image and a few options; 8 x 128 bytes is room for that and for no more
+  // than the fixed buffers hold.
+  static constexpr size_t kArgsMax = 8;
+  static constexpr size_t kArgBytes = 128;
+  // The longest result prefix with its zero. "RESTORE FAILED: after reset" is 27 bytes; the
+  // output line is cut at 160 (Outcome::line), so a prefix of 64 leaves room for details.
+  static constexpr size_t kPrefixBytes = 64;
+
+  // What to run: the script's arguments and the result lines it prints. Copied by start().
+  struct Request
+  {
+    const char * const * args;   // arguments after the script's name, ended by a null pointer;
+                                 // null: none. At most kArgsMax, each under kArgBytes
+    const char * done_prefix;    // result line meaning "done" (with exit status 0); not empty
+    const char * after_prefix;   // result line meaning "failed after the step ran"; null: none
   };
 
   struct Outcome
@@ -65,9 +92,17 @@ public:
   // The script path; "" when none is configured.
   const char * script() const;
 
-  // Starts "script reset". False if not configured, already running, or the child could not be
-  // started; error then holds the errno value.
+  // The decision-H request: argument "reset", result lines "RESTORE DONE: reset" and
+  // "RESTORE FAILED: after reset".
+  static Request resetRequest();
+
+  // Starts "script reset" (resetRequest()). False if not configured, already running, or the
+  // child could not be started; error then holds the errno value.
   [[nodiscard]] bool start(uint64_t now_ms, int & error);
+
+  // Starts "script <request.args>" with the request's result lines. As above, and EINVAL when
+  // the request does not fit the fixed buffers or has no done_prefix.
+  [[nodiscard]] bool start(const Request & request, uint64_t now_ms, int & error);
 
   // Every loop pass while running(): reads output, reaps, enforces the deadline. True once, when
   // the child has ended or been given up; outcome is then filled and running() is false.
@@ -88,6 +123,8 @@ private:
   uint64_t kill_ms_;
   bool term_sent_;
   bool kill_sent_;
+  std::array<char, kPrefixBytes> done_prefix_;    // of the request now running
+  std::array<char, kPrefixBytes> after_prefix_;   // empty: the request has none
   std::array<char, 512> output_;   // the last bytes the child printed
   size_t output_size_;
   bool output_cut_;   // older bytes were dropped: output_[0] may be the middle of a line

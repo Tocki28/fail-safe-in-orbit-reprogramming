@@ -31,8 +31,15 @@
  *   UPLOAD CHUNKs of 256 bytes and UPLOAD END, stop-and-wait (data_link.hpp), under the same
  *   image number the ground used.
  *
- * BENCH LIMITS: CANCEL does not stop a delivery already running (REQ-051 partly); storage is
- * freed by CANCEL only, not when an update ends (REQ-052 partly); no minimum version (REQ-045).
+ * Limits (owner decision 24, 15 Oct 2026): the store holds the image limits (minimum version and
+ * controller identity, REQ-045, REQ-046) that UPLOAD END and the check before delivery apply. The
+ * updater loads them from the "limits" record and sets them here; a store never given any holds
+ * defaultImageLimits().
+ *
+ * Storage is freed by CANCEL, by an image refused at UPLOAD END (REQ-052), and by removeImage()
+ * once the controller reports the firmware confirmed or given up (owner decision 22, 15 Oct
+ * 2026). CANCEL of the image being delivered also stops the delivery: that is the updater's
+ * (updater.hpp), the store only removes the bytes (owner decision 21).
  */
 #ifndef FSIR_UPDATER_UPDATE_MANAGER_HPP
 #define FSIR_UPDATER_UPDATE_MANAGER_HPP
@@ -68,6 +75,18 @@ public:
   uint8_t end(uint16_t number, const ImageChecker & checker, ImageVerdict & verdict);
   uint8_t cancel(uint16_t number);
 
+  // Removes the stored image-n.img only (never the .part file of an upload in progress) and
+  // flushes the directory. False if there was no such file or it could not be removed (logged).
+  // Owner decision 22, 15 Oct 2026 (REQ-052).
+  bool removeImage(uint16_t number);
+
+  // The data directory, as given to the constructor (the limits record lives there).
+  const char * directory() const;
+
+  // The limits UPLOAD END applies, and the updater's check before delivery (REQ-047).
+  void setLimits(const ImageLimits & limits);
+  const ImageLimits & limits() const;
+
   // A whole image that passed its checks at UPLOAD END, read into out. False if there is none.
   bool load(uint16_t number, uint8_t * out, size_t room, size_t & size) const;
 
@@ -93,6 +112,7 @@ private:
   std::array<uint8_t, 32> hash_;   // SHA-256 of the first 64 bytes, valid when have_hash_
   bool have_hash_;
   DirectorySync sync_;   // flushes the data directory; syncDirectory unless a test replaced it
+  ImageLimits limits_;   // defaultImageLimits() until the updater sets the loaded ones
   std::array<uint8_t, config::kMaxImageBytes> image_;   // UPLOAD END reads the image here
 };
 

@@ -169,7 +169,7 @@ bool syncDirectory(const char * dir)
  */
 UploadStore::UploadStore(const char * dir)
 : dir_(dir), fd_(-1), number_(0), length_(0), stored_(0), hash_{}, have_hash_(false),
-  sync_(syncDirectory), image_{}
+  sync_(syncDirectory), limits_(defaultImageLimits()), image_{}
 {
 }
 
@@ -519,7 +519,7 @@ uint8_t UploadStore::end(uint16_t number, const ImageChecker & checker, ImageVer
 
   std::array<char, 512> part{};
   (void)path(part, number, ".part");   // same form as at BEGIN, which succeeded
-  verdict = checker.check(image_.data(), length_);
+  verdict = checker.check(image_.data(), length_, limits_);
   if (verdict.code != answer::kSuccess) {
     // A refused image is of no use; the next BEGIN starts it afresh (REQ-052).
     closeUpload();
@@ -570,6 +570,74 @@ uint8_t UploadStore::cancel(uint16_t number)
     logging::line("store: image %u removed, but the removal is not flushed", number);
   }
   return answer::kSuccess;
+}
+
+/**
+ * @brief Removes the stored image-n.img of an image number; leaves its .part file alone.
+ *
+ * Owner decision 22 (15 Oct 2026, REQ-052): once the controller reports its firmware confirmed
+ * (EVENT 0x0007) or given up (0x0008) after a delivery, the delivered image is of no further use
+ * and its storage is freed. Only the .img goes: a .part file belongs to an upload in progress
+ * (possibly of the same image number) and is not this function's to delete. The directory is
+ * flushed afterwards; a flush that fails is logged and the removal still counts as done.
+ *
+ * @param[in] number  image number
+ * @return true: the .img existed and was removed; false: there was no such file, or it could not
+ *         be removed (logged)
+ */
+bool UploadStore::removeImage(uint16_t number)
+{
+  std::array<char, 512> name{};
+  if (!path(name, number, ".img")) {
+    return false;
+  }
+  if (::unlink(name.data()) != 0) {
+    if (errno != ENOENT) {
+      logging::line("store: cannot remove %s: %s", name.data(), std::strerror(errno));
+    }
+    return false;
+  }
+  if (!sync_(dir_)) {
+    logging::line("store: image %u removed, but the removal is not flushed", number);
+  }
+  return true;
+}
+
+/**
+ * @brief Gives the data directory the store was made with.
+ *
+ * The limits record is kept in the same directory (durable_record.hpp).
+ *
+ * @return the directory path; valid as long as the string given to the constructor
+ */
+const char * UploadStore::directory() const
+{
+  return dir_;
+}
+
+/**
+ * @brief Sets the limits UPLOAD END applies from now on.
+ *
+ * Called by the updater after loading the limits record and after a SET LIMITS (owner decision 24,
+ * 15 Oct 2026). Images already stored are not touched; DELIVER checks them again against the
+ * limits then in force (REQ-047).
+ *
+ * @param[in] limits  the minimum version, the controller identity and whether they are usable
+ * @return nothing
+ */
+void UploadStore::setLimits(const ImageLimits & limits)
+{
+  limits_ = limits;
+}
+
+/**
+ * @brief Gives the limits UPLOAD END applies.
+ *
+ * @return the limits in force (defaultImageLimits() until setLimits() is called)
+ */
+const ImageLimits & UploadStore::limits() const
+{
+  return limits_;
 }
 
 /**

@@ -19,16 +19,19 @@
  *   proprietary string "FSIR"                0x08 damaged (not an image)
  *   format = 1                               0x08 damaged
  *   kind 0x01, 0x02 or 0x03                  0x06 impossible values
- *   target = 0x0431                          0x0B built for another controller
+ *   target = the controller identity (limits)  0x0B built for another controller (REQ-046)
+   version >= the minimum version (limits)  0x0A older than the minimum (REQ-045)
  *   header Length + 64 + 128 = image size    0x08 damaged
  *   CRC-32 of the body = body check value    0x08 damaged
  *   Signature A with key A                   0x09 not from the operator
  *   Signature B with key B                   0x09 not from the operator
  * The header has no check value of its own: damage to it shows as whichever check it breaks
  * first, and at the latest as a signature (0x09).
- * Not checked here (bench): minimum version (0x0A, REQ-045; SET LIMITS is not built) and the
- * slot the image is linked for (0x0E; the controller checks it, src/controller/common/
- * image_check.c).
+ * The identity and the minimum version are the "limits" (ImageLimits), set by SET LIMITS (owner
+ * decision 24, 15 Oct 2026; REQ-053). The first line of check() refuses everything with 0x0A when
+ * the limits are not usable (a damaged limits record: fail closed, TBR).
+ * Not checked here (bench): the slot the image is linked for (0x0E; the controller checks it,
+ * src/controller/common/image_check.c).
  */
 #ifndef FSIR_UPDATER_IMAGE_CHECKER_HPP
 #define FSIR_UPDATER_IMAGE_CHECKER_HPP
@@ -37,6 +40,18 @@
 #include <cstdint>
 
 struct evp_pkey_st;   // OpenSSL's EVP_PKEY, kept out of this header
+
+// The two limits an image must meet (REQ-045, REQ-046, REQ-053; owner decision 24, 15 Oct 2026).
+struct ImageLimits
+{
+  uint32_t minimum_version;   // an image with a lower header version is refused 0x0A
+  uint16_t identity;          // an image whose header target differs is refused 0x0B
+  bool usable;                // false: the limits could not be read; every image is refused 0x0A
+};
+
+// The limits of a first start, with no record: minimum version config::kDefaultMinimumVersion
+// and identity config::kDefaultControllerIdentity, usable.
+ImageLimits defaultImageLimits();
 
 struct ImageVerdict
 {
@@ -58,6 +73,11 @@ public:
   // Both keys were accepted by OpenSSL.
   bool ready() const;
 
+  // The checks against the limits given (the production calls: the store's, UploadStore::limits()).
+  ImageVerdict check(const uint8_t * image, size_t size, const ImageLimits & limits) const;
+
+  // The same with defaultImageLimits(). For callers that have no limits to apply (the tests of
+  // the other checks); the updater itself always passes the stored limits.
   ImageVerdict check(const uint8_t * image, size_t size) const;
 
 private:

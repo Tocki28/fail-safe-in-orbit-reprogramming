@@ -481,17 +481,26 @@ void ForwardTable::remove(uint32_t link_sequence)
 
 static_assert(config::kUsedPayloadMax >= command::kArmBytes &&
               config::kUsedPayloadMax >= command::kSetControllerTimeBytes &&
-              config::kUsedPayloadMax >= command::kStartFailedBytes,
+              config::kUsedPayloadMax >= command::kStartFailedBytes &&
+              config::kUsedPayloadMax >= command::kSetLimitsBytes &&
+              config::kUsedPayloadMax >= command::kRestoreBytes &&
+              config::kUsedPayloadMax >= command::kReprogramBytes &&
+              config::kUsedPayloadMax >= command::kSetOnboardTimeBytes &&
+              config::kUsedPayloadMax >= command::kReplaceKeyBytes,
   "the ring must hold the longest ARM or dangerous command (Interfaces Sec. 5.1 table)");
 
-UsedSequences::UsedSequences()
+template <size_t Count, size_t PayloadMax>
+SequenceMemory<Count, PayloadMax>::SequenceMemory()
 : entries_{}, next_(0)
 {
 }
 
+template <size_t Count, size_t PayloadMax>
 /**
- * @brief Compares an ARM or dangerous command with the ring of the last config::kUsedSequenceCount.
+ * @brief Compares a command with the memory of the last Count commands (64 for UsedSequences,
+ *        256 for RepeatMemory).
  *
+ * Both memories are instances of this template (owner decision 26, 15 Oct 2026).
  * Tells a resend after a lost answer from an old command sent again: the ground console resends
  * with the same sequence number and the same bytes so that the receiver can recognise the repeat
  * (Interfaces Sec. 4.2, REQ-031), while a different command under a used number is the replay
@@ -506,8 +515,8 @@ UsedSequences::UsedSequences()
  * @return kNew: not in the ring; kSamePending, kSameDone, kSameRefused: same number and bytes,
  *         by how the first ended; kDifferent: same number, other bytes (REFUSED 0x04, REQ-065)
  */
-UsedSequences::Repeat UsedSequences::check(uint32_t sequence, const uint8_t * payload,
-  uint16_t length, uint8_t & refusal_code) const
+SequenceRepeat SequenceMemory<Count, PayloadMax>::check(uint32_t sequence,
+  const uint8_t * payload, uint16_t length, uint8_t & refusal_code) const
 {
   for (const Entry & entry : entries_) {
     if (!entry.used || entry.sequence != sequence) {
@@ -515,41 +524,43 @@ UsedSequences::Repeat UsedSequences::check(uint32_t sequence, const uint8_t * pa
     }
     if (entry.length != length || length > entry.payload.size() ||
         std::memcmp(entry.payload.data(), payload, length) != 0) {
-      return Repeat::kDifferent;
+      return SequenceRepeat::kDifferent;
     }
     if (entry.state == State::kPending) {
-      return Repeat::kSamePending;
+      return SequenceRepeat::kSamePending;
     }
     if (entry.state == State::kDone) {
-      return Repeat::kSameDone;
+      return SequenceRepeat::kSameDone;
     }
     if (entry.state == State::kRefused) {
       refusal_code = entry.refusal_code;
-      return Repeat::kSameRefused;
+      return SequenceRepeat::kSameRefused;
     }
     // A state that cannot exist is corrupted memory (code rules B1). The updater has no fault
     // reaction yet (open), so this fails closed: the command is refused 0x04, never ALREADY DONE.
-    return Repeat::kDifferent;
+    return SequenceRepeat::kDifferent;
   }
-  return Repeat::kNew;
+  return SequenceRepeat::kNew;
 }
 
+template <size_t Count, size_t PayloadMax>
 /**
- * @brief Remembers an accepted ARM or dangerous command: its number, its bytes, not finished yet.
+ * @brief Remembers an accepted command: its number, its bytes, not finished yet.
  *
- * Replaces the oldest entry when the ring of config::kUsedSequenceCount is full (REQ-065). The
+ * Replaces the oldest entry when the memory of Count entries is full (REQ-065). The
  * bytes are kept so that a resend can be told from a different command under the same number
- * (REQ-031). A payload longer than config::kUsedPayloadMax cannot be an ARM or dangerous command
- * the updater accepts; nothing is stored then.
+ * (REQ-031). A payload longer than PayloadMax cannot be a command this memory is made for
+ * (static_asserts below); nothing is stored then.
  *
  * @param[in]     sequence  the ground sequence number of the command
  * @param[in]     payload   the command's payload bytes
  * @param[in]     length    number of payload bytes
- * @return true: stored; false: the payload was too long, nothing stored
+ * @return true: stored; false: the payload was longer than PayloadMax, nothing stored
  */
-bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t length)
+bool SequenceMemory<Count, PayloadMax>::add(uint32_t sequence, const uint8_t * payload,
+  uint16_t length)
 {
-  if (length > config::kUsedPayloadMax) {
+  if (length > PayloadMax) {
     return false;
   }
   Entry & entry = entries_[next_];
@@ -563,6 +574,7 @@ bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t len
   return true;
 }
 
+template <size_t Count, size_t PayloadMax>
 /**
  * @brief Marks a remembered command finished: its final answer has gone to the ground.
  *
@@ -570,7 +582,7 @@ bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t len
  * of an unfinished one only RECEIVED, and a resend of a refused one repeats its refusal code
  * (REQ-031). Only a pending entry changes, so a later answer
  * under the same number cannot overwrite how the first ended. Does nothing when no entry has the
- * number (a command that is not an ARM or dangerous command).
+ * number (a command of the other memory).
  *
  * @param[in]     sequence  the ground sequence number of the command
  * @param[in]     done      true: it ended DONE or ALREADY DONE; false: it ended REFUSED
@@ -578,7 +590,7 @@ bool UsedSequences::add(uint32_t sequence, const uint8_t * payload, uint16_t len
  *                          when done)
  * @return nothing
  */
-void UsedSequences::finish(uint32_t sequence, bool done, uint8_t refusal_code)
+void SequenceMemory<Count, PayloadMax>::finish(uint32_t sequence, bool done, uint8_t refusal_code)
 {
   for (Entry & entry : entries_) {
     if (entry.used && entry.sequence == sequence && entry.state == State::kPending) {
@@ -587,3 +599,25 @@ void UsedSequences::finish(uint32_t sequence, bool done, uint8_t refusal_code)
     }
   }
 }
+
+// The two memories (owner decision 26, 15 Oct 2026). Defined in this file only, so the member
+// functions above are instantiated here and nowhere else.
+template class SequenceMemory<config::kUsedSequenceCount, config::kUsedPayloadMax>;
+template class SequenceMemory<config::kRepeatCount, config::kRepeatPayloadMax>;
+
+// The longest ground command is UPLOAD CHUNK: identifier, image number (2), offset (4), up to
+// kChunkBytes of data (Interfaces Sec. 5.1 table, row 0x02). Every other command to the
+// onboard computer or the controller that the updater lets in is shorter.
+static_assert(config::kRepeatPayloadMax == command::kUploadChunkHeadBytes + config::kChunkBytes,
+  "RepeatMemory must hold an UPLOAD CHUNK exactly (263 bytes)");
+static_assert(config::kRepeatPayloadMax >= command::kUploadBeginBytes &&
+              config::kRepeatPayloadMax >= command::kImageNumberOnlyBytes &&
+              config::kRepeatPayloadMax >= command::kGetStatusBytes &&
+              config::kRepeatPayloadMax >= command::kSetControllerTimeBytes,
+  "RepeatMemory must hold every other ground command (Interfaces Sec. 5.1 table)");
+// RAM of the new memory: 256 entries of 276 bytes (used 1, state 1, sequence 4, length 2, refusal
+// code 1, payload 263, padding to a multiple of 4) plus the 8-byte next_ index; measured with
+// sizeof on 64-bit Linux and macOS. The bound is the measured size rounded up, so that the number
+// the owner accepted in decision 26 cannot grow without this line failing.
+static_assert(sizeof(RepeatMemory) <= 70664U,
+  "RepeatMemory takes about 69 KB of RAM (256 x 276 bytes + 8); a change must be reported");

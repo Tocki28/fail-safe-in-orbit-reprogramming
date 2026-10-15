@@ -529,7 +529,7 @@ class ConsoleTests(unittest.TestCase):
         for where in (0x01, 0x07, 0x10, 0x11, 0x20, 0x2F):
             text = self.event_text(0x0005, bytes([where]))
             self.assertTrue(text.startswith(f"{base} at 0x{where:02x} ("), text)
-        for where in (0x00, 0x08, 0x0F, 0x12, 0x1F, 0x30, 0x4F, 0xFF):
+        for where in (0x00, 0x0B, 0x0F, 0x12, 0x1F, 0x30, 0x4F, 0xFF):
             self.assertEqual(self.event_text(0x0005, bytes([where])),
                              f"{base} at unknown code 0x{where:02x}")
         self.assertEqual(self.event_text(0x0005), base + ": location not given")

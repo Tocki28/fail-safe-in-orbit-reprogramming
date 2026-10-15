@@ -31,6 +31,7 @@
 #include "image_checker.hpp"
 #include "image_file_check.hpp"
 #include "keys.h"
+#include "limits_record.hpp"
 #include "log.hpp"
 #include "options.hpp"
 #include "report_store.hpp"
@@ -156,8 +157,35 @@ int main(int argc, char ** argv)
       printUsage(argv[0]);
       return kExitUsage;
     }
-    std::array<char, 384> line{};
-    bool passed = checkImageFile(options.check_image, kind, checker, line.data(), line.size());
+    // The limits (owner decision 24, 15 Oct 2026): the stored ones when they can be read, else
+    // minimum version 1 and identity 0x0431, and the result line says which. A damaged or
+    // unreadable record does NOT make this mode refuse everything, unlike the running updater:
+    // the restore script exists to recover a controller, and must still be able to check an image
+    // when the limits are lost. TBR, awaiting the owner's acceptance.
+    DurableRecord limits_file(options.data_dir, config::kLimitsRecordName,
+      config::kLimitsRecordBytes);
+    ImageLimits limits{};
+    int limits_error = 0;
+    limits_record::Source source = limits_record::load(limits_file, limits, limits_error);
+    const char * limits_note = "stored record";
+    switch (source) {
+      case limits_record::Source::kStored:
+        break;
+      case limits_record::Source::kNoRecord:
+        limits_note = "default, no record";
+        break;
+      case limits_record::Source::kDamaged:
+        limits = defaultImageLimits();
+        limits_note = "default, record damaged";
+        break;
+      case limits_record::Source::kUnreadable:
+        limits = defaultImageLimits();
+        limits_note = "default, record unreadable";
+        break;
+    }
+    std::array<char, 448> line{};
+    bool passed = checkImageFile(options.check_image, kind, checker, limits, limits_note,
+      line.data(), line.size());
     (void)std::printf("%s\n", line.data());
     return passed ? kExitStopped : kExitImageRefused;
   }

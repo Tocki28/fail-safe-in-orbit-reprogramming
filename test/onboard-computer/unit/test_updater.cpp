@@ -18,9 +18,18 @@
  *   reports       report number and onboard time filled in; lengths and kinds checked
  *   data link     stop-and-wait, sequence numbers, timeout, the 10 ms gap
  *   options       the command line, including --restore-script
+ *   onboard arm   ARM for the onboard dangerous commands 0x06-0x09, 0x0C and the arming check
+ *                 (contract P0, before "not built")
  *   restart       RestartRunner on mock scripts (result lines, deadline, TERM, KILL, never blocks);
+ *                 with other arguments and result prefix (contract P2); DurableRecord
+ *                 (contract P1);
  *                 the Updater's trial-overrun path with a mock restore.sh (decision H); ARM with no
  *                 answer (decision S); names and decoded event detail
+ *
+ *   batch 1       owner decisions of 15 Oct 2026: 26 repeats of every ground command and the two
+ *                 memories' capacity; 24 SET LIMITS, the limits at start (none, stored, damaged)
+ *                 and in force at UPLOAD END and DELIVER; 22 the delivered image deleted at EVENT
+ *                 0x0007 or 0x0008; 21 UPLOAD CANCEL stopping a delivery
  *
  * Usage: test_updater CONTROLLER_IMAGES TEST_IMAGES FLIPPED_IMAGE SCRATCH_DIR
  * Prints PASS or FAIL per test; exit status 1 on a failure.
@@ -52,6 +61,7 @@
 #include "controller_watch.hpp"
 #include "crc32.hpp"
 #include "data_link.hpp"
+#include "durable_record.hpp"
 #include "backup_layout.h"
 #include "fault_codes.h"
 #include "frame.hpp"
@@ -2193,6 +2203,273 @@ void testResendAfterLostAnswer(const std::string & scratch)
   }
 }
 
+// ---- Onboard dangerous commands: ARM and the arming check (contract P0) ------------------------
+// Drafted from the contract alone, apart from the code (code rule E4). The five onboard dangerous
+// commands are the rows with Dangerous = YES and a code below 0x20 in the Interfaces Sec. 5.1
+// table. SET LIMITS (0x06) has a handler since owner decision 24 (15 Oct 2026; its tests are
+// testSetLimitsCommand and the limits tests). The other four have none yet, so a command that
+// passes the arming check is REFUSED 0x06 ("not built"); RESTORE (0x07) stands for them here.
+
+/** One onboard dangerous command: identifier, name, and the bytes of its fields. */
+struct OnboardDangerous
+{
+  uint8_t id;
+  const char * name;
+  size_t field_bytes;   // payload bytes after the identifier (Interfaces Sec. 5.1 table)
+};
+
+// Interfaces Sec. 5.1 table: 0x06 SET LIMITS (version 4, identity 2), 0x07 RESTORE (none),
+// 0x08 REPROGRAM (image number 2, region 1), 0x09 SET ONBOARD TIME (time 4), 0x0C REPLACE KEY
+// (which key 1, new key 32).
+constexpr std::array<OnboardDangerous, 5> kOnboardDangerous = {{
+  {0x06, "SET LIMITS", 6},
+  {0x07, "RESTORE", 0},
+  {0x08, "REPROGRAM", 3},
+  {0x09, "SET ONBOARD TIME", 4},
+  {0x0C, "REPLACE KEY", 33},
+}};
+// Every field byte of the test commands. 0x01 is a valid value in each field (bootloader region,
+// signing key B); no reason beyond that, the updater reads none of them yet (contract P0).
+constexpr uint8_t kOnboardFieldFill = 0x01;
+// First ground sequence number the onboard-ARM test uses; each case takes fresh ones above it, so
+// no case meets the used-sequence memory of another (bench choice of this test).
+constexpr uint32_t kOnboardFirstSequence = 100;
+// Identifier of the non-dangerous onboard command DELIVER, and a code no table row has.
+constexpr uint8_t kNotDangerousOnboard = command::kDeliver;
+constexpr uint8_t kUnknownIdentifier = 0x7F;   // below 0x80, not in the Sec. 5.1 table
+constexpr uint8_t kScheduleId = 0x0A;      // SCHEDULE, Dangerous = NO (Sec. 5.1 table)
+constexpr uint8_t kSendReportsId = 0x0B;   // SEND REPORTS, Dangerous = NO (Sec. 5.1 table)
+constexpr uint8_t kZeroIdentifier = 0x00;  // no table row
+
+/**
+ * @brief The payload of an onboard dangerous command, with the field lengths of Sec. 5.1.
+ *
+ * @param[in]     d  the command
+ * @return identifier, then d.field_bytes bytes of kOnboardFieldFill
+ */
+std::vector<uint8_t> onboardPayload(const OnboardDangerous & d)
+{
+  std::vector<uint8_t> p(1 + d.field_bytes, kOnboardFieldFill);
+  p[0] = d.id;
+  return p;
+}
+
+/**
+ * @brief Sends an ARM to Destination 0x01 and reads the answers it got.
+ *
+ * @param[in,out] rig       the updater under test
+ * @param[in]     arm_seq   the ARM's own ground sequence number
+ * @param[in]     id        the command identifier the ARM names
+ * @param[in]     named     the ground sequence number of the command the ARM names
+ * @return the answers sent to the ground; empty if the ARM did not reach the gate
+ */
+std::vector<GroundAnswer> sendOnboardArm(UpdaterRig & rig, uint32_t arm_seq, uint8_t id,
+  uint32_t named)
+{
+  if (!rig.fromGround(frame::kDestOnboard, arm_seq, armOf(id, named))) {
+    return {};
+  }
+  return rig.groundAnswers();
+}
+
+/**
+ * @brief Sends a payload to Destination 0x01 and reads the answers it got.
+ *
+ * @param[in,out] rig      the updater under test
+ * @param[in]     seq      the command's ground sequence number
+ * @param[in]     payload  the command's payload
+ * @return the answers sent to the ground; empty if the command did not reach the gate
+ */
+std::vector<GroundAnswer> sendOnboard(UpdaterRig & rig, uint32_t seq,
+  const std::vector<uint8_t> & payload)
+{
+  if (!rig.fromGround(frame::kDestOnboard, seq, payload)) {
+    return {};
+  }
+  return rig.groundAnswers();
+}
+
+/**
+ * @brief Tells whether the answers are exactly one REFUSED with this code, for this command.
+ *
+ * @param[in]     g     the answers read
+ * @param[in]     seq   the ground sequence number answered
+ * @param[in]     code  the refusal code
+ * @return true: one answer, REFUSED, that code, that number
+ */
+bool isOnlyRefused(const std::vector<GroundAnswer> & g, uint32_t seq, uint8_t code)
+{
+  return g.size() == 1 && hasAnswer(g, seq, answer::kRefused, code);
+}
+
+/**
+ * @brief Tells whether the answers are RECEIVED and then DONE, both code 0, for this command.
+ *
+ * @param[in]     g    the answers read
+ * @param[in]     seq  the ground sequence number answered
+ * @return true: exactly two answers, in that order
+ */
+bool isReceivedThenDone(const std::vector<GroundAnswer> & g, uint32_t seq)
+{
+  return g.size() == 2 && g[0].answered == seq && g[0].kind == answer::kReceived &&
+         g[0].code == answer::kReceivedCode && g[1].answered == seq &&
+         g[1].kind == answer::kDone && g[1].code == answer::kSuccess;
+}
+
+/**
+ * @brief Contract P0: the ARM for the onboard dangerous commands and the arming check.
+ *
+ * Requirement: TBD (contract P0 of the 15 Oct 2026 brief; no REQ number assigned yet).
+ * Defects caught, by case: (1) an ARM for a dangerous onboard command is not held or not
+ * answered RECEIVED then DONE; (2) an ARM naming a controller command, a non-dangerous onboard
+ * command or an unknown code is accepted, so a stray ARM could arm the wrong thing; (3) a
+ * dangerous command runs, or reaches "not built", with no ARM (arming check after "not built");
+ * (4) a valid ARM is not honoured, or the answer is not 0x06; (5) the ARM matches by identifier
+ * only or by sequence number only; (6) the expiry is not 30 s, or an expired ARM is honoured;
+ * (7) a resent ARM is held again or answered anew instead of ALREADY DONE, or a resent ARM with
+ * other bytes is accepted.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testOnboardArm(const std::string & scratch)
+{
+  std::string dir = scratch + "/onboard-arm";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "onboard arm: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  uint32_t seq = kOnboardFirstSequence;
+  auto next = [&seq]() { return seq++; };
+  // Sends the command with its own number and ignores the answer: uses up or clears a held ARM.
+  auto clear = [&rig](const OnboardDangerous & d, uint32_t number) {
+    (void)sendOnboard(rig, number, onboardPayload(d));
+  };
+  const std::string kPrefix = "onboard arm: ";
+
+  // 3. No ARM held at all: REFUSED 0x01, never "not built" first. Runs first, before any ARM.
+  for (const OnboardDangerous & d : kOnboardDangerous) {
+    uint32_t n = next();
+    report(isOnlyRefused(sendOnboard(rig, n, onboardPayload(d)), n, answer::kNotArmed) &&
+           quiet(rig), kPrefix + d.name + " with no ARM held: REFUSED 0x01, not 0x06");
+  }
+
+  // 1. An ARM for each dangerous onboard command: RECEIVED then DONE, nothing sent on link A.
+  for (const OnboardDangerous & d : kOnboardDangerous) {
+    uint32_t arm_seq = next();
+    uint32_t cmd_seq = next();
+    std::vector<GroundAnswer> g = sendOnboardArm(rig, arm_seq, d.id, cmd_seq);
+    report(isReceivedThenDone(g, arm_seq) && quiet(rig),
+      kPrefix + "ARM naming " + d.name + ": RECEIVED then DONE, nothing sent to the controller");
+    clear(d, cmd_seq);
+  }
+
+  // 2. An ARM naming anything else: REFUSED 0x06.
+  const std::array<uint8_t, 8> not_armable = {kNotDangerousOnboard, kScheduleId,
+    kSendReportsId, command::kArm, command::kSwitch, command::kLeaveFallback, kZeroIdentifier,
+    kUnknownIdentifier};
+  for (uint8_t id : not_armable) {
+    uint32_t arm_seq = next();
+    char name[8] = {};
+    (void)std::snprintf(name, sizeof name, "0x%02X", static_cast<unsigned>(id));
+    report(isOnlyRefused(sendOnboardArm(rig, arm_seq, id, next()), arm_seq, answer::kImpossible),
+      kPrefix + "ARM naming " + name + " to Destination 0x01: REFUSED 0x06");
+  }
+  {
+    const OnboardDangerous & d = kOnboardDangerous[1];
+    uint32_t arm_seq = next();
+    uint32_t cmd_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, command::kSwitch, cmd_seq);
+    report(isOnlyRefused(sendOnboard(rig, cmd_seq, onboardPayload(d)), cmd_seq,
+                         answer::kNotArmed),
+      kPrefix + "a refused ARM holds nothing: RESTORE after it is REFUSED 0x01");
+  }
+
+  // 4. A valid ARM: the arming check passes, then "not built": REFUSED 0x06 only. SET LIMITS is
+  // built (decision 24: DONE), so it is not in this loop; RESTORE, REPROGRAM, SET ONBOARD TIME and
+  // REPLACE KEY still are.
+  for (const OnboardDangerous & d : kOnboardDangerous) {
+    if (d.id == command::kSetLimits) {
+      continue;
+    }
+    uint32_t arm_seq = next();
+    uint32_t cmd_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, d.id, cmd_seq);
+    report(isOnlyRefused(sendOnboard(rig, cmd_seq, onboardPayload(d)), cmd_seq,
+                         answer::kImpossible) && quiet(rig),
+      kPrefix + d.name + " with its ARM: REFUSED 0x06 after the arming check, nothing sent");
+  }
+
+  // 5. The ARM names an identifier and a sequence number; both must match.
+  {
+    const OnboardDangerous & armed = kOnboardDangerous[1];
+    const OnboardDangerous & other = kOnboardDangerous[3];
+    uint32_t arm_seq = next();
+    uint32_t cmd_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, armed.id, cmd_seq);
+    report(isOnlyRefused(sendOnboard(rig, cmd_seq, onboardPayload(other)), cmd_seq,
+                         answer::kNotArmed),
+      kPrefix + "ARM names RESTORE: SET ONBOARD TIME with the same number is REFUSED 0x01");
+    clear(armed, cmd_seq);
+    arm_seq = next();
+    cmd_seq = next();
+    uint32_t other_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, armed.id, cmd_seq);
+    report(isOnlyRefused(sendOnboard(rig, other_seq, onboardPayload(armed)), other_seq,
+                         answer::kNotArmed),
+      kPrefix + "ARM names RESTORE 1: RESTORE with another sequence number is REFUSED 0x01");
+    clear(armed, cmd_seq);
+  }
+
+  // 6. Expiry: valid at exactly kArmExpiryMs, REFUSED 0x02 one millisecond later. RESTORE, not
+  // SET LIMITS: SET LIMITS is built since decision 24 and would answer DONE.
+  {
+    const OnboardDangerous & d = kOnboardDangerous[1];
+    uint32_t arm_seq = next();
+    uint32_t cmd_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, d.id, cmd_seq);
+    rig.advance(config::kArmExpiryMs);
+    report(isOnlyRefused(sendOnboard(rig, cmd_seq, onboardPayload(d)), cmd_seq,
+                         answer::kImpossible),
+      kPrefix + "command at exactly 30 s after its ARM: still armed (REFUSED 0x06, not 0x02)");
+    arm_seq = next();
+    cmd_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, d.id, cmd_seq);
+    rig.advance(config::kArmExpiryMs + 1);
+    report(isOnlyRefused(sendOnboard(rig, cmd_seq, onboardPayload(d)), cmd_seq,
+                         answer::kArmExpired),
+      kPrefix + "command 30.001 s after its ARM: REFUSED 0x02");
+  }
+
+  // 7. Resends: same sequence number and bytes (REQ-031, command_gate.hpp header).
+  {
+    const OnboardDangerous & d = kOnboardDangerous[1];
+    uint32_t arm_seq = next();
+    uint32_t cmd_seq = next();
+    (void)sendOnboardArm(rig, arm_seq, d.id, cmd_seq);
+    std::vector<GroundAnswer> g = sendOnboardArm(rig, arm_seq, d.id, cmd_seq);
+    report(g.size() == 1 && hasAnswer(g, arm_seq, answer::kAlreadyDone, 0) && quiet(rig),
+      kPrefix + "the finished ARM sent again, same bytes: ALREADY DONE");
+    g = sendOnboardArm(rig, arm_seq, kOnboardDangerous[3].id, cmd_seq);
+    report(isOnlyRefused(g, arm_seq, answer::kOldCommand),
+      kPrefix + "the same ARM number with other bytes: REFUSED 0x04");
+    g = sendOnboard(rig, cmd_seq, onboardPayload(d));
+    report(isOnlyRefused(g, cmd_seq, answer::kImpossible),
+      kPrefix + "the command after the resent ARM: still armed by the first (REFUSED 0x06)");
+    // The first one ended REFUSED, so a resend is REFUSED with the same code, never ALREADY DONE
+    // (command_gate.hpp header: "a first one that ended REFUSED is not turned into ALREADY DONE").
+    g = sendOnboard(rig, cmd_seq, onboardPayload(d));
+    report(isOnlyRefused(g, cmd_seq, answer::kImpossible) && quiet(rig),
+      kPrefix + "the command sent again, same bytes: REFUSED 0x06 again (resend rule)");
+    uint32_t again_seq = next();
+    g = sendOnboard(rig, again_seq, onboardPayload(d));
+    report(isOnlyRefused(g, again_seq, answer::kNotArmed),
+      kPrefix + "the ARM was used up: the same command with a new number is REFUSED 0x01");
+  }
+}
+
 /**
  * @brief Decision 6: a restarted trial (a second EVENT 0x0006) gets the test image again; the first does not make it twice.
  *
@@ -2523,6 +2800,1415 @@ void testRestartRunner(const std::string & scratch)
   report(ok && o.result == R::kDone, "restart runner: used twice in a row");
 }
 
+// ---- RestartRunner with the script's arguments and result prefix as parameters (contract P2) ----
+// Real API (restart_runner.hpp): RestartRunner(script, deadline_ms, kill_grace_ms) and
+//   start(const Request & { args, done_prefix, after_prefix }, now_ms, error).
+// The drafted constructor with the arguments is replaced by makeRunner() and startWith(), the
+// only places that name the API; the asserts below are unchanged.
+
+constexpr uint64_t kRunnerDeadlineMs = 5000;   // as in testRestartRunner: never reached here
+constexpr uint64_t kRunnerGraceMs = 150;       // as in testRestartRunner
+constexpr uint64_t kRunnerWaitMs = 3000;       // most real time a mock script may take, as there
+constexpr char kDefaultDonePrefix[] = "RESTORE DONE: reset";   // restart_runner.hpp header
+
+/**
+ * @brief Makes a RestartRunner for a script, with the deadline and grace of this test.
+ *
+ * The arguments and the done prefix are not the runner's: they go to startWith() (the real API
+ * takes them as a Request at start()).
+ *
+ * @param[in]     script  path of the script
+ * @return the runner, not started
+ */
+RestartRunner makeRunner(const std::string & script)
+{
+  return RestartRunner(script.c_str(), kRunnerDeadlineMs, kRunnerGraceMs);
+}
+
+/**
+ * @brief Starts a runner with these arguments and this done prefix (no "failed after" prefix).
+ *
+ * Builds the null-ended argument list and the Request; start() copies both, so they need not
+ * outlive this call. after_prefix is null: the drafted API had only a done prefix.
+ *
+ * @param[in,out] runner       the runner
+ * @param[in]     arguments    the script's command-line arguments, in order
+ * @param[in]     done_prefix  the result line that means done
+ * @param[in]     now_ms       the time now
+ * @param[out]    error        errno value when false is returned
+ * @return true: the child was started
+ */
+bool startWith(RestartRunner & runner, const std::vector<std::string> & arguments,
+  const std::string & done_prefix, uint64_t now_ms, int & error)
+{
+  std::vector<const char *> argv;
+  for (const std::string & a : arguments) {
+    argv.push_back(a.c_str());
+  }
+  argv.push_back(nullptr);
+  RestartRunner::Request request{argv.data(), done_prefix.c_str(), nullptr};
+  return runner.start(request, now_ms, error);
+}
+
+/**
+ * @brief Contract P2: the restart runner passes the given arguments and judges by the given prefix.
+ *
+ * Requirement: TBD (contract P2 of the 15 Oct 2026 brief; no REQ number assigned yet).
+ * Defects caught: (1) the arguments are still the fixed "reset" (the script sees "reset", or
+ * "reset" plus the new ones); (2) an argument with a space is split into two or run through a
+ * shell; (3) the result is still judged by the fixed "RESTORE DONE: reset", so a script that
+ * prints the given prefix is kFailed, or a script that prints the old line is kDone; (4) the
+ * given prefix is not enforced, so any line gives kDone; (5) passing {"reset"} and the default
+ * prefix explicitly changes the old behaviour. The existing tests of testRestartRunner stay the
+ * regression test of the default.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testRestartRunnerArguments(const std::string & scratch)
+{
+  std::string dir = scratch + "/restart-runner-args";
+  removeTree(dir);
+  (void)::mkdir(dir.c_str(), 0755);
+  using R = RestartRunner::Result;
+  RestartRunner::Outcome o{};
+  int error = 0;
+  const std::string kDonePrefix = "CHECK DONE: arguments";
+  const std::string kArgsFile = dir + "/args";
+  // One line per argument as the script received it, then the result line.
+  const std::string body = "printf '%s\\n' \"$#\" \"$@\" > " + kArgsFile + "\necho '" +
+                           kDonePrefix + "'\n";
+  const std::string script = dir + "/echo-args.sh";
+  bool written = writeScript(script, body, 0755);
+
+  // 1. Other arguments, the matching prefix: the script sees exactly those, the result is kDone.
+  const std::vector<std::string> arguments = {"alpha", "two words", "--flag=3"};
+  RestartRunner a = makeRunner(script);
+  bool ok = written && startWith(a, arguments, kDonePrefix, clocks::nowMs(), error) &&
+      runUntilEnded(a, kRunnerWaitMs, o);
+  std::vector<uint8_t> seen = readFile(kArgsFile);
+  report(ok && std::string(seen.begin(), seen.end()) == "3\nalpha\ntwo words\n--flag=3\n",
+    "restart runner args: the script sees exactly the given arguments, none added, none split");
+  report(ok && o.result == R::kDone && o.exit_code == 0 && !o.deadline_hit &&
+         std::strcmp(o.line.data(), kDonePrefix.c_str()) == 0,
+    "restart runner args: the given prefix as the result line, exit 0: kDone");
+
+  // 2. The same script, another prefix: the line no longer matches, so kFailed.
+  RestartRunner b = makeRunner(script);
+  ok = startWith(b, arguments, "OTHER DONE: arguments", clocks::nowMs(), error) &&
+      runUntilEnded(b, kRunnerWaitMs, o);
+  report(ok && o.result == R::kFailed && o.exit_code == 0,
+    "restart runner args: a result line that is not the given prefix: kFailed, though exit 0");
+
+  // 3. The old line with a new prefix is not done: the default prefix does not leak through.
+  const std::string old_script = dir + "/old-line.sh";
+  written = writeScript(old_script, std::string("echo '") + kDefaultDonePrefix + "'\n", 0755);
+  RestartRunner c = makeRunner(old_script);
+  ok = written && startWith(c, arguments, kDonePrefix, clocks::nowMs(), error) &&
+      runUntilEnded(c, kRunnerWaitMs, o);
+  report(ok && o.result == R::kFailed,
+    "restart runner args: 'RESTORE DONE: reset' under another prefix: kFailed");
+
+  // 4. Explicit {"reset"} and the default prefix: the old behaviour.
+  const std::string reset_script = dir + "/reset.sh";
+  written = writeScript(reset_script, "echo \"$#:$1\" > " + dir + "/reset-args\necho '" +
+                        kDefaultDonePrefix + "'\n", 0755);
+  RestartRunner d = makeRunner(reset_script);
+  ok = written && startWith(d, {"reset"}, kDefaultDonePrefix, clocks::nowMs(), error) &&
+      runUntilEnded(d, kRunnerWaitMs, o);
+  report(ok && o.result == R::kDone && firstLineIs(dir + "/reset-args", "1:reset"),
+    "restart runner args: {\"reset\"} with the default prefix: called 'script reset', kDone");
+}
+
+// ---- DurableRecord (contract P1) ----------------------------------------------------------------
+// Drafted from the contract alone, apart from the code (code rule E4). Real API
+// (durable_record.hpp): DurableRecord(directory, name, record_bytes), the size fixed per object;
+// bool write(const uint8_t *, size_t, int & error); Status read(uint8_t *, size_t, int & error)
+// const, with DurableRecord::RECORD_OK / RECORD_ABSENT / RECORD_DAMAGED / RECORD_ERROR.
+// writeRecord() and readRecord() are the only places that name them. The file format is not
+// assumed: the damage tests only flip, cut and extend bytes.
+
+constexpr size_t kRecordMax = 64;          // contract P1: at most 64 bytes
+constexpr uint8_t kRecordSentinel = 0xEE;  // fills the output buffer before a read
+constexpr size_t kLongFileBytes = 4096;    // a file far longer than any record (bench choice)
+
+/**
+ * What one read() gave: the status, the length and the buffer it was given. The real read()
+ * reports no length; length is the record size the read was asked for (readRecord()).
+ */
+struct RecordRead
+{
+  DurableRecord::Status status;
+  size_t length;
+  std::array<uint8_t, kRecordMax> data;
+};
+
+/**
+ * @brief Stores bytes in a record.
+ *
+ * @param[in,out] record  the record (its record_bytes should equal bytes.size())
+ * @param[in]     bytes   what to store
+ * @return true: write() reported success
+ */
+bool writeRecord(DurableRecord & record, const std::vector<uint8_t> & bytes)
+{
+  int error = 0;
+  return record.write(bytes.data(), bytes.size(), error);
+}
+
+/**
+ * @brief Reads a record into a buffer filled with kRecordSentinel.
+ *
+ * The real read() needs out_size equal to the record's size, so the size is a parameter.
+ *
+ * @param[in,out] record        the record
+ * @param[in]     record_bytes  the record's size, 1 to kRecordMax: the size read() is asked for
+ * @return the status, record_bytes as the length, and the buffer
+ */
+RecordRead readRecord(DurableRecord & record, size_t record_bytes)
+{
+  RecordRead r{};
+  r.data.fill(kRecordSentinel);
+  r.length = record_bytes;
+  int error = 0;
+  r.status = record.read(r.data.data(), record_bytes, error);
+  return r;
+}
+
+/**
+ * @brief Tells whether a read gave RECORD_OK with exactly these bytes.
+ *
+ * @param[in]     r      the read
+ * @param[in]     bytes  the bytes expected
+ * @return true: RECORD_OK, the length equal, and the bytes equal
+ */
+bool readIs(const RecordRead & r, const std::vector<uint8_t> & bytes)
+{
+  return r.status == DurableRecord::RECORD_OK && r.length == bytes.size() &&
+      bytes.size() <= r.data.size() &&
+         std::equal(bytes.begin(), bytes.end(), r.data.begin());
+}
+
+/**
+ * @brief Gives a record's bytes a recognisable pattern.
+ *
+ * @param[in]     length  number of bytes
+ * @param[in]     seed    changes the pattern, so two records differ at every position
+ * @return the bytes: (seed + 7 * index) modulo 256
+ */
+std::vector<uint8_t> recordBytes(size_t length, uint8_t seed)
+{
+  std::vector<uint8_t> v(length);
+  for (size_t i = 0; i < length; i++) {
+    v[i] = static_cast<uint8_t>(seed + 7U * i);
+  }
+  return v;
+}
+
+/**
+ * @brief Replaces a file's content.
+ *
+ * @param[in]     path  the file
+ * @param[in]     data  the new content (may be empty: the file is then emptied)
+ * @return true: written and closed
+ */
+bool overwriteFile(const std::string & path, const std::vector<uint8_t> & data)
+{
+  std::FILE * f = std::fopen(path.c_str(), "wb");
+  if (f == nullptr) {
+    return false;
+  }
+  bool ok = data.empty() || std::fwrite(data.data(), 1, data.size(), f) == data.size();
+  return (std::fclose(f) == 0) && ok;
+}
+
+/**
+ * @brief Contract P1: DurableRecord stores a record of up to 64 bytes and reports its state.
+ *
+ * Requirement: TBD (contract P1 of the 15 Oct 2026 brief; no REQ number assigned yet).
+ * Defects caught, by case: (1) bytes not stored, or returned changed or cut; (2) a missing file
+ * read as a record or as DAMAGED (ABSENT must differ from DAMAGED, and never be a default
+ * value); (3) a flipped byte at any position, a short file, an empty file, a long file (also
+ * far beyond 64 bytes, which must not overflow the caller's buffer) accepted as a record;
+ * (4) a leftover "<name>.tmp" read as the record, or made a missing record present; (5) a
+ * second write that does not replace the first, or leaves its temporary file; (6) a 65-byte
+ * write accepted, or one that destroys the record already stored.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testDurableRecord(const std::string & scratch)
+{
+  std::string dir = scratch + "/durable-record";
+  removeTree(dir);
+  if (::mkdir(dir.c_str(), 0755) != 0) {
+    report(false, "durable record: the scratch directory could not be made");
+    return;
+  }
+  const std::string kPrefix = "durable record: ";
+
+  // 1. Write, then read: the same bytes, at 1, 17 and 64 bytes.
+  for (size_t length : {static_cast<size_t>(1), static_cast<size_t>(17), kRecordMax}) {
+    std::string name = "round-" + std::to_string(length);
+    DurableRecord record(dir.c_str(), name.c_str(), length);
+    std::vector<uint8_t> bytes = recordBytes(length, 0x11);
+    bool ok = writeRecord(record, bytes);
+    report(ok && readIs(readRecord(record, length), bytes),
+      kPrefix + "write then read gives the same " + std::to_string(length) + " bytes");
+  }
+
+  // 2. No file: ABSENT, not DAMAGED, not OK.
+  DurableRecord none(dir.c_str(), "never-written", kRecordMax);
+  report(readRecord(none, kRecordMax).status == DurableRecord::RECORD_ABSENT,
+    kPrefix + "no file: RECORD_ABSENT");
+
+  // 3. Damage. A good record of 20 bytes; the file is read, changed and written back.
+  const std::string kDamaged = "damaged";
+  const std::string path = dir + "/" + kDamaged;
+  constexpr size_t kDamagedBytes = 20;   // the record size of the damage cases
+  DurableRecord record(dir.c_str(), kDamaged.c_str(), kDamagedBytes);
+  std::vector<uint8_t> good = recordBytes(kDamagedBytes, 0x40);
+  bool ok = writeRecord(record, good);
+  const std::vector<uint8_t> original = readFile(path);
+  ok = ok && !original.empty() && readIs(readRecord(record, kDamagedBytes), good);
+  report(ok, kPrefix + "setup: the 20-byte record is stored in a file and reads OK");
+  bool every_flip = ok;
+  for (size_t i = 0; i < original.size(); i++) {
+    std::vector<uint8_t> flipped = original;
+    flipped[i] = static_cast<uint8_t>(flipped[i] ^ 0x01U);
+    every_flip = overwriteFile(path, flipped) &&
+        readRecord(record, kDamagedBytes).status == DurableRecord::RECORD_DAMAGED &&
+                 every_flip;
+  }
+  report(every_flip, kPrefix + "one flipped bit at any position of the file: RECORD_DAMAGED");
+  std::vector<uint8_t> cut = original;
+  cut.pop_back();
+  report(overwriteFile(path, cut) &&
+      readRecord(record, kDamagedBytes).status == DurableRecord::RECORD_DAMAGED,
+    kPrefix + "a file one byte short: RECORD_DAMAGED");
+  report(overwriteFile(path, {}) &&
+      readRecord(record, kDamagedBytes).status == DurableRecord::RECORD_DAMAGED,
+    kPrefix + "an empty file: RECORD_DAMAGED, not ABSENT");
+  report(overwriteFile(path, {original[0]}) &&
+      readRecord(record, kDamagedBytes).status == DurableRecord::RECORD_DAMAGED,
+    kPrefix + "a file of one byte: RECORD_DAMAGED");
+  std::vector<uint8_t> longer = original;
+  longer.push_back(0x00);
+  report(overwriteFile(path, longer) &&
+      readRecord(record, kDamagedBytes).status == DurableRecord::RECORD_DAMAGED,
+    kPrefix + "a file one byte longer: RECORD_DAMAGED");
+  report(overwriteFile(path, std::vector<uint8_t>(kLongFileBytes, 0x5A)) &&
+         readRecord(record, kDamagedBytes).status == DurableRecord::RECORD_DAMAGED,
+    kPrefix + "a file of 4096 bytes: RECORD_DAMAGED, caller's 64-byte buffer not overrun");
+  report(overwriteFile(path, original) && readIs(readRecord(record, kDamagedBytes), good),
+    kPrefix + "the untouched file written back reads OK again (the damage tests are sound)");
+
+  // 4. A leftover temporary file does not matter.
+  const std::string kTmpName = "with-tmp";
+  // The size is fixed per object, so each size is its own object over the same file.
+  DurableRecord tmp_record(dir.c_str(), kTmpName.c_str(), 12);
+  DurableRecord tmp_record_next(dir.c_str(), kTmpName.c_str(), 9);
+  std::vector<uint8_t> kept = recordBytes(12, 0x70);
+  ok = writeRecord(tmp_record, kept) &&
+       overwriteFile(dir + "/" + kTmpName + ".tmp", recordBytes(30, 0x01));
+  report(ok && readIs(readRecord(tmp_record, 12), kept),
+    kPrefix + "a leftover <name>.tmp beside a good record: the record is read, not the temp");
+  std::vector<uint8_t> next = recordBytes(9, 0x90);
+  report(writeRecord(tmp_record_next, next) && readIs(readRecord(tmp_record_next, 9), next),
+    kPrefix + "a write over a leftover <name>.tmp stores the new record");
+  const std::string kOnlyTmp = "only-tmp";
+  DurableRecord only_tmp(dir.c_str(), kOnlyTmp.c_str(), kDamagedBytes);
+  report(overwriteFile(dir + "/" + kOnlyTmp + ".tmp", original) &&
+         readRecord(only_tmp, kDamagedBytes).status == DurableRecord::RECORD_ABSENT,
+    kPrefix + "a <name>.tmp and no <name>: RECORD_ABSENT");
+
+  // 5. A write over an existing record replaces it and leaves no temporary file.
+  DurableRecord over_first(dir.c_str(), "overwritten", 30);
+  DurableRecord over(dir.c_str(), "overwritten", 7);
+  std::vector<uint8_t> first = recordBytes(30, 0x21);
+  std::vector<uint8_t> second = recordBytes(7, 0xC3);
+  ok = writeRecord(over_first, first) && writeRecord(over, second);
+  report(ok && readIs(readRecord(over, 7), second),
+    kPrefix + "a second write replaces the first (30 bytes, then 7): the 7 bytes are read");
+  report(!exists(dir + "/overwritten.tmp"),
+    kPrefix + "after a write the temporary file is gone (renamed over the record)");
+
+  // 6. More than 64 bytes: refused, and the stored record stays.
+  std::vector<uint8_t> too_long = recordBytes(kRecordMax + 1, 0x05);
+  // The size is fixed at construction, so 65 bytes is refused twice over: a record object made
+  // for 65 bytes is not configured (kRecordMaxBytes is 64), and a 7-byte object refuses 65.
+  DurableRecord over_big(dir.c_str(), "overwritten", kRecordMax + 1);
+  int refuse_error = 0;
+  report(!over_big.configured() && !writeRecord(over_big, too_long) &&
+         readIs(readRecord(over, 7), second),
+    kPrefix + "a write of 65 bytes is refused and the stored record is unchanged");
+  report(!over.write(too_long.data(), too_long.size(), refuse_error) && refuse_error == EINVAL &&
+         readIs(readRecord(over, 7), second),
+    kPrefix + "a 65-byte write through the 7-byte record is refused (EINVAL), record unchanged");
+}
+
+// ---- Batch 1: owner decisions 21, 22, 24 and 26 of 15 Oct 2026 ---------------------------------
+// Drafted from the decisions' contract alone, apart from the code (code rule E4). Answers are
+// [sequence: kind: code], kinds RECEIVED 1, DONE 2, REFUSED 3, ALREADY DONE 4.
+
+// Image numbers of the batch-1 tests (bench choice of this test; none has a meaning in the
+// Interfaces document except that 0xFFFF is the test image's).
+constexpr uint16_t kBatchImage = 3;
+constexpr uint16_t kBatchSecondImage = 4;
+constexpr uint16_t kBatchUnknownImage = 9;
+// Version of the signed images the Makefile builds: src/controller/build/images/firmware-B.img is
+// version 1 and test/controller/build/images/slotB-v2.img is version 2 (the batch-1 brief).
+constexpr uint32_t kFirmwareBVersion = 1;
+constexpr uint32_t kSlotBV2Version = 2;
+// A minimum version above both images, and a controller identity other than the default 0x0431
+// (config::kDefaultControllerIdentity). Bench choices of this test; the digits stay 0 to 9 so the
+// log's hex text has no letter case to guess.
+constexpr uint32_t kVersionAboveImages = 3;
+constexpr uint32_t kVersionStored = 7;
+constexpr uint16_t kIdentityOther = 0x0432;
+// First ground sequence number of the batch-1 tests; an ARM and its command take two numbers.
+constexpr uint32_t kBatchFirstSequence = 10;
+constexpr uint32_t kPairStep = 2;
+// Decision 26: how many later commands the capacity test sends, and how many answers it reads at
+// once. 300 is the brief's number (more than the 256 entries); 20 commands give 40 answers of
+// about 42 bytes each, inside the 9,216-byte receive buffer a datagram socket has on this Mac.
+constexpr uint32_t kManyCommands = 300;
+constexpr uint32_t kDrainEvery = 20;
+// The size of the memory for the ordinary commands, as the owner decided it (decision 26: 256). The
+// tests use this number, not config::kRepeatCount, so that a changed setting fails them instead of
+// moving them along; one test also compares the two.
+constexpr uint32_t kContractRepeatCount = 256;
+static_assert(kManyCommands > kContractRepeatCount, "the capacity test must overflow the memory");
+// A delivery is bounded: BEGIN, one CHUNK per 256 bytes of an image of up to the 40 KB slot, END.
+constexpr size_t kMaxDeliverySteps = 400;
+static_assert(kMaxDeliverySteps > config::kMaxImageBytes / config::kChunkBytes + 2U,
+  "the step bound must cover the largest image");
+// Mode of the files the log capture creates (owner read and write, others read).
+constexpr unsigned kLogFileMode = 0644;
+// The log lines of decision 24 (the batch-1 brief gives the text; the stamp in front is the log's).
+const char kLogNoRecord[] =
+  "limits: no record, starting with minimum version 1, controller identity 0x0431";
+const char kLogDamaged[] =
+  "limits: record damaged; refusing every upload and delivery 0x0a until SET LIMITS writes a "
+  "good one";
+
+/**
+ * @brief Takes what the code under test writes to stderr (its log) into a file, for a test to read.
+ *
+ * The updater's log goes to stderr (log.hpp). The capture points file descriptor 2 at a file in
+ * the scratch directory between start() and stop(); stop() puts it back and also writes the text
+ * to the real stderr, so build/unit.log still shows it when a test fails.
+ */
+class LogCapture
+{
+public:
+  /**
+   * @brief Names the capture file.
+   *
+   * @param[in]     scratch  scratch directory; the file is log-capture.txt in it
+   */
+  explicit LogCapture(const std::string & scratch)
+  : path_(scratch + "/log-capture.txt"), saved_(-1)
+  {
+  }
+
+  /**
+   * @brief Starts capturing: stderr goes to the file, which is emptied first.
+   *
+   * @return true: capturing; false: the file or the copy of descriptor 2 could not be made
+   */
+  bool start()
+  {
+    (void)std::fflush(stderr);
+    int file = ::open(path_.c_str(), O_WRONLY | O_CREAT | O_TRUNC, kLogFileMode);
+    if (file < 0) {
+      return false;
+    }
+    saved_ = ::dup(STDERR_FILENO);
+    bool ok = saved_ >= 0 && ::dup2(file, STDERR_FILENO) >= 0;
+    (void)::close(file);
+    return ok;
+  }
+
+  /**
+   * @brief Stops capturing and gives back the text written since start().
+   *
+   * @return the captured log text; empty if start() failed
+   */
+  std::string stop()
+  {
+    (void)std::fflush(stderr);
+    if (saved_ >= 0) {
+      (void)::dup2(saved_, STDERR_FILENO);
+      (void)::close(saved_);
+      saved_ = -1;
+    }
+    std::vector<uint8_t> raw = readFile(path_);
+    std::string text(raw.begin(), raw.end());
+    (void)std::fputs(text.c_str(), stderr);
+    return text;
+  }
+
+private:
+  std::string path_;
+  int saved_;   // a copy of the real descriptor 2 while capturing, else -1
+};
+
+/**
+ * @brief Tells whether a text contains a piece of text.
+ *
+ * @param[in]     text    the text searched
+ * @param[in]     needle  the text looked for
+ * @return true: found
+ */
+bool contains(const std::string & text, const std::string & needle)
+{
+  return text.find(needle) != std::string::npos;
+}
+
+/**
+ * @brief Tells whether the answers are exactly one answer of this kind and code, for this command.
+ *
+ * @param[in]     g     the answers read
+ * @param[in]     seq   the ground sequence number answered
+ * @param[in]     kind  answer::kReceived, kDone, kRefused or kAlreadyDone
+ * @param[in]     code  the code the answer must carry
+ * @return true: one answer, that kind, that code, that number
+ */
+bool isOnly(const std::vector<GroundAnswer> & g, uint32_t seq, uint8_t kind, uint8_t code)
+{
+  return g.size() == 1 && hasAnswer(g, seq, kind, code);
+}
+
+/**
+ * @brief Tells whether the answers are RECEIVED, then REFUSED with this code, for this command.
+ *
+ * @param[in]     g     the answers read
+ * @param[in]     seq   the ground sequence number answered
+ * @param[in]     code  the refusal code
+ * @return true: exactly two answers, in that order
+ */
+bool isReceivedThenRefused(const std::vector<GroundAnswer> & g, uint32_t seq, uint8_t code)
+{
+  return g.size() == 2 && g[0].answered == seq && g[0].kind == answer::kReceived &&
+         g[1].answered == seq && g[1].kind == answer::kRefused && g[1].code == code;
+}
+
+/**
+ * @brief The payload of a command that names an image: identifier, then the number (2, LE).
+ *
+ * @param[in]     id      UPLOAD END, UPLOAD CANCEL or DELIVER
+ * @param[in]     number  the image number
+ * @return the payload (Interfaces Sec. 5.1 table, rows 0x03 to 0x05)
+ */
+std::vector<uint8_t> imageCommand(uint8_t id, uint16_t number)
+{
+  std::vector<uint8_t> p(command::kImageNumberOnlyBytes, 0);
+  p[0] = id;
+  bytes::writeU16(&p[command::kIdBytes], number);
+  return p;
+}
+
+/**
+ * @brief The payload of SET LIMITS: identifier, minimum version (4), controller identity (2).
+ *
+ * @param[in]     version   minimum version, little-endian in the payload
+ * @param[in]     identity  controller identity, little-endian in the payload
+ * @return the payload (Interfaces Sec. 5.1 table, row 0x06; protocol.hpp offsets)
+ */
+std::vector<uint8_t> setLimitsPayload(uint32_t version, uint16_t identity)
+{
+  std::vector<uint8_t> p(command::kSetLimitsBytes, 0);
+  p[0] = command::kSetLimits;
+  bytes::writeU32(&p[command::kSetLimitsVersionAt], version);
+  bytes::writeU16(&p[command::kSetLimitsIdentityAt], identity);
+  return p;
+}
+
+/**
+ * @brief Sends an ARM naming SET LIMITS and then SET LIMITS itself; gives the command's answers.
+ *
+ * @param[in,out] rig       the updater under test
+ * @param[in]     seq       the ARM's ground sequence number; the command takes seq + 1
+ * @param[in]     version   minimum version to set
+ * @param[in]     identity  controller identity to set
+ * @return the answers to SET LIMITS (those of the ARM are read and dropped); empty if a datagram
+ *         did not reach the gate
+ */
+std::vector<GroundAnswer> armedSetLimits(UpdaterRig & rig, uint32_t seq, uint32_t version,
+  uint16_t identity)
+{
+  (void)sendOnboardArm(rig, seq, command::kSetLimits, seq + 1);
+  return sendOnboard(rig, seq + 1, setLimitsPayload(version, identity));
+}
+
+/**
+ * @brief Puts an image's UPLOAD BEGIN and every UPLOAD CHUNK into the rig's store, without END.
+ *
+ * Goes through the store, not the ground link, so the test does not spend 80 datagrams on the
+ * bytes; UPLOAD END then comes from the ground, which is what the tests of the limits are about.
+ *
+ * @param[in,out] rig     the updater under test
+ * @param[in]     number  image number
+ * @param[in]     image   the image bytes
+ * @return true: BEGIN and all chunks accepted
+ */
+bool storeBytes(UpdaterRig & rig, uint16_t number, const std::vector<uint8_t> & image)
+{
+  uint32_t resume = 0;
+  return rig.store().begin(number, static_cast<uint32_t>(image.size()), resume) == 0 &&
+         sendChunks(rig.store(), number, image, 0, image.size());
+}
+
+/**
+ * @brief Sends a ground UPLOAD END for an image and gives the answers.
+ *
+ * @param[in,out] rig     the updater under test
+ * @param[in]     seq     the command's ground sequence number
+ * @param[in]     number  image number
+ * @return the answers to UPLOAD END
+ */
+std::vector<GroundAnswer> endFromGround(UpdaterRig & rig, uint32_t seq, uint16_t number)
+{
+  return sendOnboard(rig, seq, imageCommand(command::kUploadEnd, number));
+}
+
+/**
+ * @brief Answers every frame of a running delivery DONE until its UPLOAD END has been answered.
+ *
+ * @param[in,out] rig    the updater under test
+ * @param[in,out] frame  the delivery's frame in flight (UPLOAD BEGIN); the last one sent on return
+ * @return true: UPLOAD END was reached and answered within kMaxDeliverySteps
+ */
+bool finishDelivery(UpdaterRig & rig, SentFrame & frame)
+{
+  for (size_t step = 0; step < kMaxDeliverySteps; step++) {
+    const uint8_t id = frame.payload[0];
+    rig.answer(frame.sequence, answer::kDone, answer::kSuccess);
+    if (id == command::kUploadEnd) {
+      return true;
+    }
+    if (!rig.tick(frame)) {
+      return false;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Puts an EVENT report from the controller into data link A.
+ *
+ * @param[in,out] rig   the updater under test
+ * @param[in]     code  the event code, at offset 13 of the report (Interfaces Sec. 5.4)
+ * @return nothing
+ */
+void sendEvent(UpdaterRig & rig, uint16_t code)
+{
+  std::vector<uint8_t> p(report::kEventMinBytes, 0);
+  p[report::kOffsetKind] = report::kEvent;
+  bytes::writeU16(&p[report::kOffsetEventCode], code);
+  rig.fromController(frame::kTypeReport, p);
+}
+
+/**
+ * @brief Sends GET STATUS to the onboard computer under consecutive sequence numbers.
+ *
+ * Reads the answers every kDrainEvery commands, so the socket's receive buffer does not overflow.
+ *
+ * @param[in,out] rig    the updater under test
+ * @param[in]     first  ground sequence number of the first command
+ * @param[in]     count  number of commands
+ * @return how many commands were answered DONE (ALREADY DONE and REFUSED do not count)
+ */
+size_t runStatusCommands(UpdaterRig & rig, uint32_t first, uint32_t count)
+{
+  const std::vector<uint8_t> status = {command::kGetStatus};
+  size_t done = 0;
+  for (uint32_t i = 0; i < count; i++) {
+    if (!rig.fromGround(frame::kDestOnboard, first + i, status)) {
+      return done;
+    }
+    if ((i + 1) % kDrainEvery == 0 || i + 1 == count) {
+      for (const GroundAnswer & a : rig.groundAnswers()) {
+        done += (a.kind == answer::kDone) ? 1U : 0U;
+      }
+    }
+  }
+  return done;
+}
+
+/**
+ * @brief Decision 26: a repeated onboard command that is not dangerous, answered from its first.
+ *
+ * Requirement: REQ-065, REQ-031 (owner decision 26, 15 Oct 2026). Defects caught, by case:
+ * (1) a repeat after DONE runs again or answers RECEIVED and DONE a second time instead of
+ * ALREADY DONE only; (2) the same number with other bytes is accepted, or it changes what the
+ * first one answers; (3) a repeat after a refusal turns into ALREADY DONE or RECEIVED, which
+ * tells the ground the command ran; (4) an ARM's number is reused by an ordinary command, or the
+ * reverse, because the two memories do not know each other; (5) a command refused on arrival
+ * (not on the list, image number 0xFFFF) is remembered, so a later good command with that number
+ * is refused for no reason.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testRepeatOnboard(const std::string & scratch)
+{
+  std::string dir = scratch + "/repeat-onboard";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "repeat onboard: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const std::string kPrefix = "repeat onboard: ";
+  const std::vector<uint8_t> status = {command::kGetStatus};
+  uint32_t seq = kBatchFirstSequence;
+  auto next = [&seq]() { return seq++; };
+
+  // 1 and 2. DONE first, then ALREADY DONE only; other bytes under the same number: REFUSED 0x04.
+  const uint32_t done_seq = next();
+  report(isReceivedThenDone(sendOnboard(rig, done_seq, status), done_seq),
+    kPrefix + "GET STATUS first time: RECEIVED then DONE");
+  report(isOnly(sendOnboard(rig, done_seq, status), done_seq, answer::kAlreadyDone, 0) &&
+         quiet(rig), kPrefix + "the same number and bytes after DONE: ALREADY DONE only");
+  report(isOnlyRefused(sendOnboard(rig, done_seq, imageCommand(command::kUploadCancel,
+           kBatchUnknownImage)), done_seq, answer::kOldCommand),
+    kPrefix + "the same number with other bytes: REFUSED 0x04 only");
+  report(isOnly(sendOnboard(rig, done_seq, status), done_seq, answer::kAlreadyDone, 0),
+    kPrefix + "and the first entry still answers ALREADY DONE");
+
+  // 3. A refusal repeats as the same refusal. DELIVER of an image never stored: REFUSED 0x06.
+  rig.health(report::kModeOperate);
+  const uint32_t refused_seq = next();
+  const std::vector<uint8_t> deliver = imageCommand(command::kDeliver, kBatchUnknownImage);
+  report(isReceivedThenRefused(sendOnboard(rig, refused_seq, deliver), refused_seq,
+           answer::kImpossible),
+    kPrefix + "DELIVER of an image never stored: RECEIVED then REFUSED 0x06");
+  report(isOnlyRefused(sendOnboard(rig, refused_seq, deliver), refused_seq, answer::kImpossible) &&
+         quiet(rig),
+    kPrefix + "the same DELIVER again: REFUSED 0x06 only, not ALREADY DONE, nothing sent");
+  report(isOnlyRefused(sendOnboard(rig, refused_seq, deliver), refused_seq, answer::kImpossible),
+    kPrefix + "and a third time: REFUSED 0x06 again");
+
+  // 4. A number held by the other memory.
+  const uint32_t arm_seq = next();
+  const uint32_t restore_seq = next();
+  report(isReceivedThenDone(sendOnboardArm(rig, arm_seq, command::kRestore, restore_seq), arm_seq),
+    kPrefix + "setup: an ARM naming RESTORE is accepted");
+  report(isOnlyRefused(sendOnboard(rig, arm_seq, status), arm_seq, answer::kOldCommand),
+    kPrefix + "an ordinary command under an ARM's number: REFUSED 0x04");
+  const uint32_t other_seq = next();
+  report(isReceivedThenDone(sendOnboard(rig, other_seq, status), other_seq),
+    kPrefix + "setup: an ordinary command is accepted");
+  const uint32_t clash_restore = next();
+  report(isOnlyRefused(sendOnboardArm(rig, other_seq, command::kRestore, clash_restore),
+           other_seq, answer::kOldCommand),
+    kPrefix + "an ARM under an ordinary command's number: REFUSED 0x04");
+  report(isOnlyRefused(sendOnboard(rig, clash_restore, {command::kRestore}), clash_restore,
+           answer::kNotArmed),
+    kPrefix + "and that refused ARM held nothing: RESTORE after it is REFUSED 0x01");
+
+  // 5. Refused on arrival: not remembered.
+  const uint32_t unknown_seq = next();
+  report(isOnlyRefused(sendOnboard(rig, unknown_seq, {kUnknownIdentifier}), unknown_seq,
+           answer::kImpossible),
+    kPrefix + "a command not on the list: REFUSED 0x06 only");
+  report(isReceivedThenDone(sendOnboard(rig, unknown_seq, status), unknown_seq),
+    kPrefix + "its number was not remembered: GET STATUS under it is RECEIVED then DONE");
+  const uint32_t test_image_seq = next();
+  std::vector<uint8_t> begin_test_image = {command::kUploadBegin, 0xFF, 0xFF, 0, 0, 0, 0};
+  bytes::writeU32(&begin_test_image[command::kIdBytes + 2U], config::kChunkBytes);
+  report(isOnlyRefused(sendOnboard(rig, test_image_seq, begin_test_image), test_image_seq,
+           answer::kImpossible),
+    kPrefix + "UPLOAD BEGIN of image 0xFFFF (the test image's): REFUSED 0x06 only");
+  report(isReceivedThenDone(sendOnboard(rig, test_image_seq, status), test_image_seq),
+    kPrefix + "its number was not remembered either");
+}
+
+/**
+ * @brief Decision 26: a repeated controller command or DELIVER, while it runs and after.
+ *
+ * Requirement: REQ-065, REQ-031 (owner decision 26, 15 Oct 2026). Defects caught, by case:
+ * (1) a repeat of a controller command that has no answer yet is sent to the controller again, or
+ * answered with more than RECEIVED; (2) a repeat after the controller's DONE is sent again or not
+ * ALREADY DONE; (3) a repeat after the controller's refusal is turned into RECEIVED or ALREADY
+ * DONE; (4) other bytes under the number are accepted, or disturb the first entry; (5) a repeat of
+ * a DELIVER in flight restarts the delivery, or a finished or refused DELIVER repeats its work.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testRepeatController(const std::string & controller_images, const std::string & scratch)
+{
+  std::string dir = scratch + "/repeat-controller";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "repeat controller: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const std::string kPrefix = "repeat controller: ";
+  const uint32_t kDest = frame::kDestController;
+  const std::vector<uint8_t> status = {command::kGetStatus};
+  SentFrame f{};
+  uint32_t seq = kBatchFirstSequence;
+  auto next = [&seq]() { return seq++; };
+
+  // 1 and 2. A controller command with no answer yet, then answered DONE.
+  const uint32_t pending_seq = next();
+  bool ok = rig.fromGround(kDest, pending_seq, status) && rig.tick(f) && isCommand(f, status);
+  (void)rig.groundAnswers();
+  ok = ok && rig.fromGround(kDest, pending_seq, status);
+  report(ok && isOnly(rig.groundAnswers(), pending_seq, answer::kReceived, 0) && quiet(rig),
+    kPrefix + "GET STATUS repeated before the controller answers: RECEIVED only, not sent again");
+  rig.answer(f.sequence, answer::kDone, answer::kSuccess);
+  (void)rig.groundAnswers();
+  ok = rig.fromGround(kDest, pending_seq, status);
+  report(ok && isOnly(rig.groundAnswers(), pending_seq, answer::kAlreadyDone, 0) && quiet(rig),
+    kPrefix + "repeated after the controller's DONE: ALREADY DONE only, not sent again");
+
+  // 3. The controller refuses.
+  const uint32_t refused_seq = next();
+  ok = rig.fromGround(kDest, refused_seq, status) && rig.tick(f);
+  rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
+  (void)rig.groundAnswers();
+  ok = ok && rig.fromGround(kDest, refused_seq, status);
+  report(ok && isOnlyRefused(rig.groundAnswers(), refused_seq, answer::kNotInThisMode) &&
+         quiet(rig),
+    kPrefix + "repeated after the controller's REFUSED 0x05: REFUSED 0x05 only, not sent again");
+
+  // 4. Other bytes under the number.
+  ok = rig.fromGround(kDest, pending_seq, {command::kLeaveFallback});
+  report(ok && isOnlyRefused(rig.groundAnswers(), pending_seq, answer::kOldCommand) && quiet(rig),
+    kPrefix + "the same number with another command: REFUSED 0x04 only, nothing sent");
+  ok = rig.fromGround(kDest, pending_seq, status);
+  report(ok && isOnly(rig.groundAnswers(), pending_seq, answer::kAlreadyDone, 0),
+    kPrefix + "and the first entry still answers ALREADY DONE");
+
+  // 5. DELIVER in flight, finished, and refused by the controller.
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  rig.health(report::kModeOperate);
+  ok = storeThrough(rig, kBatchImage, image);
+  const std::vector<uint8_t> deliver = imageCommand(command::kDeliver, kBatchImage);
+  const uint32_t deliver_seq = next();
+  ok = ok && sendOnboard(rig, deliver_seq, deliver).size() == 1 && rig.tick(f);
+  ok = ok && f.payload[0] == command::kUploadBegin;
+  report(ok, kPrefix + "setup: DELIVER starts with UPLOAD BEGIN in flight");
+  report(isOnly(sendOnboard(rig, deliver_seq, deliver), deliver_seq, answer::kReceived, 0) &&
+         quiet(rig),
+    kPrefix + "DELIVER repeated while the delivery runs: RECEIVED only, nothing new on the link");
+  ok = finishDelivery(rig, f);
+  report(ok && hasAnswer(rig.groundAnswers(), deliver_seq, answer::kDone, 0),
+    kPrefix + "the delivery ends DONE");
+  report(isOnly(sendOnboard(rig, deliver_seq, deliver), deliver_seq, answer::kAlreadyDone, 0) &&
+         quiet(rig),
+    kPrefix + "DELIVER repeated after DONE: ALREADY DONE only, no new delivery");
+  const uint32_t refused_deliver_seq = next();
+  ok = sendOnboard(rig, refused_deliver_seq, deliver).size() == 1 && rig.tick(f);
+  rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
+  (void)rig.groundAnswers();
+  report(ok && isOnlyRefused(sendOnboard(rig, refused_deliver_seq, deliver), refused_deliver_seq,
+           answer::kNotInThisMode) && quiet(rig),
+    kPrefix + "DELIVER the controller refused 0x05, repeated: REFUSED 0x05 only, no new delivery");
+}
+
+/**
+ * @brief Decision 26: the exact capacity of the memory for ordinary commands, through the class.
+ *
+ * Requirement: REQ-065 (owner decision 26, 15 Oct 2026). Defects caught: (1) the memory for the
+ * rest keeps fewer or more than 256 entries; (2) it forgets the newest instead of
+ * the oldest; (3) it keeps a command's bytes only up to the wrong length, so a chunk repeat is not
+ * recognised; (4) finish() does not turn an entry into DONE or REFUSED with its code.
+ *
+ * @return nothing
+ */
+void testRepeatMemoryRing()
+{
+  RepeatMemory memory;
+  report(config::kRepeatCount == kContractRepeatCount,
+    "repeat memory: config::kRepeatCount is 256, the number of owner decision 26");
+  bool ok = true;
+  for (uint32_t i = 0; i < kManyCommands; i++) {
+    const uint8_t byte = static_cast<uint8_t>(i);
+    ok = memory.add(i, &byte, 1) && ok;
+  }
+  // The newest 256 of kManyCommands are kept: the last is kManyCommands - 1.
+  const uint32_t oldest_kept = kManyCommands - kContractRepeatCount;
+  const uint32_t newest = kManyCommands - 1;
+  const uint8_t first_byte = static_cast<uint8_t>(0);
+  const uint8_t forgotten_byte = static_cast<uint8_t>(oldest_kept - 1);
+  const uint8_t kept_byte = static_cast<uint8_t>(oldest_kept);
+  const uint8_t newest_byte = static_cast<uint8_t>(newest);
+  const uint8_t after_byte = static_cast<uint8_t>(kManyCommands);
+  uint8_t code = 0;
+  report(ok && memory.check(0, &first_byte, 1, code) == SequenceRepeat::kNew &&
+         memory.check(oldest_kept - 1, &forgotten_byte, 1, code) == SequenceRepeat::kNew,
+    "repeat memory: after 300 adds the first and the 257th from last are forgotten");
+  report(memory.check(oldest_kept, &kept_byte, 1, code) == SequenceRepeat::kSamePending &&
+         memory.check(newest, &newest_byte, 1, code) == SequenceRepeat::kSamePending &&
+         memory.check(kManyCommands, &after_byte, 1, code) == SequenceRepeat::kNew,
+    "repeat memory: the 256th from last and the last are kept, a number never added is new");
+
+  std::array<uint8_t, config::kRepeatPayloadMax + 1> longest{};
+  RepeatMemory sizes;
+  report(sizes.add(1, longest.data(), static_cast<uint16_t>(config::kRepeatPayloadMax)) &&
+         !sizes.add(2, longest.data(), static_cast<uint16_t>(longest.size())) &&
+         sizes.check(1, longest.data(), static_cast<uint16_t>(config::kRepeatPayloadMax), code) ==
+           SequenceRepeat::kSamePending,
+    "repeat memory: an UPLOAD CHUNK's 263 bytes are kept, 264 are not");
+
+  RepeatMemory states;
+  const uint8_t a = 0x11;
+  const uint8_t b = 0x22;
+  ok = states.add(1, &a, 1) && states.add(2, &b, 1);
+  states.finish(1, true, 0);
+  states.finish(2, false, answer::kNotInThisMode);
+  code = 0;
+  report(ok && states.check(1, &a, 1, code) == SequenceRepeat::kSameDone &&
+         states.check(2, &b, 1, code) == SequenceRepeat::kSameRefused &&
+         code == answer::kNotInThisMode &&
+         states.check(2, &a, 1, code) == SequenceRepeat::kDifferent,
+    "repeat memory: finish() gives DONE and REFUSED with its code; other bytes are different");
+}
+
+/**
+ * @brief Decision 26: 300 other commands leave the dangerous 64 alone; the 256 forget the oldest.
+ *
+ * Requirement: REQ-065 (owner decision 26, 15 Oct 2026). Defects caught: (1) upload traffic or
+ * other ordinary commands push an ARM out of the memory of the dangerous ones, so a replayed ARM
+ * runs again (the defect the second memory exists to prevent); (2) the memory for the rest keeps
+ * fewer than 256 commands, or more, or forgets the newest first. Reading of the
+ * brief: it says "the 300th-from-last is still remembered"; with 256 entries only the 256th from
+ * last can be, so this test checks the 256th from last (kept) and the 257th (forgotten) and
+ * asks the owner to confirm (reported with the batch).
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testRepeatMemories(const std::string & scratch)
+{
+  std::string dir = scratch + "/repeat-memories";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "repeat memories: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const std::string kPrefix = "repeat memories: ";
+  const uint32_t kArmSeq = 1000;
+  const uint32_t kCommandsFirst = 2000;
+  const std::vector<uint8_t> status = {command::kGetStatus};
+  report(isReceivedThenDone(sendOnboardArm(rig, kArmSeq, command::kRestore, kArmSeq + 1), kArmSeq),
+    kPrefix + "setup: an ARM is accepted");
+  report(runStatusCommands(rig, kCommandsFirst, kManyCommands) == kManyCommands,
+    kPrefix + "setup: 300 ordinary commands, each RECEIVED then DONE");
+  report(isOnly(sendOnboardArm(rig, kArmSeq, command::kRestore, kArmSeq + 1), kArmSeq,
+           answer::kAlreadyDone, 0),
+    kPrefix + "after 300 ordinary commands the ARM is still remembered: ALREADY DONE");
+  // 300 commands sent, numbers kCommandsFirst + 0 to + 299; the 256 newest are + 44 to + 299.
+  const uint32_t oldest_kept = kManyCommands - kContractRepeatCount;
+  const uint32_t kept_seq = kCommandsFirst + oldest_kept;
+  report(isOnly(sendOnboard(rig, kept_seq, status), kept_seq, answer::kAlreadyDone, 0),
+    kPrefix + "the 256th command from last is still remembered: ALREADY DONE");
+  report(isReceivedThenDone(sendOnboard(rig, kCommandsFirst + oldest_kept - 1, status),
+           kCommandsFirst + oldest_kept - 1),
+    kPrefix + "the 257th from last is forgotten: its number runs again");
+  report(isReceivedThenDone(sendOnboard(rig, kCommandsFirst, status), kCommandsFirst),
+    kPrefix + "the first command's number runs again");
+}
+
+/**
+ * @brief Decision 24: SET LIMITS needs an ARM, answers DONE once written, fails safe.
+ *
+ * Requirement: REQ-053, REQ-045, REQ-046 (owner decision 24, 15 Oct 2026). Defects caught, by case:
+ * (1) SET LIMITS runs without an ARM; (2) it answers RECEIVED first, or answers before the write,
+ * or a resend writes again instead of ALREADY DONE; (3) a write that failed (the temporary file
+ * cannot be made) is answered DONE, or leaves the new limits in force, or damages the previous
+ * record; (4) the limits are not read back at the next start, or are read as other values.
+ *
+ * @param[in]     test_images  directory with slotB-v2.img
+ * @param[in]     scratch      scratch directory
+ * @return nothing
+ */
+void testSetLimitsCommand(const std::string & test_images, const std::string & scratch)
+{
+  const std::string kPrefix = "set limits: ";
+  std::string dir = scratch + "/set-limits";
+  removeTree(dir);
+  const std::string tmp_dir = dir + "/" + config::kLimitsRecordName + ".tmp";
+  const std::string stored_v2 = std::string("limits: stored record, minimum version ") +
+    std::to_string(kSlotBV2Version) + ", controller identity 0x0431";
+  const std::string stored_v7 = std::string("limits: stored record, minimum version ") +
+    std::to_string(kVersionStored) + ", controller identity 0x0432";
+  std::vector<uint8_t> v2_image = readFile(test_images + "/slotB-v2.img");
+  LogCapture capture(scratch);
+  uint32_t seq = kBatchFirstSequence;
+  auto next = [&seq]() { uint32_t s = seq; seq += kPairStep; return s; };
+  {
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    const uint32_t lone = next();
+    report(isOnlyRefused(sendOnboard(rig, lone, setLimitsPayload(kSlotBV2Version,
+             config::kDefaultControllerIdentity)), lone, answer::kNotArmed) && quiet(rig),
+      kPrefix + "without an ARM: REFUSED 0x01 only");
+    const uint32_t arm = next();
+    std::vector<GroundAnswer> g = armedSetLimits(rig, arm, kSlotBV2Version,
+      config::kDefaultControllerIdentity);
+    report(isOnly(g, arm + 1, answer::kDone, answer::kSuccess) && quiet(rig),
+      kPrefix + "with its ARM: DONE only (no RECEIVED first), nothing sent to the controller");
+    g = sendOnboard(rig, arm + 1, setLimitsPayload(kSlotBV2Version,
+      config::kDefaultControllerIdentity));
+    report(isOnly(g, arm + 1, answer::kAlreadyDone, 0),
+      kPrefix + "the same SET LIMITS sent again: ALREADY DONE only");
+
+    // A failed write: a directory where the temporary file must go.
+    report(::mkdir(tmp_dir.c_str(), 0755) == 0, kPrefix + "setup: limits.tmp made a directory");
+    const uint32_t failing = next();
+    g = armedSetLimits(rig, failing, kVersionAboveImages, config::kDefaultControllerIdentity);
+    report(isOnlyRefused(g, failing + 1, answer::kStorageBench),
+      kPrefix + "a write that fails: REFUSED 0xFE only");
+    bool ok = storeBytes(rig, kBatchSecondImage, v2_image);
+    const uint32_t end_seq = next();
+    report(ok && isReceivedThenDone(endFromGround(rig, end_seq, kBatchSecondImage), end_seq),
+      kPrefix + "and the limits did not change: a version 2 image is still accepted (minimum 2)");
+  }
+  report(::rmdir(tmp_dir.c_str()) == 0, kPrefix + "cleanup: limits.tmp removed");
+  {
+    (void)capture.start();
+    UpdaterRig rig(dir, 0);
+    const bool opened = rig.open();
+    const std::string text = capture.stop();
+    report(opened && contains(text, stored_v2),
+      kPrefix + "a new Updater on the same directory logs the stored limits: the failed write left "
+      "the previous record");
+    const uint32_t arm = next();
+    report(isOnly(armedSetLimits(rig, arm, kVersionStored, kIdentityOther), arm + 1, answer::kDone,
+             answer::kSuccess), kPrefix + "a second SET LIMITS (other version and identity): DONE");
+  }
+  {
+    (void)capture.start();
+    UpdaterRig rig(dir, 0);
+    const bool opened = rig.open();
+    const std::string text = capture.stop();
+    report(opened && contains(text, stored_v7),
+      kPrefix + "a new Updater logs the limits of the second SET LIMITS: 'stored record, minimum "
+      "version 7, controller identity 0x0432'");
+  }
+}
+
+/**
+ * @brief Decision 24: with no record the limits are minimum version 1, identity 0x0431, in the log.
+ *
+ * Requirement: REQ-045, REQ-046 (owner decision 24, 15 Oct 2026). Defects caught: (1) the default
+ * limits are other values, or the log does not say that no record was found (an operator cannot
+ * tell the default from a stored value); (2) with no record an image of version 1 is refused.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testLimitsNoRecord(const std::string & controller_images, const std::string & scratch)
+{
+  const std::string kPrefix = "limits, no record: ";
+  std::string dir = scratch + "/limits-none";
+  removeTree(dir);
+  if (::mkdir(dir.c_str(), 0755) != 0) {
+    report(false, kPrefix + "the scratch directory could not be made");
+    return;
+  }
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  LogCapture capture(scratch);
+  (void)capture.start();
+  UpdaterRig rig(dir, 0);
+  const bool opened = rig.open();
+  const std::string text = capture.stop();
+  if (!opened) {
+    report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  report(contains(text, kLogNoRecord) && !contains(text, "record damaged"),
+    kPrefix + "the log says: no record, starting with minimum version 1, identity 0x0431");
+  report(storeBytes(rig, kBatchImage, image) &&
+         isReceivedThenDone(endFromGround(rig, kBatchFirstSequence, kBatchImage),
+           kBatchFirstSequence),
+    kPrefix + "a version 1 image for 0x0431 is accepted at UPLOAD END (minimum 1)");
+}
+
+/**
+ * @brief Decision 24: an image below the minimum or for another identity is refused at UPLOAD END.
+ *
+ * Requirement: REQ-045, REQ-046, REQ-047 (owner decision 24, 15 Oct 2026). Defects caught:
+ * (1) UPLOAD END uses fixed limits, not the ones SET LIMITS set; (2) the boundary is off by one (an
+ * image whose version equals the minimum must pass); (3) the target check gives 0x0A or the version
+ * check 0x0B; (4) DELIVER trusts the check made at UPLOAD END and delivers an image that the limits
+ * in force now refuse (REQ-047 asks for the check again just before delivery).
+ *
+ * @param[in]     controller_images  directory with firmware-B.img (version 1)
+ * @param[in]     test_images        directory with slotB-v2.img (version 2)
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testLimitsInForce(const std::string & controller_images, const std::string & test_images,
+  const std::string & scratch)
+{
+  const std::string kPrefix = "limits in force: ";
+  std::string dir = scratch + "/limits-in-force";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  std::vector<uint8_t> v1 = readFile(controller_images + "/firmware-B.img");
+  std::vector<uint8_t> v2 = readFile(test_images + "/slotB-v2.img");
+  const uint16_t identity = config::kDefaultControllerIdentity;
+  uint32_t seq = kBatchFirstSequence;
+  auto next = [&seq]() { uint32_t s = seq; seq += kPairStep; return s; };
+  auto setLimits = [&rig, &next](uint32_t version, uint16_t id) {
+    const uint32_t arm = next();
+    return isOnly(armedSetLimits(rig, arm, version, id), arm + 1, answer::kDone, answer::kSuccess);
+  };
+
+  // UPLOAD END against the limits in force.
+  bool ok = setLimits(kSlotBV2Version, identity) && storeBytes(rig, kBatchImage, v1);
+  uint32_t n = next();
+  report(ok && isReceivedThenRefused(endFromGround(rig, n, kBatchImage), n,
+           answer::kOlderThanMinimum),
+    kPrefix + "minimum version 2: a version 1 image is refused 0x0A at UPLOAD END");
+  ok = storeBytes(rig, kBatchSecondImage, v2);
+  n = next();
+  report(ok && isReceivedThenDone(endFromGround(rig, n, kBatchSecondImage), n),
+    kPrefix + "minimum version 2: a version 2 image is accepted (the boundary)");
+  ok = setLimits(kFirmwareBVersion, kIdentityOther) && storeBytes(rig, kBatchImage, v1);
+  n = next();
+  report(ok && isReceivedThenRefused(endFromGround(rig, n, kBatchImage), n,
+           answer::kOtherController),
+    kPrefix + "identity 0x0432: an image built for 0x0431 is refused 0x0B at UPLOAD END");
+
+  // DELIVER checks again, against the limits in force at that moment.
+  ok = setLimits(kFirmwareBVersion, identity) && storeBytes(rig, kBatchImage, v1);
+  n = next();
+  ok = ok && isReceivedThenDone(endFromGround(rig, n, kBatchImage), n);
+  rig.health(report::kModeOperate);
+  report(ok, kPrefix + "setup: image 3 stored under minimum 1, identity 0x0431");
+  const std::vector<uint8_t> deliver = imageCommand(command::kDeliver, kBatchImage);
+  ok = setLimits(kSlotBV2Version, identity);
+  n = next();
+  report(ok && isReceivedThenRefused(sendOnboard(rig, n, deliver), n, answer::kOlderThanMinimum) &&
+         quiet(rig),
+    kPrefix + "minimum raised to 2 after storage: DELIVER of the version 1 image is REFUSED 0x0A");
+  ok = setLimits(kFirmwareBVersion, kIdentityOther);
+  n = next();
+  report(ok && isReceivedThenRefused(sendOnboard(rig, n, deliver), n, answer::kOtherController) &&
+         quiet(rig),
+    kPrefix + "identity changed to 0x0432 after storage: DELIVER is REFUSED 0x0B");
+  ok = setLimits(kFirmwareBVersion, identity);
+  n = next();
+  SentFrame f{};
+  ok = ok && sendOnboard(rig, n, deliver).size() == 1 && rig.tick(f);
+  report(ok && f.payload[0] == command::kUploadBegin,
+    kPrefix + "limits met again: DELIVER starts with UPLOAD BEGIN");
+}
+
+/**
+ * @brief Decision 24: a damaged limits record refuses every upload and delivery until SET LIMITS.
+ *
+ * Requirement: REQ-045, REQ-046, REQ-053 (owner decision 24, 15 Oct 2026; fail closed). Defects
+ * caught: (1) a damaged file is read as the defaults or as zeros, so a downgrade passes; (2) the
+ * log does not say why every image is refused; (3) UPLOAD END or DELIVER accept an image while the
+ * record is damaged; (4) a good SET LIMITS does not end the state. The file `limits` is damaged two
+ * ways: the wrong size, and the right size (6 bytes and the 4-byte CRC-32) with a wrong CRC-32.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testLimitsDamaged(const std::string & controller_images, const std::string & scratch)
+{
+  const std::vector<uint8_t> wrong_size = {0xDE, 0xAD, 0xBE, 0xEF, 0x01};
+  const std::vector<uint8_t> wrong_crc(config::kLimitsRecordBytes + DurableRecord::kCrcBytes, 0x5A);
+  const std::string kPrefix = "limits damaged: ";
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  LogCapture capture(scratch);
+  const std::array<const std::vector<uint8_t> *, 2> garbage = {&wrong_size, &wrong_crc};
+  const std::array<const char *, 2> names = {"wrong size", "wrong CRC-32"};
+  for (size_t i = 0; i < garbage.size(); i++) {
+    const std::string what = kPrefix + names[i] + ": ";
+    std::string dir = scratch + "/limits-damaged-" + std::to_string(i);
+    removeTree(dir);
+    bool ok = ::mkdir(dir.c_str(), 0755) == 0;
+    {
+      UpdaterRig first(dir, 0);   // stores image 3 while the limits are the defaults
+      ok = ok && first.open() && storeThrough(first, kBatchImage, image);
+    }
+    ok = ok && overwriteFile(dir + "/" + config::kLimitsRecordName, *garbage[i]);
+    report(ok, what + "setup: image 3 stored, then the file `limits` damaged");
+    (void)capture.start();
+    UpdaterRig rig(dir, 0);
+    const bool opened = rig.open();
+    const std::string text = capture.stop();
+    if (!opened) {
+      report(false, what + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    report(contains(text, kLogDamaged), what + "the log says the record is damaged and why every "
+      "upload and delivery is refused 0x0a");
+    rig.health(report::kModeOperate);
+    uint32_t seq = kBatchFirstSequence;
+    auto next = [&seq]() { uint32_t s = seq; seq += kPairStep; return s; };
+    uint32_t n = next();
+    report(isReceivedThenRefused(sendOnboard(rig, n, imageCommand(command::kDeliver, kBatchImage)),
+             n, answer::kOlderThanMinimum) && quiet(rig),
+      what + "DELIVER of a stored image: REFUSED 0x0A");
+    ok = storeBytes(rig, kBatchSecondImage, image);
+    n = next();
+    report(ok && isReceivedThenRefused(endFromGround(rig, n, kBatchSecondImage), n,
+             answer::kOlderThanMinimum),
+      what + "UPLOAD END of a good image: RECEIVED, REFUSED 0x0A");
+    const uint32_t arm = next();
+    report(isOnly(armedSetLimits(rig, arm, config::kDefaultMinimumVersion,
+             config::kDefaultControllerIdentity), arm + 1, answer::kDone, answer::kSuccess),
+      what + "a good SET LIMITS: DONE");
+    ok = storeBytes(rig, kBatchSecondImage, image);
+    n = next();
+    report(ok && isReceivedThenDone(endFromGround(rig, n, kBatchSecondImage), n),
+      what + "after it UPLOAD END accepts the image");
+    n = next();
+    SentFrame f{};
+    ok = sendOnboard(rig, n, imageCommand(command::kDeliver, kBatchImage)).size() == 1 &&
+         rig.tick(f);
+    report(ok && f.payload[0] == command::kUploadBegin, what + "and DELIVER starts");
+  }
+}
+
+/**
+ * @brief Decision 22: the delivered image is deleted when the controller reports it settled.
+ *
+ * Requirement: REQ-052 (owner decision 22, 15 Oct 2026). Defects caught, by case: (1) the image of
+ * a DONE delivery stays in storage after EVENT 0x0007 or 0x0008 (40 KB lost per update); (2) the
+ * deletion is not in the log, or names another image; (3) the .part file of an upload in progress
+ * under the same number is deleted with it; (4) a second event deletes again or fails loudly; (5)
+ * an image that was only stored, or whose delivery the controller refused, is deleted by an event;
+ * (6) the log does not say that there was nothing to delete.
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testDeliveredImageFreed(const std::string & controller_images, const std::string & scratch)
+{
+  const std::string kPrefix = "delivered image freed: ";
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  LogCapture capture(scratch);
+  const std::vector<uint8_t> part_bytes = {1, 2, 3};
+  const std::array<uint16_t, 2> events = {report::kEventFirmwareConfirmed,
+                                          report::kEventFirmwareGivenUp};
+  for (uint16_t code : events) {
+    char hex[16] = {};
+    (void)std::snprintf(hex, sizeof hex, "0x%04X", static_cast<unsigned>(code));
+    const std::string what = kPrefix + "EVENT " + hex + ": ";
+    std::string dir = scratch + "/freed-" + std::to_string(code);
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, what + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    const std::string img = dir + "/image-00003.img";
+    const std::string part = dir + "/image-00003.part";
+    rig.health(report::kModeOperate);
+    bool ok = storeThrough(rig, kBatchImage, image);
+    SentFrame f{};
+    const uint32_t deliver_seq = kBatchFirstSequence;
+    const std::vector<uint8_t> deliver = imageCommand(command::kDeliver, kBatchImage);
+    ok = ok && sendOnboard(rig, deliver_seq, deliver).size() == 1 && rig.tick(f) &&
+         finishDelivery(rig, f);
+    report(ok && hasAnswer(rig.groundAnswers(), deliver_seq, answer::kDone, 0) && exists(img),
+      what + "setup: DELIVER of image 3 ended DONE, image-00003.img is still stored");
+    report(overwriteFile(part, part_bytes), what + "setup: a .part file of the same number made");
+    (void)capture.start();
+    sendEvent(rig, code);
+    std::string text = capture.stop();
+    report(!exists(img), what + "image-00003.img is deleted");
+    report(exists(part), what + "image-00003.part stays");
+    report(contains(text, std::string("EVENT ") + hex + " (" + eventName(code) +
+             "): the delivered image 3 was deleted from storage (image-00003.img)"),
+      what + "the log names the event and the deleted image");
+    (void)capture.start();
+    sendEvent(rig, code);
+    text = capture.stop();
+    report(contains(text, "no delivered image to delete") && !contains(text, "was deleted") &&
+           exists(part), what + "a second event has nothing to delete: the log says so");
+  }
+
+  std::string dir = scratch + "/freed-nothing";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  bool ok = storeThrough(rig, kBatchSecondImage, image);
+  (void)capture.start();
+  sendEvent(rig, report::kEventFirmwareConfirmed);
+  std::string text = capture.stop();
+  report(ok && contains(text, "no delivered image to delete") && !contains(text, "was deleted") &&
+         exists(dir + "/image-00004.img"),
+    kPrefix + "nothing delivered: the log says so; a stored, never delivered image stays");
+
+  // A delivery the controller refused did not end DONE: its image stays.
+  rig.health(report::kModeOperate);
+  SentFrame f{};
+  const uint32_t refused_seq = kBatchFirstSequence;
+  const std::vector<uint8_t> second = imageCommand(command::kDeliver, kBatchSecondImage);
+  ok = sendOnboard(rig, refused_seq, second).size() == 1 && rig.tick(f);
+  rig.answer(f.sequence, answer::kRefused, answer::kNotInThisMode);
+  (void)capture.start();
+  sendEvent(rig, report::kEventFirmwareConfirmed);
+  text = capture.stop();
+  report(ok && hasAnswer(rig.groundAnswers(), refused_seq, answer::kRefused,
+           answer::kNotInThisMode) && exists(dir + "/image-00004.img") &&
+         !contains(text, "was deleted"),
+    kPrefix + "a delivery the controller refused: the image stays after the event");
+}
+
+/**
+ * @brief Decision 21: UPLOAD CANCEL of the image being delivered stops the delivery.
+ *
+ * Requirement: REQ-051 (owner decision 21, 15 Oct 2026). Defects caught, by case: (1) the CANCEL is
+ * answered at once or sends a frame while a step is still in flight (stop-and-wait broken); (2) the
+ * delivery goes on with the next chunk after the CANCEL; (3) the controller is never told (no
+ * UPLOAD CANCEL, Destination 0x02, on data link A); (4) the ground gets the answers in the wrong
+ * order or with other codes than [DELIVER: REFUSED 0x12] then [CANCEL: DONE]; (5) the image's bytes
+ * stay in storage; (6) a resent DELIVER starts again or answers something else than REFUSED 0x12;
+ * (7) a refused or unanswered cancel is answered DONE; (8) a CANCEL for another image stops the
+ * delivery (inferred from the contract, not stated in it).
+ *
+ * @param[in]     controller_images  directory with firmware-B.img
+ * @param[in]     scratch            scratch directory
+ * @return nothing
+ */
+void testCancelDelivery(const std::string & controller_images, const std::string & scratch)
+{
+  const std::string kPrefix = "cancel delivery: ";
+  std::vector<uint8_t> image = readFile(controller_images + "/firmware-B.img");
+  const std::vector<uint8_t> deliver = imageCommand(command::kDeliver, kBatchImage);
+  const std::vector<uint8_t> cancel = imageCommand(command::kUploadCancel, kBatchImage);
+  const uint32_t deliver_seq = kBatchFirstSequence;
+  const uint32_t cancel_seq = kBatchFirstSequence + 1;
+  SentFrame f{};
+  SentFrame c{};
+
+  // 1. The whole course, with the UPLOAD BEGIN in flight.
+  {
+    std::string dir = scratch + "/cancel-1";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    rig.health(report::kModeOperate);
+    bool ok = storeThrough(rig, kBatchImage, image);
+    ok = ok && sendOnboard(rig, deliver_seq, deliver).size() == 1 && rig.tick(f) &&
+         f.payload[0] == command::kUploadBegin;
+    report(ok, kPrefix + "setup: DELIVER 3 running, its UPLOAD BEGIN in flight");
+    std::vector<GroundAnswer> g = sendOnboard(rig, cancel_seq, cancel);
+    report(isOnly(g, cancel_seq, answer::kReceived, 0) && quiet(rig),
+      kPrefix + "UPLOAD CANCEL 3: RECEIVED only, nothing new on the link during the step");
+    rig.answer(f.sequence, answer::kDone, answer::kSuccess);
+    ok = rig.tick(c) && c.type == frame::kTypeCommand && c.destination == frame::kDestController &&
+         c.payload == cancel;
+    report(ok, kPrefix + "after the step is answered the next frame is UPLOAD CANCEL 3 to "
+      "Destination 0x02, not a chunk");
+    report(quiet(rig) && rig.groundAnswers().empty(),
+      kPrefix + "while the cancel is in flight nothing else is sent and the ground hears nothing");
+    rig.answer(c.sequence, answer::kDone, answer::kSuccess);
+    g = rig.groundAnswers();
+    report(g.size() == 2 && g[0].answered == deliver_seq && g[0].kind == answer::kRefused &&
+           g[0].code == answer::kCancelled && g[1].answered == cancel_seq &&
+           g[1].kind == answer::kDone && g[1].code == answer::kSuccess,
+      kPrefix + "the ground gets [DELIVER: REFUSED 0x12] then [CANCEL: DONE 0x00]");
+    report(!exists(dir + "/image-00003.img"), kPrefix + "the image's stored file is removed");
+    report(isOnlyRefused(sendOnboard(rig, deliver_seq, deliver), deliver_seq, answer::kCancelled) &&
+           quiet(rig), kPrefix + "the DELIVER sent again: REFUSED 0x12 only, no new delivery");
+    report(isOnly(sendOnboard(rig, cancel_seq, cancel), cancel_seq, answer::kAlreadyDone, 0) &&
+           quiet(rig), kPrefix + "the CANCEL sent again: ALREADY DONE only");
+  }
+
+  // 2. The controller refuses the cancel, with a chunk in flight when the CANCEL arrives.
+  {
+    std::string dir = scratch + "/cancel-2";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig 2 could not open");
+      return;
+    }
+    rig.health(report::kModeOperate);
+    bool ok = storeThrough(rig, kBatchImage, image);
+    ok = ok && sendOnboard(rig, deliver_seq, deliver).size() == 1 && rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, answer::kSuccess);   // BEGIN
+    ok = ok && rig.tick(f) && f.payload[0] == command::kUploadChunk;
+    (void)sendOnboard(rig, cancel_seq, cancel);
+    rig.answer(f.sequence, answer::kDone, answer::kSuccess);   // the chunk in flight
+    ok = ok && rig.tick(c) && c.payload == cancel;
+    report(ok, kPrefix + "a chunk in flight: the frame after its answer is UPLOAD CANCEL, "
+      "not the next chunk");
+    rig.answer(c.sequence, answer::kRefused, answer::kNotInThisMode);
+    std::vector<GroundAnswer> g = rig.groundAnswers();
+    report(hasAnswer(g, cancel_seq, answer::kRefused, answer::kNotInThisMode) &&
+           !hasAnswer(g, cancel_seq, answer::kDone, 0) && quiet(rig),
+      kPrefix + "the controller refuses the cancel 0x05: the CANCEL is answered REFUSED 0x05");
+  }
+
+  // 3. The controller does not answer the cancel.
+  {
+    std::string dir = scratch + "/cancel-3";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig 3 could not open");
+      return;
+    }
+    rig.health(report::kModeOperate);
+    bool ok = storeThrough(rig, kBatchImage, image);
+    ok = ok && sendOnboard(rig, deliver_seq, deliver).size() == 1 && rig.tick(f);
+    (void)sendOnboard(rig, cancel_seq, cancel);
+    rig.answer(f.sequence, answer::kDone, answer::kSuccess);
+    ok = ok && rig.tick(c) && c.payload == cancel;
+    rig.advance(config::kAnswerTimeoutMs + 1);
+    (void)rig.tick(f);
+    report(ok && hasAnswer(rig.groundAnswers(), cancel_seq, answer::kRefused,
+             answer::kNoAnswerBench),
+      kPrefix + "no answer to the cancel in time: the CANCEL is answered REFUSED 0xFF");
+  }
+
+  // 4. A CANCEL for another image does not stop this delivery.
+  {
+    std::string dir = scratch + "/cancel-4";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig 4 could not open");
+      return;
+    }
+    rig.health(report::kModeOperate);
+    bool ok = storeThrough(rig, kBatchImage, image);
+    ok = ok && sendOnboard(rig, deliver_seq, deliver).size() == 1 && rig.tick(f);
+    (void)sendOnboard(rig, cancel_seq, imageCommand(command::kUploadCancel, kBatchUnknownImage));
+    rig.answer(f.sequence, answer::kDone, answer::kSuccess);
+    ok = ok && rig.tick(f) && f.payload[0] == command::kUploadChunk;
+    report(ok && exists(dir + "/image-00003.img"),
+      kPrefix + "UPLOAD CANCEL of another image: the delivery goes on with its first chunk");
+  }
+}
+
 /**
  * @brief Waits for a mock restart script to finish, serving the Updater meanwhile.
  *
@@ -2841,13 +4527,15 @@ void testNamesAndFallbackDetail()
          std::strcmp(refusalName(0x0F), "trial tests not passed") == 0 &&
          std::strcmp(refusalName(0x05), "not allowed in the current mode") == 0 &&
          std::strcmp(refusalName(0xFF), "controller did not answer (bench code)") == 0 &&
-         std::strcmp(refusalName(0x12), "unknown") == 0 && std::strcmp(refusalName(0x00), "unknown") == 0,
-    "names: refusal 0x10 'image of the wrong kind for its place', 0x11 'boot state could not be stored', 0xFF, unknown");
+         std::strcmp(refusalName(0x12), "delivery cancelled by the operator") == 0 &&
+         std::strcmp(refusalName(0x00), "unknown") == 0,
+    "names: refusal 0x10 'image of the wrong kind for its place', 0x11 'boot state could not be stored', "
+    "0x12 'delivery cancelled by the operator' (decision 21), 0xFF, unknown");
   bool all_named = true;
-  for (unsigned code = 0x01; code <= 0x11; code++) {
+  for (unsigned code = 0x01; code <= answer::kCancelled; code++) {
     all_named = all_named && std::strcmp(refusalName(static_cast<uint8_t>(code)), "unknown") != 0;
   }
-  report(all_named, "names: every refusal 0x01 to 0x11 of the Sec. 4.2 table has a name");
+  report(all_named, "names: every refusal 0x01 to 0x12 of the Sec. 4.2 table has a name");
   report(std::strcmp(eventName(0x0106), "controller restarted by the onboard computer") == 0 &&
          std::strcmp(eventName(0x0009), "restart") == 0 && std::strcmp(eventName(0x0107), "unknown") == 0,
     "names: event 0x0106 'controller restarted by the onboard computer'; 0x0009 stays the controller's 'restart'");
@@ -3561,9 +5249,22 @@ int main(int argc, char ** argv)
   testAlreadyDone(argv[1], argv[4]);
   testUsedSequences(argv[4]);
   testResendAfterLostAnswer(argv[4]);
+  testOnboardArm(argv[4]);
   testTestImageOnEvent(argv[4]);
   testTrialWatch();
   testRestartRunner(argv[4]);
+  testRestartRunnerArguments(argv[4]);
+  testDurableRecord(argv[4]);
+  testRepeatOnboard(argv[4]);
+  testRepeatController(argv[1], argv[4]);
+  testRepeatMemoryRing();
+  testRepeatMemories(argv[4]);
+  testSetLimitsCommand(argv[2], argv[4]);
+  testLimitsNoRecord(argv[1], argv[4]);
+  testLimitsInForce(argv[1], argv[2], argv[4]);
+  testLimitsDamaged(argv[1], argv[4]);
+  testDeliveredImageFreed(argv[1], argv[4]);
+  testCancelDelivery(argv[1], argv[4]);
   testTrialOverrunRestart(argv[4]);
   testArmNoAnswer(argv[4]);
   testNamesAndFallbackDetail();

@@ -883,6 +883,280 @@ void testSelfTestFailure()
            "restart)");
 }
 
+/* ---- Periodic self-test (owner decision 23, 15 Oct 2026; REQ-039) ------------------------- */
+
+/* How many whole periods a poll() gap spans in the "never twice in one pass" test. No technical
+ * reason for 3; any number above 1 shows a catch-up loop. */
+constexpr uint32_t kManyPeriods = 3U;
+/* An odd offset past the multiple, so the gap is not an exact multiple of the period. No technical
+ * reason for the value. */
+constexpr uint32_t kGapOffsetMs = 7U;
+/* A start 1000 ms before the 32-bit millisecond count wraps (same value as testTrialTime). */
+constexpr uint32_t kStartBeforeWrap = 0xFFFFFC18U;
+
+/**
+ * @brief Inverts one bit of the first body byte of a slot's image: the self-test then fails;
+ * calling it again restores the image.
+ *
+ * @param[in]     slot  Slot::kA or Slot::kB
+ */
+void toggleBodyBit(Slot slot)
+{
+    slotBytes(slot)[kHeader] = static_cast<uint8_t>(slotBytes(slot)[kHeader] ^ 0x01U);
+}
+
+/**
+ * @brief Returns true if nothing came of the passes so far: no frame sent after the first `from`
+ * bytes, no restart of either kind, no boot-state write.
+ *
+ * @param[in]     from  link bytes already sent and accounted for
+ * @return true if the link, the restarts and the boot state are as they were
+ */
+bool quietSince(uint32_t from)
+{
+    return (fake_link.sent_bytes == from) && (fake.restarts == 0U) &&
+           (fake.counted_restarts == 0U) && (fake.state_writes == 0U);
+}
+
+/**
+ * @brief The self-test does not re-run before kSelfTestPeriodMs have passed since start.
+ *
+ * REQ-039, owner decision 23: the start-up self-test is the first. The image is damaged right after
+ * start; one millisecond short of the period nothing may happen, in OPERATE and in TRIAL. Fails on
+ * code that re-runs on every pass or uses a shorter period (the damage would be found and EVENT
+ * 0x0004, or 0x000B and the give-up, would go out early).
+ */
+void testPeriodicNotEarly()
+{
+    Rig operate;
+    startRig(operate, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    toggleBodyBit(Slot::kA);
+    operate.mm.poll(1U);
+    operate.mm.poll(kSelfTestPeriodMs - 1U);
+    report(operate.mm.selfTestPassed() && quietSince(0U),
+           "periodic self-test, OPERATE: damaged image, polls at 1 ms and 59 999 ms -> not re-run: "
+           "field still passed, nothing sent, no restart");
+
+    Rig trial;
+    startRig(trial, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    trial.mm.poll(0U);
+    uint32_t started = fake_link.sent_bytes;
+    toggleBodyBit(Slot::kB);
+    trial.mm.poll(kSelfTestPeriodMs - 1U);
+    report(trial.mm.selfTestPassed() && sentIs(0U, {ev(EventCode::kTrialStarted)}) &&
+               quietSince(started),
+           "periodic self-test, TRIAL: damaged image, poll at 59 999 ms -> not re-run: only "
+           "EVENT 0x0006 so far, no 0x000B, no give-up");
+}
+
+/**
+ * @brief The self-test re-runs at exactly kSelfTestPeriodMs, and HEALTH's field follows it.
+ *
+ * REQ-039, owner decision 23. Both directions of a changed result: passed at start and damaged
+ * later (field turns false), failed at start and repaired before the re-run (field turns true, no
+ * second EVENT). Fails on code that compares with > instead of >= (re-run one millisecond late),
+ * that never re-runs, or that does not store the new result in the field.
+ */
+void testPeriodicAtPeriod()
+{
+    Rig damaged;
+    startRig(damaged, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    toggleBodyBit(Slot::kA);
+    damaged.mm.poll(kSelfTestPeriodMs - 1U);
+    bool before = damaged.mm.selfTestPassed();
+    damaged.mm.poll(kSelfTestPeriodMs);
+    report(before && !damaged.mm.selfTestPassed() && sentIs(0U, {ev(EventCode::kSelfTestFailed)}),
+           "periodic self-test: image damaged after start, re-run at exactly 60 000 ms -> HEALTH "
+           "field passed -> failed, EVENT 0x0004");
+
+    Rig repaired;
+    prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+    toggleBodyBit(Slot::kA);
+    repaired.mm.start(Slot::kA, 0U, false);
+    bool failed_at_start = !repaired.mm.selfTestPassed();
+    toggleBodyBit(Slot::kA);
+    repaired.mm.poll(kSelfTestPeriodMs);
+    report(failed_at_start && repaired.mm.selfTestPassed() && quietSince(0U),
+           "periodic self-test: failed at start, image good again at 60 000 ms -> HEALTH field "
+           "failed -> passed, nothing sent, no restart");
+}
+
+/**
+ * @brief The next re-run comes one period after the last re-run, not after start.
+ *
+ * REQ-039, owner decision 23: "at least kSelfTestPeriodMs since the last one". After the re-run at
+ * 60 000 ms the image is damaged: 119 999 ms must not find it, 120 000 ms must. Fails on code that
+ * does not remember the time of the last run (it re-runs on every pass after the first period, so
+ * 60 001 ms finds the damage) or measures every period from start.
+ */
+void testPeriodicSecondRun()
+{
+    Rig rig;
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    rig.mm.poll(kSelfTestPeriodMs);
+    bool first_ok = rig.mm.selfTestPassed() && quietSince(0U);
+    toggleBodyBit(Slot::kA);
+    rig.mm.poll(kSelfTestPeriodMs + 1U);
+    rig.mm.poll((2U * kSelfTestPeriodMs) - 1U);
+    bool not_early = rig.mm.selfTestPassed() && quietSince(0U);
+    rig.mm.poll(2U * kSelfTestPeriodMs);
+    report(first_ok && not_early && !rig.mm.selfTestPassed() &&
+               sentIs(0U, {ev(EventCode::kSelfTestFailed)}),
+           "periodic self-test: re-run at 60 000 ms passes; damage at 60 001 and 119 999 ms not "
+           "found; found at 120 000 ms");
+
+    Rig late;
+    startRig(late, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    late.mm.poll(kSelfTestPeriodMs + kGapOffsetMs);
+    toggleBodyBit(Slot::kA);
+    late.mm.poll(kSelfTestPeriodMs + kSelfTestPeriodMs - 1U);
+    bool early = late.mm.selfTestPassed();
+    late.mm.poll(kSelfTestPeriodMs + kSelfTestPeriodMs + kGapOffsetMs);
+    report(early && !late.mm.selfTestPassed(),
+           "periodic self-test: first re-run late at 60 007 ms -> the next is due 60 s after it "
+           "(120 007 ms), not at 120 000 ms");
+}
+
+/**
+ * @brief The timing is right across the wrap of the 32-bit millisecond count.
+ *
+ * Owner decision 23: elapsed time is an unsigned subtraction. Start 1000 ms before the wrap. A
+ * comparison of "now >= last + period" breaks: last + period wraps to 59 000, so the first poll
+ * (now near 0xFFFFFFFF) would already be "due" and the self-test would run at once; and a signed
+ * difference or a wrapped "now" smaller than "last" would never run it. The polls: right after
+ * start, just before the wrap, one millisecond short of the period (after the wrap), at the period.
+ */
+void testPeriodicAcrossWrap()
+{
+    Rig rig;
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, kStartBeforeWrap);
+    toggleBodyBit(Slot::kA);
+    rig.mm.poll(kStartBeforeWrap + 1U);
+    rig.mm.poll(0xFFFFFFFFU);
+    bool early_polls = rig.mm.selfTestPassed() && quietSince(0U);
+    rig.mm.poll(kStartBeforeWrap + kSelfTestPeriodMs - 1U);
+    bool short_by_one = rig.mm.selfTestPassed() && quietSince(0U);
+    rig.mm.poll(kStartBeforeWrap + kSelfTestPeriodMs);
+    report(early_polls && short_by_one && !rig.mm.selfTestPassed() &&
+               sentIs(0U, {ev(EventCode::kSelfTestFailed)}),
+           "periodic self-test across the millisecond count's wrap (start 1 s before it): not run "
+           "at +1 ms, at 0xFFFFFFFF or at 59 999 ms; run at 60 000 ms");
+
+    Rig second;
+    startRig(second, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, kStartBeforeWrap);
+    second.mm.poll(kStartBeforeWrap + kSelfTestPeriodMs);
+    toggleBodyBit(Slot::kA);
+    second.mm.poll(kStartBeforeWrap + (2U * kSelfTestPeriodMs) - 1U);
+    bool second_early = second.mm.selfTestPassed();
+    second.mm.poll(kStartBeforeWrap + (2U * kSelfTestPeriodMs));
+    report(second_early && !second.mm.selfTestPassed(),
+           "periodic self-test: the second period also counts right when the first re-run is just "
+           "after the wrap (not at 119 999 ms, at 120 000 ms)");
+}
+
+/**
+ * @brief A failed periodic self-test in OPERATE: EVENT 0x0004, link drained, counted restart.
+ *
+ * Owner decision 23 with decision L: "reacts as a failed self-test does today". Checks what
+ * testSelfTestFailure checks for the start-up case: one EVENT 0x0004, no boot-state write, no
+ * uncounted restart, the fault mark BACKUP_FAULT_SELF_TEST, the link drained before the restart,
+ * the restart after the event. Fails on code that only updates the HEALTH field, restarts without
+ * the event or without the count, or sends the event after the restart.
+ */
+void testPeriodicFailureOperate()
+{
+    Rig rig;
+    uint32_t mark = 0U;
+
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    toggleBodyBit(Slot::kA);
+    rig.mm.poll(kSelfTestPeriodMs);
+    report(!rig.mm.selfTestPassed() && sentIs(0U, {ev(EventCode::kSelfTestFailed)}) &&
+               (fake.state_writes == 0U) && (fake.restarts == 0U) &&
+               (fake.counted_restarts == 1U) && (fake.fault_reason == BACKUP_FAULT_SELF_TEST) &&
+               fakeBackupGet(BACKUP_PAIR_FAULT, mark) && (mark == BACKUP_FAULT_SELF_TEST) &&
+               (fake.drains_at_restart >= 1U) && (fake.sent_at_restart == fake_link.sent_bytes),
+           "periodic self-test fails in OPERATE at 60 000 ms -> EVENT 0x0004, link drained, "
+           "counted restart with the fault mark, no boot-state write");
+}
+
+/**
+ * @brief A failed periodic self-test in TRIAL: EVENT 0x000B (detail 0x01), EVENT 0x0008, restart.
+ *
+ * Owner decision 23 with REQ-140: the trial is given up as for a failed self-test at start. The
+ * order is EVENT 0x0006 (pass at 0 ms), 0x000B with detail 0x01, the boot-state write (confirmed
+ * A, trial none, 0 starts), EVENT 0x0008, link drained, one restart into the previous firmware.
+ * Fails on code that re-runs only in OPERATE, that sends 0x000B without the detail or with
+ * another detail, or that restarts without the give-up (no 0x0008, boot state not written).
+ */
+void testPeriodicFailureTrial()
+{
+    Rig rig;
+
+    startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    rig.mm.poll(0U);
+    toggleBodyBit(Slot::kB);
+    rig.mm.poll(kSelfTestPeriodMs);
+    report(!rig.mm.selfTestPassed() && (rig.mm.firstFailedTest() == TrialTest::kSelfTest) &&
+               sentIs(0U, {ev(EventCode::kTrialStarted),
+                           ev(EventCode::kTestsFailed, static_cast<uint8_t>(TrialTest::kSelfTest)),
+                           ev(EventCode::kGivenUp)}) &&
+               (framesBefore(fake.sent_at_state_write) == 2U) && givenUpToA() &&
+               (fake.state_writes == 1U) && (fake.counted_restarts == 0U),
+           "periodic self-test fails in TRIAL at 60 000 ms -> EVENT 0x000B detail 0x01, boot state "
+           "written, EVENT 0x0008, link drained, one restart (previous firmware)");
+}
+
+/**
+ * @brief A passing periodic self-test sends nothing and changes nothing else.
+ *
+ * Owner decision 23: the good image is checked at 60 000 ms and 120 000 ms in OPERATE and in
+ * TRIAL (where only EVENT 0x0006 goes out, at the first pass). Fails on code that reports a pass
+ * (an EVENT), restarts, writes the boot state, or changes the mode.
+ */
+void testPeriodicPassQuiet()
+{
+    Rig operate;
+    startRig(operate, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    operate.mm.poll(kSelfTestPeriodMs);
+    operate.mm.poll(2U * kSelfTestPeriodMs);
+    report(operate.mm.selfTestPassed() && (operate.mm.mode() == HealthMode::kOperate) &&
+               quietSince(0U),
+           "periodic self-test passes in OPERATE at 60 000 and 120 000 ms: nothing sent, no "
+           "restart, no boot-state write, mode unchanged");
+
+    Rig trial;
+    startRig(trial, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    trial.mm.poll(0U);
+    uint32_t started = fake_link.sent_bytes;
+    trial.mm.poll(kSelfTestPeriodMs);
+    report(trial.mm.selfTestPassed() && (trial.mm.mode() == HealthMode::kTrial) &&
+               (trial.mm.firstFailedTest() != TrialTest::kSelfTest) &&
+               sentIs(0U, {ev(EventCode::kTrialStarted)}) && quietSince(started),
+           "periodic self-test passes in TRIAL at 60 000 ms: nothing new sent, no give-up, no "
+           "restart, no boot-state write, mode unchanged");
+}
+
+/**
+ * @brief At most one re-run per poll() pass, however long the gap since the last run.
+ *
+ * Owner decision 23. The image is damaged and the next pass comes 3 periods + 7 ms after start (a
+ * stalled loop). One run means one EVENT 0x0004 and one counted restart. Fails on code that
+ * catches up period by period in a loop (several events and restarts in the one pass).
+ */
+void testPeriodicOncePerPass()
+{
+    Rig rig;
+
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    toggleBodyBit(Slot::kA);
+    rig.mm.poll((kManyPeriods * kSelfTestPeriodMs) + kGapOffsetMs);
+    report(!rig.mm.selfTestPassed() && sentIs(0U, {ev(EventCode::kSelfTestFailed)}) &&
+               (fake.counted_restarts == 1U) && (fake.restarts == 0U),
+           "periodic self-test: one pass 3 periods + 7 ms after start -> one run: one EVENT "
+           "0x0004, one counted restart");
+}
+
 /**
  * @brief The test-image rules for an identifier outside UploadId: accept() and run() are the
  * fault reaction.
@@ -2144,6 +2418,14 @@ int main(int argc, char **argv)
     testSelfTest();
     testSelfTestRealImages(argv[1]);
     testSelfTestFailure();
+    testPeriodicNotEarly();
+    testPeriodicAtPeriod();
+    testPeriodicSecondRun();
+    testPeriodicAcrossWrap();
+    testPeriodicFailureOperate();
+    testPeriodicFailureTrial();
+    testPeriodicPassQuiet();
+    testPeriodicOncePerPass();
     testDataLink();
     testTestImageRules();
     testTestImageOutsideEnum();

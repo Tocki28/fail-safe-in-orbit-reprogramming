@@ -19,6 +19,10 @@
  *   6  (in the update receiver) a slot written and passed by UPLOAD END gets a fresh count.
  * Decision 5 closes the open item that was recorded here: a give-up whose boot-state write failed
  * sent no EVENT 0x0008, even when the give-up request was stored.
+ * And the owner's decision 23, 15 Oct 2026:
+ *   23 the self-test runs every kSelfTestPeriodMs (60 s, bench value for TBD-selftest) while the
+ *      firmware runs, in OPERATE and in TRIAL (runSelfTestWhenDue; REQ-039). Its failure uses the
+ *      reactions that exist (pollOperate, pollTrial); the numbers are at kSelfTestPeriodMs.
  *
  * Switches over an enum have no default label. No default: the compiler checks every case
  * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which calls the
@@ -101,6 +105,8 @@ uint8_t copyCode(Slot slot)
  * the start (clock fault, fall-back) go out on the first poll().
  *
  * The self-test runs at every start, in every mode (REQ-039); HEALTH reports its result.
+ * This run is the first of the periodic self-tests (runSelfTestWhenDue): the next is due
+ * kSelfTestPeriodMs after now_ms.
  *
  * @param[in]     running      the slot this firmware runs from (UpdateReceiver::slotOf)
  * @param[in]     now_ms       milliseconds since start
@@ -124,6 +130,7 @@ void ModeManager::start(Slot running, uint32_t now_ms, bool clock_fault)
     mode_ = (valid && in_slot && (toSlot(state.trial) == running)) ? HealthMode::kTrial
                                                                    : HealthMode::kOperate;
     self_test_passed_ = selfTest(running);
+    last_self_test_ms_ = now_ms;
 }
 
 /**
@@ -182,6 +189,9 @@ bool ModeManager::trialTestsPassed() const
  * A failed test stays failed: a later pass of the same test does not undo it (the trial is
  * given up at once, REQ-140). Data link: any send that returned false fails it, also after
  * EVENT 0x000A; a stalled transmitter during the trial is a failure whenever it happens.
+ * Self-test: it is the last self-test (selfTestPassed), replaced every kSelfTestPeriodMs. A
+ * failure is handled by pollTrial on the pass that found it, and the give-up restarts the chip,
+ * so on the board a later passing run never undoes a failed one.
  *
  * @return the failed test, or TrialTest::kNone if none has failed
  */
@@ -402,6 +412,36 @@ void ModeManager::clearRestartCountWhenDue(uint32_t now_ms)
 }
 
 /**
+ * @brief Runs the self-test again once kSelfTestPeriodMs have passed since the last run, and
+ * stores the result for HEALTH (REQ-039; owner's decision 23, 15 Oct 2026).
+ *
+ * What it is: the periodic part of REQ-039, "at every start and at TBD-selftest". The run in
+ * start() is the first; this is every later one. Why it is like this: a change to the image in
+ * flash after the start would otherwise go unseen until the next start. The 60 s, the time one
+ * run takes (at most 10 ms at 170 MHz, 106 ms at 16 MHz, computed, not measured) and the
+ * comparison with the 1.88 s watchdog and the UART ring are at kSelfTestPeriodMs.
+ *
+ * At most one run per call, and so per main-loop pass; the clock for the next run is the now_ms
+ * of the call that ran, so runs are never closer than kSelfTestPeriodMs. A pass that is late
+ * (the loop was busy) gives one run, never a catch-up. A passing run changes only the stored
+ * result and sends nothing. A failing run stores false; the reaction is not here but in the
+ * mode's own work that follows in poll(): pollOperate (EVENT 0x0004, restart, decision L) or
+ * pollTrial (EVENT 0x000B with detail 0x01, then the give-up, REQ-140). This function has no
+ * wait and no loop of its own; selfTest() is bounded by the slot (see there).
+ * Unsigned subtraction stays right when the millisecond count wraps (every 49.7 days).
+ *
+ * @param[in]     now_ms  milliseconds since start
+ */
+void ModeManager::runSelfTestWhenDue(uint32_t now_ms)
+{
+    if ((now_ms - last_self_test_ms_) < kSelfTestPeriodMs) {
+        return;
+    }
+    last_self_test_ms_ = now_ms;
+    self_test_passed_ = selfTest(running_);
+}
+
+/**
  * @brief Waits, bounded, until the UART has sent everything, then restarts the chip.
  *
  * The wait lets the last answer or event leave the chip before the reset. Its result changes
@@ -466,6 +506,8 @@ void ModeManager::giveUp(uint32_t now_ms)
  * failed" (Interfaces Sec. 5.4, REQ-039) goes out first, since the restart comes before the
  * first HEALTH report could carry the result. Before, the failure was only reported in HEALTH
  * and the firmware ran on.
+ * The failed self-test is the last one run: the one at start, or a periodic one found by
+ * runSelfTestWhenDue() earlier in the same poll() pass (owner's decision 23, 15 Oct 2026).
  *
  * @param[in]     now_ms  milliseconds since start
  * @note Does not return on the board when the self-test failed.
@@ -514,7 +556,12 @@ void ModeManager::pollTrial(uint32_t now_ms)
 
 /**
  * @brief The work of one main-loop pass: a restart after SWITCH, the events of the start, the
- * restart-count clear, then the mode's own work.
+ * restart-count clear, the periodic self-test, then the mode's own work.
+ *
+ * The periodic self-test (runSelfTestWhenDue, every kSelfTestPeriodMs, owner's decision 23,
+ * 15 Oct 2026) comes before the mode's work, so a failure it finds is handled by that work on
+ * the same pass: pollOperate restarts, pollTrial reports EVENT 0x000B and gives the trial up.
+ * It does not run on a pass that restarts after SWITCH: the chip is going away.
  *
  * Called after the frame of this pass was handled, so an answer always goes out before the
  * events and the restart it causes: UPLOAD END of a bad test image is answered REFUSED 0x08,
@@ -535,6 +582,7 @@ void ModeManager::poll(uint32_t now_ms)
     }
     sendStartEvents(now_ms);
     clearRestartCountWhenDue(now_ms);
+    runSelfTestWhenDue(now_ms);
     switch (mode_) {
     case HealthMode::kOperate:
         pollOperate(now_ms);

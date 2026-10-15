@@ -1,0 +1,499 @@
+# mac 2026-10-15 23:39:44 EEST; console.py --radio-loss 0.5 --seed 3 update --yes
+update  reading a HEALTH report
+no answer to GET STATUS (seq 1791888190) within 3 s, sending again
+waiting: seq 1791888190 GET STATUS, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12234 onboard t=1792096786 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image <checkout of 49314cc>/src/controller/build/images/firmware-B.img
+report  HEALTH  #12235 onboard t=1792096787 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12236 onboard t=1792096788 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12237 onboard t=1792096789 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD BEGIN (seq 1791888191) within 3 s, sending again
+waiting: seq 1791888191 UPLOAD BEGIN, sent 3.0 s ago, RECEIVED no
+upload  256/20424 bytes (1 %)   report  HEALTH  #12238 onboard t=1792096790 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12239 onboard t=1792096791 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12240 onboard t=1792096792 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 256 (seq 1791888193) within 3 s, sending again
+waiting: seq 1791888193 UPLOAD CHUNK offset 256, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12241 onboard t=1792096793 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12242 onboard t=1792096794 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12243 onboard t=1792096795 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 256 (seq 1791888193) within 3 s, sending again
+waiting: seq 1791888193 UPLOAD CHUNK offset 256, sent 6.0 s ago, RECEIVED no
+upload  512/20424 bytes (2 %)   report  HEALTH  #12244 onboard t=1792096796 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12245 onboard t=1792096797 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12246 onboard t=1792096798 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 512 (seq 1791888194) within 3 s, sending again
+waiting: seq 1791888194 UPLOAD CHUNK offset 512, sent 3.1 s ago, RECEIVED no
+report  HEALTH  #12247 onboard t=1792096799 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12248 onboard t=1792096800 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12249 onboard t=1792096801 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 512 (seq 1791888194) within 3 s, sending again
+waiting: seq 1791888194 UPLOAD CHUNK offset 512, sent 6.1 s ago, RECEIVED no
+upload  768/20424 bytes (3 %)   report  HEALTH  #12250 onboard t=1792096802 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12251 onboard t=1792096803 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12252 onboard t=1792096804 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 768 (seq 1791888195) within 3 s, sending again
+waiting: seq 1791888195 UPLOAD CHUNK offset 768, sent 3.0 s ago, RECEIVED no
+upload  1024/20424 bytes (5 %)   report  HEALTH  #12253 onboard t=1792096805 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12254 onboard t=1792096806 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12255 onboard t=1792096807 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 1024 (seq 1791888196) within 3 s, sending again
+waiting: seq 1791888196 UPLOAD CHUNK offset 1024, sent 3.0 s ago, RECEIVED no
+upload  1280/20424 bytes (6 %)   report  HEALTH  #12256 onboard t=1792096808 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12257 onboard t=1792096809 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12258 onboard t=1792096810 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 1280 (seq 1791888197) within 3 s, sending again
+waiting: seq 1791888197 UPLOAD CHUNK offset 1280, sent 3.0 s ago, RECEIVED no
+upload  1536/20424 bytes (7 %)   upload  1792/20424 bytes (8 %)   upload  2048/20424 bytes (10 %)   upload  2304/20424 bytes (11 %)   upload  2560/20424 bytes (12 %)   report  HEALTH  #12259 onboard t=1792096811 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12260 onboard t=1792096812 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12261 onboard t=1792096813 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 2560 (seq 1791888202) within 3 s, sending again
+waiting: seq 1791888202 UPLOAD CHUNK offset 2560, sent 3.0 s ago, RECEIVED no
+upload  2816/20424 bytes (13 %)   upload  3072/20424 bytes (15 %)   report  HEALTH  #12262 onboard t=1792096814 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12263 onboard t=1792096815 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12264 onboard t=1792096816 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 3072 (seq 1791888204) within 3 s, sending again
+waiting: seq 1791888204 UPLOAD CHUNK offset 3072, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12265 onboard t=1792096817 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12266 onboard t=1792096818 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12267 onboard t=1792096819 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 3072 (seq 1791888204) within 3 s, sending again
+waiting: seq 1791888204 UPLOAD CHUNK offset 3072, sent 6.0 s ago, RECEIVED no
+upload  3328/20424 bytes (16 %)   report  HEALTH  #12268 onboard t=1792096820 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12269 onboard t=1792096821 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12270 onboard t=1792096822 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 3328 (seq 1791888205) within 3 s, sending again
+waiting: seq 1791888205 UPLOAD CHUNK offset 3328, sent 3.0 s ago, RECEIVED no
+upload  3584/20424 bytes (17 %)   upload  3840/20424 bytes (18 %)   upload  4096/20424 bytes (20 %)   upload  4352/20424 bytes (21 %)   report  HEALTH  #12271 onboard t=1792096823 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12272 onboard t=1792096824 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12273 onboard t=1792096825 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 4352 (seq 1791888209) within 3 s, sending again
+waiting: seq 1791888209 UPLOAD CHUNK offset 4352, sent 3.0 s ago, RECEIVED no
+upload  4608/20424 bytes (22 %)   report  HEALTH  #12274 onboard t=1792096826 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12275 onboard t=1792096827 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12276 onboard t=1792096828 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 4608 (seq 1791888210) within 3 s, sending again
+waiting: seq 1791888210 UPLOAD CHUNK offset 4608, sent 3.0 s ago, RECEIVED no
+upload  4864/20424 bytes (23 %)   upload  5120/20424 bytes (25 %)   report  HEALTH  #12277 onboard t=1792096829 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12278 onboard t=1792096830 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12279 onboard t=1792096831 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5120 (seq 1791888212) within 3 s, sending again
+waiting: seq 1791888212 UPLOAD CHUNK offset 5120, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12280 onboard t=1792096832 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12281 onboard t=1792096833 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12282 onboard t=1792096834 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5120 (seq 1791888212) within 3 s, sending again
+waiting: seq 1791888212 UPLOAD CHUNK offset 5120, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #12283 onboard t=1792096835 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12284 onboard t=1792096836 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12285 onboard t=1792096837 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5120 (seq 1791888212) within 3 s, sending again
+waiting: seq 1791888212 UPLOAD CHUNK offset 5120, sent 9.0 s ago, RECEIVED no
+upload  5376/20424 bytes (26 %)   report  HEALTH  #12286 onboard t=1792096838 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12287 onboard t=1792096839 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12288 onboard t=1792096840 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5376 (seq 1791888213) within 3 s, sending again
+waiting: seq 1791888213 UPLOAD CHUNK offset 5376, sent 3.0 s ago, RECEIVED no
+upload  5632/20424 bytes (27 %)   report  HEALTH  #12289 onboard t=1792096841 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12290 onboard t=1792096842 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12291 onboard t=1792096843 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5632 (seq 1791888214) within 3 s, sending again
+waiting: seq 1791888214 UPLOAD CHUNK offset 5632, sent 3.0 s ago, RECEIVED no
+upload  5888/20424 bytes (28 %)   report  HEALTH  #12292 onboard t=1792096844 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12293 onboard t=1792096845 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12294 onboard t=1792096846 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5888 (seq 1791888215) within 3 s, sending again
+waiting: seq 1791888215 UPLOAD CHUNK offset 5888, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12295 onboard t=1792096847 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12296 onboard t=1792096848 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12297 onboard t=1792096849 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 5888 (seq 1791888215) within 3 s, sending again
+waiting: seq 1791888215 UPLOAD CHUNK offset 5888, sent 6.0 s ago, RECEIVED no
+upload  6144/20424 bytes (30 %)   upload  6400/20424 bytes (31 %)   upload  6656/20424 bytes (32 %)   upload  6912/20424 bytes (33 %)   upload  7168/20424 bytes (35 %)   upload  7424/20424 bytes (36 %)   upload  7680/20424 bytes (37 %)   upload  7936/20424 bytes (38 %)   report  HEALTH  #12298 onboard t=1792096850 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12299 onboard t=1792096851 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12300 onboard t=1792096852 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 7936 (seq 1791888223) within 3 s, sending again
+waiting: seq 1791888223 UPLOAD CHUNK offset 7936, sent 3.0 s ago, RECEIVED no
+upload  8192/20424 bytes (40 %)   upload  8448/20424 bytes (41 %)   upload  8704/20424 bytes (42 %)   upload  8960/20424 bytes (43 %)   upload  9216/20424 bytes (45 %)   report  HEALTH  #12301 onboard t=1792096853 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12302 onboard t=1792096854 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12303 onboard t=1792096855 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 9216 (seq 1791888228) within 3 s, sending again
+waiting: seq 1791888228 UPLOAD CHUNK offset 9216, sent 3.0 s ago, RECEIVED no
+upload  9472/20424 bytes (46 %)   upload  9728/20424 bytes (47 %)   report  HEALTH  #12304 onboard t=1792096856 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12305 onboard t=1792096857 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12306 onboard t=1792096858 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 9728 (seq 1791888230) within 3 s, sending again
+waiting: seq 1791888230 UPLOAD CHUNK offset 9728, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12307 onboard t=1792096859 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12308 onboard t=1792096860 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12309 onboard t=1792096861 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 9728 (seq 1791888230) within 3 s, sending again
+waiting: seq 1791888230 UPLOAD CHUNK offset 9728, sent 6.0 s ago, RECEIVED no
+upload  9984/20424 bytes (48 %)   upload  10240/20424 bytes (50 %)   report  HEALTH  #12310 onboard t=1792096862 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12311 onboard t=1792096863 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12312 onboard t=1792096864 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 10240 (seq 1791888232) within 3 s, sending again
+waiting: seq 1791888232 UPLOAD CHUNK offset 10240, sent 3.0 s ago, RECEIVED no
+upload  10496/20424 bytes (51 %)   report  HEALTH  #12313 onboard t=1792096865 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12314 onboard t=1792096866 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12315 onboard t=1792096867 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 10496 (seq 1791888233) within 3 s, sending again
+waiting: seq 1791888233 UPLOAD CHUNK offset 10496, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12316 onboard t=1792096868 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12317 onboard t=1792096869 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12318 onboard t=1792096870 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 10496 (seq 1791888233) within 3 s, sending again
+waiting: seq 1791888233 UPLOAD CHUNK offset 10496, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #12319 onboard t=1792096871 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12320 onboard t=1792096872 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12321 onboard t=1792096873 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 10496 (seq 1791888233) within 3 s, sending again
+waiting: seq 1791888233 UPLOAD CHUNK offset 10496, sent 9.0 s ago, RECEIVED no
+upload  10752/20424 bytes (52 %)   upload  11008/20424 bytes (53 %)   report  HEALTH  #12322 onboard t=1792096874 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12323 onboard t=1792096875 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12324 onboard t=1792096876 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 11008 (seq 1791888235) within 3 s, sending again
+waiting: seq 1791888235 UPLOAD CHUNK offset 11008, sent 3.0 s ago, RECEIVED no
+upload  11264/20424 bytes (55 %)   report  HEALTH  #12325 onboard t=1792096877 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12326 onboard t=1792096878 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12327 onboard t=1792096879 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 11264 (seq 1791888236) within 3 s, sending again
+waiting: seq 1791888236 UPLOAD CHUNK offset 11264, sent 3.0 s ago, RECEIVED no
+upload  11520/20424 bytes (56 %)   report  HEALTH  #12328 onboard t=1792096880 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12329 onboard t=1792096881 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12330 onboard t=1792096882 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 11520 (seq 1791888237) within 3 s, sending again
+waiting: seq 1791888237 UPLOAD CHUNK offset 11520, sent 3.1 s ago, RECEIVED no
+upload  11776/20424 bytes (57 %)   upload  12032/20424 bytes (58 %)   upload  12288/20424 bytes (60 %)   upload  12544/20424 bytes (61 %)   report  HEALTH  #12331 onboard t=1792096883 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12332 onboard t=1792096884 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12333 onboard t=1792096885 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 12544 (seq 1791888241) within 3 s, sending again
+waiting: seq 1791888241 UPLOAD CHUNK offset 12544, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12334 onboard t=1792096886 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12335 onboard t=1792096887 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12336 onboard t=1792096888 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 12544 (seq 1791888241) within 3 s, sending again
+waiting: seq 1791888241 UPLOAD CHUNK offset 12544, sent 6.0 s ago, RECEIVED no
+upload  12800/20424 bytes (62 %)   report  HEALTH  #12337 onboard t=1792096889 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12338 onboard t=1792096890 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12339 onboard t=1792096891 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 12800 (seq 1791888242) within 3 s, sending again
+waiting: seq 1791888242 UPLOAD CHUNK offset 12800, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12340 onboard t=1792096892 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12341 onboard t=1792096893 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12342 onboard t=1792096894 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 12800 (seq 1791888242) within 3 s, sending again
+waiting: seq 1791888242 UPLOAD CHUNK offset 12800, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #12343 onboard t=1792096895 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12344 onboard t=1792096896 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12345 onboard t=1792096897 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 12800 (seq 1791888242) within 3 s, sending again
+waiting: seq 1791888242 UPLOAD CHUNK offset 12800, sent 9.0 s ago, RECEIVED no
+upload  13056/20424 bytes (63 %)   report  HEALTH  #12346 onboard t=1792096898 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12347 onboard t=1792096899 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12348 onboard t=1792096900 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12349 onboard t=1792096901 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 13056 (seq 1791888243) within 3 s, sending again
+waiting: seq 1791888243 UPLOAD CHUNK offset 13056, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12350 onboard t=1792096902 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12351 onboard t=1792096903 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12352 onboard t=1792096904 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 13056 (seq 1791888243) within 3 s, sending again
+waiting: seq 1791888243 UPLOAD CHUNK offset 13056, sent 6.0 s ago, RECEIVED no
+upload  13312/20424 bytes (65 %)   report  HEALTH  #12353 onboard t=1792096905 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12354 onboard t=1792096906 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12355 onboard t=1792096907 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 13312 (seq 1791888244) within 3 s, sending again
+waiting: seq 1791888244 UPLOAD CHUNK offset 13312, sent 3.0 s ago, RECEIVED no
+upload  13568/20424 bytes (66 %)   upload  13824/20424 bytes (67 %)   report  HEALTH  #12356 onboard t=1792096908 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12357 onboard t=1792096909 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12358 onboard t=1792096910 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 13824 (seq 1791888246) within 3 s, sending again
+waiting: seq 1791888246 UPLOAD CHUNK offset 13824, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12359 onboard t=1792096911 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12360 onboard t=1792096912 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12361 onboard t=1792096913 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 13824 (seq 1791888246) within 3 s, sending again
+waiting: seq 1791888246 UPLOAD CHUNK offset 13824, sent 6.0 s ago, RECEIVED no
+upload  14080/20424 bytes (68 %)   upload  14336/20424 bytes (70 %)   upload  14592/20424 bytes (71 %)   upload  14848/20424 bytes (72 %)   upload  15104/20424 bytes (73 %)   upload  15360/20424 bytes (75 %)   upload  15616/20424 bytes (76 %)   report  HEALTH  #12362 onboard t=1792096914 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12363 onboard t=1792096915 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12364 onboard t=1792096916 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 15616 (seq 1791888253) within 3 s, sending again
+waiting: seq 1791888253 UPLOAD CHUNK offset 15616, sent 3.0 s ago, RECEIVED no
+upload  15872/20424 bytes (77 %)   report  HEALTH  #12365 onboard t=1792096917 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12366 onboard t=1792096918 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12367 onboard t=1792096919 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 15872 (seq 1791888254) within 3 s, sending again
+waiting: seq 1791888254 UPLOAD CHUNK offset 15872, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12368 onboard t=1792096920 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12369 onboard t=1792096921 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12370 onboard t=1792096922 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 15872 (seq 1791888254) within 3 s, sending again
+waiting: seq 1791888254 UPLOAD CHUNK offset 15872, sent 6.0 s ago, RECEIVED no
+upload  16128/20424 bytes (78 %)   upload  16384/20424 bytes (80 %)   upload  16640/20424 bytes (81 %)   report  HEALTH  #12371 onboard t=1792096923 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12372 onboard t=1792096924 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12373 onboard t=1792096925 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 16640 (seq 1791888257) within 3 s, sending again
+waiting: seq 1791888257 UPLOAD CHUNK offset 16640, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12374 onboard t=1792096926 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12375 onboard t=1792096927 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12376 onboard t=1792096928 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 16640 (seq 1791888257) within 3 s, sending again
+waiting: seq 1791888257 UPLOAD CHUNK offset 16640, sent 6.0 s ago, RECEIVED no
+upload  16896/20424 bytes (82 %)   report  HEALTH  #12377 onboard t=1792096929 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12378 onboard t=1792096930 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12379 onboard t=1792096931 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 16896 (seq 1791888258) within 3 s, sending again
+waiting: seq 1791888258 UPLOAD CHUNK offset 16896, sent 3.0 s ago, RECEIVED no
+upload  17152/20424 bytes (83 %)   upload  17408/20424 bytes (85 %)   report  HEALTH  #12380 onboard t=1792096932 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12381 onboard t=1792096933 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12382 onboard t=1792096934 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 17408 (seq 1791888260) within 3 s, sending again
+waiting: seq 1791888260 UPLOAD CHUNK offset 17408, sent 3.0 s ago, RECEIVED no
+upload  17664/20424 bytes (86 %)   report  HEALTH  #12383 onboard t=1792096935 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12384 onboard t=1792096936 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12385 onboard t=1792096937 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 17664 (seq 1791888261) within 3 s, sending again
+waiting: seq 1791888261 UPLOAD CHUNK offset 17664, sent 3.0 s ago, RECEIVED no
+upload  17920/20424 bytes (87 %)   report  HEALTH  #12386 onboard t=1792096938 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12387 onboard t=1792096939 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12388 onboard t=1792096940 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 17920 (seq 1791888262) within 3 s, sending again
+waiting: seq 1791888262 UPLOAD CHUNK offset 17920, sent 3.0 s ago, RECEIVED no
+upload  18176/20424 bytes (88 %)   upload  18432/20424 bytes (90 %)   report  HEALTH  #12389 onboard t=1792096941 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12390 onboard t=1792096942 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12391 onboard t=1792096943 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 18432 (seq 1791888264) within 3 s, sending again
+waiting: seq 1791888264 UPLOAD CHUNK offset 18432, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12392 onboard t=1792096944 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12393 onboard t=1792096945 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12394 onboard t=1792096946 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 18432 (seq 1791888264) within 3 s, sending again
+waiting: seq 1791888264 UPLOAD CHUNK offset 18432, sent 6.0 s ago, RECEIVED no
+upload  18688/20424 bytes (91 %)   upload  18944/20424 bytes (92 %)   report  HEALTH  #12395 onboard t=1792096947 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12396 onboard t=1792096948 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12397 onboard t=1792096949 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 18944 (seq 1791888266) within 3 s, sending again
+waiting: seq 1791888266 UPLOAD CHUNK offset 18944, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12398 onboard t=1792096950 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12399 onboard t=1792096950 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12400 onboard t=1792096951 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 18944 (seq 1791888266) within 3 s, sending again
+waiting: seq 1791888266 UPLOAD CHUNK offset 18944, sent 6.0 s ago, RECEIVED no
+upload  19200/20424 bytes (94 %)   report  HEALTH  #12401 onboard t=1792096952 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12402 onboard t=1792096953 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12403 onboard t=1792096954 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19200 (seq 1791888267) within 3 s, sending again
+waiting: seq 1791888267 UPLOAD CHUNK offset 19200, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12404 onboard t=1792096955 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12405 onboard t=1792096956 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12406 onboard t=1792096957 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19200 (seq 1791888267) within 3 s, sending again
+waiting: seq 1791888267 UPLOAD CHUNK offset 19200, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #12407 onboard t=1792096958 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12408 onboard t=1792096959 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12409 onboard t=1792096960 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19200 (seq 1791888267) within 3 s, sending again
+waiting: seq 1791888267 UPLOAD CHUNK offset 19200, sent 9.0 s ago, RECEIVED no
+report  HEALTH  #12410 onboard t=1792096961 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12411 onboard t=1792096962 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12412 onboard t=1792096963 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19200 (seq 1791888267) within 3 s, sending again
+waiting: seq 1791888267 UPLOAD CHUNK offset 19200, sent 12.0 s ago, RECEIVED no
+upload  19456/20424 bytes (95 %)   report  HEALTH  #12413 onboard t=1792096964 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12414 onboard t=1792096965 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12415 onboard t=1792096966 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19456 (seq 1791888268) within 3 s, sending again
+waiting: seq 1791888268 UPLOAD CHUNK offset 19456, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12416 onboard t=1792096967 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12417 onboard t=1792096968 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12418 onboard t=1792096969 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19456 (seq 1791888268) within 3 s, sending again
+waiting: seq 1791888268 UPLOAD CHUNK offset 19456, sent 6.0 s ago, RECEIVED no
+upload  19712/20424 bytes (96 %)   report  HEALTH  #12419 onboard t=1792096970 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12420 onboard t=1792096971 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12421 onboard t=1792096972 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 19712 (seq 1791888269) within 3 s, sending again
+waiting: seq 1791888269 UPLOAD CHUNK offset 19712, sent 3.0 s ago, RECEIVED no
+upload  19968/20424 bytes (97 %)   upload  20224/20424 bytes (99 %)   report  HEALTH  #12422 onboard t=1792096973 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12423 onboard t=1792096974 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12424 onboard t=1792096975 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 20224 (seq 1791888271) within 3 s, sending again
+waiting: seq 1791888271 UPLOAD CHUNK offset 20224, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12425 onboard t=1792096976 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12426 onboard t=1792096977 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12427 onboard t=1792096978 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD CHUNK offset 20224 (seq 1791888271) within 3 s, sending again
+waiting: seq 1791888271 UPLOAD CHUNK offset 20224, sent 6.0 s ago, RECEIVED no
+upload  20424/20424 bytes (100 %)   report  HEALTH  #12428 onboard t=1792096979 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12429 onboard t=1792096980 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12430 onboard t=1792096981 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD END (seq 1791888272) within 3 s, sending again
+waiting: seq 1791888272 UPLOAD END, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12431 onboard t=1792096982 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12432 onboard t=1792096983 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12433 onboard t=1792096984 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD END (seq 1791888272) within 3 s, sending again
+waiting: seq 1791888272 UPLOAD END, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #12434 onboard t=1792096985 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12435 onboard t=1792096986 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12436 onboard t=1792096987 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to UPLOAD END (seq 1791888272) within 3 s, sending again
+waiting: seq 1791888272 UPLOAD END, sent 9.0 s ago, RECEIVED no
+
+upload  complete, 20424 bytes in 202.07 s
+report  HEALTH  #12437 onboard t=1792096988 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12438 onboard t=1792096989 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12439 onboard t=1792096990 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12440 onboard t=1792096991 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12441 onboard t=1792096992 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12442 onboard t=1792096993 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12443 onboard t=1792096994 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12444 onboard t=1792096995 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12445 onboard t=1792096996 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12446 onboard t=1792096997 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12447 onboard t=1792096998 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12448 onboard t=1792096999 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12449 onboard t=1792097000 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12450 onboard t=1792097001 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12451 onboard t=1792097002 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12452 onboard t=1792097003 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12453 onboard t=1792097004 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12454 onboard t=1792097005 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12455 onboard t=1792097006 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12456 onboard t=1792097007 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12457 onboard t=1792097008 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12458 onboard t=1792097009 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12459 onboard t=1792097010 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12460 onboard t=1792097011 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12461 onboard t=1792097012 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12462 onboard t=1792097013 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12463 onboard t=1792097014 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12464 onboard t=1792097015 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12465 onboard t=1792097016 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12466 onboard t=1792097017 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to DELIVER (seq 1791888273) within 30 s, sending again
+waiting: seq 1791888273 DELIVER, sent 30.0 s ago, RECEIVED no
+report  HEALTH  #12467 onboard t=1792097018 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12468 onboard t=1792097019 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12469 onboard t=1792097020 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12470 onboard t=1792097021 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12471 onboard t=1792097022 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12472 onboard t=1792097023 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12473 onboard t=1792097024 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12474 onboard t=1792097025 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12475 onboard t=1792097026 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12476 onboard t=1792097027 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12477 onboard t=1792097028 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12478 onboard t=1792097029 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12479 onboard t=1792097030 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12480 onboard t=1792097031 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12481 onboard t=1792097032 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12482 onboard t=1792097033 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12483 onboard t=1792097034 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12484 onboard t=1792097035 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12485 onboard t=1792097036 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12486 onboard t=1792097037 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12487 onboard t=1792097038 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12488 onboard t=1792097039 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12489 onboard t=1792097040 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12490 onboard t=1792097041 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12491 onboard t=1792097042 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12492 onboard t=1792097043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12493 onboard t=1792097044 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12494 onboard t=1792097045 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12495 onboard t=1792097046 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12496 onboard t=1792097047 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to DELIVER (seq 1791888273) within 30 s, sending again
+waiting: seq 1791888273 DELIVER, sent 60.0 s ago, RECEIVED no
+report  HEALTH  #12497 onboard t=1792097048 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12498 onboard t=1792097049 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12499 onboard t=1792097050 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12500 onboard t=1792097051 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12501 onboard t=1792097052 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12502 onboard t=1792097053 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12503 onboard t=1792097054 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12504 onboard t=1792097055 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12505 onboard t=1792097056 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12506 onboard t=1792097057 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12507 onboard t=1792097058 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12508 onboard t=1792097059 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12509 onboard t=1792097060 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12510 onboard t=1792097061 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12511 onboard t=1792097062 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12512 onboard t=1792097063 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12513 onboard t=1792097064 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12514 onboard t=1792097065 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12515 onboard t=1792097066 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12516 onboard t=1792097067 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12517 onboard t=1792097068 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12518 onboard t=1792097069 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12519 onboard t=1792097070 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12520 onboard t=1792097071 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12521 onboard t=1792097072 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12522 onboard t=1792097073 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12523 onboard t=1792097074 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12524 onboard t=1792097075 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12525 onboard t=1792097076 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12526 onboard t=1792097077 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to DELIVER (seq 1791888273) within 30 s, sending again
+waiting: seq 1791888273 DELIVER, sent 90.0 s ago, RECEIVED no
+report  HEALTH  #12527 onboard t=1792097079 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12528 onboard t=1792097080 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12529 onboard t=1792097081 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 93.11 s
+report  HEALTH  #12530 onboard t=1792097082 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12531 onboard t=1792097083 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12532 onboard t=1792097084 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to ARM (seq 1791888274) within 3 s, sending again
+waiting: seq 1791888274 ARM, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12533 onboard t=1792097085 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12534 onboard t=1792097086 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12535 onboard t=1792097086 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to SWITCH (seq 1791888275) within 3 s, sending again
+waiting: seq 1791888275 SWITCH, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12536 onboard t=1792097087 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12537 onboard t=1792097088 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12538 onboard t=1792097089 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to SWITCH (seq 1791888275) within 3 s, sending again
+waiting: seq 1791888275 SWITCH, sent 6.0 s ago, RECEIVED no
+switch  sent, answered DONE
+report  EVENT   #12539 onboard t=1792097090 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #12540 onboard t=1792097091 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #12541 onboard t=1792097092 0x000a trial tests passed
+report  HEALTH  #12542 onboard t=1792097092 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  HEALTH  #12543 onboard t=1792097093 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 117 s, self-test PASSED
+report  HEALTH  #12544 onboard t=1792097094 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 116 s, self-test PASSED
+report  HEALTH  #12545 onboard t=1792097095 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 115 s, self-test PASSED
+no answer to ARM (seq 1791888277) within 3 s, sending again
+waiting: seq 1791888277 ARM, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #12546 onboard t=1792097096 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 114 s, self-test PASSED
+report  HEALTH  #12547 onboard t=1792097097 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 113 s, self-test PASSED
+report  HEALTH  #12548 onboard t=1792097098 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 112 s, self-test PASSED
+no answer to ARM (seq 1791888277) within 3 s, sending again
+waiting: seq 1791888277 ARM, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #12549 onboard t=1792097099 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 111 s, self-test PASSED
+report  HEALTH  #12550 onboard t=1792097100 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 110 s, self-test PASSED
+report  HEALTH  #12551 onboard t=1792097101 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 109 s, self-test PASSED
+no answer to ARM (seq 1791888277) within 3 s, sending again
+waiting: seq 1791888277 ARM, sent 9.0 s ago, RECEIVED no
+report  HEALTH  #12552 onboard t=1792097102 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 108 s, self-test PASSED
+report  HEALTH  #12553 onboard t=1792097103 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 107 s, self-test PASSED
+report  HEALTH  #12554 onboard t=1792097104 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 106 s, self-test PASSED
+no answer to CONFIRM (seq 1791888278) within 3 s, sending again
+waiting: seq 1791888278 CONFIRM, sent 3.0 s ago, RECEIVED no
+report  EVENT   #12555 onboard t=1792097105 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #12556 onboard t=1792097105 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (323.1 s)
+radio simulator: dropped 78 of 167 outgoing datagrams
+exit=0
+# mac end 2026-10-15 23:45:08 EEST

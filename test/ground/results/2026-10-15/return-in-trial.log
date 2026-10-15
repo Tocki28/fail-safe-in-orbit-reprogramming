@@ -1,0 +1,91 @@
+# mac 2026-10-15 23:12:12 EEST; console and images at 49314cc
+$ console.py upload firmware-B.img --number 10
+upload  256/20424 bytes (1 %)   upload  512/20424 bytes (2 %)   upload  768/20424 bytes (3 %)   upload  1024/20424 bytes (5 %)   upload  1280/20424 bytes (6 %)   upload  1536/20424 bytes (7 %)   upload  1792/20424 bytes (8 %)   upload  2048/20424 bytes (10 %)   upload  2304/20424 bytes (11 %)   upload  2560/20424 bytes (12 %)   upload  2816/20424 bytes (13 %)   upload  3072/20424 bytes (15 %)   upload  3328/20424 bytes (16 %)   upload  3584/20424 bytes (17 %)   upload  3840/20424 bytes (18 %)   upload  4096/20424 bytes (20 %)   upload  4352/20424 bytes (21 %)   upload  4608/20424 bytes (22 %)   upload  4864/20424 bytes (23 %)   upload  5120/20424 bytes (25 %)   upload  5376/20424 bytes (26 %)   upload  5632/20424 bytes (27 %)   upload  5888/20424 bytes (28 %)   upload  6144/20424 bytes (30 %)   upload  6400/20424 bytes (31 %)   upload  6656/20424 bytes (32 %)   upload  6912/20424 bytes (33 %)   upload  7168/20424 bytes (35 %)   upload  7424/20424 bytes (36 %)   upload  7680/20424 bytes (37 %)   upload  7936/20424 bytes (38 %)   upload  8192/20424 bytes (40 %)   upload  8448/20424 bytes (41 %)   upload  8704/20424 bytes (42 %)   upload  8960/20424 bytes (43 %)   upload  9216/20424 bytes (45 %)   upload  9472/20424 bytes (46 %)   upload  9728/20424 bytes (47 %)   upload  9984/20424 bytes (48 %)   upload  10240/20424 bytes (50 %)   upload  10496/20424 bytes (51 %)   upload  10752/20424 bytes (52 %)   upload  11008/20424 bytes (53 %)   upload  11264/20424 bytes (55 %)   upload  11520/20424 bytes (56 %)   upload  11776/20424 bytes (57 %)   upload  12032/20424 bytes (58 %)   upload  12288/20424 bytes (60 %)   upload  12544/20424 bytes (61 %)   upload  12800/20424 bytes (62 %)   upload  13056/20424 bytes (63 %)   upload  13312/20424 bytes (65 %)   upload  13568/20424 bytes (66 %)   upload  13824/20424 bytes (67 %)   upload  14080/20424 bytes (68 %)   upload  14336/20424 bytes (70 %)   upload  14592/20424 bytes (71 %)   upload  14848/20424 bytes (72 %)   upload  15104/20424 bytes (73 %)   upload  15360/20424 bytes (75 %)   upload  15616/20424 bytes (76 %)   upload  15872/20424 bytes (77 %)   upload  16128/20424 bytes (78 %)   upload  16384/20424 bytes (80 %)   upload  16640/20424 bytes (81 %)   upload  16896/20424 bytes (82 %)   upload  17152/20424 bytes (83 %)   upload  17408/20424 bytes (85 %)   upload  17664/20424 bytes (86 %)   upload  17920/20424 bytes (87 %)   upload  18176/20424 bytes (88 %)   upload  18432/20424 bytes (90 %)   upload  18688/20424 bytes (91 %)   upload  18944/20424 bytes (92 %)   upload  19200/20424 bytes (94 %)   upload  19456/20424 bytes (95 %)   upload  19712/20424 bytes (96 %)   upload  19968/20424 bytes (97 %)   upload  20224/20424 bytes (99 %)   upload  20424/20424 bytes (100 %)   report  HEALTH  #10559 onboard t=1792095131 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+upload  complete, 20424 bytes in 0.79 s
+exit=0
+$ console.py deliver --number 10
+report  HEALTH  #10560 onboard t=1792095132 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10561 onboard t=1792095133 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.11 s
+exit=0
+$ console.py switch
+report  HEALTH  #10562 onboard t=1792095134 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+switch  sent, answered DONE
+exit=0
+$ console.py status --seconds 4
+report  EVENT   #10563 onboard t=1792095134 0x0006 trial started
+report  HEALTH  #10564 onboard t=1792095135 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  HEALTH  #10565 onboard t=1792095136 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+report  EVENT   #10566 onboard t=1792095136 0x000a trial tests passed
+no answer to GET STATUS (seq 1791887603) within 3 s, sending again
+waiting: seq 1791887603 GET STATUS, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #10567 onboard t=1792095137 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 117 s, self-test PASSED
+report  HEALTH  #10568 onboard t=1792095138 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 116 s, self-test PASSED
+report  HEALTH  #10569 onboard t=1792095139 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 115 s, self-test PASSED
+report  HEALTH  #10570 onboard t=1792095140 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 114 s, self-test PASSED
+mac 23:12:23
+$ console.py return
+report  EVENT   #10572 onboard t=1792095142 0x0008 firmware given up
+return to previous  sent, answered DONE
+exit=0
+$ console.py status --seconds 8
+report  HEALTH  #10573 onboard t=1792095143 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10574 onboard t=1792095144 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+no answer to GET STATUS (seq 1791887606) within 3 s, sending again
+waiting: seq 1791887606 GET STATUS, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #10575 onboard t=1792095145 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10576 onboard t=1792095146 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10577 onboard t=1792095147 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10578 onboard t=1792095148 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10579 onboard t=1792095149 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10580 onboard t=1792095150 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10581 onboard t=1792095151 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10582 onboard t=1792095152 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10583 onboard t=1792095153 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+# fsir-updater journal (board UTC), 20:12:10-20:12:45
+2026-10-15T20:12:10.459065+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10541.126] ground link: answers and reports now go to 192.168.7.85:60001
+2026-10-15T20:12:10.459065+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10541.126] ground: command 0x01 sequence 1791887518 for the onboard computer (7 payload bytes)
+2026-10-15T20:12:10.471400+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10541.139] UPLOAD BEGIN image 10, 20424 bytes: starting at byte 0
+2026-10-15T20:12:11.226780+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10541.894] ground: command 0x03 sequence 1791887599 for the onboard computer (3 payload bytes)
+2026-10-15T20:12:11.251268+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10541.919] UPLOAD END image 10: checks passed (kind 0x02, version 1); stored
+2026-10-15T20:12:11.376525+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10542.044] ground link: answers and reports now go to 192.168.7.85:62560
+2026-10-15T20:12:11.376525+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10542.044] ground: command 0x05 sequence 1791887600 for the onboard computer (3 payload bytes)
+2026-10-15T20:12:11.379384+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10542.047] DELIVER image 10: 20424 bytes, version 1, to the controller
+2026-10-15T20:12:14.481826+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.150] DELIVER image 10: done; the controller accepted UPLOAD END
+2026-10-15T20:12:14.599515+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.267] ground link: answers and reports now go to 192.168.7.85:60960
+2026-10-15T20:12:14.599515+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.267] ground: command 0x0d sequence 1791887601 for the controller (6 payload bytes)
+2026-10-15T20:12:14.599515+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.267] ground: ARM sequence 1791887601 held for command 0x20, ground sequence 1791887602 (valid 30000 ms)
+2026-10-15T20:12:14.600838+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.269] ground: command 0x20 sequence 1791887602 for the controller (1 payload bytes)
+2026-10-15T20:12:14.601147+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.269] ARM sequence 5247 sent for ground command 0x20 sequence 1791887602, which will carry sequence 5248
+2026-10-15T20:12:14.607917+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.276] ground command 0x20 sequence 1791887602 passed on to the controller as sequence 5248
+2026-10-15T20:12:14.724959+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.393] controller: answer 0x02 code 0x00 to ground sequence 1791887602
+2026-10-15T20:12:14.843918+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.511] ground link: answers and reports now go to 192.168.7.85:61291
+2026-10-15T20:12:14.843918+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.511] ground: command 0x25 sequence 1791887603 for the controller (1 payload bytes)
+2026-10-15T20:12:14.843918+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.511] ground command 0x25 sequence 1791887603 passed on to the controller as sequence 5249
+2026-10-15T20:12:14.906071+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10545.574] controller: EVENT 0x0006 (trial started)
+2026-10-15T20:12:15.895115+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10546.563] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+2026-10-15T20:12:16.849988+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10547.518] controller: no last answer to sequence 5249 in time; the ground gets none (a late one is still passed on)
+2026-10-15T20:12:16.850468+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10547.518] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+2026-10-15T20:12:16.982563+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10547.650] test image: done; the controller accepted UPLOAD END
+2026-10-15T20:12:16.985422+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10547.653] controller: EVENT 0x000a (trial tests passed)
+2026-10-15T20:12:17.846025+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10548.513] ground: command 0x25 sequence 1791887603 for the controller (1 payload bytes)
+2026-10-15T20:12:17.846025+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10548.513] ground command 0x25 sequence 1791887603 passed on to the controller as sequence 5257
+2026-10-15T20:12:17.852451+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10548.520] controller: answer 0x02 code 0x00 to ground sequence 1791887603
+2026-10-15T20:12:21.973514+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.641] ground link: answers and reports now go to 192.168.7.85:51000
+2026-10-15T20:12:21.973514+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.641] ground: command 0x0d sequence 1791887604 for the controller (6 payload bytes)
+2026-10-15T20:12:21.973514+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.641] ground: ARM sequence 1791887604 held for command 0x21, ground sequence 1791887605 (valid 30000 ms)
+2026-10-15T20:12:21.975683+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.643] ground: command 0x21 sequence 1791887605 for the controller (1 payload bytes)
+2026-10-15T20:12:21.975683+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.643] ARM sequence 5260 sent for ground command 0x21 sequence 1791887605, which will carry sequence 5261
+2026-10-15T20:12:21.982079+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.650] ground command 0x21 sequence 1791887605 passed on to the controller as sequence 5261
+2026-10-15T20:12:22.011490+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.679] controller: EVENT 0x0008 (firmware given up)
+2026-10-15T20:12:22.013774+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.681] controller: answer 0x02 code 0x00 to ground sequence 1791887605
+2026-10-15T20:12:22.128309+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.796] ground link: answers and reports now go to 192.168.7.85:62537
+2026-10-15T20:12:22.128309+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.796] ground: command 0x25 sequence 1791887606 for the controller (1 payload bytes)
+2026-10-15T20:12:22.128309+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10552.796] ground command 0x25 sequence 1791887606 passed on to the controller as sequence 5262
+2026-10-15T20:12:23.141967+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10553.810] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+2026-10-15T20:12:24.135172+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10554.803] controller: no last answer to sequence 5262 in time; the ground gets none (a late one is still passed on)
+2026-10-15T20:12:25.130155+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10555.798] ground: command 0x25 sequence 1791887606 for the controller (1 payload bytes)
+2026-10-15T20:12:25.130155+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10555.798] ground command 0x25 sequence 1791887606 passed on to the controller as sequence 5264
+2026-10-15T20:12:25.140566+00:00 stm32mp2unknownunknown fsir-updater[6147]: [ 10555.808] controller: answer 0x02 code 0x00 to ground sequence 1791887606

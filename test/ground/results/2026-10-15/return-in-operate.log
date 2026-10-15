@@ -1,0 +1,4 @@
+# mac 2026-10-15 23:12:04 EEST; console and images at 49314cc; controller firmware A 49314cc (restored 20:10 UTC)
+$ console.py return   (controller in OPERATE)
+FAILED: RETURN TO PREVIOUS (seq 1791887517) REFUSED 0x05: Not allowed in the current mode
+exit=1

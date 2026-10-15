@@ -1,0 +1,84 @@
+# mac 2026-10-15 23:13:36 EEST; trial-forever test image 49314cc; decision H
+$ console.py upload slotB-v2-trial-forever.img --number 11
+
+upload  complete, 2368 bytes in 0.13 s
+exit=0
+$ console.py deliver --number 11
+report  HEALTH  #10647 onboard t=1792095215 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 0.80 s
+exit=0
+$ console.py switch
+switch  sent, answered DONE
+exit=0  mac 23:13:37
+$ console.py status --seconds 660
+report  HEALTH  #10649 onboard t=1792095216 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10650 onboard t=1792095217 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10651 onboard t=1792095218 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+no answer to GET STATUS (seq 1791887628) within 3 s, sending again
+waiting: seq 1791887628 GET STATUS, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #10652 onboard t=1792095219 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10653 onboard t=1792095220 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10654 onboard t=1792095221 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+no answer to GET STATUS (seq 1791887628) within 3 s, sending again
+waiting: seq 1791887628 GET STATUS, sent 6.0 s ago, RECEIVED no
+report  HEALTH  #10655 onboard t=1792095222 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10656 onboard t=1792095223 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10657 onboard t=1792095224 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+no answer to GET STATUS (seq 1791887628) within 3 s, sending again
+waiting: seq 1791887628 GET STATUS, sent 9.0 s ago, RECEIVED no
+report  HEALTH  #10658 onboard t=1792095225 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10659 onboard t=1792095226 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10660 onboard t=1792095227 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+no answer to GET STATUS (seq 1791887628) within 3 s, sending again
+waiting: seq 1791887628 GET STATUS, sent 12.0 s ago, RECEIVED no
+report  HEALTH  #10661 onboard t=1792095228 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10662 onboard t=1792095229 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10663 onboard t=1792095230 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+no answer to GET STATUS (seq 1791887628) within 3 s, sending again
+waiting: seq 1791887628 GET STATUS, sent 15.0 s ago, RECEIVED no
+report  HEALTH  #10664 onboard t=1792095231 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10665 onboard t=1792095232 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+report  HEALTH  #10666 onboard t=1792095233 mode TRIAL, firmware kind 2 version 2, slot B, failed starts 1, trial left 0 s, self-test PASSED
+waiting: seq 1791887628 GET STATUS, sent 18.0 s ago, RECEIVED no
+FAILED: GET STATUS (seq 1791887628): no answer after 6 tries
+end mac 23:13:55
+done at 20:27:32
+20:13:35.426updater[6147]: [ 10626.095] DELIVER image 11: done; the controller accepted UPLOAD END
+20:13:35.558updater[6147]: [ 10626.226] ground: command 0x0d sequence 1791887626 for the controller (6 payload bytes)
+20:13:35.558updater[6147]: [ 10626.226] ground: ARM sequence 1791887626 held for command 0x20, ground sequence 1791887627 (valid 30000 ms)
+20:13:35.560updater[6147]: [ 10626.228] ground: command 0x20 sequence 1791887627 for the controller (1 payload bytes)
+20:13:35.560updater[6147]: [ 10626.228] ARM sequence 5324 sent for ground command 0x20 sequence 1791887627, which will carry sequence 5325
+20:13:35.567updater[6147]: [ 10626.235] ground command 0x20 sequence 1791887627 passed on to the controller as sequence 5325
+20:13:35.638updater[6147]: [ 10626.306] controller: answer 0x02 code 0x00 to ground sequence 1791887627
+20:13:35.773updater[6147]: [ 10626.441] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v2, failed starts 1, trial time left 0 s, self-test 0x00
+20:13:35.773updater[6147]: [ 10626.441] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+20:13:35.776updater[6147]: [ 10626.444] ground: command 0x25 sequence 1791887628 for the controller (1 payload bytes)
+20:13:38.777updater[6147]: [ 10629.445] ground: command 0x25 sequence 1791887628 for the controller (1 payload bytes)
+20:13:38.777updater[6147]: [ 10629.445] test image: no answer from the controller after 0 of 1024 bytes; not retried
+20:13:38.778updater[6147]: [ 10629.445] ground command 0x25 sequence 1791887628 passed on to the controller as sequence 5327
+20:13:40.819updater[6147]: [ 10631.487] ground command 0x25 sequence 1791887628 passed on to the controller as sequence 5328
+20:13:41.779updater[6147]: [ 10632.448] ground: command 0x25 sequence 1791887628 for the controller (1 payload bytes)
+20:13:42.867updater[6147]: [ 10633.535] ground command 0x25 sequence 1791887628 passed on to the controller as sequence 5329
+20:13:44.781updater[6147]: [ 10635.449] ground: command 0x25 sequence 1791887628 for the controller (1 payload bytes)
+20:13:44.882updater[6147]: [ 10635.550] ground command 0x25 sequence 1791887628 passed on to the controller as sequence 5330
+20:13:47.782updater[6147]: [ 10638.450] ground: command 0x25 sequence 1791887628 for the controller (1 payload bytes)
+20:13:48.963updater[6147]: [ 10639.631] ground command 0x25 sequence 1791887628 passed on to the controller as sequence 5332
+20:13:50.783updater[6147]: [ 10641.451] ground: command 0x25 sequence 1791887628 for the controller (1 payload bytes)
+20:13:50.984updater[6147]: [ 10641.652] ground command 0x25 sequence 1791887628 passed on to the controller as sequence 5333
+20:16:05.816updater[6147]: [ 10776.484] trial: no EVENT 0x0007 or 0x0008 within 120 s + 30 s margin of the trial's start (REQ-037); restarting the controller with the restart script
+20:16:05.817updater[6147]: [ 10776.485] trial: /usr/local/bin/restore.sh reset started (deadline 40 s, then TERM, KILL after 5 s)
+20:16:05.998updater[6147]: [ 10776.666] trial: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+20:16:05.998updater[6147]: [ 10776.666] trial: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x01 trial past its time
+20:16:05.998updater[6147]: [ 10776.666] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x01
+20:16:06.015updater[6147]: [ 10776.683] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v2, failed starts 2, trial time left 0 s, self-test 0x00
+
+# 20:28 UTC: controller still in TRIAL slot B, failed starts 2, controller clock 723 s (read with a GET STATUS and the HEALTH reports). Recovery by the operator: restore.sh reset, twice.
+reset 1 at 20:28:33.796
+RESTORE DONE: reset
+exit=0
+reset 2 at 20:28:41.980
+RESTORE DONE: reset
+exit=0
+20:28:33.995updater[6147]: [ 11524.663] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v2, failed starts 3, trial time left 0 s, self-test 0x00
+20:28:42.231updater[6147]: [ 11532.899] controller: EVENT 0x0002 (fall-back to the previous copy), refused copy 0x02 (B), check result 0x0c (trial started too often)
+20:28:43.220updater[6147]: [ 11533.888] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00

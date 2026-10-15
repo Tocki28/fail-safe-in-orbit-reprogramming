@@ -1,0 +1,11 @@
+# radio-loss runs, decision 6; console and images 49314cc; mac start 2026-10-15 23:29:19 EEST
+loss 0.1 seed 1: exit=0, 41 s, dropped 11 of 100, resends 11
+loss 0.1 seed 2: exit=0, 30 s, dropped 7 of 96, resends 7
+loss 0.1 seed 3: exit=0, 44 s, dropped 12 of 101, resends 12
+loss 0.3 seed 1: exit=0, 189 s, dropped 33 of 122, resends 33
+loss 0.3 seed 2: exit=0, 113 s, dropped 35 of 124, resends 35
+loss 0.3 seed 3: exit=0, 116 s, dropped 27 of 116, resends 27
+loss 0.5 seed 1: exit=1, 56 s, dropped 18 of 29, resends 17
+loss 0.5 seed 2: exit=1, 36 s, dropped 12 of 24, resends 11
+loss 0.5 seed 3: exit=0, 324 s, dropped 78 of 167, resends 78
+# mac end 2026-10-15 23:45:08 EEST

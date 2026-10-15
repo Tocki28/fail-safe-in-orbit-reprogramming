@@ -27,8 +27,9 @@ all passed, image tool 11/0, restore 372/0), ground `make check` exit 0 (45 test
 - FAIL: measured; the expected result did not hold. Listed under "Findings".
 - NOT RUN: not measured on this build. The Reason column says why.
 - NOT ON BENCH: needs equipment the 12 Oct build declaration left out (data link B, CAN FD or
-  RS-422, the factory-loader restore, SWD driven by the onboard computer's own pins, an
-  automatic power switch).
+  RS-422, the factory-loader restore, SWD driven by the onboard computer's own pins). The
+  automatic power switch, also left out then, is on the bench since 15 Oct: the MP257's USB2422
+  hub switches the Nucleo's port power (`onboard-computer/results/2026-10-15/power-switch-check.log`).
 - N/A: the pair has no meaning. The Reason column says why.
 
 **Reason** (rows that are not PASS):
@@ -83,12 +84,12 @@ condition").
 | A4.4 | Test-4 Trial | Confirmed on the operator's ARM and CONFIRM | REQ-012 | SCRIPTED | PASS | — | tom-y-n:118-123 |
 | A4.5 | Test-4 Trial | Given up at once when a trial test fails (bad test image) | REQ-140 | PROBE | NOT RUN | EARLIER BUILD | `controller/results/2026-10-13/step-2d-trial-bad-image.log` (5e9bdbc) |
 | A4.6 | Test-4 Trial | Given up when the new firmware hangs | REQ-014 | SCRIPTED | NOT RUN | PLANNED-2 | `slotB-v2-hang.img` through the whole chain (B5.12) |
-| A4.7 | Test-4 Trial | Given up on the operator's order (RETURN TO PREVIOUS 0x21) | REQ-113 | — | NOT RUN | NOT BUILT-OPEN | `src/controller/firmware/main.cpp:20-22` |
+| A4.7 | Test-4 Trial | Given up on the operator's order (RETURN TO PREVIOUS 0x21) | REQ-113 | SCRIPTED | PASS | — | `ground/results/2026-10-15/return-in-trial.log` (EVENT 0x0008 at 10552.679 s, DONE at 10552.681 s, then OPERATE slot A); refused 0x05 in OPERATE: `ground/results/2026-10-15/return-in-operate.log`; firmware 49314cc |
 | A4.8 | Test-4 Trial | Switch at the set moment (bench: on the operator's SWITCH; TBD-switch open) | REQ-021 | SCRIPTED | PASS | — | tom-y-n:106-110 |
-| A5.1 | Test-5 Failed starts | After 3 failed starts the previous copy runs | REQ-015 | SCRIPTED | NOT RUN | PLANNED-2 | B5.12; earlier `controller/results/2026-10-13/scenario-2.log` |
+| A5.1 | Test-5 Failed starts | After 3 failed starts the previous copy runs | REQ-015 | SCRIPTED | PASS | — | `ground/results/2026-10-15/trial-forever-decision-h.log`: starts 1, 2, 3 of slot B (two of them after operator resets), then EVENT 0x0002 refused copy B, check 0x0c, OPERATE slot A; controller 49314cc |
 | A5.2 | Test-5 Failed starts | A power cut during a trial counts as a failed start | REQ-016 | HAND | NOT RUN | PLANNED-3 | B5.1 |
 | A5.3 | Test-5 Failed starts | The count survives restarts and power cuts (HEALTH and the boot state read back) | REQ-017 | HAND | NOT RUN | PLANNED-3 | B5.1, B5.2 |
-| A5.4 | Test-5 Failed starts | Given-up firmware is not started again by a restart or a SWITCH without a new delivery | REQ-019 | SCRIPTED | NOT RUN | PLANNED-2 | B8.11 |
+| A5.4 | Test-5 Failed starts | Given-up firmware is not started again by a restart or a SWITCH without a new delivery | REQ-019 | SCRIPTED | FAIL | — | Finding F-1: `ground/results/2026-10-15/finding-37-switch-to-given-up.log` |
 | A5.5 | Test-5 Failed starts | Failed firmware started again on order (START FAILED 0x22) | REQ-019 | — | NOT RUN | NOT BUILT-OPEN | `src/controller/firmware/main.cpp:20-22` |
 | A6.1 | Test-6 Fall-back | No update changes the previous copy or the last-resort firmware, by reading memory back | REQ-007, REQ-008 | OPENOCD | NOT RUN | PLANNED-4 | flash dumped before and after every update and power-cut case |
 | A6.2 | Test-6 Fall-back | Previous copy also fails: the last-resort firmware runs | REQ-018 | OPENOCD | NOT RUN | EARLIER BUILD | `controller/results/2026-10-13/scenario-4.log`, `scenario-5.log` |
@@ -127,7 +128,7 @@ condition").
 | A13.3 | Test-13 Image checks | Older than the minimum version refused 0x0A | REQ-045 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/image_checker.hpp:29-31` |
 | A13.4 | Test-13 Image checks | Built for another controller refused 0x0B | REQ-046 | SCRIPTED | NOT RUN | PLANNED-2 | target bytes 6-7 changed with `tools/flip_byte.py` |
 | A13.5 | Test-13 Image checks | Image changed after its last transfer refused before delivery | REQ-047 | SCRIPTED | NOT RUN | PLANNED-2 | B2.8 |
-| A14.1 | Test-14 Upload and delivery | Upload cut at random chunks resumes where it stopped | REQ-049 | SCRIPTED | NOT RUN | PLANNED-2 | B1.5, B1.7 |
+| A14.1 | Test-14 Upload and delivery | Upload cut at random chunks resumes where it stopped | REQ-049 | SCRIPTED | PASS | — | `ground/results/2026-10-15/radio-loss/resume-after-loss.log`: stopped at offset 2560 by 50 % loss, resumed with `upload --offset 2560`, UPLOAD END checks passed; ground/results/2026-10-15/radio-loss/summary.txt |
 | A14.2 | Test-14 Upload and delivery | Delivery runs while the controller works | REQ-048 | SCRIPTED | NOT RUN | PLANNED-2 | HEALTH recorded through a DELIVER |
 | A14.3 | Test-14 Upload and delivery | Delivery during a trial refused 0x07 | REQ-050 | SCRIPTED | NOT RUN | PLANNED-2 | B5.11 |
 | A14.4 | Test-14 Upload and delivery | A cancelled update leaves working firmware running and frees the storage | REQ-051, REQ-052 | SCRIPTED | NOT RUN | NEEDS TOOL | the console has no CANCEL (`src/ground/console.py:1110-1125`); D4 tool T1 |
@@ -151,7 +152,7 @@ condition").
 | A21.1 | Test-21 Command log | The ground receives a log of every command acted on | REQ-087 | — | NOT RUN | NOT BUILT-OPEN | no code names REQ-087 in `src/` (searched 15 Oct) |
 | A22.1 | Test-22 Recovery | A silent controller is noticed | REQ-061 | OPENOCD | NOT RUN | PLANNED-4 | core halted with the watchdog frozen |
 | A22.2 | Test-22 Recovery | A silent controller is brought back, and the attempt recorded | REQ-061 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/controller_watch.hpp:5-7` |
-| A22.3 | Test-22 Recovery | A trial past its time: `restore.sh reset`, then EVENT 0x0106 | REQ-061, REQ-124 | SCRIPTED | NOT RUN | NEEDS TOOL | needs a test firmware that runs and never confirms (D4 tool T2) |
+| A22.3 | Test-22 Recovery | A trial past its time: `restore.sh reset`, then EVENT 0x0106 | REQ-061, REQ-124 | SCRIPTED | FAIL | — | Finding F-2: `ground/results/2026-10-15/trial-forever-decision-h.log` (first reset 150.04 s after the trial start, EVENT 0x0106 reason 0x01; no second reset) |
 | A22.4 | Test-22 Recovery | Updater killed: restarted, the update in progress resumes | REQ-062 | SCRIPTED | NOT RUN | PLANNED-2 | B1.3, B2.3 (D7) |
 | A22.5 | Test-22 Recovery | Whole onboard computer restarted: the update in progress resumes | REQ-063 | SCRIPTED | NOT RUN | PLANNED-2 | B1.4, B2.4 |
 | A23.1 | Test-23 Ground checks | Every release signed twice | REQ-088 | INSPECTION | NOT RUN | PLANNED-2 | header and both signatures of the release images |
@@ -168,7 +169,7 @@ condition").
 | A25.1 | Test-25 Restore | Memory erased: the restore writes only checked images, the last-resort first, and clears the kept data | REQ-054, REQ-057, REQ-118, REQ-120 | SCRIPTED | NOT RUN | PLANNED-2 | `brick.sh`, then `restore.sh restore`; only after a restore has passed this session |
 | A25.2 | Test-25 Restore | Bootloader damaged: the restore brings the controller back | REQ-054 | OPENOCD | NOT RUN | PLANNED-4 | bootloader page erased |
 | A25.3 | Test-25 Restore | Restore through reprogramming link B (factory loader) | REQ-122 | — | NOT ON BENCH | — | factory-loader restore not on the bench |
-| A25.4 | Test-25 Restore | On order, the bootloader and the main firmware put back | REQ-121 | SCRIPTED | NOT RUN | EARLIER BUILD | `onboard-computer/results/2026-10-13/install-restore-full.log`; `restore.sh` changed after it (bd8eac7) |
+| A25.4 | Test-25 Restore | On order, the bootloader and the main firmware put back | REQ-121 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/restore-full-49314cc.log`: 17 steps done in 4.154 s; images 49314cc; restore.sh d95a67a |
 | A25.5 | Test-25 Restore | The onboard computer restarts the controller | REQ-124 | SCRIPTED | NOT RUN | PLANNED-2 | `restore.sh reset` |
 | A25.6 | Test-25 Restore | Its copy of the last-resort firmware and the links checked between uses | REQ-059 | — | NOT RUN | NOT BUILT-OPEN | no code names REQ-059 in `src/` (searched 15 Oct) |
 | A25.7 | Test-25 Restore | The ground told the result of a restore | REQ-060 | — | NOT RUN | NOT BUILT-OPEN | no RESTORE command in `protocol.hpp:20-35`; only EVENT 0x0106 after a trial overrun |
@@ -181,7 +182,7 @@ condition").
 | A29.1 | Test-29 Hardware measurements | Two signatures checked at start within the restart time | REQ-023 | SCRIPTED | NOT RUN | EARLIER BUILD | 68.0 to 68.1 ms, `controller/results/2026-10-13/README.md` (5e9bdbc); limit TBD-restart |
 | A29.2 | Test-29 Hardware measurements | Software cannot stop the watchdog | Architecture Sec. 8.0 | OPENOCD | NOT RUN | PLANNED-4 | — |
 | A29.3 | Test-29 Hardware measurements | The controller clock runs from its own source, at a measured rate | Architecture Sec. 8.0 | SCRIPTED | NOT RUN | PLANNED-2 | A12.1 |
-| A29.4 | Test-29 Hardware measurements | The debug port reaches all memory with the controller held in reset | Architecture Sec. 8.0 | SCRIPTED | NOT RUN | EARLIER BUILD | `onboard-computer/results/2026-10-13/install-restore-full.log` |
+| A29.4 | Test-29 Hardware measurements | The debug port reaches all memory with the controller held in reset | Architecture Sec. 8.0 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/restore-full-49314cc.log`: written and verified with the chip held in reset |
 | A29.5 | Test-29 Hardware measurements | The factory loader reaches all memory with the controller held in reset | Architecture Sec. 8.0 | — | NOT ON BENCH | — | factory-loader restore not on the bench |
 | AI1 | Inspection-1 Separate code | Link maps and source lists share no file, library or symbol | REQ-009, REQ-099, REQ-119, REQ-123, REQ-126, REQ-130 | INSPECTION | NOT RUN | DESK | known bench limit against REQ-119: `src/README.md` ("share controller/common") |
 | AI2 | Inspection-2 Records | Logs hold every command and answer; ground archive holds every report; the key copy restores the keys | REQ-036, REQ-092, REQ-096 | INSPECTION | NOT RUN | DESK | — |
@@ -264,7 +265,7 @@ How some faults are caused (no flight code changed):
 | B1.4 | Test-22; REQ-063 | The stored part survives; the upload resumes | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B1.5 | Test-14; REQ-049; Scenario-200 | The upload resumes where it stopped | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B1.6 | — | — | — | N/A | NO TRAFFIC | an upload does not use data link A; the link loss is B8.6 |
-| B1.7 | Test-14; REQ-049; Scenario-200 | Resent chunks are answered DONE and not written twice; the image passes UPLOAD END | SCRIPTED | NOT RUN | NEEDS DECISION | radio-loss levels (D3) |
+| B1.7 | Test-14; REQ-049; Scenario-200 | Resent chunks are answered DONE and not written twice; the image passes UPLOAD END | SCRIPTED | PASS | — | `ground/results/2026-10-15/radio-loss/summary.txt`: loss 0.1 and 0.3, 6 of 6 updates completed (30-189 s); 0.5, 1 of 3 (324 s), 2 stopped after 6 unanswered tries as designed; one trial start and one confirm per completed run; updater e5f46cc6 |
 | B1.8 | Test-13; REQ-044; Scenario-400 | Refused 0x08 at UPLOAD END | SCRIPTED | NOT RUN | EARLIER BUILD | `controller/results/2026-10-12/milestone-2-updater.log` (updater 9da60f3) |
 | B1.9 | Test-13; REQ-043; Scenario-410 | Refused 0x09 at UPLOAD END | SCRIPTED | NOT RUN | EARLIER BUILD | as B1.8 |
 | B1.10 | REQ-031 | A chunk inside the bytes stored is answered DONE without writing | SCRIPTED | NOT RUN | PLANNED-2 | `update_manager.hpp:16-18` |
@@ -277,7 +278,7 @@ How some faults are caused (no flight code changed):
 | B2.4 | Test-22; REQ-063; Scenario-535 | As B2.3; the controller keeps slot A running | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B2.5 | REQ-031, REQ-049 | The delivery completes; the resent DELIVER runs again (only ARM and dangerous commands are recognised as repeats) | SCRIPTED | NOT RUN | PLANNED-2 | `command_gate.hpp:14-19` |
 | B2.6 | REQ-025, REQ-081 | The delivery fails and is reported; slot A keeps running; a later delivery succeeds | SCRIPTED | NOT RUN | PLANNED-2 | — |
-| B2.7 | REQ-049 | As B2.5 | SCRIPTED | NOT RUN | NEEDS DECISION | radio-loss levels (D3) |
+| B2.7 | REQ-049 | As B2.5 | SCRIPTED | PASS | — | `ground/results/2026-10-15/radio-loss/summary.txt`: loss 0.1 and 0.3, 6 of 6 updates completed (30-189 s); 0.5, 1 of 3 (324 s), 2 stopped after 6 unanswered tries as designed; one trial start and one confirm per completed run; updater e5f46cc6 |
 | B2.8 | Test-13; REQ-047 | The stored image changed after UPLOAD END is refused before delivery | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B2.9 | Test-13; REQ-043, REQ-047 | A stored image replaced by a forged one after UPLOAD END is refused 0x09 before delivery | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B2.10 | REQ-031 | A second DELIVER during the first does not corrupt the delivery | SCRIPTED | NOT RUN | PLANNED-2 | — |
@@ -311,7 +312,7 @@ How some faults are caused (no flight code changed):
 | B4.12 | — | — | — | N/A | DUPLICATE | the hang starts after the count: B5.12 |
 | B4.13 | — | — | — | N/A | DUPLICATE | B5.13 |
 | B5.1 | Test-5; REQ-016, REQ-017; Scenario-605 | Each cut counts as a failed start; after 3, slot A runs; the count survives | HAND | NOT RUN | PLANNED-3 | — |
-| B5.2 | Test-5; REQ-015; Scenario-440 | As B5.1 with resets | SCRIPTED | NOT RUN | PLANNED-2 | — |
+| B5.2 | Test-5; REQ-015; Scenario-440 | As B5.1 with resets | SCRIPTED | PASS | — | `ground/results/2026-10-15/trial-forever-decision-h.log` (resets by restore.sh reset at 20:28:33 and 20:28:41 UTC) |
 | B5.3 | REQ-062 | The updater restarts; the trial ends by itself (confirm or give-up) and is seen | SCRIPTED | NOT RUN | PLANNED-2 | D7 |
 | B5.4 | Test-8; REQ-024; Scenario-535 | The controller keeps its trial running (controller clock continuous); the trial ends correctly | SCRIPTED | NOT RUN | PLANNED-2 | the Nucleo is powered from the MP257's USB; a restart may cut it (observation) |
 | B5.5 | Scenario-450; REQ-013 | No CONFIRM arrives: the trial is given up at 120 s; a CONFIRM after the trial time refused | SCRIPTED | NOT RUN | PLANNED-2 | — |
@@ -349,17 +350,17 @@ How some faults are caused (no flight code changed):
 | B7.11 | Test-4, Test-9; REQ-012, REQ-027, REQ-029, REQ-030 | CONFIRM not armed 0x01; arm expired 0x02; in OPERATE 0x05; before the tests 0x0F; after the trial time refused | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1; earlier `controller/results/2026-10-13/step-2d-trial-confirm.log` |
 | B7.12 | — | — | — | N/A | DUPLICATE | a hanging firmware never reaches CONFIRM: B5.12 |
 | B7.13 | H-3 control 2; REQ-139 | A firmware that answers but cannot take the test image fails its trial test and cannot be confirmed (0x0F) | — | NOT RUN | NEEDS TOOL | needs a test firmware with a broken update receiver (D4 tool T2) |
-| B8.1 | REQ-017, REQ-022 | Slot A runs again after power returns; boot state unchanged | HAND | NOT RUN | PLANNED-3 | — |
+| B8.1 | REQ-017, REQ-022 | Slot A runs again after power returns; boot state unchanged | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/power-switch-check.log`: hub port off 5 s; controller clock 15081 s to 6 s; OPERATE slot A, failed starts 0 |
 | B8.2 | REQ-023, REQ-124 | Slot A runs again; restart time measured | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B8.3 | Test-22; REQ-062; Scenario-530 | The updater restarts; the controller is not affected (controller clock continuous) | SCRIPTED | NOT RUN | PLANNED-2 | D7 |
 | B8.4 | Test-8; REQ-024; Scenario-535 | The controller keeps running (controller clock continuous) | SCRIPTED | NOT RUN | PLANNED-2 | the Nucleo is powered from the MP257's USB (observation) |
 | B8.5 | Test-8 | Nothing changes onboard; reports while the link is down are lost (bench limit) | SCRIPTED | NOT RUN | PLANNED-2 | `report_store.hpp:14-15` |
 | B8.6 | Test-8, Test-19; REQ-025, REQ-081, REQ-082 | The controller keeps running; "controller silent", then "controller heard again" | SCRIPTED | NOT RUN | PLANNED-2 | — |
-| B8.7 | Test-14 | Commands resent and answered; nothing runs twice | SCRIPTED | NOT RUN | NEEDS DECISION | D3 |
+| B8.7 | Test-14 | Commands resent and answered; nothing runs twice | SCRIPTED | PASS | — | `ground/results/2026-10-15/radio-loss/summary.txt`: loss 0.1 and 0.3, 6 of 6 updates completed (30-189 s); 0.5, 1 of 3 (324 s), 2 stopped after 6 unanswered tries as designed; one trial start and one confirm per completed run; updater e5f46cc6 |
 | B8.8 | Test-11; REQ-041; Scenario-610, 620 | Bit changed in running slot A: at the next start, refused; slot B or the last-resort runs; reported | OPENOCD | NOT RUN | PLANNED-4 | — |
 | B8.9 | — | — | — | N/A | DUPLICATE | a forged image is refused at UPLOAD END (B1.9) or at the start check (B3.9) |
 | B8.10 | Test-9; REQ-031 | ARM sent again: ALREADY DONE | SCRIPTED | NOT RUN | PLANNED-2 | other commands: A9.8 (NOT BUILT) |
-| B8.11 | Test-1, Test-9; REQ-019, REQ-027; Scenario-310 | CONFIRM in OPERATE refused 0x05; SWITCH with no new delivery since the given-up trial refused | SCRIPTED | NOT RUN | PLANNED-2 | — |
+| B8.11 | Test-1, Test-9; REQ-019, REQ-027; Scenario-310 | CONFIRM in OPERATE refused 0x05; SWITCH with no new delivery since the given-up trial refused | SCRIPTED | FAIL | — | Finding F-1 (the SWITCH part); the CONFIRM-in-OPERATE part is not run yet |
 | B8.12 | Test-7; REQ-022, REQ-023; Scenario-620 | Core halted with the watchdog running: restart, slot A resumes; restart time measured | OPENOCD | NOT RUN | PLANNED-4 | — |
 | B8.13 | REQ-058, REQ-121 | A confirmed firmware that cannot take an update is replaced through the restore | SCRIPTED | NOT RUN | PLANNED-2 | follows B5.13 |
 | B9.1 | REQ-054, REQ-056 | Power cut during `restore.sh full`: RESTORE FAILED; a second run passes | HAND | NOT RUN | PLANNED-3 | — |
@@ -378,7 +379,12 @@ How some faults are caused (no flight code changed):
 
 ## Findings
 
-None yet.
+| No. | Row | Expected (source) | Actual | Reproduce | Evidence | State |
+|---|---|---|---|---|---|---|
+| F-1 | A5.4, B8.11 | A SWITCH when no new firmware has arrived is refused with the reason (ConOps Scenario-310; REQ-019, REQ-027) | SWITCH answered DONE; the given-up firmware started a new trial (HEALTH TRIAL, slot B, failed starts 1) and passed its trial tests | deliver a firmware to slot B, `switch`, `return` (it is given up), then `switch` again with no delivery | `ground/results/2026-10-15/finding-37-switch-to-given-up.log`; cause by reading: `mode_manager.cpp:648-672` checks only that slot B holds a valid image | OPEN: fix accepted as decision 30 |
+| F-2 | A22.3 | A trial not confirmed in time is given up and the previous firmware runs (REQ-013; decision H: the onboard computer resets an overrunning trial) | The onboard computer reset the controller once, 150.04 s after the trial started; the firmware came back still on trial (failed starts 2) and the onboard computer did not reset it again: 723 s later it was still in TRIAL on slot B | deliver `slotB-v2-trial-forever.img`, `switch`, wait 5 minutes | `ground/results/2026-10-15/trial-forever-decision-h.log`; cause by reading: `trial_watch.cpp:72-79` stops timing after the first overrun, and only EVENT 0x0006 re-arms it (`:51-57`); a firmware that does not send 0x0006 is never timed again | OPEN: fix is the owner's decision |
+
+Legend. State: OPEN (reported, not fixed), FIXED (fix and regression test committed; the commit is named).
 
 ## Decisions
 

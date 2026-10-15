@@ -1,0 +1,30 @@
+# mac 2026-10-15 23:13:02 EEST; slot B holds firmware-B 49314cc, given up at 20:12:24 UTC by RETURN TO PREVIOUS; no delivery since
+$ console.py switch
+switch  sent, answered DONE
+exit=0
+$ console.py status --seconds 6
+report  EVENT   #10611 onboard t=1792095180 0x0006 trial started
+report  HEALTH  #10612 onboard t=1792095181 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  HEALTH  #10613 onboard t=1792095182 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+report  EVENT   #10614 onboard t=1792095182 0x000a trial tests passed
+no answer to GET STATUS (seq 1791887609) within 3 s, sending again
+waiting: seq 1791887609 GET STATUS, sent 3.0 s ago, RECEIVED no
+report  HEALTH  #10615 onboard t=1792095183 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 117 s, self-test PASSED
+report  HEALTH  #10616 onboard t=1792095184 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 116 s, self-test PASSED
+report  HEALTH  #10617 onboard t=1792095185 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 115 s, self-test PASSED
+report  HEALTH  #10618 onboard t=1792095186 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 114 s, self-test PASSED
+report  HEALTH  #10619 onboard t=1792095187 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 113 s, self-test PASSED
+report  HEALTH  #10620 onboard t=1792095188 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 112 s, self-test PASSED
+$ console.py return   (end the trial, if one started)
+report  EVENT   #10622 onboard t=1792095189 0x0008 firmware given up
+return to previous  sent, answered DONE
+exit=0
+$ console.py status --seconds 8
+report  HEALTH  #10623 onboard t=1792095190 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10624 onboard t=1792095191 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10625 onboard t=1792095192 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10626 onboard t=1792095193 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10627 onboard t=1792095194 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10628 onboard t=1792095195 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10629 onboard t=1792095196 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10630 onboard t=1792095197 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED

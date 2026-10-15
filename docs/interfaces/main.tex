@@ -356,7 +356,7 @@ ID & Command & Fields (bytes) & Modes & Dangerous & Requirement \\
 0x0C & REPLACE KEY & which key (1): signing A, signing B or encryption; new key (32) & ANY & YES & REQ-084 to 086 \\
 0x0D & ARM & command identifier (1), its sequence number (4) & ANY & NO & REQ-029, REQ-112 \\
 0x20 & SWITCH & none & OPERATE, FALLBACK & YES & REQ-021 \\
-0x21 & RETURN TO PREVIOUS & none & OPERATE, TRIAL & YES & REQ-113 \\
+0x21 & RETURN TO PREVIOUS & none & TRIAL & YES & REQ-113 \\
 0x22 & START FAILED & which copy (1) & OPERATE, FALLBACK & YES & REQ-019 \\
 0x23 & LEAVE FALLBACK & none & FALLBACK & NO & REQ-117 \\
 0x24 & SET CONTROLLER TIME & ground time (4) & OPERATE, TRIAL, FALLBACK & YES & REQ-132 \\

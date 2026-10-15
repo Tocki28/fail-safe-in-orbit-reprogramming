@@ -1,11 +1,11 @@
 /*
  * mode_manager.hpp — the controller's mode, the trial of new firmware, its trial tests, and the
- * two dangerous commands of this step, SWITCH and CONFIRM (Architecture: mode manager;
- * REQ-011 to REQ-021, REQ-139, REQ-140).
+ * three dangerous commands of this step, SWITCH, RETURN TO PREVIOUS and CONFIRM (Architecture:
+ * mode manager; REQ-011 to REQ-021, REQ-113, REQ-139, REQ-140).
  *
  * Mode at start (decided design, step 2d): the running slot is the boot state's trial slot ->
  * TRIAL; otherwise OPERATE. FALLBACK is a later step. The mode then changes only by CONFIRM
- * (TRIAL -> OPERATE); every other way out of a trial is a restart.
+ * (TRIAL -> OPERATE); every other way out of a trial, RETURN TO PREVIOUS included, is a restart.
  *
  * The trial (TRIAL only):
  *   - EVENT 0x0006 "trial started", once, on the first pass after start;
@@ -30,12 +30,15 @@
  * In OPERATE a failed self-test sends EVENT 0x0004 and restarts the chip, counted by the
  * bootloader (decision L).
  *
- * SWITCH (0x20) and CONFIRM (0x26): checks on arrival in this order, each refusal answered
- * REFUSED only: mode (SWITCH in OPERATE, CONFIRM in TRIAL and before kTrialMs have passed; else
- * 0x05), arming (0x01, 0x02; command-checker/arm_state.hpp), and for CONFIRM the trial tests
- * (0x0F). Then RECEIVED, the work, and DONE or REFUSED. SWITCH's work: the boot state read again
- * (decision E, 0x05), the other slot's image checked (decision F(a), the UPLOAD END codes), the
- * boot-state write (0x11 if it fails, decision N). CONFIRM's work: the boot-state write (0x11).
+ * SWITCH (0x20), RETURN TO PREVIOUS (0x21) and CONFIRM (0x26): checks on arrival in this order,
+ * each refusal answered REFUSED only: mode (SWITCH in OPERATE, RETURN TO PREVIOUS in TRIAL,
+ * CONFIRM in TRIAL and before kTrialMs have passed; else 0x05), arming (0x01, 0x02;
+ * command-checker/arm_state.hpp), and for CONFIRM the trial tests (0x0F). Then RECEIVED, the work,
+ * and DONE or REFUSED. SWITCH's work: the boot state read again (decision E, 0x05), the other
+ * slot's image checked (decision F(a), the UPLOAD END codes), the boot-state write (0x11 if it
+ * fails, decision N). CONFIRM's work: the boot-state write (0x11). RETURN TO PREVIOUS's work: the
+ * give-up's boot-state write (0x11 if it fails) and EVENT 0x0008; the restart follows on the next
+ * pass, after DONE (REQ-034), as for SWITCH.
  *
  * Every decision is here; main.cpp only routes frames and sends the answers. The chip is reached
  * through mode_port.hpp and the link through FrameSender, so the same file runs in the host unit
@@ -64,8 +67,10 @@ constexpr uint32_t kTrialMs = 120000U;
 constexpr uint32_t kNormalRunMs = 60000U;
 
 /* The dangerous commands of this step, each 1 byte with no fields (Interfaces Sec. 5.1).
- * RETURN TO PREVIOUS (0x21) and START FAILED (0x22) are not in this step. */
+ * START FAILED (0x22) is not in this step. RETURN TO PREVIOUS is row 0x21 of the command table
+ * (docs/interfaces/main.tex, line 359; REQ-113). */
 constexpr uint8_t kCmdSwitch = 0x20U;
+constexpr uint8_t kCmdReturnToPrevious = 0x21U;
 constexpr uint8_t kCmdConfirm = 0x26U;
 constexpr uint16_t kDangerousBytes = 1U;
 
@@ -97,14 +102,14 @@ public:
     /** @brief The work of one main-loop pass: events, failed tests, time-out, restart. */
     void poll(uint32_t now_ms);
 
-    /** @brief True if the payload's identifier is SWITCH or CONFIRM, whatever its size. */
+    /** @brief True if the payload's identifier is SWITCH, RETURN TO PREVIOUS or CONFIRM. */
     [[nodiscard]] static bool isDangerous(const uint8_t *payload, uint16_t length);
 
-    /** @brief Checks on arrival of SWITCH or CONFIRM: kSuccess or the refusal code. */
+    /** @brief Checks on arrival of SWITCH, RETURN TO PREVIOUS or CONFIRM: kSuccess or refusal. */
     AnswerCode acceptDangerous(const uint8_t *payload, uint16_t length, uint32_t sequence,
                                uint32_t now_ms, ArmState &arm);
 
-    /** @brief Run SWITCH or CONFIRM after RECEIVED: kSuccess or the refusal code. */
+    /** @brief Run SWITCH, RETURN TO PREVIOUS or CONFIRM after RECEIVED: kSuccess or refusal. */
     AnswerCode runDangerous(uint8_t command, uint32_t now_ms);
 
     /** @brief Checks on arrival of a test-image command (TRIAL only): kSuccess or 0x06. */
@@ -150,6 +155,7 @@ private:
     void restartWhenSent();
     AnswerCode runSwitch();
     AnswerCode runConfirm(uint32_t now_ms);
+    AnswerCode runReturnToPrevious(uint32_t now_ms);
 
     FrameSender &sender_;
     TestImage &test_image_;

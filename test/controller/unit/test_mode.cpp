@@ -59,6 +59,14 @@ constexpr uint32_t kBodyBytes = 600U;
 constexpr uint32_t kFlipOffset = 0x600U;
 constexpr uint8_t kSwitch = 0x20U;
 constexpr uint8_t kConfirm = 0x26U;
+/* RETURN TO PREVIOUS: identifier 0x21 (Interfaces Sec. 5.1, command table, line 359). Written
+ * here from the document, not taken from mode_manager.hpp, so a wrong value there shows. */
+constexpr uint8_t kReturn = 0x21U;
+/* Arrival time of a command, milliseconds since start: inside the trial and the ARM's 30 s. No
+ * technical reason for the value. */
+constexpr uint32_t kReturnNow = 10U;
+/* How far from the frame's own number an ARM's named sequence number is, for "another number". */
+constexpr uint32_t kOtherSeqOffset = 5U;
 constexpr uint32_t kChunkMax = 256U;
 constexpr AnswerCode kReceivedCode = static_cast<AnswerCode>(0x00U);
 constexpr uint32_t kLogFrames = 128U;
@@ -1431,6 +1439,231 @@ void testSwitchWriteFails()
            "0x06)");
 }
 
+/* ---- RETURN TO PREVIOUS (0x21) ---------------------------------------------------------- */
+
+/**
+ * @brief isDangerous() for RETURN TO PREVIOUS, and the identifier's value.
+ *
+ * REQ-113 and Interfaces line 359 (0x21, dangerous = YES): a command marked dangerous goes
+ * through the checks on arrival. The size is checked later by acceptDangerous(), so a 2-byte
+ * payload still counts as dangerous here, as for SWITCH and CONFIRM. 0x22 (START FAILED) is not
+ * in this step and stays not dangerous; an empty payload is not dangerous.
+ * Defects caught: kCmdReturnToPrevious not 0x21 or missing; isDangerous() without the 0x21
+ * branch, so the command would skip the arming and mode checks; a branch that matches 0x22 or
+ * the wrong byte; a branch that drops SWITCH or CONFIRM.
+ */
+void testReturnIsDangerous()
+{
+    const std::array<uint8_t, 2> two = {kReturn, 0x00U};
+    const std::array<uint8_t, 1> start_failed = {0x22U};
+    const std::array<uint8_t, 1> sw = {kSwitch};
+    const std::array<uint8_t, 1> cf = {kConfirm};
+
+    report(kCmdReturnToPrevious == kReturn,
+           "RETURN TO PREVIOUS: kCmdReturnToPrevious is 0x21 (Interfaces line 359)");
+    report(ModeManager::isDangerous(two.data(), 1U) && ModeManager::isDangerous(two.data(), 2U),
+           "RETURN TO PREVIOUS: isDangerous() true for 0x21, of 1 byte and of 2 bytes");
+    report(!ModeManager::isDangerous(start_failed.data(), 1U) &&
+               !ModeManager::isDangerous(two.data(), 0U),
+           "RETURN TO PREVIOUS: isDangerous() false for 0x22 (not in this step) and for an empty "
+           "payload");
+    report(ModeManager::isDangerous(sw.data(), 1U) && ModeManager::isDangerous(cf.data(), 1U),
+           "RETURN TO PREVIOUS: isDangerous() still true for SWITCH and CONFIRM");
+}
+
+/**
+ * @brief RETURN TO PREVIOUS refused on arrival for its size and its arming, in TRIAL with the
+ * trial tests not passed; each refusal REFUSED only, boot state untouched.
+ *
+ * REQ-028 (size 0x06), REQ-029 (no ARM 0x01), REQ-030 (expired 0x02), Interfaces lines 260-318
+ * (answers, codes) and line 359 (0x21 has no fields). The ARM must name identifier 0x21 and the
+ * frame's own sequence number (Interfaces Sec. 5.2). The trial tests are left unpassed so that
+ * a refusal cannot be a test-state side effect.
+ * Defects caught: 0x21 not size-checked (a 2-byte command accepted or another code); an ARM
+ * naming SWITCH or CONFIRM accepted for 0x21 (checking "any ARM", or checking the wrong
+ * identifier); an ARM naming another sequence number accepted; an expired ARM accepted or
+ * answered 0x01; a refusal that still writes the boot state.
+ */
+void testReturnRefusals()
+{
+    Rig rig;
+    startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    rig.mm.poll(0U);
+
+    const std::array<uint8_t, 2> two = {kReturn, 0x00U};
+    report(rig.mm.acceptDangerous(two.data(), 2U, rig.seq, kReturnNow, rig.arm) ==
+               AnswerCode::kImpossible,
+           "RETURN TO PREVIOUS of 2 bytes in TRIAL: REFUSED 0x06 (no fields, Interfaces line 359)");
+
+    report(refusedOnly(dangerous(rig, kReturn, rig.seq++, kReturnNow), AnswerCode::kNotArmed),
+           "TRIAL, RETURN TO PREVIOUS without ARM: REFUSED 0x01 only");
+
+    sendArm(rig, kSwitch, rig.seq + 1U, kReturnNow);
+    report(refusedOnly(dangerous(rig, kReturn, rig.seq++, kReturnNow), AnswerCode::kNotArmed),
+           "TRIAL, ARM naming SWITCH, then RETURN TO PREVIOUS: REFUSED 0x01");
+
+    sendArm(rig, kConfirm, rig.seq + 1U, kReturnNow);
+    report(refusedOnly(dangerous(rig, kReturn, rig.seq++, kReturnNow), AnswerCode::kNotArmed),
+           "TRIAL, ARM naming CONFIRM, then RETURN TO PREVIOUS: REFUSED 0x01");
+
+    sendArm(rig, kReturn, rig.seq + kOtherSeqOffset, kReturnNow);
+    report(refusedOnly(dangerous(rig, kReturn, rig.seq++, kReturnNow), AnswerCode::kNotArmed),
+           "TRIAL, ARM naming 0x21 with another sequence number, then RETURN TO PREVIOUS: "
+           "REFUSED 0x01");
+
+    sendArm(rig, kReturn, rig.seq + 1U, kReturnNow);
+    report(refusedOnly(dangerous(rig, kReturn, rig.seq++, kReturnNow + kArmExpiryMs),
+                       AnswerCode::kArmExpired),
+           "TRIAL, ARM naming 0x21, then RETURN TO PREVIOUS 30 s later: REFUSED 0x02");
+
+    report((fake.state_writes == 0U) && (fake.restarts == 0U) &&
+               stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U),
+           "TRIAL, every refused RETURN TO PREVIOUS above: boot state untouched, no write, no "
+           "restart");
+}
+
+/**
+ * @brief RETURN TO PREVIOUS in OPERATE: REFUSED 0x05 only, nothing written.
+ *
+ * Interfaces line 359 lists OPERATE for 0x21 as a proposal awaiting the owner's acceptance; the
+ * contract of this step is 0x05 in OPERATE (Interfaces lines 260-318, REQ-027). Tested as the
+ * contract says; the Interfaces row and the contract disagree and the owner decides. A valid
+ * ARM is given so the 0x05 cannot come from the arming check, whatever the order of the checks.
+ * Defects caught: 0x21 accepted in OPERATE (the trial give-up reached with no trial, writing
+ * the boot state); a mode check missing for 0x21 so the refusal is another code.
+ */
+void testReturnRefusedInOperate()
+{
+    Rig rig;
+    startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+    rig.mm.poll(0U);
+    Answer a = armedCommand(rig, kReturn, kReturnNow);
+    rig.mm.poll(kReturnNow + 1U);
+    report(refusedOnly(a, AnswerCode::kMode) && (fake.state_writes == 0U) &&
+               (fake.restarts == 0U) && stateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U),
+           "OPERATE, ARM + RETURN TO PREVIOUS: REFUSED 0x05 only; boot state untouched, no "
+           "restart");
+}
+
+/**
+ * @brief RETURN TO PREVIOUS accepted in TRIAL before and after the trial tests passed, and after
+ * the trial time; the ARM is used up.
+ *
+ * Interfaces line 359 (0x21 allowed in TRIAL) and REQ-113 ("when the operator orders it"):
+ * unlike CONFIRM (REQ-012, REQ-020) the operator may return at any moment of a trial, also while
+ * the tests have not passed (0x0F does not apply) and also when kTrialMs have passed (0x05 does
+ * not apply to the time) before poll() gave the trial up. A command that passes the arming
+ * check uses the ARM up (arm_state.hpp), so the same frame again is REFUSED 0x01.
+ * Defects caught: CONFIRM's trial-tests check copied to 0x21 (0x0F before the tests passed);
+ * CONFIRM's trial-time check copied (0x05 at 120 s); an ARM left in place after the command.
+ */
+void testReturnAccepted()
+{
+    {
+        Rig rig;
+        startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+        rig.mm.poll(0U);
+        sendArm(rig, kReturn, rig.seq + 1U, kReturnNow);
+        const std::array<uint8_t, 1> p = {kReturn};
+        uint32_t seq = rig.seq++;
+        AnswerCode first = rig.mm.acceptDangerous(p.data(), 1U, seq, kReturnNow, rig.arm);
+        AnswerCode again = rig.mm.acceptDangerous(p.data(), 1U, seq, kReturnNow, rig.arm);
+        report(!rig.mm.trialTestsPassed() && (first == AnswerCode::kSuccess) &&
+                   (again == AnswerCode::kNotArmed),
+               "TRIAL, tests not passed, ARM + RETURN TO PREVIOUS: accepted (not 0x0F); the ARM "
+               "is used up (the same frame again: 0x01)");
+    }
+    {
+        Rig rig;
+        bool passed = passedTrial(rig);
+        sendArm(rig, kReturn, rig.seq + 1U, kReturnNow);
+        const std::array<uint8_t, 1> p = {kReturn};
+        report(passed && rig.mm.trialTestsPassed() &&
+                   (rig.mm.acceptDangerous(p.data(), 1U, rig.seq++, kReturnNow, rig.arm) ==
+                    AnswerCode::kSuccess),
+               "TRIAL, tests passed, ARM + RETURN TO PREVIOUS: accepted");
+    }
+    {
+        Rig rig;
+        startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+        rig.mm.poll(0U);
+        sendArm(rig, kReturn, rig.seq + 1U, kTrialMs);
+        const std::array<uint8_t, 1> p = {kReturn};
+        report(rig.mm.acceptDangerous(p.data(), 1U, rig.seq++, kTrialMs + kReturnNow, rig.arm) ==
+                   AnswerCode::kSuccess,
+               "TRIAL, 120 s passed, poll() has not given up yet, ARM + RETURN TO PREVIOUS: "
+               "accepted (the trial time left does not matter; CONFIRM would be 0x05)");
+    }
+}
+
+/**
+ * @brief RETURN TO PREVIOUS run in TRIAL gives the trial up as a failed trial test does.
+ *
+ * REQ-113, REQ-013 and giveUp() (mode_manager.cpp): the boot state is written with confirmed =
+ * the previous slot (the one not running), trial = none, failed starts = 0; EVENT 0x0008 goes
+ * out before DONE 0x00; the chip restarts only on a later pass, after DONE was sent and the
+ * link drained (Interfaces Sec. 5.4, EVENT 0x0008). The second rig runs from slot A to show the
+ * previous slot is derived, not fixed to A. The later pass sends nothing more.
+ * Defects caught: boot state not written or written with trial or failed starts left over;
+ * confirmed set to the running slot (the CONFIRM write) or fixed to A; EVENT 0x0008 missing,
+ * after DONE, or sent twice; a restart inside the command, before DONE; no restart on the next
+ * pass; a restart before the answer left the link (sent_at_restart short of the bytes sent).
+ */
+void testReturnRuns()
+{
+    {
+        Rig rig;
+        startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+        rig.mm.poll(0U);
+        uint32_t mark = fake_link.sent_bytes;
+        Answer a = armedCommand(rig, kReturn, kReturnNow);
+        bool order = sentIs(mark, {kRecv, kDone, kRecv, ev(EventCode::kGivenUp), kDone});
+        bool before = (fake.restarts == 0U) && (fake.state_writes == 1U) &&
+                      stateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+        uint32_t after_done = fake_link.sent_bytes;
+        rig.mm.poll(kReturnNow + 1U);
+        report(done(a) && order && before && (fake.restarts == 1U) &&
+                   (fake.drains_at_restart >= 1U) && (fake.sent_at_restart == after_done) &&
+                   (fake_link.sent_bytes == after_done) && givenUpToA(),
+               "TRIAL running B, ARM + RETURN TO PREVIOUS: RECEIVED, EVENT 0x0008, DONE 0x00; "
+               "boot state confirmed A, trial none, 0 starts; no restart yet; the next pass "
+               "drains the link, restarts once, sends nothing");
+    }
+    {
+        Rig rig;
+        startRig(rig, Slot::kA, BOOT_SLOT_B, BOOT_SLOT_A, 0U);
+        rig.mm.poll(0U);
+        Answer a = armedCommand(rig, kReturn, kReturnNow);
+        rig.mm.poll(kReturnNow + 1U);
+        report(done(a) && (fake.restarts == 1U) && stateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U),
+               "TRIAL running A (confirmed B), ARM + RETURN TO PREVIOUS: boot state confirmed B, "
+               "trial none, 0 starts, restart on the next pass");
+    }
+}
+
+/**
+ * @brief RETURN TO PREVIOUS whose boot-state write fails: RECEIVED, REFUSED 0x11, no restart.
+ *
+ * Interfaces lines 260-318 (0x11 "boot state could not be stored", REQ-012, REQ-021) and the
+ * contract of this step: a failed write answers 0x11 and the chip does not restart, since
+ * nothing changed. Checked on the pass after the command too.
+ * Defects caught: DONE sent after a failed write; another code (0x06); a restart after a failed
+ * write, which would lose the operator's trial while the boot state still names it.
+ */
+void testReturnWriteFails()
+{
+    Rig rig;
+    startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    rig.mm.poll(0U);
+    fake.fail_state_write = true;
+    Answer a = armedCommand(rig, kReturn, kReturnNow);
+    rig.mm.poll(kReturnNow + 1U);
+    report(receivedThenRefused(a, AnswerCode::kStateNotStored) && (fake.restarts == 0U) &&
+               stateIs(BOOT_SLOT_A, BOOT_SLOT_B, 1U),
+           "RETURN TO PREVIOUS whose boot-state write fails: RECEIVED, REFUSED 0x11, no restart "
+           "on the next pass, boot state unchanged");
+}
+
 /* ---- Events of the start, restart count ------------------------------------------------- */
 
 using FallbackDetail = std::array<uint8_t, 2>;
@@ -1922,6 +2155,12 @@ int main(int argc, char **argv)
     testSwitchStateCheck();
     testSwitchImageCheck();
     testSwitchWriteFails();
+    testReturnIsDangerous();
+    testReturnRefusals();
+    testReturnRefusedInOperate();
+    testReturnAccepted();
+    testReturnRuns();
+    testReturnWriteFails();
     testStartEvents();
     testBootloaderFault();
     testRestartCountClear();

@@ -551,27 +551,36 @@ void ModeManager::poll(uint32_t now_ms)
 }
 
 /**
- * @brief Returns true if the payload's identifier is SWITCH (0x20) or CONFIRM (0x26).
+ * @brief Returns true if the payload's identifier is SWITCH (0x20), RETURN TO PREVIOUS (0x21) or
+ * CONFIRM (0x26).
  *
- * The size is checked by acceptDangerous(), so a SWITCH or CONFIRM of the wrong size is refused
- * 0x06 there.
+ * The size is checked by acceptDangerous(), so one of them of the wrong size is refused 0x06
+ * there.
  *
  * @param[in]     payload  command payload
  * @param[in]     length   payload bytes
- * @return true for SWITCH or CONFIRM, false otherwise or for an empty payload
+ * @return true for SWITCH, RETURN TO PREVIOUS or CONFIRM, false otherwise or for an empty payload
  */
 bool ModeManager::isDangerous(const uint8_t *payload, uint16_t length)
 {
-    return (length >= 1U) && ((payload[0] == kCmdSwitch) || (payload[0] == kCmdConfirm));
+    return (length >= 1U) && ((payload[0] == kCmdSwitch) ||
+                              (payload[0] == kCmdReturnToPrevious) ||
+                              (payload[0] == kCmdConfirm));
 }
 
 /**
- * @brief The checks on arrival of SWITCH or CONFIRM, in the order of the decided design; each
- * refusal is answered REFUSED only.
+ * @brief The checks on arrival of SWITCH, RETURN TO PREVIOUS or CONFIRM, in the order of the
+ * decided design; each refusal is answered REFUSED only.
  *
  * 0. the command itself: exactly 1 byte (0x06, REQ-028);
  * 1. mode (REQ-027): SWITCH only in OPERATE, CONFIRM only in TRIAL (Interfaces Sec. 5.1, command
- *    table; FALLBACK is a later step); else 0x05. CONFIRM also needs the trial time not to be
+ *    table; FALLBACK is a later step); else 0x05. RETURN TO PREVIOUS only in TRIAL, else 0x05.
+ *    Accepted by the owner's decision 14a, 15 Oct 2026: RETURN TO PREVIOUS is accepted in TRIAL
+ *    only and refused 0x05 in OPERATE; the Interfaces row 0x21 (line 359 of
+ *    docs/interfaces/main.tex) says TRIAL. (The row had allowed OPERATE, but what "previous"
+ *    means in OPERATE was not defined, REQ-113.) The trial time and the trial tests do
+ *    not apply to RETURN TO PREVIOUS: the operator may give a trial up at any time.
+ *    CONFIRM also needs the trial time not to be
  *    over: from kTrialMs after the start on, the trial is over (REQ-013) even if poll() has not
  *    yet given it up on this pass, so CONFIRM is refused 0x05 too (audit finding #22). Why 0x05
  *    and not another code of Interfaces Sec. 4.2: the table's other time codes are 0x02
@@ -703,12 +712,50 @@ AnswerCode ModeManager::runConfirm(uint32_t now_ms)
 }
 
 /**
- * @brief Runs SWITCH or CONFIRM after acceptDangerous() accepted it and RECEIVED was sent.
+ * @brief RETURN TO PREVIOUS, after RECEIVED (REQ-113): gives the trial up as a failed trial test
+ * does (giveUp): boot state confirmed = the other slot, trial = none, failed starts = 0, then
+ * EVENT 0x0008 "firmware given up"; the restart follows on the next pass (poll), after DONE
+ * (REQ-034), as for SWITCH.
  *
- * acceptDangerous() lets only these two identifiers through, so any other value here is a
+ * Only TRIAL reaches here (acceptDangerous), so the confirmed slot is the other one, as in
+ * giveUp(). Unlike giveUp(), a failed boot-state write answers 0x11, "boot state could not be
+ * stored" (Interfaces Sec. 4.2), and leaves no give-up request: the operator is told and can order
+ * it again, and the chip does not restart, as for runSwitch(). Accepted by the owner's decision
+ * 15a, 15 Oct 2026.
+ * EVENT 0x0008 has no detail byte in Interfaces Sec. 5.4, so the operator's order cannot be told
+ * apart from a time-out or a failed test in the event itself; it is told apart by the DONE that
+ * precedes the event after an order. Accepted by the owner's decision 16a, 15 Oct 2026.
+ *
+ * @param[in]     now_ms  milliseconds since start
+ * @return AnswerCode::kSuccess if the boot state was written; kImpossible (0x06) if the running
+ *         slot is not A or B; kStateNotStored (0x11) if the write failed
+ */
+AnswerCode ModeManager::runReturnToPrevious(uint32_t now_ms)
+{
+    boot_state_t state{};
+
+    if ((running_ != Slot::kA) && (running_ != Slot::kB)) {
+        return AnswerCode::kImpossible;
+    }
+    state.confirmed = stateCode(otherSlot(running_));
+    state.trial = BOOT_SLOT_NONE;
+    state.failed_starts = 0U;
+    if (!ModePort::writeBootState(state)) {
+        return AnswerCode::kStateNotStored;
+    }
+    sendEvent(EventCode::kGivenUp, nullptr, 0U, now_ms);
+    restart_due_ = true;
+    return AnswerCode::kSuccess;
+}
+
+/**
+ * @brief Runs SWITCH, RETURN TO PREVIOUS or CONFIRM after acceptDangerous() accepted it and
+ * RECEIVED was sent.
+ *
+ * acceptDangerous() lets only these three identifiers through, so any other value here is a
  * corrupted variable: the fault reaction (firmware/fault.hpp). Before, it answered 0x06.
  *
- * @param[in]     command  kCmdSwitch or kCmdConfirm
+ * @param[in]     command  kCmdSwitch, kCmdReturnToPrevious or kCmdConfirm
  * @param[in]     now_ms   milliseconds since start
  * @return AnswerCode::kSuccess (answer DONE 0x00), or the refusal code (answer REFUSED)
  * @note Does not return for any other command.
@@ -717,6 +764,9 @@ AnswerCode ModeManager::runDangerous(uint8_t command, uint32_t now_ms)
 {
     if (command == kCmdSwitch) {
         return runSwitch();
+    }
+    if (command == kCmdReturnToPrevious) {
+        return runReturnToPrevious(now_ms);
     }
     if (command == kCmdConfirm) {
         return runConfirm(now_ms);

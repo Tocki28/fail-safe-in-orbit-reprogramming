@@ -100,15 +100,15 @@ condition").
 | A8.1 | Test-8 Independence | The controller keeps working while the onboard computer restarts | REQ-024 | SCRIPTED | NOT RUN | PLANNED-2 | B8.4 |
 | A8.2 | Test-8 Independence | The controller keeps working with data link A cut | REQ-025 | SCRIPTED | NOT RUN | PLANNED-2 | B8.6 |
 | A8.3 | Test-8 Independence | Both data links cut | REQ-025 | — | NOT ON BENCH | — | data link B not on the bench |
-| A8.4 | Test-8 Independence | A run of TBD-runlen without commands | REQ-026 | SCRIPTED | NOT RUN | NEEDS DECISION | D3 |
+| A8.4 | Test-8 Independence | A run of TBD-runlen without commands | REQ-026 | SCRIPTED | NOT RUN | PLANNED-2 | 12 h run without commands started 16 Oct 00:50:45 EEST (beat off by a systemd drop-in for the night); `ground/results/2026-10-16/overnight/` |
 | A9.1 | Test-9 Command checks | Command not allowed in the mode refused 0x05 | REQ-027 | SCRIPTED | NOT RUN | PLANNED-2 | A1.6, B8.11 |
-| A9.2 | Test-9 Command checks | Impossible values or unknown command refused 0x06 | REQ-028 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1; earlier `controller/results/2026-10-12/step-2a-link-probe.log` |
-| A9.3 | Test-9 Command checks | Dangerous command not armed refused 0x01 (onboard computer and controller) | REQ-029, REQ-112 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1; earlier `controller/results/2026-10-13/step-2d-trial-confirm.log` |
-| A9.4 | Test-9 Command checks | Armed too long ago refused 0x02 | REQ-030 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
+| A9.2 | Test-9 Command checks | Impossible values or unknown command refused 0x06 | REQ-028 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
+| A9.3 | Test-9 Command checks | Dangerous command not armed refused 0x01 (onboard computer and controller) | REQ-029, REQ-112 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
+| A9.4 | Test-9 Command checks | Armed too long ago refused 0x02 | REQ-030 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | A9.5 | Test-9 Command checks | Past its expiry refused 0x03 | REQ-133 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/command_gate.hpp:19-20`; `src/controller/firmware/main.cpp:221-225` |
 | A9.6 | Test-9 Command checks | Scheduled while the clocks disagree refused 0x0C | REQ-134 | — | NOT RUN | NOT BUILT-OPEN | `src/controller/firmware/main.cpp:221-225` |
 | A9.7 | Test-9 Command checks | ARM or dangerous command sent again runs once, answered ALREADY DONE | REQ-031 | SCRIPTED | NOT RUN | PLANNED-2 | B3.10, B7.10 |
-| A9.8 | Test-9 Command checks | Any other command sent again runs once | REQ-031 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:14-19` |
+| A9.8 | Test-9 Command checks | Any other command sent again runs once | REQ-031 | SCRIPTED | NOT RUN | PLANNED-2 | built at df3aced (decision 26); host tests pass; not yet run on the bench |
 | A9.9 | Test-9 Command checks | Held command changed before its run time refused | REQ-032 | — | NOT RUN | NOT BUILT-OPEN | no SCHEDULE (0x0A) in `src/onboard-computer/updater/protocol.hpp:20-35` |
 | A9.10 | Test-9 Command checks | No single changed bit of the stored arm state arms it | REQ-137 | OPENOCD | NOT RUN | PLANNED-4 | — |
 | A10.1 | Test-10 Answers | RECEIVED, then DONE, for every command | REQ-033 | SCRIPTED | NOT RUN | PLANNED-2 | the journal logs DONE and REFUSED only; RECEIVED needs a ground-side record |
@@ -125,20 +125,20 @@ condition").
 | A12.3 | Test-12 Clock | Every report carries both times | REQ-135 | SCRIPTED | NOT RUN | PLANNED-2 | HEALTH and EVENT payloads decoded |
 | A13.1 | Test-13 Image checks | Not released by the operator (unknown key A) refused 0x09 | REQ-043 | SCRIPTED | NOT RUN | EARLIER BUILD | `controller/results/2026-10-12/milestone-2-updater.log` (updater 9da60f3) |
 | A13.2 | Test-13 Image checks | Damaged refused 0x08 | REQ-044 | SCRIPTED | NOT RUN | EARLIER BUILD | as A13.1 |
-| A13.3 | Test-13 Image checks | Older than the minimum version refused 0x0A | REQ-045 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/image_checker.hpp:29-31` |
+| A13.3 | Test-13 Image checks | Older than the minimum version refused 0x0A | REQ-045 | SCRIPTED | NOT RUN | PLANNED-2 | built at df3aced (decision 24), host tests pass; not yet run on the bench |
 | A13.4 | Test-13 Image checks | Built for another controller refused 0x0B | REQ-046 | SCRIPTED | NOT RUN | PLANNED-2 | target bytes 6-7 changed with `tools/flip_byte.py` |
 | A13.5 | Test-13 Image checks | Image changed after its last transfer refused before delivery | REQ-047 | SCRIPTED | NOT RUN | PLANNED-2 | B2.8 |
 | A14.1 | Test-14 Upload and delivery | Upload cut at random chunks resumes where it stopped | REQ-049 | SCRIPTED | PASS | — | `ground/results/2026-10-15/radio-loss/resume-after-loss.log`: stopped at offset 2560 by 50 % loss, resumed with `upload --offset 2560`, UPLOAD END checks passed; ground/results/2026-10-15/radio-loss/summary.txt |
 | A14.2 | Test-14 Upload and delivery | Delivery runs while the controller works | REQ-048 | SCRIPTED | PASS | — | HEALTH reports #120-#122 arrived during the delivery of `ground/results/2026-10-16/power-cuts/pc1-deliver-1.log`; 100 deliveries in `ground/results/2026-10-16/endurance/summary.txt` |
 | A14.3 | Test-14 Upload and delivery | Delivery during a trial refused 0x07 | REQ-050 | SCRIPTED | NOT RUN | PLANNED-2 | B5.11 |
-| A14.4 | Test-14 Upload and delivery | A cancelled update leaves working firmware running and frees the storage | REQ-051, REQ-052 | SCRIPTED | NOT RUN | NEEDS TOOL | the console has no CANCEL (`src/ground/console.py:1110-1125`); D4 tool T1 |
+| A14.4 | Test-14 Upload and delivery | A cancelled update leaves working firmware running and frees the storage | REQ-051, REQ-052 | SCRIPTED | NOT RUN | PLANNED-2 | built at df3aced (decision 21); host tests pass; on the bench with the command sender `test/ground/send_frame.py cancel` |
 | A14.5 | Test-14 Upload and delivery | Storage freed when an update ends | REQ-052 | — | PASS | — | built at df3aced; `ground/results/2026-10-16/already-done-short-timeout.log`: `the delivered image 40 was deleted from storage` on EVENT 0x0007 (observation O-2 for a restart in between) |
-| A15.1 | Test-15 Limits | SET LIMITS changes the minimum version and controller identity after an ARM | REQ-053 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/image_checker.hpp:29-31` |
+| A15.1 | Test-15 Limits | SET LIMITS changes the minimum version and controller identity after an ARM | REQ-053 | SCRIPTED | NOT RUN | PLANNED-2 | built at df3aced (decision 24), host tests pass; not yet run on the bench |
 | A16.1 | Test-16 Command intake | Frames not encrypted with the right key or with a bad signature refused | REQ-064, REQ-127, REQ-129 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:11-13` |
-| A16.2 | Test-16 Command intake | Old command sent again refused 0x04 | REQ-065 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1; ARM and dangerous commands only (`command_gate.hpp:14-15`) |
+| A16.2 | Test-16 Command intake | Old command sent again refused 0x04 | REQ-065 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | A16.3 | Test-16 Command intake | Past its expiry refused | REQ-066 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:19-20` |
 | A16.4 | Test-16 Command intake | Commands not from the radio link refused | REQ-067 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:21` |
-| A16.5 | Test-16 Command intake | A dangerous command without a valid ARM is not passed on | REQ-112 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
+| A16.5 | Test-16 Command intake | A dangerous command without a valid ARM is not passed on | REQ-112 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | A17.1 | Test-17 Scheduled commands | Passed on at its run time, once, across a restart and a power cut; a changed held command not passed on | REQ-068, REQ-069, REQ-136 | — | NOT RUN | NOT BUILT-OPEN | no SCHEDULE in `src/onboard-computer/updater/protocol.hpp:20-35` |
 | A18.1 | Test-18 Report store | Every report numbered | REQ-071 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/phase0-status-console.log` (#988 to #991) |
 | A18.2 | Test-18 Report store | Every report time-tagged | REQ-070 | SCRIPTED | PASS | — | same log (onboard t=946685803 to 946685806) |
@@ -157,12 +157,12 @@ condition").
 | A22.5 | Test-22 Recovery | Whole onboard computer restarted: the update in progress resumes | REQ-063 | SCRIPTED | NOT RUN | PLANNED-2 | B1.4, B2.4 |
 | A23.1 | Test-23 Ground checks | Every release signed twice | REQ-088 | INSPECTION | NOT RUN | PLANNED-2 | header and both signatures of the release images |
 | A23.2 | Test-23 Ground checks | Every command signed twice | REQ-088 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:11-13` |
-| A23.3 | Test-23 Ground checks | Malformed commands not sent | REQ-089 | SCRIPTED | NOT RUN | PLANNED-2 | map `ground/test_console.py` cases to this condition |
+| A23.3 | Test-23 Ground checks | Malformed commands not sent | REQ-089 | SCRIPTED | PASS | — | ITEM level: `test/ground/test_ground_checks.py` 41/41 at 4fdb497 (the console on its own computer, the fake onboard computer as test tool); malformed commands refused before sending |
 | A23.4 | Test-23 Ground checks | Releases for another controller, older than the minimum, or not the tested build, not sent | REQ-090 | SCRIPTED | NOT RUN | PLANNED-2 | as A23.3 |
-| A23.5 | Test-23 Ground checks | Each signed image passes the onboard computer's checks before it is sent | REQ-114 | SCRIPTED | NOT RUN | PLANNED-2 | as A23.3 |
+| A23.5 | Test-23 Ground checks | Each signed image passes the onboard computer's checks before it is sent | REQ-114 | SCRIPTED | PASS | — | ITEM level: `test/ground/test_ground_checks.py` 41/41 at 4fdb497 (the console on its own computer, the fake onboard computer as test tool); on the bench every upload of 15-16 Oct ran the check first (`ground/results/2026-10-1*/`) |
 | A23.6 | Test-23 Ground checks | A planned sequence stops at the first refusal or missing answer | REQ-115, REQ-116 | SCRIPTED | NOT RUN | PLANNED-2 | `update` stopped by a refusal |
-| A24.1 | Test-24 Ground display | A damaged report is marked on arrival | REQ-093 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
-| A24.2 | Test-24 Ground display | Every command still waiting for its answers is shown | REQ-094 | SCRIPTED | NOT RUN | PLANNED-2 | — |
+| A24.1 | Test-24 Ground display | A damaged report is marked on arrival | REQ-093 | SCRIPTED | PASS | — | ITEM level: `test/ground/test_ground_checks.py` 41/41 at 4fdb497 (the console on its own computer, the fake onboard computer as test tool); damaged frames counted and shown |
+| A24.2 | Test-24 Ground display | Every command still waiting for its answers is shown | REQ-094 | SCRIPTED | PASS | — | ITEM level: `test/ground/test_ground_checks.py` 41/41 at 4fdb497 (the console on its own computer, the fake onboard computer as test tool); on the bench: `waiting:` lines in `ground/results/2026-10-15/return-in-trial.log` |
 | A24.3 | Test-24 Ground display | The running firmware is shown | REQ-095 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/phase0-status-console.log` (slot A, kind 2, version 1) |
 | AD1.1 | Demonstration-1 Operator access | Someone without the operator's credentials cannot use the operator interface | REQ-091 | — | NOT RUN | NOT BUILT-OPEN | the console has no credential check (`src/ground/console.py:1097-1125`) |
 | AD2.1 | Demonstration-2 Planning | The operator plans commands, uploads and report retrieval | REQ-097 | — | NOT RUN | NOT BUILT-OPEN | as AD1.1 |
@@ -175,7 +175,7 @@ condition").
 | A25.7 | Test-25 Restore | The ground told the result of a restore | REQ-060 | — | NOT RUN | NOT BUILT-OPEN | no RESTORE command in `protocol.hpp:20-35`; only EVENT 0x0106 after a trial overrun |
 | AD3.1 | Demonstration-3 Restore on order | The operator orders a restore while firmware runs, and it completes | REQ-055 | SCRIPTED | NOT RUN | PLANNED-2 | mechanism only: `restore.sh full` by ssh; the RESTORE command is not built |
 | A26.1 | Test-26 Interfaces | Every message matches the Interface Design byte for byte | REQ-107 | SCRIPTED | NOT RUN | PLANNED-2 | frames recorded on both links, decoded against `docs/interfaces` |
-| A26.2 | Test-26 Interfaces | A frame with any byte changed is dropped: radio link | REQ-107 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
+| A26.2 | Test-26 Interfaces | A frame with any byte changed is dropped: radio link | REQ-107 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | A26.3 | Test-26 Interfaces | A frame with any byte changed is dropped: data link A | REQ-107 | PROBE | NOT RUN | EARLIER BUILD | `controller/results/2026-10-12/step-2a-link-probe.log` |
 | A27.1 | Test-27 Fault injection | Every fault of the Table of faults injected, handled as its scenario says | REQ-105 | — | NOT RUN | PLANNED-2 | status follows the rows in "Test-27 and Test-28 map" |
 | A28.1 | Test-28 Scenario runs | Every ConOps scenario run from start to end | — | — | NOT RUN | PLANNED-2 | status follows the rows in "Test-27 and Test-28 map" |
@@ -269,7 +269,7 @@ How some faults are caused (no flight code changed):
 | B1.8 | Test-13; REQ-044; Scenario-400 | Refused 0x08 at UPLOAD END | SCRIPTED | NOT RUN | EARLIER BUILD | `controller/results/2026-10-12/milestone-2-updater.log` (updater 9da60f3) |
 | B1.9 | Test-13; REQ-043; Scenario-410 | Refused 0x09 at UPLOAD END | SCRIPTED | NOT RUN | EARLIER BUILD | as B1.8 |
 | B1.10 | REQ-031 | A chunk inside the bytes stored is answered DONE without writing | SCRIPTED | NOT RUN | PLANNED-2 | `update_manager.hpp:16-18` |
-| B1.11 | REQ-028 | A chunk past the bytes stored refused 0x06 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
+| B1.11 | REQ-028 | A chunk past the bytes stored refused 0x06 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | B1.12 | — | — | — | N/A | NO TRAFFIC | no new firmware runs during an upload |
 | B1.13 | — | — | — | N/A | NO TRAFFIC | as B1.12 |
 | B2.1 | Test-6; REQ-007; Scenario-600; H-1 control 1 | Slot A runs after power returns; slot A and the last-resort read back unchanged; the update can be repeated | SCRIPTED | PASS | — | `ground/results/2026-10-16/power-cuts/pc1-deliver-1.log`, `-2.log`, `-3.log`: hub power off 1.0, 0.3, 2.3 s into DELIVER; slot B ran again each time; slot B and the last-resort read back byte-identical over SWD; the repeated delivery completed |
@@ -287,15 +287,15 @@ How some faults are caused (no flight code changed):
 | B2.13 | — | — | — | N/A | NO TRAFFIC | as B2.12 |
 | B3.1 | Test-5; REQ-007; code rule B7 | Power cut between the data and the check-value writes of the SWITCH boot-state write: the boot state stays valid (slot A, or trial B) | OPENOCD | NOT RUN | PLANNED-4 | reset at a breakpoint stands in for the power cut (D6) |
 | B3.2 | REQ-029 | Reset between ARM and SWITCH: SWITCH refused 0x01 or done; never half done | OPENOCD | NOT RUN | PLANNED-4 | — |
-| B3.3 | REQ-062, REQ-112 | Updater killed between ARM and SWITCH: the held ARM is lost; SWITCH refused 0x01; a new ARM and SWITCH succeed | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 (gap between ARM and SWITCH) |
-| B3.4 | REQ-063, REQ-112 | As B3.3 with an MP257 restart | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
-| B3.5 | REQ-030; Scenario-335 | Link down longer than 30 s after ARM: SWITCH refused 0x02 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
+| B3.3 | REQ-062, REQ-112 | Updater killed between ARM and SWITCH: the held ARM is lost; SWITCH refused 0x01; a new ARM and SWITCH succeed | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
+| B3.4 | REQ-063, REQ-112 | As B3.3 with an MP257 restart | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
+| B3.5 | REQ-030; Scenario-335 | Link down longer than 30 s after ARM: SWITCH refused 0x02 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | B3.6 | REQ-081, REQ-025 | SWITCH not delivered; the ground told; slot A keeps running | SCRIPTED | NOT RUN | PLANNED-2 | — |
-| B3.7 | REQ-031; Scenario-350 | Resent ARM and SWITCH run once; answers ALREADY DONE | SCRIPTED | NOT RUN | NEEDS DECISION | radio-loss levels and short-timeout run (D3) |
+| B3.7 | REQ-031; Scenario-350 | Resent ARM and SWITCH run once; answers ALREADY DONE | SCRIPTED | PASS | — | as B3.10: `ground/results/2026-10-16/already-done-short-timeout.log` |
 | B3.8 | Test-3; REQ-005; Scenario-610 | Bit changed in slot B after delivery: the bootloader refuses slot B, gives up the trial, slot A runs | OPENOCD | NOT RUN | PLANNED-4 | — |
 | B3.9 | Test-3; REQ-006 | Slot B overwritten with an image signed by an unknown key: refused, slot A runs | OPENOCD | NOT RUN | PLANNED-4 | — |
 | B3.10 | Test-9; REQ-031 | SWITCH sent again: ALREADY DONE; one restart, one trial start | SCRIPTED | PASS | — | `ground/results/2026-10-16/already-done-short-timeout.log`: SWITCH sent 3 times 50 ms apart, passed on once, one EVENT 0x0006 (the ALREADY DONE answer itself is not in the log; host test testRepeatController covers it) |
-| B3.11 | Test-9; REQ-029, REQ-030, REQ-027 | SWITCH not armed 0x01; arm expired 0x02; in TRIAL 0x05 | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1; earlier `controller/results/2026-10-13/step-2d-trial-confirm.log` (0x01) |
+| B3.11 | Test-9; REQ-029, REQ-030, REQ-027 | SWITCH not armed 0x01; arm expired 0x02; in TRIAL 0x05 | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | B3.12 | — | — | — | N/A | NO TRAFFIC | the new firmware starts at moment 4 |
 | B3.13 | — | — | — | N/A | NO TRAFFIC | as B3.12 |
 | B4.1 | Test-5; REQ-016, REQ-017; code rule B7 | Cut between the data and the check-value writes of the start count: the count survives; the boot state stays valid | OPENOCD | NOT RUN | PLANNED-4 | a log-triggered power cut lands about 0.5 s after the command is passed on (journal 0.30 s, uhubctl 0.19 s; `ground/results/2026-10-16/power-cuts/pc4-switch-count-write.log`), after the 25 ms write; needs the breakpoint design (D6) or a trigger without the log |
@@ -339,15 +339,15 @@ How some faults are caused (no flight code changed):
 | B6.13 | — | — | — | N/A | DUPLICATE | B7.13 |
 | B7.1 | Test-5; REQ-012; code rule B7 | Cut between the data and the check-value writes of CONFIRM: the boot state stays valid (trial B or confirmed B) | OPENOCD | NOT RUN | PLANNED-4 | a log-triggered power cut lands about 0.5 s after the command is passed on (journal 0.30 s, uhubctl 0.19 s; `ground/results/2026-10-16/power-cuts/pc4-switch-count-write.log`), after the 25 ms write; needs the breakpoint design (D6) or a trigger without the log |
 | B7.2 | REQ-012 | As B7.1 | OPENOCD | NOT RUN | PLANNED-4 | — |
-| B7.3 | REQ-062, REQ-112 | Updater killed between ARM and CONFIRM: CONFIRM refused 0x01; a new ARM and CONFIRM succeed within the trial time | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1 |
+| B7.3 | REQ-062, REQ-112 | Updater killed between ARM and CONFIRM: CONFIRM refused 0x01; a new ARM and CONFIRM succeed within the trial time | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | B7.4 | REQ-063 | CONFIRM after the MP257 is back, within the trial time: DONE | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B7.5 | REQ-031 | Link down while CONFIRM is resent: confirmed once; EVENT 0x0007 once | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B7.6 | REQ-081 | CONFIRM cannot be passed on: the ground told; the trial runs out; slot A runs | SCRIPTED | NOT RUN | PLANNED-2 | — |
-| B7.7 | REQ-031; Scenario-350 | Resent ARM and CONFIRM run once; answers ALREADY DONE | SCRIPTED | NOT RUN | NEEDS DECISION | D3 |
+| B7.7 | REQ-031; Scenario-350 | Resent ARM and CONFIRM run once; answers ALREADY DONE | SCRIPTED | PASS | — | as B7.10: `ground/results/2026-10-16/already-done-short-timeout.log` |
 | B7.8 | REQ-005; Scenario-610 | Bit changed in slot B before CONFIRM: confirmed now; at the next start slot B refused and slot A runs | OPENOCD | NOT RUN | PLANNED-4 | — |
 | B7.9 | — | — | — | N/A | DUPLICATE | B7.8 (any change to slot B is caught by the same start check) |
 | B7.10 | Test-9; REQ-031 | CONFIRM sent again: ALREADY DONE; one EVENT 0x0007 | SCRIPTED | PASS | — | `ground/results/2026-10-16/already-done-short-timeout.log`: CONFIRM sent 3 times 20 ms apart, passed on once, one EVENT 0x0007 (answer kind as for B3.10) |
-| B7.11 | Test-4, Test-9; REQ-012, REQ-027, REQ-029, REQ-030 | CONFIRM not armed 0x01; arm expired 0x02; in OPERATE 0x05; before the tests 0x0F; after the trial time refused | SCRIPTED | NOT RUN | NEEDS TOOL | D4 tool T1; earlier `controller/results/2026-10-13/step-2d-trial-confirm.log` |
+| B7.11 | Test-4, Test-9; REQ-012, REQ-027, REQ-029, REQ-030 | CONFIRM not armed 0x01; arm expired 0x02; in OPERATE 0x05; before the tests 0x0F; after the trial time refused | SCRIPTED | NOT RUN | PLANNED-2 | the command sender `test/ground/send_frame.py` exists since 4fdb497; not yet run |
 | B7.12 | — | — | — | N/A | DUPLICATE | a hanging firmware never reaches CONFIRM: B5.12 |
 | B7.13 | H-3 control 2; REQ-139 | A firmware that answers but cannot take the test image fails its trial test and cannot be confirmed (0x0F) | — | NOT RUN | NEEDS TOOL | needs a test firmware with a broken update receiver (D4 tool T2) |
 | B8.1 | REQ-017, REQ-022 | Slot A runs again after power returns; boot state unchanged | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/power-switch-check.log`: hub port off 5 s; controller clock 15081 s to 6 s; OPERATE slot A, failed starts 0 |

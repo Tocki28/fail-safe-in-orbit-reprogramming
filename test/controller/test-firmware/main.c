@@ -8,6 +8,11 @@
  *            (confirmed = this slot, trial = none, failed starts = 0);
  *   hang     it stops reloading the watchdog and loops, so the watchdog restarts the chip
  *            and the bootloader counts a failed start.
+ *   trial-forever  (a different programme, not a decision at 3 s) it starts on trial and says so
+ *            in framed HEALTH reports for the onboard computer's trial watch (decision H, trial
+ *            time 120 s + margin 30 s): see trial_forever. It prints no text, reloads the
+ *            watchdog every second, and never confirms and never gives up, so the onboard
+ *            computer resets the controller and the bootloader counts a failed start.
  * It runs on HSI16, the clock the bootloader hands over (bootloader/handover.h). It shares no
  * code with the bootloader except the boot-state module it must use to confirm, and so it also
  * defines the fault reaction that module calls for an impossible value (common/fault.h).
@@ -17,12 +22,18 @@
  *   APP_NAME     "A", "B" or "LR"
  *   APP_VERSION  the version written into the image header by tools/make_image.py
  *   APP_HANG     1 = hang after 3 s, 0 = confirm after 3 s
+ *   APP_TRIAL_FOREVER  1 = the trial-forever programme (HEALTH reports, never ends), 0 = not
+ *   APP_REPORT_SLOT    the running-slot code of the HEALTH report: 0x01 A, 0x02 B, 0x03 last-resort
+ *   APP_REPORT_KIND    the firmware kind of the HEALTH report: IMAGE_KIND_MAIN or
+ *                      IMAGE_KIND_LAST_RESORT (common/image_format.h)
  *   CODE_START   the layout.h address this build is linked at
  */
 #include <stdint.h>
 
 #include "boot_state.h"
+#include "crc32.h"
 #include "fault.h"
+#include "image_format.h"
 #include "layout.h"
 #include "stm32g4xx.h"
 
@@ -43,6 +54,44 @@
 /* The bench plan: confirm or hang 3 s after start. */
 #define DECISION_SECOND    3U
 #define DECIMAL_DIGITS     10U
+
+/* The trial-forever programme sends the controller's HEALTH report as the operating firmware
+ * does (src/controller/firmware/health-monitor/health_monitor.cpp, data-link/frame_sender.cpp,
+ * data-link/frame.cpp). Frame fields [Interfaces Sec. 4.0, frame table]: */
+#define FRAME_SYNC_0       0xA5U
+#define FRAME_SYNC_1       0x5AU
+#define FRAME_VERSION      0x01U
+#define FRAME_TYPE_REPORT  0x03U
+/* Destination 0x01 = onboard computer [Interfaces Sec. 4.0, frame table]; every frame the
+ * operating firmware sends goes there (frame_sender.cpp, FrameSender::send). */
+#define FRAME_DEST_ONBOARD 0x01U
+/* Frame offsets [Interfaces Sec. 4.0, Figure 2]; the flags (offset 5) and the expiry (offset 12)
+ * are 0 in a report and are left as the zero fill. */
+#define FRAME_AT_VERSION   2U
+#define FRAME_AT_TYPE      3U
+#define FRAME_AT_DEST      4U
+#define FRAME_AT_LENGTH    6U
+#define FRAME_AT_SEQUENCE  8U
+#define FRAME_HEADER_BYTES 16U
+#define FRAME_CHECK_BYTES  4U
+/* HEALTH payload: 24 bytes; offsets of the fields [Interfaces Sec. 5.4, report table;
+ * health_monitor.hpp, layout comment]. The report number (0) and the onboard computer clock
+ * time (4) are sent as 0: the onboard computer fills them (health_monitor.cpp, report). */
+#define HEALTH_BYTES       24U
+#define HEALTH_AT_CLOCK    8U
+#define HEALTH_AT_KIND     12U
+#define HEALTH_AT_MODE     13U
+#define HEALTH_AT_FW_KIND  14U
+#define HEALTH_AT_VERSION  15U
+#define HEALTH_AT_SLOT     19U
+#define HEALTH_AT_FAILED   20U
+#define HEALTH_AT_TRIAL    21U
+#define HEALTH_AT_SELFTEST 23U
+#define HEALTH_KIND_HEALTH 0x01U   /* report kind HEALTH [Interfaces Sec. 5.4, report table] */
+#define HEALTH_MODE_TRIAL  0x02U   /* mode TRIAL [Interfaces Sec. 5.4, report table] */
+#define HEALTH_SELF_PASSED 0x00U   /* last self-test PASSED [Interfaces Sec. 5.4, report table] */
+/* The whole frame: header, payload, check value [Interfaces Sec. 4.0, Figure 2]. */
+#define HEALTH_FRAME_BYTES (FRAME_HEADER_BYTES + HEALTH_BYTES + FRAME_CHECK_BYTES)
 
 /**
  * @brief Starts USART2 transmit on PA2 at 115200 baud from HSI16.
@@ -191,8 +240,121 @@ void fault_impossible_value(uint8_t location, const char *where)
 }
 
 /**
+ * @brief Writes a 16-bit value little-endian.
+ *
+ * Little-endian: Interfaces Sec. 4.0.
+ *
+ * @param[out]    bytes  two bytes, least significant first
+ * @param[in]     value  the value to write
+ */
+static void write_u16(uint8_t *bytes, uint16_t value)
+{
+    bytes[0] = (uint8_t)value;
+    bytes[1] = (uint8_t)(value >> 8);
+}
+
+/**
+ * @brief Writes a 32-bit value little-endian.
+ *
+ * Little-endian: Interfaces Sec. 4.0.
+ *
+ * @param[out]    bytes  four bytes, least significant first
+ * @param[in]     value  the value to write
+ */
+static void write_u32(uint8_t *bytes, uint32_t value)
+{
+    bytes[0] = (uint8_t)value;
+    bytes[1] = (uint8_t)(value >> 8);
+    bytes[2] = (uint8_t)(value >> 16);
+    bytes[3] = (uint8_t)(value >> 24);
+}
+
+/**
+ * @brief Builds one framed HEALTH report: mode TRIAL, this build's slot, kind and version.
+ *
+ * The same bytes the operating firmware sends in a HEALTH report in trial (health_monitor.cpp,
+ * HealthMonitor::report, and frame.cpp, buildFrame): Type 0x03 report, Destination 0x01, flags 0,
+ * length 24, expiry 0, the check value a CRC-32 of every byte before it [Interfaces Sec. 4.0].
+ * The trial time left is 0: this test application keeps no trial time. The self-test is
+ * reported as passed: it runs none.
+ *
+ * @param[out]    out           the frame, HEALTH_FRAME_BYTES bytes
+ * @param[in]     sequence      the frame's sequence number, 1 to 2^32 - 1 [Interfaces Sec. 4.0]
+ * @param[in]     clock_s       the controller clock time, seconds since start
+ * @param[in]     failed_starts the failed starts of the new copy, from the boot state
+ */
+static void build_health_frame(uint8_t *out, uint32_t sequence, uint32_t clock_s,
+                               uint8_t failed_starts)
+{
+    uint8_t *payload = &out[FRAME_HEADER_BYTES];
+
+    for (uint32_t i = 0U; i < HEALTH_FRAME_BYTES; i++) {
+        out[i] = 0U;
+    }
+    out[0] = FRAME_SYNC_0;
+    out[1] = FRAME_SYNC_1;
+    out[FRAME_AT_VERSION] = FRAME_VERSION;
+    out[FRAME_AT_TYPE] = FRAME_TYPE_REPORT;
+    out[FRAME_AT_DEST] = FRAME_DEST_ONBOARD;
+    write_u16(&out[FRAME_AT_LENGTH], (uint16_t)HEALTH_BYTES);
+    write_u32(&out[FRAME_AT_SEQUENCE], sequence);
+
+    write_u32(&payload[HEALTH_AT_CLOCK], clock_s);
+    payload[HEALTH_AT_KIND] = HEALTH_KIND_HEALTH;
+    payload[HEALTH_AT_MODE] = HEALTH_MODE_TRIAL;
+    payload[HEALTH_AT_FW_KIND] = (uint8_t)APP_REPORT_KIND;
+    write_u32(&payload[HEALTH_AT_VERSION], APP_VERSION);
+    payload[HEALTH_AT_SLOT] = (uint8_t)APP_REPORT_SLOT;
+    payload[HEALTH_AT_FAILED] = failed_starts;
+    write_u16(&payload[HEALTH_AT_TRIAL], 0U);
+    payload[HEALTH_AT_SELFTEST] = HEALTH_SELF_PASSED;
+
+    write_u32(&out[FRAME_HEADER_BYTES + HEALTH_BYTES],
+              crc32_compute(out, FRAME_HEADER_BYTES + HEALTH_BYTES));
+}
+
+/**
+ * @brief The trial-forever programme: a HEALTH report in TRIAL every second, for ever.
+ *
+ * Exercises the onboard computer's trial watch (decision H): the watch starts at the first
+ * HEALTH report showing TRIAL (trial_watch.hpp) and, when no "confirmed" or "given up" event
+ * comes within 120 s + 30 s, the onboard computer resets the controller. This programme never
+ * writes the boot state (never confirms, never gives up), so the bootloader counts each such
+ * start as a failed start and, after BOOT_STATE_MAX_STARTS (3), returns to the previous firmware.
+ * It prints no text: the onboard computer reads USART2 as data link A and would only drop text.
+ * The failed starts are read once, from the boot state; if it cannot be read, 0 is reported, as
+ * the operating firmware does (health_monitor.cpp). The sequence number starts at 1 and rises by
+ * one per frame [Interfaces Sec. 4.0]; it would wrap to 0 after 136 years, which a bench run
+ * does not reach. The watchdog is reloaded on every pass (code rule B6); the pass lasts 1 s, well
+ * inside the 2 s watchdog (code rule B6).
+ *
+ * @note Does not return.
+ */
+static void trial_forever(void)
+{
+    uint8_t frame[HEALTH_FRAME_BYTES];
+    boot_state_t state;
+    uint8_t failed_starts = 0U;
+
+    if (boot_state_read(&state)) {
+        failed_starts = state.failed_starts;
+    }
+    for (uint32_t second = 0U;; second++) {   /* endless: the programme never ends; the watchdog
+                                                 and the onboard computer's reset end it */
+        IWDG->KR = IWDG_KEY_RELOAD;
+        build_health_frame(frame, second + 1U, second, failed_starts);
+        for (uint32_t i = 0U; i < HEALTH_FRAME_BYTES; i++) {
+            put_char((char)frame[i]);
+        }
+        wait_one_second();
+    }
+}
+
+/**
  * @brief Prints a line every second, reloads the watchdog, and after 3 s confirms itself or
  * hangs, by build flag.
+ *
+ * With APP_TRIAL_FOREVER it runs trial_forever instead and prints nothing.
  *
  * @note Does not return.
  */
@@ -204,6 +366,10 @@ int main(void)
     SysTick->LOAD = SYSTICK_RELOAD;
     SysTick->VAL = 0U;
     SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;   /* no interrupt */
+
+    if (APP_TRIAL_FOREVER != 0) {
+        trial_forever();   /* does not return */
+    }
 
     for (uint32_t second = 1U;; second++) {   /* endless: the application's main loop */
         say("running");

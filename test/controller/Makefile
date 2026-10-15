@@ -29,6 +29,12 @@
 #   make flash        same as scenario-1
 #   make scenario-N   write the flash contents of bench test N (1-7), then restart the chip
 #
+# The test images (build/images) also hold slotB-v2-trial-forever.img: slot B on trial, framed
+# HEALTH reports in TRIAL every second, never confirms or gives up; it exercises the onboard
+# computer's trial watch (decision H: reset after 120 s + 30 s, restore.sh reset), and after 3
+# such failed starts the bootloader returns to the previous firmware. No bench scenario target
+# writes it yet.
+#
 # Bench tests (expected "BL:"/"APP" lines in parentheses):
 #   1  good image in slot A, no boot state   (slot A accepted; starting slot A (confirmed))
 #   2  hanging trial in slot B, trial = B    (3 trial starts ended by the watchdog; trial given
@@ -61,6 +67,7 @@ programs:
 	$(MAKE) -C test-firmware SLOT=A  VERSION=1 BEHAVIOUR=confirm
 	$(MAKE) -C test-firmware SLOT=B  VERSION=2 BEHAVIOUR=confirm
 	$(MAKE) -C test-firmware SLOT=B  VERSION=2 BEHAVIOUR=hang
+	$(MAKE) -C test-firmware SLOT=B  VERSION=2 BEHAVIOUR=trial-forever
 	$(MAKE) -C test-firmware SLOT=LR VERSION=1 BEHAVIOUR=confirm
 
 images: programs
@@ -68,6 +75,8 @@ images: programs
 	$(SIGN) --bin $(APPS)/A-v1-confirm/app.bin  --kind main --slot A --version 1 --build-id "$(COMMIT) test A" --out $(OUT)/slotA-v1.img
 	$(SIGN) --bin $(APPS)/B-v2-confirm/app.bin  --kind main --slot B --version 2 --build-id "$(COMMIT) test B" --out $(OUT)/slotB-v2.img
 	$(SIGN) --bin $(APPS)/B-v2-hang/app.bin     --kind main --slot B --version 2 --build-id "$(COMMIT) test B hang" --out $(OUT)/slotB-v2-hang.img
+# Short label: the build-id field is 32 bytes (common/image_format.h line 44); "-dirty" adds 7.
+	$(SIGN) --bin $(APPS)/B-v2-trial-forever/app.bin --kind main --slot B --version 2 --build-id "$(COMMIT) test B forever" --out $(OUT)/slotB-v2-trial-forever.img
 	$(SIGN) --bin $(APPS)/LR-v1-confirm/app.bin --kind last-resort --slot last-resort --version 1 --build-id "$(COMMIT) test LR" --out $(OUT)/last-resort-v1.img
 	$(SIGN_BAD_A) --bin $(APPS)/A-v1-confirm/app.bin --kind main --slot A --version 1 --build-id "$(COMMIT) bad key A" --out $(OUT)/slotA-v1-wrong-key-a.img
 	$(SIGN_BAD_B) --bin $(APPS)/B-v2-confirm/app.bin --kind main --slot B --version 2 --build-id "$(COMMIT) bad key B" --out $(OUT)/slotB-v2-wrong-key-b.img

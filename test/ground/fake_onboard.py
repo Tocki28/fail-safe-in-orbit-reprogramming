@@ -11,6 +11,12 @@ return to slot A when `fail_test` is set. After 0x000A it waits for ARM + CONFIR
 CONFIRM by the end of the trial time `trial_s` it gives the firmware up (0x0008) and returns
 to slot A. `rollback` makes it give up at once with no test result. Test double only, never
 part of src/.
+
+Options added for test_ground_checks.py (all off by default, so the behaviour above is unchanged):
+`damaged` sends chosen raw datagrams to the console once; `ignore` leaves chosen command ids
+without any answer; `no_done` answers chosen command ids with RECEIVED only; `accept` makes chosen
+command ids that the fake does not run (such as 0x21) answer DONE. `datagrams` keeps every raw
+datagram the fake received, in order.
 """
 import queue
 import socket
@@ -29,7 +35,8 @@ TRIAL_REPORTS = 3        # HEALTH reports in TRIAL before OPERATE
 
 
 class FakeOnboard:
-    def __init__(self, refuse=None, rollback=False, fail_test=None, trial_s=3.0):
+    def __init__(self, refuse=None, rollback=False, fail_test=None, trial_s=3.0, damaged=None,
+                 ignore=None, no_done=None, accept=None):
         """Bind a UDP socket on localhost and start the receive, work and report threads.
 
         Args:
@@ -37,7 +44,22 @@ class FakeOnboard:
             rollback: True to give the new firmware up at once, with no test result.
             fail_test: detail byte of EVENT 0x000B (the failed test), or None for passing tests.
             trial_s: trial time of the fake, seconds.
+            damaged: list of raw datagrams (bytes) sent once to the console, right after the
+                RECEIVED answer of the first command that is answered; None for none. They are
+                sent as they are, so the test decides how each one is damaged (Interfaces Sec. 4.0,
+                REQ-093).
+            ignore: set of command ids the fake does not answer at all, not even RECEIVED; None
+                for none. The set may be changed while the fake runs (REQ-094).
+            no_done: set of command ids the fake answers with RECEIVED only, never DONE; None for
+                none. The set may be changed while the fake runs (REQ-094).
+            accept: set of command ids the fake does not run itself but answers DONE; None for
+                none. Without it such an id is REFUSED 0x06, as before.
         """
+        self.damaged = list(damaged or [])  # raw datagrams still to send, once
+        self.ignore = set(ignore or ())     # command ids with no answer at all
+        self.no_done = set(no_done or ())   # command ids with RECEIVED only
+        self.accept = set(accept or ())     # command ids answered DONE without being run
+        self.datagrams = []                 # every raw datagram received, in order
         self.refuse = refuse or {}          # command id -> REFUSED code
         self.rollback = rollback            # after SWITCH go back to slot A version 1, no test result
         self.fail_test = fail_test          # detail byte of EVENT 0x000B, or None: tests pass
@@ -103,6 +125,7 @@ class FakeOnboard:
                 data, addr = self.sock.recvfrom(4096)
             except OSError:
                 return
+            self.datagrams.append(data)
             frame = c.parse(data)
             if frame is None or frame["type"] != c.TYPE_COMMAND:
                 continue
@@ -119,15 +142,31 @@ class FakeOnboard:
             except queue.Empty:
                 continue
             seq, p = frame["seq"], frame["payload"]
+            if p[0] in self.ignore:
+                continue
             if seq in self.seen:
                 self._answer(seq, c.ALREADY_DONE)
                 continue
             self._answer(seq, c.RECEIVED)
+            self._send_damaged()
+            if p[0] in self.no_done:
+                continue
             time.sleep(ANSWER_DELAY_S)
             code = self.refuse.get(p[0]) or self._run(frame["dest"], p, seq)
             self.seen[seq] = c.REFUSED if code else c.DONE
             self.done_at[seq] = time.monotonic()
             self._answer(seq, self.seen[seq], code or 0)
+
+    def _send_damaged(self):
+        """Send the datagrams of the `damaged` option, as they are, once, to the latest source.
+        """
+        pending, self.damaged = self.damaged, []
+        for data in pending:
+            if self.source:
+                try:
+                    self.sock.sendto(data, self.source)
+                except OSError:
+                    pass
 
     def _run(self, dest, p, seq):
         """Returns a REFUSED code, or 0 for DONE."""
@@ -165,6 +204,8 @@ class FakeOnboard:
             self.trial_left = 0
             self.confirmed.set()
             self._event(c.EVENT_CONFIRMED)
+        elif cid in self.accept:
+            pass
         elif cid != c.GET_STATUS:
             return 0x06
         return 0

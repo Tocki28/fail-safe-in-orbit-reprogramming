@@ -13,6 +13,7 @@ with the same sequence number, so the onboard computer answers ALREADY DONE and 
 them twice (Sec. 4.2, REQ-031).
 
 Subcommands:  status | upload IMAGE --number N | deliver --number N | switch | update [--yes] | confirm
+              | return
 
 Sequence numbers are kept across runs in a state file (default ~/.fsir/console-seq, option
 --seq-file), because the onboard computer refuses an ARM or a dangerous command whose ground
@@ -27,6 +28,7 @@ import os
 import random
 import socket
 import struct
+import subprocess
 import sys
 import time
 import zlib
@@ -74,6 +76,12 @@ REFUSAL_TEXT = {                        # Sec. 4.2: table of REFUSED codes
 UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END, UPLOAD_CANCEL, DELIVER = 0x01, 0x02, 0x03, 0x04, 0x05
 ARM, SWITCH, GET_STATUS, CONFIRM = 0x0D, 0x20, 0x25, 0x26
 CHUNK_MAX = 256                         # Sec. 5.1: UPLOAD CHUNK carries up to 256 data bytes
+RETURN_TO_PREVIOUS = 0x21               # Sec. 5.1, table line 359: RETURN TO PREVIOUS (REQ-113)
+SET_LIMITS, RESTORE, REPROGRAM, SET_ONBOARD_TIME = 0x06, 0x07, 0x08, 0x09   # Sec. 5.1: table
+SCHEDULE, SEND_REPORTS, REPLACE_KEY = 0x0A, 0x0B, 0x0C                      # Sec. 5.1: table
+START_FAILED, LEAVE_FALLBACK, SET_CONTROLLER_TIME = 0x22, 0x23, 0x24        # Sec. 5.1: table
+IMAGE_NUMBER_MAX = 0xFFFE               # Sec. 5.1: 0xFFFF is the test image; ground uses 0-65534
+TEST_IMAGE_NUMBER = 0xFFFF              # Sec. 5.1: the controller's trial-test image number
 
 # ---- Reports, Sec. 5.4 ---------------------------------------------------------------
 REPORT_HEALTH, REPORT_EVENT = 0x01, 0x02            # Sec. 5.4: report kind
@@ -196,10 +204,169 @@ CONFIRM_WAIT_S = 10.0       # how long to wait for EVENT 0x0007 and HEALTH OPERA
 STATUS_SECONDS = 10.0       # default listening time of `status`
 RECV_BYTES = 2048           # larger than the biggest frame (16 + 1024 + 4)
 DEFAULT_SEQ_FILE = os.path.join("~", ".fsir", "console-seq")   # bench choice: per-user state file
+# Longest wait for the image check before an upload (REQ-114). TBD placeholder, not measured: the
+# same placeholder restore.sh uses for one image check.
+IMAGE_CHECK_TIMEOUT_S = 30.0
+# The onboard computer's check-only mode (updater README, "Check-only mode"), built on this Mac.
+# console.py lives in src/ground/, so two levels up from its folder is the repository root.
+DEFAULT_CHECK_TOOL = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "src", "onboard-computer", "updater", "build", "host", "fsir-updater")
 
 
 class Refused(Exception):
     """A command was REFUSED or never answered."""
+
+
+# Command table, Interfaces Sec. 5.1 (docs/interfaces/main.tex lines 345-364): identifier ->
+# (name, the destinations it may go to, shortest payload, longest payload). Payload lengths
+# include the identifier byte. UPLOAD BEGIN to UPLOAD CANCEL and DELIVER go to the onboard
+# computer from the ground (lines 327-336, 345-349); ARM goes to either destination (line 357).
+# A fixed length has the same shortest and longest value.
+COMMAND_TABLE = {
+    UPLOAD_BEGIN: ("UPLOAD BEGIN", (DEST_ONBOARD,), 7, 7),  # id 1, number 2, length 4
+    # UPLOAD CHUNK: id 1, number 2, offset 4, then 1 to 256 data bytes.
+    UPLOAD_CHUNK: ("UPLOAD CHUNK", (DEST_ONBOARD,), 8, 7 + CHUNK_MAX),
+    UPLOAD_END: ("UPLOAD END", (DEST_ONBOARD,), 3, 3),                        # id 1, number 2
+    UPLOAD_CANCEL: ("UPLOAD CANCEL", (DEST_ONBOARD,), 3, 3),                  # id 1, number 2
+    DELIVER: ("DELIVER", (DEST_ONBOARD,), 3, 3),                              # id 1, number 2
+    SET_LIMITS: ("SET LIMITS", (DEST_ONBOARD,), 7, 7),  # id 1, version 4, id 2
+    RESTORE: ("RESTORE", (DEST_ONBOARD,), 1, 1),                              # id 1
+    REPROGRAM: ("REPROGRAM", (DEST_ONBOARD,), 4, 4),  # id 1, number 2, area 1
+    SET_ONBOARD_TIME: ("SET ONBOARD TIME", (DEST_ONBOARD,), 5, 5),            # id 1, time 4
+    # SCHEDULE: id 1, run time 4, then one complete frame: at least the header and the check value.
+    SCHEDULE: ("SCHEDULE", (DEST_ONBOARD,), 5 + HEADER.size + CHECK_BYTES, PAYLOAD_MAX),
+    SEND_REPORTS: ("SEND REPORTS", (DEST_ONBOARD,), 5, 5),                    # id 1, first number 4
+    REPLACE_KEY: ("REPLACE KEY", (DEST_ONBOARD,), 34, 34),  # id 1, which 1, key 32
+    ARM: ("ARM", (DEST_ONBOARD, DEST_CONTROLLER), 6, 6),  # id 1, named id 1, seq 4
+    SWITCH: ("SWITCH", (DEST_CONTROLLER,), 1, 1),                             # id 1
+    RETURN_TO_PREVIOUS: ("RETURN TO PREVIOUS", (DEST_CONTROLLER,), 1, 1),     # id 1
+    START_FAILED: ("START FAILED", (DEST_CONTROLLER,), 2, 2),                 # id 1, which copy 1
+    LEAVE_FALLBACK: ("LEAVE FALLBACK", (DEST_CONTROLLER,), 1, 1),             # id 1
+    SET_CONTROLLER_TIME: ("SET CONTROLLER TIME", (DEST_CONTROLLER,), 5, 5),   # id 1, time 4
+    GET_STATUS: ("GET STATUS", (DEST_CONTROLLER,), 1, 1),                     # id 1
+    CONFIRM: ("CONFIRM", (DEST_CONTROLLER,), 1, 1),                           # id 1
+}
+# Dangerous commands an ARM may name, per destination (Dangerous column, lines 345-364: YES).
+DANGEROUS_BY_DEST = {
+    DEST_ONBOARD: (SET_LIMITS, RESTORE, REPROGRAM, SET_ONBOARD_TIME, REPLACE_KEY),
+    DEST_CONTROLLER: (SWITCH, RETURN_TO_PREVIOUS, START_FAILED, SET_CONTROLLER_TIME, CONFIRM),
+}
+UPLOAD_IDENTIFIERS = (UPLOAD_BEGIN, UPLOAD_CHUNK, UPLOAD_END, UPLOAD_CANCEL, DELIVER)   # 345-349
+IMAGE_NUMBER_AT = slice(1, 3)           # lines 345-349: image number, the 2 bytes after the id
+IMAGE_LENGTH_AT = slice(3, 7)           # line 345: UPLOAD BEGIN image length, 4 bytes after number
+
+
+def check_command(dest, payload):
+    """Why a command is not well formed, or None when it is (REQ-089).
+
+    A malformed command must not be sent, so the operator sees the mistake at once and not as a
+    REFUSED 0x06 after a round trip (REQ-089, Sec. 4.2). The rules are the command table of
+    Interfaces Sec. 5.1, lines 345-364: destination of each identifier, exact payload length
+    (identifier byte included), and the dangerous command an ARM names. Two further rules:
+    the test image number 0xFFFF from the ground (Interfaces Sec. 5.1, lines 327-336) and an
+    UPLOAD BEGIN image length of 0.
+
+    Accepted by the owner, 15 Oct 2026 (decision 17): the rule that refuses image number 0xFFFF
+    in UPLOAD BEGIN, CHUNK, END, CANCEL and DELIVER from the ground, and the rule that refuses
+    an image length of 0. An empty payload is refused as "no identifier" (TBR, same reason).
+
+    Args:
+        dest: Destination field, DEST_ONBOARD or DEST_CONTROLLER.
+        payload: the command payload, identifier byte first.
+
+    Returns:
+        A one-line reason text, or None when the command is well formed.
+    """
+    if not payload:
+        return "no identifier byte"
+    ident = payload[0]
+    entry = COMMAND_TABLE.get(ident)
+    if entry is None or dest not in entry[1]:
+        return f"unknown command 0x{ident:02x} for destination 0x{dest:02x}"
+    name, _, shortest, longest = entry
+    if not shortest <= len(payload) <= longest:
+        wanted = f"{shortest}" if shortest == longest else f"{shortest} to {longest}"
+        return f"{name} payload is {len(payload)} bytes, expected {wanted}"
+    if ident == ARM and payload[1] not in DANGEROUS_BY_DEST[dest]:
+        return f"ARM names 0x{payload[1]:02x}, not a dangerous command of destination 0x{dest:02x}"
+    if ident in UPLOAD_IDENTIFIERS and \
+            struct.unpack("<H", payload[IMAGE_NUMBER_AT])[0] == TEST_IMAGE_NUMBER:
+        return "image number 0xFFFF is the test image (Interfaces Sec. 5.1)"
+    if ident == UPLOAD_BEGIN and struct.unpack("<I", payload[IMAGE_LENGTH_AT])[0] == 0:
+        return "UPLOAD BEGIN image length is 0"
+    return None
+
+
+def check_image_number(number):
+    """Refuse an image number that cannot be packed into the 2-byte field (REQ-089).
+
+    The operator types the number, and struct.pack would raise an exception on 70000. The number
+    is checked before packing, so the result is a Refused line and not a traceback. 0xFFFF packs
+    and is refused later by check_command() with its own reason (Interfaces Sec. 5.1); the range
+    text names 0 to 65534, the numbers the ground may use.
+
+    Args:
+        number: image number as typed, any integer.
+
+    Raises:
+        Refused: the number is outside 0 to 65535.
+    """
+    if not 0 <= number <= TEST_IMAGE_NUMBER:
+        raise Refused(f"command not sent: image number {number} outside 0 to {IMAGE_NUMBER_MAX}")
+
+
+def check_offset(offset, total):
+    """Refuse a resume offset outside the image (REQ-089).
+
+    An offset below 0 cannot be packed, and one past the image end has no byte to send. The
+    range 0 to the image length is the one upload() documents.
+
+    Accepted by the owner, 15 Oct 2026 (decision 17): refusing an offset past the image length,
+    which the contract did not name (struct.pack would accept it).
+
+    Args:
+        offset: byte offset as typed, any integer.
+        total: image length, bytes.
+
+    Raises:
+        Refused: the offset is outside 0 to total.
+    """
+    if not 0 <= offset <= total:
+        raise Refused(f"command not sent: offset {offset} outside 0 to {total}")
+
+
+def check_image_before_upload(tool, path):
+    """Run the onboard computer's image checks on the file before any byte is sent (REQ-114).
+
+    The check-only mode of fsir-updater runs the checks of an upload on one file and prints one
+    line (updater README, "Check-only mode"). Exit status 0 means passed, 1 refused, 2 usage,
+    3 keys unusable. Any status but 0, a time-out, or a tool that cannot be started means the
+    image is not sent: an image the onboard computer would refuse is not worth the link time.
+
+    Args:
+        tool: path of the fsir-updater program.
+        path: path of the image file.
+
+    Raises:
+        Refused: "image refused before upload: <reason>", the reason being the tool's one output
+            line, "check tool not found: <tool>", or "check tool timed out after 30 s".
+    """
+    try:
+        done = subprocess.run([tool, "--check-image", path, "--kind", "main"], capture_output=True,
+                              text=True, timeout=IMAGE_CHECK_TIMEOUT_S, check=False)
+    except subprocess.TimeoutExpired:
+        raise Refused(f"image refused before upload: check tool timed out after "
+                      f"{IMAGE_CHECK_TIMEOUT_S:g} s") from None
+    except OSError:
+        raise Refused(f"image refused before upload: check tool not found: {tool}") from None
+    if done.returncode == 0:
+        return
+    # Accepted by the owner, 15 Oct 2026 (decision 17): the reason is the first line of standard
+    # output, else of standard error, else the exit status (the contract names only the line).
+    lines = done.stdout.strip().splitlines() or done.stderr.strip().splitlines()
+    reason = lines[0] if lines else f"check tool exit status {done.returncode}"
+    raise Refused(f"image refused before upload: {reason}")
 
 
 def build(ftype, dest, seq, payload, expiry=0):
@@ -234,6 +401,40 @@ def parse(data):
     if struct.unpack_from("<I", data, len(data) - CHECK_BYTES)[0] != zlib.crc32(data[:-CHECK_BYTES]):
         return None
     return dict(type=ftype, dest=dest, seq=seq, payload=data[HEADER.size:HEADER.size + length])
+
+
+def frame_fault(data):
+    """Why a datagram was not accepted as a good frame, or None when it was (Sec. 4.0, REQ-093).
+
+    The receiver drops a frame whose sync, version, length or check value it does not accept
+    (Sec. 4.0). The operator must see that a frame was dropped and why (REQ-093), so this gives
+    the first reason, checked in the order parse() checks. A report frame whose payload does not
+    decode (decode_report()) is also named, because pump() drops it too.
+
+    Args:
+        data: the datagram, bytes.
+
+    Returns:
+        A one-line reason text, or None when the datagram is a good frame.
+    """
+    if len(data) < HEADER.size + CHECK_BYTES:
+        return f"shorter than the smallest frame ({HEADER.size + CHECK_BYTES} bytes)"
+    sync, version, _, _, _, length, _, _ = HEADER.unpack_from(data)
+    if sync != SYNC:
+        return "bad sync"
+    if version != VERSION:
+        return f"version 0x{version:02x} not accepted"
+    if length > PAYLOAD_MAX:
+        return f"length field {length} is past {PAYLOAD_MAX}"
+    if len(data) != HEADER.size + length + CHECK_BYTES:
+        return f"length field {length} does not match the datagram size"
+    sent_check = struct.unpack_from("<I", data, len(data) - CHECK_BYTES)[0]
+    if sent_check != zlib.crc32(data[:-CHECK_BYTES]):
+        return "check value differs"
+    frame = parse(data)
+    if frame["type"] == TYPE_REPORT and decode_report(frame["payload"]) is None:
+        return "report payload does not decode"
+    return None
 
 
 def unknown(value, digits=2):
@@ -562,6 +763,8 @@ class Console:
         self.sock.bind(("", local_port))    # the onboard computer reports to our source address
         self.dropped = 0
         self.sent = 0
+        self.damaged = 0                    # datagrams dropped as damaged frames (REQ-093)
+        self.ledger = {}                    # seq -> command sent and not finished (REQ-094)
         self.health = None                  # latest HEALTH report
         self.reports = []                   # reports received and not yet consumed
 
@@ -604,11 +807,28 @@ class Console:
         self.sent += 1
 
     def pump(self, wait):
-        """Wait up to `wait` s for one datagram; returns a frame or None. Reports are stored."""
+        """Wait up to `wait` s for one datagram; returns a frame or None. Reports are stored.
+
+        A datagram that is not a good frame is dropped and shown, never silently (Sec. 4.0,
+        REQ-093): one line with its size and the reason from frame_fault(), and the count
+        `damaged` goes up by one.
+
+        Args:
+            wait: longest time to wait for a datagram, seconds.
+
+        Returns:
+            A command or answer frame dict as parse() gives it, or None (nothing came, a report
+            was stored, or the datagram was dropped).
+        """
         self.sock.settimeout(max(wait, 0.001))
         try:
             data, _ = self.sock.recvfrom(RECV_BYTES)
         except (socket.timeout, BlockingIOError):
+            return None
+        reason = frame_fault(data)
+        if reason:
+            self.damaged += 1
+            self.say(f"damaged frame dropped ({len(data)} bytes): {reason}")
             return None
         frame = parse(data)
         if frame and frame["type"] == TYPE_REPORT:
@@ -621,32 +841,84 @@ class Console:
             return None
         return frame
 
+    def pending(self):
+        """The commands sent and still waiting for their answers, oldest first (REQ-094).
+
+        A command is in the ledger from its first transmission until DONE, ALREADY DONE or
+        REFUSED arrives for it, or until it is given up after all tries (Sec. 4.2).
+
+        Returns:
+            A list of dicts, one per waiting command: seq (int), what (str), age_s (float,
+            seconds since it was first sent) and received (bool, RECEIVED has arrived).
+        """
+        now = time.monotonic()
+        return [dict(seq=seq, what=e["what"], age_s=now - e["first_sent"], received=e["received"])
+                for seq, e in sorted(self.ledger.items(), key=lambda item: item[1]["first_sent"])]
+
+    def show_pending(self):
+        """Print one line per waiting command, so the operator sees what is not answered (REQ-094).
+
+        The line is "waiting: seq N WHAT, sent T s ago, RECEIVED yes|no"; T has one decimal.
+        """
+        for e in self.pending():
+            self.say(f"waiting: seq {e['seq']} {e['what']}, sent {e['age_s']:.1f} s ago, "
+                     f"RECEIVED {'yes' if e['received'] else 'no'}")
+
     def command(self, dest, payload, timeout=None, what="command"):
         """Send one command and wait for its DONE (or REFUSED). Returns the DONE kind.
-        Resends the identical frame (same sequence number) after each timeout."""
+
+        Resends the identical frame (same sequence number) after each timeout. A malformed
+        command is refused before a sequence number is taken, so nothing is sent (REQ-089). The
+        command stays in the ledger (pending()) until it is finished or given up (REQ-094); at
+        each resend and at the give-up the waiting commands are printed.
+
+        Args:
+            dest: Destination field, DEST_ONBOARD or DEST_CONTROLLER.
+            payload: the command payload, identifier byte first.
+            timeout: seconds to wait for an answer before sending again; the console's if None.
+            what: the command's name, for messages and the ledger.
+
+        Returns:
+            DONE or ALREADY_DONE, the answer kind.
+
+        Raises:
+            Refused: the command is malformed (check_command()), was REFUSED, or was never
+                answered after all tries.
+        """
+        reason = check_command(dest, payload)
+        if reason:
+            raise Refused(f"command not sent: {reason}")
         timeout = timeout or self.timeout
         seq = self.next_seq()
         frame = build(TYPE_COMMAND, dest, seq, payload, int(time.time()) + EXPIRY_S)
-        for attempt in range(RETRIES + 1):
-            self.transmit(frame)
-            end = time.monotonic() + timeout
-            while time.monotonic() < end:
-                answer = self.pump(end - time.monotonic())
-                if not answer or answer["type"] != TYPE_ANSWER or len(answer["payload"]) != ANSWER.size:
-                    continue
-                answered, kind, code = ANSWER.unpack(answer["payload"])
-                if answered != seq:
-                    continue                # a late duplicate answer to an earlier command
-                if kind == RECEIVED:
-                    continue
-                if kind == REFUSED:
-                    text = refusal_text(code)
-                    raise Refused(f"{what} (seq {seq}) REFUSED 0x{code:02x}: {text}")
-                if kind in (DONE, ALREADY_DONE):
-                    return kind
-            if attempt < RETRIES:
-                self.say(f"no answer to {what} (seq {seq}) within {timeout:g} s, sending again")
-        raise Refused(f"{what} (seq {seq}): no answer after {RETRIES + 1} tries")
+        self.ledger[seq] = dict(what=what, first_sent=time.monotonic(), received=False)
+        try:
+            for attempt in range(RETRIES + 1):
+                self.transmit(frame)
+                end = time.monotonic() + timeout
+                while time.monotonic() < end:
+                    answer = self.pump(end - time.monotonic())
+                    if (not answer or answer["type"] != TYPE_ANSWER
+                            or len(answer["payload"]) != ANSWER.size):
+                        continue
+                    answered, kind, code = ANSWER.unpack(answer["payload"])
+                    if answered != seq:
+                        continue                # a late duplicate answer to an earlier command
+                    if kind == RECEIVED:
+                        self.ledger[seq]["received"] = True
+                        continue
+                    if kind == REFUSED:
+                        text = refusal_text(code)
+                        raise Refused(f"{what} (seq {seq}) REFUSED 0x{code:02x}: {text}")
+                    if kind in (DONE, ALREADY_DONE):
+                        return kind
+                if attempt < RETRIES:
+                    self.say(f"no answer to {what} (seq {seq}) within {timeout:g} s, sending again")
+                    self.show_pending()
+            self.show_pending()                 # its own entry, just before it leaves the ledger
+            raise Refused(f"{what} (seq {seq}): no answer after {RETRIES + 1} tries")
+        finally:
+            del self.ledger[seq]                # answered, refused or given up: no longer waiting
 
 
 # ---- Commands ------------------------------------------------------------------------
@@ -665,10 +937,13 @@ def upload(con, data, number, start=0):
         start: byte offset to resume from, 0 to len(data); 0 sends BEGIN too.
 
     Raises:
-        Refused: a command was refused or never answered; the text carries the resume advice.
+        Refused: a value cannot be packed (nothing is sent), or a command was refused or never
+            answered; the text carries the resume advice.
     """
     t0 = time.monotonic()
     total = len(data)
+    check_image_number(number)
+    check_offset(start, total)
     stage = "UPLOAD BEGIN"
     offset = start
     try:
@@ -707,9 +982,11 @@ def deliver(con, number):
         number: image number, 0 to 65535, as given to UPLOAD BEGIN.
 
     Raises:
-        Refused: DELIVER was refused or never answered.
+        Refused: the number cannot be packed (nothing is sent), or DELIVER was refused or never
+            answered.
     """
     t0 = time.monotonic()
+    check_image_number(number)
     con.command(DEST_ONBOARD, struct.pack("<BH", DELIVER, number), timeout=DELIVER_TIMEOUT_S, what="DELIVER")
     con.say(f"deliver complete in {time.monotonic() - t0:.2f} s")
 
@@ -973,7 +1250,7 @@ def cmd_update(con, args):
 
     Args:
         con: the Console.
-        args: parsed options: image_dir, number, yes (answer y without asking).
+        args: parsed options: image_dir, number, yes (answer y without asking), check_tool.
 
     Returns:
         Exit code: 0 confirmed, 1 rolled back or tests failed, 2 unresolved, 3 not confirmed
@@ -990,6 +1267,8 @@ def cmd_update(con, args):
     con.say(f"update  running slot {old['slot']} version {old['version']}; free slot {name}, image {path}")
     with open(path, "rb") as f:
         data = f.read()
+    check_image_number(args.number)
+    check_image_before_upload(args.check_tool, path)
     upload(con, data, args.number)
     deliver(con, args.number)
     con.reports.clear()                 # only reports from now on count
@@ -1057,6 +1336,27 @@ def cmd_confirm(con, args):
     return 2
 
 
+def cmd_return(con, args):
+    """Send ARM and RETURN TO PREVIOUS to the controller (Sec. 5.1, REQ-113).
+
+    RETURN TO PREVIOUS is dangerous, so it needs its ARM like CONFIRM does (Sec. 5.1, command
+    table line 359). It is sent the way `confirm` sends ARM and CONFIRM (arm_and_send()), and
+    the DONE is printed the same way. Nothing else is waited for.
+
+    Args:
+        con: the Console.
+        args: parsed options (none used).
+
+    Returns:
+        Exit code 0.
+
+    Raises:
+        Refused: ARM or RETURN TO PREVIOUS was refused or never answered.
+    """
+    arm_and_send(con, RETURN_TO_PREVIOUS, "RETURN TO PREVIOUS")
+    return 0
+
+
 def cmd_status(con, args):
     """Send GET STATUS and print the reports that arrive for a while (Sec. 5.1, 5.4).
 
@@ -1107,6 +1407,9 @@ def main(argv=None):
                    help="file that keeps the last sequence number between runs (default %(default)s); "
                         "the onboard computer refuses a number it has seen since it started")
     p.add_argument("--seed", type=int, default=None, help="seed of the radio-loss random numbers")
+    p.add_argument("--check-tool", default=DEFAULT_CHECK_TOOL, metavar="PATH",
+                   help="fsir-updater program that checks an image before upload (REQ-114) "
+                        "(default %(default)s)")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("status", help="print HEALTH reports for N seconds")
     s.add_argument("--seconds", type=float, default=STATUS_SECONDS)
@@ -1123,6 +1426,8 @@ def main(argv=None):
     s.add_argument("--number", type=int, default=1, help="image number (default 1)")
     s.add_argument("--image-dir", default="src/controller/build/images")
     sub.add_parser("confirm", help="ARM, then CONFIRM, both to the controller (new firmware in its trial)")
+    sub.add_parser("return", help="ARM, then RETURN TO PREVIOUS, both to the controller "
+                                  "(new firmware in its trial)")
     a = p.parse_args(argv)
     if not 0.0 <= a.radio_loss <= 1.0:
         p.error("--radio-loss must be between 0 and 1")
@@ -1143,7 +1448,11 @@ def main(argv=None):
             code = cmd_status(con, a)
         elif a.cmd == "upload":
             with open(a.image, "rb") as f:
-                upload(con, f.read(), a.number, a.offset)
+                data = f.read()
+            check_image_number(a.number)
+            check_offset(a.offset, len(data))
+            check_image_before_upload(a.check_tool, a.image)
+            upload(con, data, a.number, a.offset)
             code = 0
         elif a.cmd == "deliver":
             deliver(con, a.number)
@@ -1153,6 +1462,8 @@ def main(argv=None):
             code = 0
         elif a.cmd == "confirm":
             code = cmd_confirm(con, a)
+        elif a.cmd == "return":
+            code = cmd_return(con, a)
         else:
             code = cmd_update(con, a)
     except Refused as e:
@@ -1160,6 +1471,8 @@ def main(argv=None):
         code = 1
     finally:
         con.sock.close()
+    if con.damaged > 0:
+        print(f"damaged frames dropped: {con.damaged}")     # REQ-093
     if a.radio_loss > 0:
         print(f"radio simulator: dropped {con.dropped} of {con.dropped + con.sent} outgoing datagrams")
     return code

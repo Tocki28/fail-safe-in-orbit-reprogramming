@@ -227,11 +227,14 @@ class ConsoleTests(unittest.TestCase):
         self.assertEqual(r["text"], "trial tests passed")
 
     def test_upload_with_radio_loss_larger_image(self):
-        """Check that a 13-chunk upload survives 30 % radio loss (Sec. 4.2, REQ-031). Passes if exit
-        code is 0, the bytes are intact and some datagrams were dropped.
+        """Check that an 80-chunk upload of a real signed image survives 30 % radio loss (Sec. 4.2,
+        REQ-031). Passes if exit code is 0, the bytes are intact and some datagrams were dropped.
+
+        The image is src/controller/build/images/firmware-B.img, 20380 bytes = 79 chunks of 256
+        bytes + 1 chunk of 156 bytes = 80 chunks. Random bytes are refused by the image check
+        before upload since REQ-114 (owner decision 18a, 15 Oct 2026).
         """
-        big = Path(tempfile.mkdtemp()) / "big.img"
-        big.write_bytes(random.Random(1).randbytes(256 * 12 + 77))   # 13 chunks
+        big = self.image
         code, out = run_console(self.fake, "--radio-loss", "0.3", "--seed", "3",
                                 "upload", str(big), "--number", "4")
         self.assertEqual(code, 0, out)

@@ -1,0 +1,236 @@
+saved on the Mac at 2026-10-15 18:58:14 EEST
+board: Sat Jan  1 00:15:49 UTC 2000 uptime: 940.46 s
+[   11.177711] stm32mp2unknownunknown systemd[1]: Started fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+[   11.370136] stm32mp2unknownunknown fsir-updater[857]: [     0.086] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+[   11.371413] stm32mp2unknownunknown fsir-updater[857]: [     0.087] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+[   11.425399] stm32mp2unknownunknown fsir-updater[857]: [     0.142] controller heard
+[   12.032630] stm32mp2unknownunknown fsir-updater[857]: [     0.749] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[   12.036347] stm32mp2unknownunknown fsir-updater[857]: [     0.749] reports: no ground has spoken yet; reports are dropped until one does
+[  144.978741] stm32mp2unknownunknown fsir-updater[857]: [   133.695] ground link: answers and reports now go to 192.168.7.85:49500
+[  144.978741] stm32mp2unknownunknown fsir-updater[857]: [   133.695] ground: command 0x25 sequence 1791887332 for the controller (1 payload bytes)
+[  144.980230] stm32mp2unknownunknown fsir-updater[857]: [   133.695] ground command 0x25 sequence 1791887332 passed on to the controller as sequence 67
+[  144.985304] stm32mp2unknownunknown fsir-updater[857]: [   133.702] controller: answer 0x02 code 0x00 to ground sequence 1791887332
+[  231.239878] stm32mp2unknownunknown fsir-updater[857]: [   219.956] ground link: answers and reports now go to 192.168.7.85:59480
+[  231.239878] stm32mp2unknownunknown fsir-updater[857]: [   219.956] ground: command 0x25 sequence 1791887333 for the controller (1 payload bytes)
+[  231.239878] stm32mp2unknownunknown fsir-updater[857]: [   219.956] ground command 0x25 sequence 1791887333 passed on to the controller as sequence 110
+[  231.246560] stm32mp2unknownunknown fsir-updater[857]: [   219.963] controller: answer 0x02 code 0x00 to ground sequence 1791887333
+[  231.597573] stm32mp2unknownunknown fsir-updater[857]: [   220.314] ground: command 0x01 sequence 1791887334 for the onboard computer (7 payload bytes)
+[  231.608041] stm32mp2unknownunknown fsir-updater[857]: [   220.324] UPLOAD BEGIN image 1, 20276 bytes: starting at byte 0
+[  231.609591] stm32mp2unknownunknown fsir-updater[857]: [   220.326] ground: command 0x02 sequence 1791887335 for the onboard computer (263 payload bytes)
+[  231.624551] stm32mp2unknownunknown fsir-updater[857]: [   220.341] ground: command 0x02 sequence 1791887336 for the onboard computer (263 payload bytes)
+[  231.632124] stm32mp2unknownunknown fsir-updater[857]: [   220.349] ground: command 0x02 sequence 1791887337 for the onboard computer (263 payload bytes)
+[  231.640223] stm32mp2unknownunknown fsir-updater[857]: [   220.357] ground: command 0x02 sequence 1791887338 for the onboard computer (263 payload bytes)
+[  231.647773] stm32mp2unknownunknown fsir-updater[857]: [   220.364] ground: command 0x02 sequence 1791887339 for the onboard computer (263 payload bytes)
+[  231.655454] stm32mp2unknownunknown fsir-updater[857]: [   220.372] ground: command 0x02 sequence 1791887340 for the onboard computer (263 payload bytes)
+[  231.663439] stm32mp2unknownunknown fsir-updater[857]: [   220.380] ground: command 0x02 sequence 1791887341 for the onboard computer (263 payload bytes)
+[  231.671206] stm32mp2unknownunknown fsir-updater[857]: [   220.388] ground: command 0x02 sequence 1791887342 for the onboard computer (263 payload bytes)
+[  231.678496] stm32mp2unknownunknown fsir-updater[857]: [   220.395] ground: command 0x02 sequence 1791887343 for the onboard computer (263 payload bytes)
+[  231.686361] stm32mp2unknownunknown fsir-updater[857]: [   220.403] ground: command 0x02 sequence 1791887344 for the onboard computer (263 payload bytes)
+[  231.693988] stm32mp2unknownunknown fsir-updater[857]: [   220.410] ground: command 0x02 sequence 1791887345 for the onboard computer (263 payload bytes)
+[  231.702078] stm32mp2unknownunknown fsir-updater[857]: [   220.419] ground: command 0x02 sequence 1791887346 for the onboard computer (263 payload bytes)
+[  231.710352] stm32mp2unknownunknown fsir-updater[857]: [   220.427] ground: command 0x02 sequence 1791887347 for the onboard computer (263 payload bytes)
+[  231.718134] stm32mp2unknownunknown fsir-updater[857]: [   220.435] ground: command 0x02 sequence 1791887348 for the onboard computer (263 payload bytes)
+[  231.725793] stm32mp2unknownunknown fsir-updater[857]: [   220.442] ground: command 0x02 sequence 1791887349 for the onboard computer (263 payload bytes)
+[  231.734005] stm32mp2unknownunknown fsir-updater[857]: [   220.450] ground: command 0x02 sequence 1791887350 for the onboard computer (263 payload bytes)
+[  231.742794] stm32mp2unknownunknown fsir-updater[857]: [   220.459] ground: command 0x02 sequence 1791887351 for the onboard computer (263 payload bytes)
+[  231.752792] stm32mp2unknownunknown fsir-updater[857]: [   220.469] ground: command 0x02 sequence 1791887352 for the onboard computer (263 payload bytes)
+[  231.760580] stm32mp2unknownunknown fsir-updater[857]: [   220.477] ground: command 0x02 sequence 1791887353 for the onboard computer (263 payload bytes)
+[  231.768439] stm32mp2unknownunknown fsir-updater[857]: [   220.485] ground: command 0x02 sequence 1791887354 for the onboard computer (263 payload bytes)
+[  231.775954] stm32mp2unknownunknown fsir-updater[857]: [   220.492] ground: command 0x02 sequence 1791887355 for the onboard computer (263 payload bytes)
+[  231.783823] stm32mp2unknownunknown fsir-updater[857]: [   220.500] ground: command 0x02 sequence 1791887356 for the onboard computer (263 payload bytes)
+[  231.791573] stm32mp2unknownunknown fsir-updater[857]: [   220.508] ground: command 0x02 sequence 1791887357 for the onboard computer (263 payload bytes)
+[  231.799166] stm32mp2unknownunknown fsir-updater[857]: [   220.516] ground: command 0x02 sequence 1791887358 for the onboard computer (263 payload bytes)
+[  231.807378] stm32mp2unknownunknown fsir-updater[857]: [   220.524] ground: command 0x02 sequence 1791887359 for the onboard computer (263 payload bytes)
+[  231.814967] stm32mp2unknownunknown fsir-updater[857]: [   220.531] ground: command 0x02 sequence 1791887360 for the onboard computer (263 payload bytes)
+[  231.822452] stm32mp2unknownunknown fsir-updater[857]: [   220.539] ground: command 0x02 sequence 1791887361 for the onboard computer (263 payload bytes)
+[  231.830385] stm32mp2unknownunknown fsir-updater[857]: [   220.547] ground: command 0x02 sequence 1791887362 for the onboard computer (263 payload bytes)
+[  231.837797] stm32mp2unknownunknown fsir-updater[857]: [   220.554] ground: command 0x02 sequence 1791887363 for the onboard computer (263 payload bytes)
+[  231.845287] stm32mp2unknownunknown fsir-updater[857]: [   220.562] ground: command 0x02 sequence 1791887364 for the onboard computer (263 payload bytes)
+[  231.854333] stm32mp2unknownunknown fsir-updater[857]: [   220.571] ground: command 0x02 sequence 1791887365 for the onboard computer (263 payload bytes)
+[  231.862056] stm32mp2unknownunknown fsir-updater[857]: [   220.579] ground: command 0x02 sequence 1791887366 for the onboard computer (263 payload bytes)
+[  231.870819] stm32mp2unknownunknown fsir-updater[857]: [   220.587] ground: command 0x02 sequence 1791887367 for the onboard computer (263 payload bytes)
+[  231.878663] stm32mp2unknownunknown fsir-updater[857]: [   220.595] ground: command 0x02 sequence 1791887368 for the onboard computer (263 payload bytes)
+[  231.886040] stm32mp2unknownunknown fsir-updater[857]: [   220.602] ground: command 0x02 sequence 1791887369 for the onboard computer (263 payload bytes)
+[  231.893383] stm32mp2unknownunknown fsir-updater[857]: [   220.610] ground: command 0x02 sequence 1791887370 for the onboard computer (263 payload bytes)
+[  231.901478] stm32mp2unknownunknown fsir-updater[857]: [   220.618] ground: command 0x02 sequence 1791887371 for the onboard computer (263 payload bytes)
+[  231.909033] stm32mp2unknownunknown fsir-updater[857]: [   220.625] ground: command 0x02 sequence 1791887372 for the onboard computer (263 payload bytes)
+[  231.916303] stm32mp2unknownunknown fsir-updater[857]: [   220.633] ground: command 0x02 sequence 1791887373 for the onboard computer (263 payload bytes)
+[  231.924568] stm32mp2unknownunknown fsir-updater[857]: [   220.641] ground: command 0x02 sequence 1791887374 for the onboard computer (263 payload bytes)
+[  231.932329] stm32mp2unknownunknown fsir-updater[857]: [   220.649] ground: command 0x02 sequence 1791887375 for the onboard computer (263 payload bytes)
+[  231.940086] stm32mp2unknownunknown fsir-updater[857]: [   220.657] ground: command 0x02 sequence 1791887376 for the onboard computer (263 payload bytes)
+[  231.948731] stm32mp2unknownunknown fsir-updater[857]: [   220.665] ground: command 0x02 sequence 1791887377 for the onboard computer (263 payload bytes)
+[  231.956208] stm32mp2unknownunknown fsir-updater[857]: [   220.673] ground: command 0x02 sequence 1791887378 for the onboard computer (263 payload bytes)
+[  231.966443] stm32mp2unknownunknown fsir-updater[857]: [   220.683] ground: command 0x02 sequence 1791887379 for the onboard computer (263 payload bytes)
+[  231.974455] stm32mp2unknownunknown fsir-updater[857]: [   220.691] ground: command 0x02 sequence 1791887380 for the onboard computer (263 payload bytes)
+[  231.982015] stm32mp2unknownunknown fsir-updater[857]: [   220.698] ground: command 0x02 sequence 1791887381 for the onboard computer (263 payload bytes)
+[  231.989461] stm32mp2unknownunknown fsir-updater[857]: [   220.706] ground: command 0x02 sequence 1791887382 for the onboard computer (263 payload bytes)
+[  231.998683] stm32mp2unknownunknown fsir-updater[857]: [   220.715] ground: command 0x02 sequence 1791887383 for the onboard computer (263 payload bytes)
+[  232.010646] stm32mp2unknownunknown fsir-updater[857]: [   220.727] ground: command 0x02 sequence 1791887384 for the onboard computer (263 payload bytes)
+[  232.019269] stm32mp2unknownunknown fsir-updater[857]: [   220.736] ground: command 0x02 sequence 1791887385 for the onboard computer (263 payload bytes)
+[  232.027376] stm32mp2unknownunknown fsir-updater[857]: [   220.744] ground: command 0x02 sequence 1791887386 for the onboard computer (263 payload bytes)
+[  232.127334] stm32mp2unknownunknown fsir-updater[857]: [   220.844] ground: command 0x02 sequence 1791887387 for the onboard computer (263 payload bytes)
+[  232.347291] stm32mp2unknownunknown fsir-updater[857]: [   221.064] ground: command 0x02 sequence 1791887388 for the onboard computer (263 payload bytes)
+[  232.356730] stm32mp2unknownunknown fsir-updater[857]: [   221.073] ground: command 0x02 sequence 1791887389 for the onboard computer (263 payload bytes)
+[  232.364696] stm32mp2unknownunknown fsir-updater[857]: [   221.081] ground: command 0x02 sequence 1791887390 for the onboard computer (263 payload bytes)
+[  232.372620] stm32mp2unknownunknown fsir-updater[857]: [   221.089] ground: command 0x02 sequence 1791887391 for the onboard computer (263 payload bytes)
+[  232.380116] stm32mp2unknownunknown fsir-updater[857]: [   221.096] ground: command 0x02 sequence 1791887392 for the onboard computer (263 payload bytes)
+[  232.390833] stm32mp2unknownunknown fsir-updater[857]: [   221.107] ground: command 0x02 sequence 1791887393 for the onboard computer (263 payload bytes)
+[  232.398734] stm32mp2unknownunknown fsir-updater[857]: [   221.115] ground: command 0x02 sequence 1791887394 for the onboard computer (263 payload bytes)
+[  232.406376] stm32mp2unknownunknown fsir-updater[857]: [   221.123] ground: command 0x02 sequence 1791887395 for the onboard computer (263 payload bytes)
+[  232.414200] stm32mp2unknownunknown fsir-updater[857]: [   221.131] ground: command 0x02 sequence 1791887396 for the onboard computer (263 payload bytes)
+[  232.421988] stm32mp2unknownunknown fsir-updater[857]: [   221.138] ground: command 0x02 sequence 1791887397 for the onboard computer (263 payload bytes)
+[  232.429902] stm32mp2unknownunknown fsir-updater[857]: [   221.146] ground: command 0x02 sequence 1791887398 for the onboard computer (263 payload bytes)
+[  232.441732] stm32mp2unknownunknown fsir-updater[857]: [   221.158] ground: command 0x02 sequence 1791887399 for the onboard computer (263 payload bytes)
+[  232.449551] stm32mp2unknownunknown fsir-updater[857]: [   221.166] ground: command 0x02 sequence 1791887400 for the onboard computer (263 payload bytes)
+[  232.458613] stm32mp2unknownunknown fsir-updater[857]: [   221.175] ground: command 0x02 sequence 1791887401 for the onboard computer (263 payload bytes)
+[  232.466123] stm32mp2unknownunknown fsir-updater[857]: [   221.183] ground: command 0x02 sequence 1791887402 for the onboard computer (263 payload bytes)
+[  232.474554] stm32mp2unknownunknown fsir-updater[857]: [   221.191] ground: command 0x02 sequence 1791887403 for the onboard computer (263 payload bytes)
+[  232.482505] stm32mp2unknownunknown fsir-updater[857]: [   221.199] ground: command 0x02 sequence 1791887404 for the onboard computer (263 payload bytes)
+[  232.492297] stm32mp2unknownunknown fsir-updater[857]: [   221.209] ground: command 0x02 sequence 1791887405 for the onboard computer (263 payload bytes)
+[  232.499975] stm32mp2unknownunknown fsir-updater[857]: [   221.216] ground: command 0x02 sequence 1791887406 for the onboard computer (263 payload bytes)
+[  232.508399] stm32mp2unknownunknown fsir-updater[857]: [   221.225] ground: command 0x02 sequence 1791887407 for the onboard computer (263 payload bytes)
+[  232.516222] stm32mp2unknownunknown fsir-updater[857]: [   221.233] ground: command 0x02 sequence 1791887408 for the onboard computer (263 payload bytes)
+[  232.523886] stm32mp2unknownunknown fsir-updater[857]: [   221.240] ground: command 0x02 sequence 1791887409 for the onboard computer (263 payload bytes)
+[  232.531756] stm32mp2unknownunknown fsir-updater[857]: [   221.248] ground: command 0x02 sequence 1791887410 for the onboard computer (263 payload bytes)
+[  232.542039] stm32mp2unknownunknown fsir-updater[857]: [   221.258] ground: command 0x02 sequence 1791887411 for the onboard computer (263 payload bytes)
+[  232.550072] stm32mp2unknownunknown fsir-updater[857]: [   221.267] ground: command 0x02 sequence 1791887412 for the onboard computer (263 payload bytes)
+[  232.558877] stm32mp2unknownunknown fsir-updater[857]: [   221.275] ground: command 0x02 sequence 1791887413 for the onboard computer (263 payload bytes)
+[  232.571680] stm32mp2unknownunknown fsir-updater[857]: [   221.288] ground: command 0x02 sequence 1791887414 for the onboard computer (59 payload bytes)
+[  232.579461] stm32mp2unknownunknown fsir-updater[857]: [   221.296] ground: command 0x03 sequence 1791887415 for the onboard computer (3 payload bytes)
+[  232.606758] stm32mp2unknownunknown fsir-updater[857]: [   221.323] UPLOAD END image 1: checks passed (kind 0x02, version 1); stored
+[  232.608387] stm32mp2unknownunknown fsir-updater[857]: [   221.325] ground: command 0x05 sequence 1791887416 for the onboard computer (3 payload bytes)
+[  232.611329] stm32mp2unknownunknown fsir-updater[857]: [   221.328] DELIVER image 1: 20276 bytes, version 1, to the controller
+[  235.699944] stm32mp2unknownunknown fsir-updater[857]: [   224.416] DELIVER image 1: done; the controller accepted UPLOAD END
+[  235.702085] stm32mp2unknownunknown fsir-updater[857]: [   224.419] ground: command 0x0d sequence 1791887417 for the controller (6 payload bytes)
+[  235.702085] stm32mp2unknownunknown fsir-updater[857]: [   224.419] ground: ARM sequence 1791887417 held for command 0x20, ground sequence 1791887418 (valid 30000 ms)
+[  235.703538] stm32mp2unknownunknown fsir-updater[857]: [   224.420] ground: command 0x20 sequence 1791887418 for the controller (1 payload bytes)
+[  235.706776] stm32mp2unknownunknown fsir-updater[857]: [   224.423] ARM sequence 195 sent for ground command 0x20 sequence 1791887418, which will carry sequence 196
+[  235.713852] stm32mp2unknownunknown fsir-updater[857]: [   224.430] ground command 0x20 sequence 1791887418 passed on to the controller as sequence 196
+[  235.827843] stm32mp2unknownunknown fsir-updater[857]: [   224.544] controller: answer 0x02 code 0x00 to ground sequence 1791887418
+[  236.008833] stm32mp2unknownunknown fsir-updater[857]: [   224.725] controller: EVENT 0x0006 (trial started)
+[  236.998824] stm32mp2unknownunknown fsir-updater[857]: [   225.715] controller: HEALTH mode TRIAL, slot A, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+[  237.000669] stm32mp2unknownunknown fsir-updater[857]: [   225.715] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+[  237.134453] stm32mp2unknownunknown fsir-updater[857]: [   225.851] test image: done; the controller accepted UPLOAD END
+[  237.137526] stm32mp2unknownunknown fsir-updater[857]: [   225.854] controller: EVENT 0x000a (trial tests passed)
+[  237.139224] stm32mp2unknownunknown fsir-updater[857]: [   225.856] ground: command 0x25 sequence 1791887419 for the controller (1 payload bytes)
+[  237.139482] stm32mp2unknownunknown fsir-updater[857]: [   225.856] ground command 0x25 sequence 1791887419 passed on to the controller as sequence 203
+[  237.145915] stm32mp2unknownunknown fsir-updater[857]: [   225.862] controller: answer 0x02 code 0x00 to ground sequence 1791887419
+[  260.345316] stm32mp2unknownunknown fsir-updater[857]: [   249.061] ground: command 0x0d sequence 1791887420 for the controller (6 payload bytes)
+[  260.345316] stm32mp2unknownunknown fsir-updater[857]: [   249.061] ground: ARM sequence 1791887420 held for command 0x26, ground sequence 1791887421 (valid 30000 ms)
+[  260.346618] stm32mp2unknownunknown fsir-updater[857]: [   249.063] ground: command 0x26 sequence 1791887421 for the controller (1 payload bytes)
+[  260.346618] stm32mp2unknownunknown fsir-updater[857]: [   249.063] ARM sequence 216 sent for ground command 0x26 sequence 1791887421, which will carry sequence 217
+[  260.353514] stm32mp2unknownunknown fsir-updater[857]: [   249.070] ground command 0x26 sequence 1791887421 passed on to the controller as sequence 217
+[  260.385909] stm32mp2unknownunknown fsir-updater[857]: [   249.102] controller: EVENT 0x0007 (firmware confirmed)
+[  260.388204] stm32mp2unknownunknown fsir-updater[857]: [   249.105] controller: answer 0x02 code 0x00 to ground sequence 1791887421
+[  260.968460] stm32mp2unknownunknown fsir-updater[857]: [   249.685] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[  341.160116] stm32mp2unknownunknown fsir-updater[857]: [   329.876] ground link: answers and reports now go to 192.168.7.85:56008
+[  341.160116] stm32mp2unknownunknown fsir-updater[857]: [   329.876] ground: command 0x25 sequence 1791887422 for the controller (1 payload bytes)
+[  341.160116] stm32mp2unknownunknown fsir-updater[857]: [   329.876] ground command 0x25 sequence 1791887422 passed on to the controller as sequence 257
+[  341.166423] stm32mp2unknownunknown fsir-updater[857]: [   329.883] controller: answer 0x02 code 0x00 to ground sequence 1791887422
+[  341.792226] stm32mp2unknownunknown fsir-updater[857]: [   330.509] ground: command 0x01 sequence 1791887423 for the onboard computer (7 payload bytes)
+[  341.804091] stm32mp2unknownunknown fsir-updater[857]: [   330.520] UPLOAD BEGIN image 1, 20276 bytes: starting at byte 0
+[  341.805680] stm32mp2unknownunknown fsir-updater[857]: [   330.522] ground: command 0x02 sequence 1791887424 for the onboard computer (263 payload bytes)
+[  341.819724] stm32mp2unknownunknown fsir-updater[857]: [   330.536] ground: command 0x02 sequence 1791887425 for the onboard computer (263 payload bytes)
+[  341.827315] stm32mp2unknownunknown fsir-updater[857]: [   330.544] ground: command 0x02 sequence 1791887426 for the onboard computer (263 payload bytes)
+[  341.835254] stm32mp2unknownunknown fsir-updater[857]: [   330.552] ground: command 0x02 sequence 1791887427 for the onboard computer (263 payload bytes)
+[  341.847872] stm32mp2unknownunknown fsir-updater[857]: [   330.564] ground: command 0x02 sequence 1791887428 for the onboard computer (263 payload bytes)
+[  341.856243] stm32mp2unknownunknown fsir-updater[857]: [   330.573] ground: command 0x02 sequence 1791887429 for the onboard computer (263 payload bytes)
+[  341.864752] stm32mp2unknownunknown fsir-updater[857]: [   330.581] ground: command 0x02 sequence 1791887430 for the onboard computer (263 payload bytes)
+[  341.872338] stm32mp2unknownunknown fsir-updater[857]: [   330.589] ground: command 0x02 sequence 1791887431 for the onboard computer (263 payload bytes)
+[  341.880170] stm32mp2unknownunknown fsir-updater[857]: [   330.596] ground: command 0x02 sequence 1791887432 for the onboard computer (263 payload bytes)
+[  341.888051] stm32mp2unknownunknown fsir-updater[857]: [   330.604] ground: command 0x02 sequence 1791887433 for the onboard computer (263 payload bytes)
+[  341.897786] stm32mp2unknownunknown fsir-updater[857]: [   330.614] ground: command 0x02 sequence 1791887434 for the onboard computer (263 payload bytes)
+[  341.905035] stm32mp2unknownunknown fsir-updater[857]: [   330.621] ground: command 0x02 sequence 1791887435 for the onboard computer (263 payload bytes)
+[  341.913223] stm32mp2unknownunknown fsir-updater[857]: [   330.630] ground: command 0x02 sequence 1791887436 for the onboard computer (263 payload bytes)
+[  341.921088] stm32mp2unknownunknown fsir-updater[857]: [   330.638] ground: command 0x02 sequence 1791887437 for the onboard computer (263 payload bytes)
+[  341.928501] stm32mp2unknownunknown fsir-updater[857]: [   330.645] ground: command 0x02 sequence 1791887438 for the onboard computer (263 payload bytes)
+[  341.936441] stm32mp2unknownunknown fsir-updater[857]: [   330.653] ground: command 0x02 sequence 1791887439 for the onboard computer (263 payload bytes)
+[  341.947990] stm32mp2unknownunknown fsir-updater[857]: [   330.664] ground: command 0x02 sequence 1791887440 for the onboard computer (263 payload bytes)
+[  341.956134] stm32mp2unknownunknown fsir-updater[857]: [   330.673] ground: command 0x02 sequence 1791887441 for the onboard computer (263 payload bytes)
+[  341.964395] stm32mp2unknownunknown fsir-updater[857]: [   330.681] ground: command 0x02 sequence 1791887442 for the onboard computer (263 payload bytes)
+[  341.972332] stm32mp2unknownunknown fsir-updater[857]: [   330.689] ground: command 0x02 sequence 1791887443 for the onboard computer (263 payload bytes)
+[  341.979802] stm32mp2unknownunknown fsir-updater[857]: [   330.696] ground: command 0x02 sequence 1791887444 for the onboard computer (263 payload bytes)
+[  341.990151] stm32mp2unknownunknown fsir-updater[857]: [   330.707] ground: command 0x02 sequence 1791887445 for the onboard computer (263 payload bytes)
+[  341.997866] stm32mp2unknownunknown fsir-updater[857]: [   330.714] ground: command 0x02 sequence 1791887446 for the onboard computer (263 payload bytes)
+[  342.005770] stm32mp2unknownunknown fsir-updater[857]: [   330.722] ground: command 0x02 sequence 1791887447 for the onboard computer (263 payload bytes)
+[  342.013374] stm32mp2unknownunknown fsir-updater[857]: [   330.730] ground: command 0x02 sequence 1791887448 for the onboard computer (263 payload bytes)
+[  342.021011] stm32mp2unknownunknown fsir-updater[857]: [   330.737] ground: command 0x02 sequence 1791887449 for the onboard computer (263 payload bytes)
+[  342.028775] stm32mp2unknownunknown fsir-updater[857]: [   330.745] ground: command 0x02 sequence 1791887450 for the onboard computer (263 payload bytes)
+[  342.039104] stm32mp2unknownunknown fsir-updater[857]: [   330.756] ground: command 0x02 sequence 1791887451 for the onboard computer (263 payload bytes)
+[  342.046954] stm32mp2unknownunknown fsir-updater[857]: [   330.763] ground: command 0x02 sequence 1791887452 for the onboard computer (263 payload bytes)
+[  342.054949] stm32mp2unknownunknown fsir-updater[857]: [   330.771] ground: command 0x02 sequence 1791887453 for the onboard computer (263 payload bytes)
+[  342.062807] stm32mp2unknownunknown fsir-updater[857]: [   330.779] ground: command 0x02 sequence 1791887454 for the onboard computer (263 payload bytes)
+[  342.074569] stm32mp2unknownunknown fsir-updater[857]: [   330.791] ground: command 0x02 sequence 1791887455 for the onboard computer (263 payload bytes)
+[  342.089213] stm32mp2unknownunknown fsir-updater[857]: [   330.806] ground: command 0x02 sequence 1791887456 for the onboard computer (263 payload bytes)
+[  342.097243] stm32mp2unknownunknown fsir-updater[857]: [   330.814] ground: command 0x02 sequence 1791887457 for the onboard computer (263 payload bytes)
+[  342.104665] stm32mp2unknownunknown fsir-updater[857]: [   330.821] ground: command 0x02 sequence 1791887458 for the onboard computer (263 payload bytes)
+[  342.112902] stm32mp2unknownunknown fsir-updater[857]: [   330.829] ground: command 0x02 sequence 1791887459 for the onboard computer (263 payload bytes)
+[  342.120513] stm32mp2unknownunknown fsir-updater[857]: [   330.837] ground: command 0x02 sequence 1791887460 for the onboard computer (263 payload bytes)
+[  342.128370] stm32mp2unknownunknown fsir-updater[857]: [   330.845] ground: command 0x02 sequence 1791887461 for the onboard computer (263 payload bytes)
+[  342.138822] stm32mp2unknownunknown fsir-updater[857]: [   330.855] ground: command 0x02 sequence 1791887462 for the onboard computer (263 payload bytes)
+[  342.146255] stm32mp2unknownunknown fsir-updater[857]: [   330.863] ground: command 0x02 sequence 1791887463 for the onboard computer (263 payload bytes)
+[  342.153824] stm32mp2unknownunknown fsir-updater[857]: [   330.870] ground: command 0x02 sequence 1791887464 for the onboard computer (263 payload bytes)
+[  342.162221] stm32mp2unknownunknown fsir-updater[857]: [   330.879] ground: command 0x02 sequence 1791887465 for the onboard computer (263 payload bytes)
+[  342.169799] stm32mp2unknownunknown fsir-updater[857]: [   330.886] ground: command 0x02 sequence 1791887466 for the onboard computer (263 payload bytes)
+[  342.177324] stm32mp2unknownunknown fsir-updater[857]: [   330.894] ground: command 0x02 sequence 1791887467 for the onboard computer (263 payload bytes)
+[  342.188497] stm32mp2unknownunknown fsir-updater[857]: [   330.905] ground: command 0x02 sequence 1791887468 for the onboard computer (263 payload bytes)
+[  342.196305] stm32mp2unknownunknown fsir-updater[857]: [   330.913] ground: command 0x02 sequence 1791887469 for the onboard computer (263 payload bytes)
+[  342.203570] stm32mp2unknownunknown fsir-updater[857]: [   330.920] ground: command 0x02 sequence 1791887470 for the onboard computer (263 payload bytes)
+[  342.211423] stm32mp2unknownunknown fsir-updater[857]: [   330.928] ground: command 0x02 sequence 1791887471 for the onboard computer (263 payload bytes)
+[  342.219427] stm32mp2unknownunknown fsir-updater[857]: [   330.936] ground: command 0x02 sequence 1791887472 for the onboard computer (263 payload bytes)
+[  342.229523] stm32mp2unknownunknown fsir-updater[857]: [   330.946] ground: command 0x02 sequence 1791887473 for the onboard computer (263 payload bytes)
+[  342.236953] stm32mp2unknownunknown fsir-updater[857]: [   330.953] ground: command 0x02 sequence 1791887474 for the onboard computer (263 payload bytes)
+[  342.244617] stm32mp2unknownunknown fsir-updater[857]: [   330.961] ground: command 0x02 sequence 1791887475 for the onboard computer (263 payload bytes)
+[  342.251751] stm32mp2unknownunknown fsir-updater[857]: [   330.968] ground: command 0x02 sequence 1791887476 for the onboard computer (263 payload bytes)
+[  342.259490] stm32mp2unknownunknown fsir-updater[857]: [   330.976] ground: command 0x02 sequence 1791887477 for the onboard computer (263 payload bytes)
+[  342.266643] stm32mp2unknownunknown fsir-updater[857]: [   330.983] ground: command 0x02 sequence 1791887478 for the onboard computer (263 payload bytes)
+[  342.276749] stm32mp2unknownunknown fsir-updater[857]: [   330.993] ground: command 0x02 sequence 1791887479 for the onboard computer (263 payload bytes)
+[  342.284578] stm32mp2unknownunknown fsir-updater[857]: [   331.001] ground: command 0x02 sequence 1791887480 for the onboard computer (263 payload bytes)
+[  342.291624] stm32mp2unknownunknown fsir-updater[857]: [   331.008] ground: command 0x02 sequence 1791887481 for the onboard computer (263 payload bytes)
+[  342.298994] stm32mp2unknownunknown fsir-updater[857]: [   331.015] ground: command 0x02 sequence 1791887482 for the onboard computer (263 payload bytes)
+[  342.306933] stm32mp2unknownunknown fsir-updater[857]: [   331.023] ground: command 0x02 sequence 1791887483 for the onboard computer (263 payload bytes)
+[  342.316928] stm32mp2unknownunknown fsir-updater[857]: [   331.033] ground: command 0x02 sequence 1791887484 for the onboard computer (263 payload bytes)
+[  342.327371] stm32mp2unknownunknown fsir-updater[857]: [   331.044] ground: command 0x02 sequence 1791887485 for the onboard computer (263 payload bytes)
+[  342.334655] stm32mp2unknownunknown fsir-updater[857]: [   331.051] ground: command 0x02 sequence 1791887486 for the onboard computer (263 payload bytes)
+[  342.342217] stm32mp2unknownunknown fsir-updater[857]: [   331.059] ground: command 0x02 sequence 1791887487 for the onboard computer (263 payload bytes)
+[  342.350967] stm32mp2unknownunknown fsir-updater[857]: [   331.067] ground: command 0x02 sequence 1791887488 for the onboard computer (263 payload bytes)
+[  342.358370] stm32mp2unknownunknown fsir-updater[857]: [   331.075] ground: command 0x02 sequence 1791887489 for the onboard computer (263 payload bytes)
+[  342.365550] stm32mp2unknownunknown fsir-updater[857]: [   331.082] ground: command 0x02 sequence 1791887490 for the onboard computer (263 payload bytes)
+[  342.375473] stm32mp2unknownunknown fsir-updater[857]: [   331.092] ground: command 0x02 sequence 1791887491 for the onboard computer (263 payload bytes)
+[  342.382891] stm32mp2unknownunknown fsir-updater[857]: [   331.099] ground: command 0x02 sequence 1791887492 for the onboard computer (263 payload bytes)
+[  342.390335] stm32mp2unknownunknown fsir-updater[857]: [   331.107] ground: command 0x02 sequence 1791887493 for the onboard computer (263 payload bytes)
+[  342.397380] stm32mp2unknownunknown fsir-updater[857]: [   331.114] ground: command 0x02 sequence 1791887494 for the onboard computer (263 payload bytes)
+[  342.404537] stm32mp2unknownunknown fsir-updater[857]: [   331.121] ground: command 0x02 sequence 1791887495 for the onboard computer (263 payload bytes)
+[  342.411904] stm32mp2unknownunknown fsir-updater[857]: [   331.128] ground: command 0x02 sequence 1791887496 for the onboard computer (263 payload bytes)
+[  342.423026] stm32mp2unknownunknown fsir-updater[857]: [   331.139] ground: command 0x02 sequence 1791887497 for the onboard computer (263 payload bytes)
+[  342.430079] stm32mp2unknownunknown fsir-updater[857]: [   331.147] ground: command 0x02 sequence 1791887498 for the onboard computer (263 payload bytes)
+[  342.436963] stm32mp2unknownunknown fsir-updater[857]: [   331.153] ground: command 0x02 sequence 1791887499 for the onboard computer (263 payload bytes)
+[  342.444168] stm32mp2unknownunknown fsir-updater[857]: [   331.161] ground: command 0x02 sequence 1791887500 for the onboard computer (263 payload bytes)
+[  342.451678] stm32mp2unknownunknown fsir-updater[857]: [   331.168] ground: command 0x02 sequence 1791887501 for the onboard computer (263 payload bytes)
+[  342.459379] stm32mp2unknownunknown fsir-updater[857]: [   331.176] ground: command 0x02 sequence 1791887502 for the onboard computer (263 payload bytes)
+[  342.469625] stm32mp2unknownunknown fsir-updater[857]: [   331.186] ground: command 0x02 sequence 1791887503 for the onboard computer (59 payload bytes)
+[  342.476889] stm32mp2unknownunknown fsir-updater[857]: [   331.193] ground: command 0x03 sequence 1791887504 for the onboard computer (3 payload bytes)
+[  342.500515] stm32mp2unknownunknown fsir-updater[857]: [   331.217] UPLOAD END image 1: checks passed (kind 0x02, version 1); stored
+[  342.502093] stm32mp2unknownunknown fsir-updater[857]: [   331.219] ground: command 0x05 sequence 1791887505 for the onboard computer (3 payload bytes)
+[  342.505057] stm32mp2unknownunknown fsir-updater[857]: [   331.222] DELIVER image 1: 20276 bytes, version 1, to the controller
+[  345.593071] stm32mp2unknownunknown fsir-updater[857]: [   334.309] DELIVER image 1: done; the controller accepted UPLOAD END
+[  345.594937] stm32mp2unknownunknown fsir-updater[857]: [   334.311] ground: command 0x0d sequence 1791887506 for the controller (6 payload bytes)
+[  345.594937] stm32mp2unknownunknown fsir-updater[857]: [   334.311] ground: ARM sequence 1791887506 held for command 0x20, ground sequence 1791887507 (valid 30000 ms)
+[  345.596354] stm32mp2unknownunknown fsir-updater[857]: [   334.313] ground: command 0x20 sequence 1791887507 for the controller (1 payload bytes)
+[  345.599766] stm32mp2unknownunknown fsir-updater[857]: [   334.316] ARM sequence 342 sent for ground command 0x20 sequence 1791887507, which will carry sequence 343
+[  345.606795] stm32mp2unknownunknown fsir-updater[857]: [   334.323] ground command 0x20 sequence 1791887507 passed on to the controller as sequence 343
+[  345.720266] stm32mp2unknownunknown fsir-updater[857]: [   334.437] controller: answer 0x02 code 0x00 to ground sequence 1791887507
+[  345.900289] stm32mp2unknownunknown fsir-updater[857]: [   334.617] controller: EVENT 0x0006 (trial started)
+[  346.890071] stm32mp2unknownunknown fsir-updater[857]: [   335.606] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+[  346.891857] stm32mp2unknownunknown fsir-updater[857]: [   335.607] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+[  347.025200] stm32mp2unknownunknown fsir-updater[857]: [   335.742] test image: done; the controller accepted UPLOAD END
+[  347.028197] stm32mp2unknownunknown fsir-updater[857]: [   335.745] controller: EVENT 0x000a (trial tests passed)
+[  347.030018] stm32mp2unknownunknown fsir-updater[857]: [   335.746] ground: command 0x25 sequence 1791887508 for the controller (1 payload bytes)
+[  347.030331] stm32mp2unknownunknown fsir-updater[857]: [   335.747] ground command 0x25 sequence 1791887508 passed on to the controller as sequence 350
+[  347.036678] stm32mp2unknownunknown fsir-updater[857]: [   335.753] controller: answer 0x02 code 0x00 to ground sequence 1791887508
+[  389.312137] stm32mp2unknownunknown fsir-updater[857]: [   378.028] ground link: answers and reports now go to 192.168.7.85:63990
+[  389.312137] stm32mp2unknownunknown fsir-updater[857]: [   378.028] ground: command 0x25 sequence 1791887509 for the controller (1 payload bytes)
+[  389.312137] stm32mp2unknownunknown fsir-updater[857]: [   378.029] ground command 0x25 sequence 1791887509 passed on to the controller as sequence 372
+[  389.318811] stm32mp2unknownunknown fsir-updater[857]: [   378.035] controller: answer 0x02 code 0x00 to ground sequence 1791887509
+[  465.643315] stm32mp2unknownunknown fsir-updater[857]: [   454.359] controller: EVENT 0x0008 (firmware given up)
+[  466.772319] stm32mp2unknownunknown fsir-updater[857]: [   455.489] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00

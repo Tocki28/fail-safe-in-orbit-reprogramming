@@ -7,8 +7,13 @@ BUILD = build
 TOP  := $(abspath ../../..)
 MONO  = $(TOP)/third_party/monocypher
 
+# No common/*.c: the bootloader shares no code with the firmware (REQ-119, owner's decision 35,
+# 15 Oct 2026). Its CRC-32, flash access, boot state and image checks are its own bl_*.c files,
+# written apart from common/crc32.c, flash.c, boot_state.c and image_check.c. From common/ it
+# takes headers of definitions only, plus build.mk and program.ld below. Monocypher and ST's
+# startup and system files are still shared: an exception the owner has not decided yet.
 SRCS = main.c clock.c uart.c handover.c watchdog.c backup.c fault.c \
-       ../common/image_check.c ../common/crc32.c ../common/flash.c ../common/boot_state.c
+       bl_crc32.c bl_flash.c bl_boot_state.c bl_image_check.c
 SRCS_EXT = $(MONO)/monocypher.c $(MONO)/monocypher-ed25519.c
 HEADERS  = $(wildcard *.h)
 INCLUDES = -I. -I$(MONO)

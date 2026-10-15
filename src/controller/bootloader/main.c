@@ -40,6 +40,12 @@
  * slot code (a uint8_t from boot_state.h, not an enum) follow the same pattern.
  *
  * Every line on USART2 starts with "BL: ".
+ *
+ * The CRC-32, the flash access, the boot state and the image checks are the bootloader's own
+ * (bl_crc32.c, bl_flash.c, bl_boot_state.c, bl_image_check.c), written apart from the firmware's
+ * common/ files: REQ-119, owner's decision 35, 15 Oct 2026. A defect in shared code would reach
+ * the firmware and the bootloader that must recover from it at once. From common/ this file
+ * takes definitions only (types, codes, the flash map).
  */
 #include <stdbool.h>
 #include <stddef.h>
@@ -48,12 +54,12 @@
 
 #include "backup.h"
 #include "backup_layout.h"
-#include "boot_state.h"
+#include "bl_boot_state.h"
+#include "bl_flash.h"
+#include "bl_image_check.h"
 #include "clock.h"
 #include "fault.h"
-#include "flash.h"
 #include "handover.h"
-#include "image_check.h"
 #include "image_format.h"
 #include "layout.h"
 #include "stm32g4xx.h"
@@ -146,8 +152,8 @@ static void log_text(const char *a, const char *b, const char *c)
 /**
  * @brief Returns the text for a slot code: "A", "B" or "none".
  *
- * Every caller passes a code from a boot state that passed its checks (common/boot_state.c,
- * fields_valid) or that this file set itself, so any other code is a corrupted value in memory
+ * Every caller passes a code from a boot state that passed its checks (bl_boot_state.c,
+ * fields_allowed) or that this file set itself, so any other code is a corrupted value in memory
  * and gets the fault reaction (owner's decision, 13 Oct 2026; the pattern is in the file
  * comment). Before, it returned "corrupted slot code" (commit b18e3e9), and before that
  * "unknown": a log line that went on as if the value were data. The fault reaction's own line
@@ -254,7 +260,7 @@ static reset_cause_t read_reset_cause(void)
  */
 static void log_accepted(const region_t *region)
 {
-    const uint8_t *image = flash_at(region->start);
+    const uint8_t *image = bl_flash_at(region->start);
     char build[IMAGE_BUILD_ID_BYTES + 1U];
     uint32_t n = 0U;
 
@@ -267,7 +273,7 @@ static void log_accepted(const region_t *region)
     uart_put("BL: ");
     uart_put(region->name);
     uart_put(" accepted: version ");
-    uart_put_decimal(image_read_u32(&image[IMAGE_OFFSET_VERSION]));
+    uart_put_decimal(bl_image_read_u32(&image[IMAGE_OFFSET_VERSION]));
     uart_put(", build ");
     uart_put(build);
     uart_put("\r\n");
@@ -311,14 +317,14 @@ static void log_signature_time(const region_t *region, uint32_t cycles)
  * full time-out; nothing is reloaded inside the flash waits, so a BSY that never clears ends in
  * a watchdog reset (audit finding #3). Logs a failure.
  *
- * @param[in,out] state  boot state to write; boot_state_write sets its sequence number and check
- *                       value
+ * @param[in,out] state  boot state to write; bl_boot_state_write sets its sequence number and
+ *                       check value
  * @return true if the state was written, false if the write failed
  */
 static bool save_state(boot_state_t *state)
 {
     watchdog_reload();
-    if (boot_state_write(state)) {
+    if (bl_boot_state_write(state)) {
         return true;
     }
     log_text("boot state write failed", "", "");
@@ -329,8 +335,8 @@ static bool save_state(boot_state_t *state)
  * @brief Writes the boot state; if that fails, tries once more; logs the result (decision I).
  *
  * Why a second try: a write can fail once and pass the next time (an error flag left set, a
- * power dip during the erase); common/flash.c clears the error flags before every operation, and
- * boot_state_write writes the copy that is not current again, so the second try starts clean.
+ * power dip during the erase); bl_flash.c clears the error flags before every operation, and
+ * bl_boot_state_write writes the copy that is not current again, so the second try starts clean.
  * Why only one: a flash that refuses twice will not be cured by more tries, and every try stalls
  * the start by up to one page erase, 24.47 ms [DS12589 Rev 6, Table 46, p. 107].
  *
@@ -369,7 +375,7 @@ static bool save_state_retry(boot_state_t *state)
  */
 static bool load_state(boot_state_t *state)
 {
-    switch (boot_state_load(state)) {
+    switch (bl_boot_state_load(state)) {
     case BOOT_STATE_VALID:
         log_state(state);
         return true;
@@ -658,8 +664,8 @@ static bool confirmed_skipped(const boot_state_t *state)
 /**
  * @brief Returns the region of slot A or of slot B; any other code is a fault.
  *
- * The callers ask only for a slot from a boot state that passed its checks (common/boot_state.c,
- * fields_valid: confirmed A or B, trial none or the other slot), and only for the trial when one
+ * The callers ask only for a slot from a boot state that passed its checks (bl_boot_state.c,
+ * fields_allowed: confirmed A or B, trial none or the other slot), and only for the trial when one
  * is set; the default state is set in this file. So any other code here is a corrupted value in
  * memory: the fault reaction (owner's decision, 13 Oct 2026). Before, it returned NULL and the
  * caller left the code out of the candidates, which carried on as if the value were data; before
@@ -754,12 +760,12 @@ static uint32_t candidates(const boot_state_t *state, bool skip_confirmed,
  * @brief Returns the code of the Interfaces "Check result" table for a result of the image
  * checks (Interfaces Sec. 5.4).
  *
- * The table numbers the checks in the order common/image_check.c runs them, 0x00 for a copy that
+ * The table numbers the checks in the order bl_image_check.c runs them, 0x00 for a copy that
  * passed. Every image_result_t value has its own case, written out, so a result added later
  * cannot fall into a wrong code (-Wswitch-enum); a value outside the enum is a corrupted variable
  * (the pattern is in the file comment).
  *
- * @param[in]     result  result of image_check_contents or image_check_signatures
+ * @param[in]     result  result of bl_image_check_contents or bl_image_check_signatures
  * @return CHECK_PASSED to CHECK_SIGNATURE_B
  * @note Does not return for a value outside image_result_t.
  */
@@ -794,10 +800,10 @@ static uint8_t check_result_code(image_result_t result)
 }
 
 /**
- * @brief All checks of image_check.c, plus flash read errors seen on the way.
+ * @brief All checks of bl_image_check.c, plus flash read errors seen on the way.
  *
  * Logs the signature check time, then either the reason for a refusal or the acceptance. The
- * image is read through flash_at() (common/flash.h).
+ * image is read through bl_flash_at() (bl_flash.h).
  *
  * @param[in]     region      region whose image is checked
  * @param[out]    result      the first check that failed, or IMAGE_OK
@@ -806,24 +812,24 @@ static uint8_t check_result_code(image_result_t result)
  */
 static bool image_passes(const region_t *region, image_result_t *result, bool *read_error)
 {
-    const uint8_t *image = flash_at(region->start);
+    const uint8_t *image = bl_flash_at(region->start);
     uint32_t signed_bytes = 0U;
 
-    flash_ecc_clear();
+    bl_flash_ecc_clear();
     *result =
-        image_check_contents(image, region->start, region->bytes, region->kind, &signed_bytes);
+        bl_image_check_contents(image, region->start, region->bytes, region->kind, &signed_bytes);
     if (*result == IMAGE_OK) {
         uint32_t begin = cycles_now();
-        *result = image_check_signatures(image, signed_bytes);
+        *result = bl_image_check_signatures(image, signed_bytes);
         log_signature_time(region, cycles_now() - begin);
     }
-    *read_error = flash_ecc_error_seen();
+    *read_error = bl_flash_ecc_error_seen();
     if (*read_error) {
         log_text(region->name, " refused: ", "flash read error (ECC)");
         return false;
     }
     if (*result != IMAGE_OK) {
-        log_text(region->name, " refused: ", image_result_text(*result));
+        log_text(region->name, " refused: ", bl_image_result_text(*result));
         return false;
     }
     log_accepted(region);

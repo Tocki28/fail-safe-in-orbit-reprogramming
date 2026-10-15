@@ -29,7 +29,7 @@
  * log line, so a UART that never empties cannot keep it from being stored. Before, only the log
  * line said where.
  * Why a reset: the restart reads the boot state and every image again from flash, where each
- * value is checked again (common/boot_state.c, common/image_check.c); a value that only went bad
+ * value is checked again (bl_boot_state.c, bl_image_check.c); a value that only went bad
  * in RAM is then gone. Why not count it: decision B counts the restarts of a firmware started as
  * the confirmed slot; the bootloader is not one, and the record of its last start is cleared at
  * every start (bootloader/main.c, count_restart), so a fault here is never charged to a slot

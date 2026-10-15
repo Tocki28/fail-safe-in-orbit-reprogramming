@@ -3,8 +3,8 @@
 # software (REQ-101). The operating programs are built by src/controller/Makefile.
 #
 #   make              build the bootloader and the test firmware, sign the test images
-#   make check        host checks: CRC-32 against zlib; every image through the bootloader's
-#                     own check code (tools/check_images.py); the unit tests
+#   make check        host checks: CRC-32 against zlib; every image through the firmware's
+#                     (common/) check code (tools/check_images.py); the unit tests
 #   make unit         unit tests, built with the Mac's clang++ (C++17, as the firmware): frame
 #                     layer (unit/test_frame.cpp), HEALTH and EVENT payloads
 #                     (unit/test_health.cpp), update receiver with a fake flash and the build's
@@ -16,8 +16,14 @@
 #                     order of its steps: watchdog, start count, park loop (unit/test_flow.c),
 #                     its watchdog module (unit/test_watchdog.c), its backup-register module
 #                     (unit/test_backup.c), its fault reaction (unit/test_fault.c) and the
-#                     flash address barrier (unit/test_flash.c); and the fault-location codes
-#                     of every fault site (check_fault_codes.py, decision 3)
+#                     flash address barrier (unit/test_flash.c); the separation of the
+#                     bootloader from the firmware's shared code (REQ-119, owner decision 35):
+#                     the bootloader's own CRC-32, boot-state, image-check and flash modules
+#                     (bootloader/bl_*.c) against common/'s, on the same inputs, in
+#                     unit/test_separation.c and unit/test_separation_flash.c, and a symbol
+#                     check that the bootloader's objects call no common/ function
+#                     (check-separation); and the fault-location codes of every fault site
+#                     (check_fault_codes.py, decision 3)
 #   make link-probe   talk to the running firmware over data link A (link_probe.py)
 #   make upload-probe upload firmware into the slot that is not running, plus refused
 #                     uploads (upload_probe.py)
@@ -138,11 +144,51 @@ MODE_SRCS   = unit/test_mode.cpp unit/fake_port.cpp unit/fake_mode_port.cpp unit
 REG_SRCS    = unit/test_registers.cpp unit/fake_fault.cpp $(FW_SRC)/core_clock.cpp \
               $(LINK_SRC)/uart_link.cpp $(LINK_SRC)/frame.cpp $(MODE_SRC)/mode_port.cpp
 COMMON_OBJS = build/host/crc32.o build/host/image_check.o
-# The bootloader's own main.c with the chip replaced (unit/boot_stubs), and boot_state.c as built.
-BOOT_SRCS   = unit/test_boot.c unit/boot_stubs/boot_stubs.c $(COMMON)/boot_state.c
-BOOT_HDRS   = $(wildcard $(SRC)/bootloader/*.h unit/boot_stubs/*.h)
+# The bootloader shares no code with the firmware (REQ-119, owner decision 35): its CRC-32,
+# boot-state, image-check and flash modules are bootloader/bl_*.c, same functions under a bl_
+# name. They are compiled apart, one object each, with no alias, so that a call to a common/
+# function inside them stays a call to it (check-separation looks for exactly that).
+BL_SRC       = $(SRC)/bootloader
+BL_OBJS      = build/host/bl_crc32.o build/host/bl_boot_state.o build/host/bl_image_check.o
+BL_FLASH_OBJ = build/host/bl_flash.o
+# common/flash.c as the separation test links it: its NMI_Handler renamed, because bl_flash.c
+# defines the NMI_Handler of the bootloader's image and the linker allows one.
+SEP_FLASH_OBJ = build/host/sep_flash.o
+# test_boot.c, test_flow.c and boot_stubs.c were written against the common/ names (boot_state_load,
+# flash_at, ...). The bootloader's main.c now calls the bl_ names, and those files' assertions
+# are not to change (rule E2). These definitions give the common/ name its bl_ meaning for
+# the test side only (test_boot.c, test_flow.c, boot_stubs.c): an assertion about boot_state_
+# classify then runs against bl_boot_state_classify, a stand-in for image_check_contents
+# stands in for bl_image_check_contents, the RAM flash serves bl_flash_at. They are not given to
+# the bootloader's own files (BL_OBJS), nor to anything in common/. check-separation compiles
+# main.c without them and fails if it calls a common/ name.
+BL_ALIAS = -Dcrc32_compute=bl_crc32_compute \
+           -Dflash_erase_page=bl_flash_erase_page -Dflash_program=bl_flash_program \
+           -Dflash_ecc_clear=bl_flash_ecc_clear -Dflash_ecc_error_seen=bl_flash_ecc_error_seen \
+           -Dflash_at=bl_flash_at \
+           -Dboot_state_read=bl_boot_state_read -Dboot_state_load=bl_boot_state_load \
+           -Dboot_state_classify=bl_boot_state_classify -Dboot_state_write=bl_boot_state_write \
+           -Dboot_state_other_slot=bl_boot_state_other_slot \
+           -Dimage_check_contents=bl_image_check_contents \
+           -Dimage_check_signatures=bl_image_check_signatures \
+           -Dimage_result_text=bl_image_result_text -Dimage_read_u32=bl_image_read_u32
+# The bootloader's own main.c with the chip replaced (unit/boot_stubs); the bootloader's boot
+# state, CRC and image check (BL_OBJS) are linked as built, not common/'s.
+BOOT_SRCS   = unit/test_boot.c unit/boot_stubs/boot_stubs.c
+BOOT_HDRS   = $(wildcard $(BL_SRC)/*.h unit/boot_stubs/*.h)
 # The bootloader's whole main() with the chip, the boot state and the image checks replaced.
 FLOW_SRCS   = unit/test_flow.c unit/boot_stubs/boot_stubs.c
+# The separation test: common/boot_state.c, crc32.o and image_check.o (COMMON_OBJS) against
+# the bootloader's modules (BL_OBJS); the flash is a RAM stand-in inside the test.
+SEP_SRCS    = unit/test_separation.c $(COMMON)/boot_state.c
+# What the bootloader's objects may not call: every function of the four common/ modules.
+COMMON_NAMES_LIST = crc32_compute \
+    flash_erase_page flash_program flash_ecc_clear flash_ecc_error_seen flash_at \
+    boot_state_read boot_state_load boot_state_classify boot_state_write boot_state_other_slot \
+    image_check_contents image_check_signatures image_result_text image_read_u32
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+COMMON_NAMES = $(subst $(SPACE),|,$(strip $(COMMON_NAMES_LIST)))
 # watchdog.c and flash.c as built, each against its own register stand-in (unit/*_stubs).
 # flash.c turns a 32-bit address into a pointer, which the chip's 32-bit cores allow and this
 # computer's 64-bit pointers warn about: -Wno-int-to-pointer-cast for that one file (that code is
@@ -173,15 +219,59 @@ build/host/test_update: $(UPDATE_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 build/host/test_health: $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(FW_HEADERS)
 	$(HOST_CXX) $(CXX_INCLUDES) $(HEALTH_SRCS) $(COMMON_OBJS) $(MONO_OBJS) -o $@
 
-build/host/test_boot: $(BOOT_SRCS) $(COMMON_OBJS) $(MONO_OBJS) $(BOOT_HDRS) $(FW_HEADERS) \
-                      $(SRC)/bootloader/main.c
+$(BL_OBJS): build/host/%.o: $(BL_SRC)/%.c $(wildcard $(BL_SRC)/*.h $(COMMON)/*.h)
 	mkdir -p build/host
-	$(HOST_CC) -Iunit/boot_stubs -I$(SRC)/bootloader -I$(COMMON) -I$(MONO) $(BOOT_SRCS) \
-	    $(COMMON_OBJS) $(MONO_OBJS) -o $@
+	$(HOST_CC) -I$(BL_SRC) -I$(COMMON) -I$(MONO) -c $< -o $@
 
-build/host/test_flow: $(FLOW_SRCS) $(BOOT_HDRS) $(FW_HEADERS) $(SRC)/bootloader/main.c
+# bl_flash.c turns a 32-bit address into a pointer, as flash.c does (-Wno-int-to-pointer-cast
+# explained at FLASH_SRCS above); its register header is the flash stand-in.
+$(BL_FLASH_OBJ): build/host/%.o: $(BL_SRC)/%.c $(wildcard $(BL_SRC)/*.h $(COMMON)/*.h)
 	mkdir -p build/host
-	$(HOST_CC) -Iunit/boot_stubs -I$(SRC)/bootloader -I$(COMMON) $(FLOW_SRCS) -o $@
+	$(HOST_CC) -Wno-int-to-pointer-cast -Iunit/flash_stubs -I$(BL_SRC) -I$(COMMON) -c $< -o $@
+
+$(SEP_FLASH_OBJ): $(COMMON)/flash.c $(wildcard $(COMMON)/*.h unit/flash_stubs/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Wno-int-to-pointer-cast -DNMI_Handler=common_flash_nmi_handler \
+	    -Iunit/flash_stubs -I$(COMMON) -c $< -o $@
+
+# main.c alone, compiled but not linked: its undefined symbols are what the bootloader calls.
+build/host/bl_main.o: $(BL_SRC)/main.c $(BOOT_HDRS) $(wildcard $(COMMON)/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Dmain=bootloader_main -Iunit/boot_stubs -I$(BL_SRC) -I$(COMMON) -I$(MONO) -c $< -o $@
+
+build/host/test_boot: $(BOOT_SRCS) $(BL_OBJS) $(MONO_OBJS) $(BOOT_HDRS) $(FW_HEADERS) \
+                      $(BL_SRC)/main.c
+	mkdir -p build/host
+	$(HOST_CC) $(BL_ALIAS) -Iunit/boot_stubs -I$(BL_SRC) -I$(COMMON) -I$(MONO) $(BOOT_SRCS) \
+	    $(BL_OBJS) $(MONO_OBJS) -o $@
+
+build/host/test_flow: $(FLOW_SRCS) $(BOOT_HDRS) $(FW_HEADERS) $(BL_SRC)/main.c
+	mkdir -p build/host
+	$(HOST_CC) $(BL_ALIAS) -Iunit/boot_stubs -I$(BL_SRC) -I$(COMMON) $(FLOW_SRCS) -o $@
+
+build/host/test_separation: $(SEP_SRCS) $(COMMON_OBJS) $(BL_OBJS) $(MONO_OBJS) \
+                            $(wildcard $(BL_SRC)/*.h $(COMMON)/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -I$(BL_SRC) -I$(COMMON) -I$(MONO) $(SEP_SRCS) $(COMMON_OBJS) $(BL_OBJS) \
+	    $(MONO_OBJS) -o $@
+
+build/host/test_separation_flash: unit/test_separation_flash.c $(SEP_FLASH_OBJ) $(BL_FLASH_OBJ) \
+                                  $(wildcard $(BL_SRC)/*.h $(COMMON)/*.h unit/flash_stubs/*.h)
+	mkdir -p build/host
+	$(HOST_CC) -Iunit/flash_stubs -I$(BL_SRC) -I$(COMMON) unit/test_separation_flash.c \
+	    $(SEP_FLASH_OBJ) $(BL_FLASH_OBJ) -o $@
+
+# REQ-119 on the symbols: no object of the bootloader calls a function of common/, and the
+# bootloader's Makefile compiles no common/ source. Fails closed: an nm that cannot read an
+# object, or a grep that cannot read the Makefile, is a failure, not a pass.
+check-separation: $(BL_OBJS) $(BL_FLASH_OBJ) build/host/bl_main.o
+	@if grep -nE '\.\./common/[A-Za-z0-9_]+\.c' $(BL_SRC)/Makefile; then \
+	    echo "FAIL  bootloader/Makefile compiles a common/ source (above)"; exit 1; fi
+	@for o in $^; do \
+	    undefined=$$(nm -u $$o) || { echo "FAIL  nm cannot read $$o"; exit 1; }; \
+	    if echo "$$undefined" | sed -e 's/^ *U _*//' | grep -x -E '$(COMMON_NAMES)'; then \
+	        echo "FAIL  $$o calls a common/ function (above)"; exit 1; fi; \
+	done; echo "PASS  separation: no bootloader object calls common/, bootloader/Makefile builds none"
 
 build/host/test_watchdog: $(WDOG_SRCS) $(wildcard $(SRC)/bootloader/*.h unit/watchdog_stubs/*.h)
 	mkdir -p build/host
@@ -219,6 +309,7 @@ src-images:
 unit: build/host/test_frame build/host/test_health build/host/test_update build/host/test_arm \
       build/host/test_mode build/host/test_boot build/host/test_flow build/host/test_watchdog \
       build/host/test_backup build/host/test_fault build/host/test_flash build/host/test_registers \
+      build/host/test_separation build/host/test_separation_flash check-separation \
       images src-images
 	build/host/test_frame
 	build/host/test_health
@@ -232,6 +323,8 @@ unit: build/host/test_frame build/host/test_health build/host/test_update build/
 	build/host/test_backup
 	build/host/test_fault
 	build/host/test_flash
+	build/host/test_separation $(SRC)/build/images $(OUT)
+	build/host/test_separation_flash
 	$(PY) check_fault_codes.py $(SRC)
 
 # Needs the firmware running from slot A: make -C ../../src/controller flash-firmware.
@@ -291,6 +384,6 @@ scenario-7: images
 clean:
 	rm -rf test-firmware/build build
 
-.PHONY: all programs images src-images check unit link-probe upload-probe trial-probe set-trial \
+.PHONY: all programs images src-images check unit check-separation link-probe upload-probe trial-probe set-trial \
         flash clean \
         scenario-1 scenario-2 scenario-3 scenario-4 scenario-5 scenario-6 scenario-7

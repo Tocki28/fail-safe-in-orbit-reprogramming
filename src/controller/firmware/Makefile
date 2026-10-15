@@ -20,8 +20,9 @@ SRCS_CXX = main.cpp core_clock.cpp data-link/uart_link.cpp data-link/frame.cpp \
            health-monitor/health_monitor.cpp \
            mode-manager/mode_manager.cpp mode-manager/test_image.cpp mode-manager/mode_port.cpp \
            command-checker/arm_state.cpp
-# common/ stays C, shared with the bootloader: the image checks the bootloader also runs
-# (UPLOAD END), boot state, flash, CRC-32. Its headers declare extern "C" for C++ callers.
+# common/ stays C, the firmware's own copy (the bootloader has its own bl_ files since decision
+# 35): the image checks run at UPLOAD END, boot state, flash, CRC-32. Its headers declare
+# extern "C" for C++ callers.
 SRCS     = ../common/image_check.c ../common/boot_state.c ../common/flash.c ../common/crc32.c
 SRCS_EXT = $(MONO)/monocypher.c $(MONO)/monocypher-ed25519.c
 HEADERS  = $(wildcard *.hpp data-link/*.hpp update-receiver/*.hpp health-monitor/*.hpp \

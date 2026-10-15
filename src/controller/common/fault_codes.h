@@ -17,7 +17,9 @@
  * a C++ member), in capitals.
  *   0x01-0x0F  bootloader/         (the bootloader leaves its code in the backup registers;
  *                                   the firmware that runs next sends it once)
- *   0x10-0x1F  common/             (run by both programs)
+ *   0x10-0x1F  common/             (run by the firmware; until 15 Oct 2026 by both programs,
+ *                                   since then the bootloader runs its own bl_*.c: REQ-119,
+ *                                   owner's decision 35)
  *   0x20-0x4F  firmware/           (sent by the firmware's fault reaction before its restart)
  * Above each code: the file and function, then the value the check finds impossible.
  */
@@ -77,6 +79,16 @@ _Static_assert(FAULT_RANGE_FIRMWARE_LAST < FAULT_FOUND_BY_BOOTLOADER,
 #define FAULT_AT_ROLE_TEXT                      0x06U
 /* bootloader/main.c, check_result_code: an image check result outside image_result_t. */
 #define FAULT_AT_CHECK_RESULT_CODE              0x07U
+/* bootloader/bl_boot_state.c, bl_boot_state_other_slot: a slot code that is not A or B. The
+ * bootloader's own boot-state code (REQ-119, owner's decision 35, 15 Oct 2026) has its own code;
+ * common/boot_state.c keeps 0x11 for the firmware's. */
+#define FAULT_AT_BL_BOOT_STATE_OTHER_SLOT       0x08U
+/* bootloader/bl_image_check.c, bl_image_result_text: an image check result outside
+ * image_result_t. common/image_check.c keeps 0x10 for the firmware's. */
+#define FAULT_AT_BL_IMAGE_RESULT_TEXT           0x09U
+/* bootloader/bl_image_check.c, bl_image_check_contents: a region size smaller than the image
+ * header. */
+#define FAULT_AT_BL_IMAGE_CHECK_CONTENTS        0x0AU
 
 /* -- common/ -- */
 

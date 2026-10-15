@@ -1,8 +1,8 @@
 /*
  * test_boot.c — host unit tests of the bootloader's own functions (src/controller/bootloader/
  * main.c: slot_region, candidates, slot_letter, check_result_code, reset_cause_text, role_text)
- * and of common/boot_state.c (boot_state_other_slot, the start-count bound, and decision D's
- * blank/damaged decision, boot_state_classify and boot_state_load).
+ * and of the bootloader's own bl_boot_state.c (bl_boot_state_other_slot, the start-count bound,
+ * and decision D's blank/damaged decision, boot_state_classify and boot_state_load).
  *
  * The bootloader's own main.c is included here, so the tests call the code that runs on the
  * board, static functions and all. Its main() is renamed and never called. The chip is replaced
@@ -208,8 +208,12 @@ static void test_slot_letter(void)
 }
 
 /**
- * @brief boot_state_other_slot: A gives B, B gives A; none and other codes are the fault reaction.
+ * @brief bl_boot_state_other_slot (the bootloader's own, via BL_ALIAS): A gives B, B gives A;
+ * none and other codes are the fault reaction.
  *
+ * Since decision 35 (REQ-119) the bootloader's main.c uses bl_boot_state.c, so its fault site is
+ * "bl_boot_state_other_slot" with FAULT_AT_BL_BOOT_STATE_OTHER_SLOT, not the firmware's
+ * "boot_state_other_slot" / FAULT_AT_BOOT_STATE_OTHER_SLOT. Same inputs, same strictness.
  * Before: BOOT_SLOT_NONE for them, and slot A before that. Fails on the old code: no fault.
  */
 static void test_other_slot(void)
@@ -227,10 +231,10 @@ static void test_other_slot(void)
         fresh();
         RUN_CATCH(ended, got = boot_state_other_slot(bad[i]));
         all = all &&
-              faulted_only(ended, "boot_state_other_slot", FAULT_AT_BOOT_STATE_OTHER_SLOT) &&
+              faulted_only(ended, "bl_boot_state_other_slot", FAULT_AT_BL_BOOT_STATE_OTHER_SLOT) &&
               (got == 0x55U);
     }
-    report(all, "boot_state_other_slot: none, 3, 0xEE -> fault reaction (was: none)");
+    report(all, "bl_boot_state_other_slot: none, 3, 0xEE -> fault reaction (was: none)");
 }
 
 /**

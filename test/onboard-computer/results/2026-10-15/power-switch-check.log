@@ -1,0 +1,23 @@
+# Hub power switch check, 15 Oct 2026 (Mac 23:01 EEST). Controller clock read with a scratchpad helper
+# (console GET STATUS, then HEALTH reports decoded by console.py); readings copied as printed.
+before: #9897 onboard 1792094460 controller 15081 OPERATE slot A failed 0
+command on the MP257 (board UTC): 20:01:06.775 uhubctl -l 1-1 -p 1 -a cycle -d 5 -> port 1 off, then power on, 20:01:12.123
+after:  #9909 onboard 1792094478 controller 6 OPERATE slot A failed 0
+after:  #9911 onboard 1792094480 controller 8 OPERATE slot A failed 0, damaged frames 0
+# fsir-updater journal, board UTC:
+2026-10-15T20:00:58.153089+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9868.821] ground link: answers and reports now go to 192.168.7.85:65455
+2026-10-15T20:00:58.153089+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9868.821] ground: command 0x25 sequence 1791887512 for the controller (1 payload bytes)
+2026-10-15T20:00:58.153089+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9868.821] ground command 0x25 sequence 1791887512 passed on to the controller as sequence 4829
+2026-10-15T20:00:58.159657+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9868.827] controller: answer 0x02 code 0x00 to ground sequence 1791887512
+2026-10-15T20:01:06.897496+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9877.559] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+2026-10-15T20:01:07.695818+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9878.364] data link A: sending sequence 4834 failed
+2026-10-15T20:01:07.896590+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9878.564] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+2026-10-15T20:01:09.705850+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9880.374] data link A: sending sequence 4835 failed
+2026-10-15T20:01:11.718135+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9882.386] data link A: sending sequence 4836 failed
+2026-10-15T20:01:11.869536+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9882.537] controller silent: no frame from the controller for 5 s (REQ-061)
+2026-10-15T20:01:12.932185+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9883.600] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+2026-10-15T20:01:13.741714+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9884.409] controller heard again after 6 s of silence
+2026-10-15T20:01:18.350551+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9889.018] ground link: answers and reports now go to 192.168.7.85:60953
+2026-10-15T20:01:18.350551+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9889.018] ground: command 0x25 sequence 1791887513 for the controller (1 payload bytes)
+2026-10-15T20:01:18.350551+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9889.018] ground command 0x25 sequence 1791887513 passed on to the controller as sequence 4840
+2026-10-15T20:01:18.356952+00:00 stm32mp2unknownunknown fsir-updater[6147]: [  9889.025] controller: answer 0x02 code 0x00 to ground sequence 1791887513

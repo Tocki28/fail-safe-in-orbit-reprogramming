@@ -408,6 +408,27 @@ OPEN (not yet answered). Each answer is recorded once, here and in the code it g
 | 18 | Old upload test meets the image check | ACCEPTED (a) | the test uploads the signed `firmware-B.img` |
 | 19 | Ground uses the onboard checker | ACCEPTED | — |
 | 44 | Command sender's 60 s gap bound | ACCEPTED | — |
-| 20 to 36 | Next functions to build | OPEN | the owner answers them later |
-| 37 to 42 | Findings and documents | OPEN | — |
-| 43 | Bench LEDs | OPEN | — |
+| 20 | Restart a silent controller | CHANGED | 3 resets 60 s apart; if the controller is still silent after the third, the onboard computer restores it (how: proposal awaiting the owner) |
+| 21 | CANCEL stops a running delivery | ACCEPTED | new refusal 0x12 "cancelled by the operator" in the Interfaces |
+| 22 | Free the storage when an update ends | ACCEPTED | EVENT 0x0007 or 0x0008 for the delivered image frees it |
+| 23 | Self-test while running | ACCEPTED | every 60 s (bench value for TBD-selftest); the owner: document it, it is important |
+| 24 | Minimum version and SET LIMITS | ACCEPTED | start at 1; lowering needs an ARM; stored with a check value; includes ARM for onboard dangerous commands |
+| 25 | Onboard clock by command, and expiry | ACCEPTED | SET ONBOARD TIME stores an offset; difference above 5 s reported; expiry 0 refused; SET ONBOARD TIME exempt from expiry |
+| 26 | Repeats recognised for every command | ACCEPTED | 64 entries for ARM and dangerous commands, 256 for the rest; not kept across a restart |
+| 27 | Link-loss events to the ground | ACCEPTED | lost = 5 s of silence; link id 0x01 |
+| 28 | Controller time | CHANGED | the owner: a real-time clock, so date and time are known and everything is synced; design proposal awaiting the owner |
+| 29 | Report storage between contacts | ACCEPTED | 1 MB; events never dropped; oldest HEALTH first; count and span reported |
+| 30 | FALLBACK, START FAILED, SWITCH refusing a given-up image | ACCEPTED | boot-state spare fields; leave FALLBACK only by LEAVE FALLBACK, SWITCH, START FAILED; copy codes 0x01 A, 0x02 B |
+| 31 | Command checks at the controller | ACCEPTED | Interfaces numbering rule fixed first |
+| 32 | Drop scheduled commands and planning from this phase | ACCEPTED | requirements revision |
+| 33 | Command encryption and signatures, key replacement | ACCEPTED | replacement covers command and encryption keys, not the image-signing keys |
+| 34 | Real last-resort firmware | ACCEPTED | REQ-009 amended to let it read the boot state; built later |
+| 35 | Separate the bootloader from the shared code | CHANGED | the owner: separate them now (not kept as a bench limit) |
+| 36 | Safe state | ACCEPTED | the controller's safe state is a restart; no outputs until there is equipment |
+| 37 | SWITCH back to a given-up firmware | ACCEPTED | measured on the bench, then fixed in 30 |
+| 38 | Verification Plan Sec. 7.0 claims | ACCEPTED | corrected |
+| 39 | REQ-100, one shared command list | ACCEPTED | bench limit now; generator later |
+| 40 | The console's --radio-loss | ACCEPTED | bench limit now; test relay later |
+| 41 | REQ-087 and REQ-059 not built | ACCEPTED | bench limits for this phase |
+| 42 | Stale comment in command_gate.hpp:19-21 | ACCEPTED | fixed with the next updater change |
+| 43 | Bench LEDs | OPEN | the owner: "we will see" |

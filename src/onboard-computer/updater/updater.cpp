@@ -1582,7 +1582,8 @@ void Updater::trialWatch(const frame::Frame * report)
     return;
   }
   if (report->payload[report::kOffsetKind] == report::kHealth) {
-    trial_watch_.onHealthMode(report->payload[report::kOffsetMode], now_ms_);
+    trial_watch_.onHealthMode(report->payload[report::kOffsetMode],
+      report->payload[report::kOffsetFailedStarts], now_ms_);   // F-2: count re-arms the watch
   } else if (report->payload[report::kOffsetKind] == report::kEvent &&
              report->length >= report::kEventMinBytes) {
     trial_watch_.onEvent(bytes::readU16(&report->payload[report::kOffsetEventCode]), now_ms_);

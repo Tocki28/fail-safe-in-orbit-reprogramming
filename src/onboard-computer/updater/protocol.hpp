@@ -23,12 +23,13 @@ constexpr uint8_t kUploadEnd = 0x03;      // image number (2)
 constexpr uint8_t kUploadCancel = 0x04;   // image number (2)
 constexpr uint8_t kDeliver = 0x05;        // image number (2)
 // The onboard computer's own dangerous commands (Interfaces Sec. 5.1 table, "Dangerous: YES").
-// SET LIMITS (0x06) has a handler (owner decision 24, 15 Oct 2026); the others have none yet:
+// SET LIMITS (0x06) has a handler (owner decision 24, 15 Oct 2026), and so has SET ONBOARD TIME
+// (0x09, decision 25); the others have none yet:
 // after the arming check they are refused 0x06 "not built" (Updater::runOnboardDangerous).
 constexpr uint8_t kSetLimits = 0x06;      // minimum version (4), controller identity (2); dangerous
 constexpr uint8_t kRestore = 0x07;        // none; dangerous
 constexpr uint8_t kReprogram = 0x08;      // image number (2), region (1); dangerous
-constexpr uint8_t kSetOnboardTime = 0x09;   // ground time (4); dangerous
+constexpr uint8_t kSetOnboardTime = 0x09;   // ground time (4), unsigned seconds; dangerous
 constexpr uint8_t kReplaceKey = 0x0C;     // which key (1), new key (32); dangerous
 constexpr uint8_t kArm = 0x0D;            // command identifier (1), its sequence number (4)
 constexpr uint8_t kSwitch = 0x20;         // none; dangerous
@@ -64,6 +65,7 @@ constexpr size_t kSetLimitsIdentityAt = kIdBytes + 4;       // offset of the con
 constexpr size_t kRestoreBytes = kIdBytes;                  // none
 constexpr size_t kReprogramBytes = kIdBytes + 2 + 1;        // image number (2), region (1)
 constexpr size_t kSetOnboardTimeBytes = kIdBytes + 4;       // ground time (4)
+constexpr size_t kSetOnboardTimeAt = kIdBytes;              // offset of the ground time (4)
 constexpr size_t kNewKeyBytes = 32;                         // new key (32), same row
 constexpr size_t kReplaceKeyBytes = kIdBytes + 1 + kNewKeyBytes;   // which key (1), new key (32)
 
@@ -87,6 +89,7 @@ constexpr uint8_t kReceivedCode = 0x00;
 // Refusal reasons used here (Sec. 4.2 table).
 constexpr uint8_t kNotArmed = 0x01;           // dangerous command without a valid ARM; REQ-029, REQ-112
 constexpr uint8_t kArmExpired = 0x02;         // REQ-030
+constexpr uint8_t kPastExpiry = 0x03;         // "Command past its expiry"; REQ-066, decision 25
 constexpr uint8_t kOldCommand = 0x04;         // "Old command sent again"; REQ-065
 constexpr uint8_t kNotInThisMode = 0x05;      // REQ-027
 constexpr uint8_t kImpossible = 0x06;         // impossible values, or an unknown command; REQ-028
@@ -168,8 +171,8 @@ constexpr size_t kOffsetFailedStarts = 20;
 constexpr size_t kOffsetTrialLeft = 21;
 constexpr size_t kOffsetSelfTest = 23;
 // Event codes (Sec. 5.4 table), the ones the updater acts on or names in its log. The
-// controller sends the first group; the onboard computer's own events (0x0101 to 0x0105) are
-// not sent on the bench.
+// controller sends the first group; the onboard computer's own events (0x0101 to 0x0104) are
+// not sent on the bench. 0x0105 is sent (below), by SET ONBOARD TIME.
 // 0x0001 "fault detected" carries a 1-byte detail, the fault kind; 0x0005 "change in memory
 // detected" carries a 2-byte detail, where (1) and later faults (1) (owner's decisions 2 and 3,
 // 13 Oct 2026, and the second round of that day; the code lists are
@@ -193,6 +196,13 @@ constexpr uint16_t kEventFirmwareGivenUp = 0x0008;
 // has run the restart script and the controller was reset (decision H, accepted by the owner,
 // 13 Oct 2026; updater.cpp, onTrialOverrun and onRestartFinished).
 constexpr uint16_t kEventControllerRestarted = 0x0106;
+// 0x0105 "onboard computer clock differs from ground time" is the onboard computer's own event
+// (Sec. 5.4 table, REQ-072). Detail (4): the difference, signed, little-endian, in seconds, onboard
+// ground time minus the ground time of SET ONBOARD TIME. Layout: Proposal (TBR), awaiting the
+// owner's acceptance; the table gives the code but no detail layout. Sent by the onboard computer
+// when SET ONBOARD TIME finds a difference above config::kClockDifferenceMaxS (decision 25).
+constexpr uint16_t kEventClockDiffers = 0x0105;
+constexpr size_t kClockDifferenceDetailBytes = 4;
 constexpr uint8_t kRestartReasonTrialPastTime = 0x01;   // Sec. 5.4 table: "0x01 trial past its time"
 constexpr uint16_t kEventTrialTestsPassed = 0x000A;   // REQ-139
 constexpr uint16_t kEventTrialTestsFailed = 0x000B;   // REQ-139, REQ-140; detail (1): which test

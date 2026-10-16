@@ -20,10 +20,13 @@
  *     it has finished, the first refusal code again if it was refused, RECEIVED while it has not
  *     finished (REQ-031, Interfaces Sec. 4.2; owner, 13 Oct 2026, and decision 26). The same
  *     number with other bytes is refused 0x04 (REQ-065). Neither memory is kept across a restart
- *     (accepted risk, decision 26). No expiry check (REQ-066): the ground console keeps its
- *     counter across runs now (src/ground/console.py header), so that is not the reason; the
- *     reason is that the board's clock is not set from ground time (decision 25 builds that), so
- *     expiry is still not checked (owner decision 42, 15 Oct 2026);
+ *     (accepted risk, decision 26);
+ *   - expiry (no longer a limit; REQ-066, owner decisions 25 and 42, 15 Oct 2026) is checked on
+ *     arrival, before a command runs or is passed on (Updater::expiryCheck): a command whose
+ *     Expiry is 0 or lower than the onboard ground time (the system clock plus the offset that
+ *     SET ONBOARD TIME stores) is refused 0x03 and is not remembered. SET ONBOARD TIME and an ARM
+ *     that names it are exempt, so that a wrong clock can be corrected. The updater's own
+ *     commands to the controller are not checked (their expiry is "never");
  *   - REQ-067 (commands only from the radio link) stands only as "only from this UDP port".
  */
 #ifndef FSIR_UPDATER_COMMAND_GATE_HPP

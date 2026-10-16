@@ -161,6 +161,20 @@ constexpr uint16_t kDefaultControllerIdentity = static_cast<uint16_t>(IMAGE_TARG
 static_assert(kDefaultControllerIdentity == 0x0431U,
   "the proposed default identity is the target the image checker demanded before decision 24");
 
+// ---- Onboard clock (owner decision 25, 15 Oct 2026; REQ-066, REQ-072, REQ-073) ----------------
+// The offset between the system clock and ground time is kept in the data directory as a
+// DurableRecord (durable_record.hpp) of this name: 8 bytes, a signed 64-bit number of seconds,
+// little-endian (clock_record.hpp). Onboard ground time = system clock + offset; SET ONBOARD TIME
+// (Interfaces Sec. 5.1 table, row 0x09) writes it. Record layout: Proposal (TBR), awaiting the
+// owner's acceptance.
+constexpr const char * kClockOffsetRecordName = "clock-offset";
+constexpr size_t kClockOffsetRecordBytes = 8;
+// A difference between the onboard ground time and the ground time in SET ONBOARD TIME above
+// this many seconds is reported with EVENT 0x0105 (REQ-072; Interfaces Sec. 5.4 table). 5 s:
+// bench value, owner decision 25, 15 Oct 2026; stands for the requirement's TBD-clock, TBD for
+// flight.
+constexpr int64_t kClockDifferenceMaxS = 5;
+
 // The "dropped datagram" log lines on the ground link: at most one per this many ms, so a
 // flood of bad datagrams cannot fill the log (audit finding #8).
 constexpr uint64_t kDropLogEveryMs = 1000;

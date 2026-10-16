@@ -23,7 +23,7 @@ constexpr uint32_t kNoExpiry = 0xFFFFFFFFU;
  * The checks on arrival for commands to the onboard computer: a command built on the bench,
  * with the payload length its fields need (Interfaces Sec. 5.1). The dangerous commands 0x06 to
  * 0x09 and 0x0C pass here with their lengths, and are then checked against an ARM
- * (isOnboardDangerous); they have no handler yet.
+ * (isOnboardDangerous); 0x06 and 0x09 have a handler, the others none yet.
  *
  * @param[in] id  the command identifier, payload byte 0
  * @param[in] length  payload length of the command, in bytes
@@ -58,6 +58,32 @@ bool arrivalOk(uint8_t id, uint16_t length)
   }
   // input from the link: every other identifier (0x0A, 0x0B are not built, the rest unknown).
   return false;
+}
+
+/**
+ * @brief Tells whether a ground command is exempt from the expiry check.
+ *
+ * SET ONBOARD TIME (0x09) and an ARM (0x0D) whose named command is 0x09 are exempt (owner
+ * decision 25, 15 Oct 2026), so that an onboard clock that is wrong, and with it every Expiry,
+ * can still be corrected. Both only when addressed to the onboard computer: 0x09 is not a
+ * controller command. The ARM must have its whole length (command::kArmBytes), as onGroundArm
+ * demands. This is not an extra exemption of the ARM-then-command pair as a whole: the pair's
+ * second command is exempt in its own right. Proposal (TBR), awaiting the owner's acceptance:
+ * the destination and length conditions.
+ *
+ * @param[in]     c  the ground command frame; c.payload has c.length valid bytes
+ * @return true: skip the expiry check; false: check it
+ */
+bool expiryExempt(const frame::Frame & c)
+{
+  if (c.destination != frame::kDestOnboard || c.length == 0) {
+    return false;
+  }
+  if (c.payload[0] == command::kSetOnboardTime) {
+    return true;
+  }
+  return c.payload[0] == command::kArm && c.length == command::kArmBytes &&
+         c.payload[1] == command::kSetOnboardTime;
 }
 
 /**
@@ -193,11 +219,14 @@ Updater::Updater(CommandGate & gate, DataLink & link, UploadStore & store,
   restart_(restart_script, restart_deadline_ms, config::kRestartKillGraceMs), used_(),
   repeats_(),
   limits_file_(store.directory(), config::kLimitsRecordName, config::kLimitsRecordBytes),
+  clock_file_(store.directory(), config::kClockOffsetRecordName, config::kClockOffsetRecordBytes),
+  clock_offset_s_(0),
   cancel_requested_(false), cancel_sequence_(0), have_delivered_(false), delivered_number_(0),
   test_image_running_(false), payload_{},
   report_{}
 {
   loadLimits();
+  loadClockOffset();
 }
 
 /**
@@ -239,6 +268,101 @@ void Updater::loadLimits()
         "until SET LIMITS writes a good one", std::strerror(error));
       return;
   }
+}
+
+/**
+ * @brief Reads the "clock-offset" record and sets the clock offset.
+ *
+ * Owner decision 25, 15 Oct 2026; REQ-073. Called once, by the constructor. A good record gives
+ * its offset. No record (first start) gives offset 0: onboard ground time is the system clock. A
+ * damaged record, or one that cannot be read, also gives offset 0 and the log says so (Proposal
+ * (TBR), awaiting the owner's acceptance: fail-closed, as for the limits, is not useful for a
+ * clock; the next SET ONBOARD TIME writes a good record).
+ *
+ * @return nothing
+ */
+void Updater::loadClockOffset()
+{
+  int error = 0;
+  clock_record::Source source = clock_record::load(clock_file_, clock_offset_s_, error);
+  switch (source) {
+    case clock_record::Source::kStored:
+      logging::line("clock: stored offset %lld s; onboard ground time is the system clock plus "
+        "that", static_cast<long long>(clock_offset_s_));
+      return;
+    case clock_record::Source::kNoRecord:
+      logging::line("clock: no offset record, starting with offset 0 s");
+      return;
+    case clock_record::Source::kDamaged:
+      logging::line("clock: offset record damaged; using offset 0 s until SET ONBOARD TIME "
+        "writes a good one");
+      return;
+    case clock_record::Source::kUnreadable:
+      logging::line("clock: offset record unreadable (%s); using offset 0 s until SET ONBOARD "
+        "TIME writes a good one", std::strerror(error));
+      return;
+  }
+}
+
+/**
+ * @brief Gives the onboard ground time: the system clock plus the stored offset.
+ *
+ * Seconds of Unix time, signed 64-bit (owner decision 25, 15 Oct 2026). The sum is limited to the
+ * range of int64_t instead of overflowing: a stored offset is read from storage (code rule B4),
+ * and a CRC-valid record could hold any value.
+ *
+ * @return seconds of onboard ground time
+ */
+int64_t Updater::groundTimeS() const
+{
+  const int64_t system_s = clocks::systemTimeS();
+  if (clock_offset_s_ > 0 && system_s > INT64_MAX - clock_offset_s_) {
+    return INT64_MAX;
+  }
+  if (clock_offset_s_ < 0 && system_s < INT64_MIN - clock_offset_s_) {
+    return INT64_MIN;
+  }
+  return system_s + clock_offset_s_;
+}
+
+/**
+ * @brief Gives the onboard ground time cut to 32 bits, for the onboard time of a report.
+ *
+ * The report field is 4 bytes (Interfaces Sec. 5.4); the cut keeps the low 32 bits, as
+ * clocks::onboardTimeS did before decision 25.
+ *
+ * @return onboard ground time, seconds, low 32 bits
+ */
+uint32_t Updater::groundTimeStampS() const
+{
+  return static_cast<uint32_t>(static_cast<uint64_t>(groundTimeS()));
+}
+
+/**
+ * @brief Checks a ground command's Expiry against the onboard ground time (REQ-066).
+ *
+ * Expiry is 4 bytes, seconds of ground time (Interfaces Sec. 4.0 frame table). Expiry 0 is refused
+ * (owner decision 25, 15 Oct 2026: the ground console always sends a real one), and so is an
+ * Expiry lower than the onboard ground time; an Expiry equal to it still passes ("after it, the
+ * command is refused"). SET ONBOARD TIME and an ARM naming it are exempt (expiryExempt). The
+ * comparison is done in 64-bit signed arithmetic, so a ground time beyond 32 bits cannot wrap.
+ *
+ * @param[in]     c  the ground command frame
+ * @return answer::kSuccess: not past its expiry, or exempt; answer::kPastExpiry: refuse it 0x03
+ */
+uint8_t Updater::expiryCheck(const frame::Frame & c) const
+{
+  if (expiryExempt(c)) {
+    return answer::kSuccess;
+  }
+  const int64_t now_s = groundTimeS();
+  if (c.expiry == 0 || static_cast<int64_t>(c.expiry) < now_s) {
+    logging::line("ground: command 0x%02x sequence %u has expiry %u s, onboard ground time is "
+      "%lld s; refused 0x03", (c.length > 0) ? c.payload[0] : 0U, c.sequence, c.expiry,
+      static_cast<long long>(now_s));
+    return answer::kPastExpiry;
+  }
+  return answer::kSuccess;
 }
 
 // ---- Answers to the ground ---------------------------------------------------------------
@@ -365,11 +489,22 @@ void Updater::onGroundReadable(uint64_t now_ms)
  * and remembered there once queued (owner decision 26, 15 Oct 2026).
  * The ARM's arrival time travels with the command so that sendNext can check its age again.
  *
+ * Before everything else the Expiry is checked (expiryCheck, REQ-066, owner decision 25, 15 Oct
+ * 2026): a command with Expiry 0 or past is refused 0x03 and not remembered, so a resend with a
+ * valid Expiry runs. Placing it ahead of the arrival checks and the repeat memories is a Proposal
+ * (TBR), awaiting the owner's acceptance: a resend of a finished command whose Expiry has passed
+ * since is then refused 0x03, not answered ALREADY DONE.
+ *
  * @param[in]     c  the command frame; c.payload is valid during the call
  * @return nothing
  */
 void Updater::onGroundCommand(const frame::Frame & c)
 {
+  const uint8_t expiry_code = expiryCheck(c);
+  if (expiry_code != answer::kSuccess) {
+    refused(c.sequence, expiry_code);   // not remembered: refused() sends the answer only
+    return;
+  }
   if (c.destination == frame::kDestOnboard) {
     onOnboardCommand(c);
     return;
@@ -705,9 +840,10 @@ void Updater::onboardDangerous(const frame::Frame & c)
  * @brief Runs an armed dangerous command of the onboard computer: SET LIMITS has a handler, the
  *        other four do not yet.
  *
- * The place where the later decisions fill in RESTORE, REPROGRAM, SET ONBOARD TIME and REPLACE KEY
- * (REQ-055, REQ-058, REQ-073, REQ-084). SET LIMITS (0x06) is built (owner decision 24, 15 Oct
- * 2026; runSetLimits). Until the others are built each is answered REFUSED 0x06 "not built", after
+ * The place where the later decisions fill in RESTORE, REPROGRAM and REPLACE KEY (REQ-055,
+ * REQ-058, REQ-084). SET LIMITS (0x06) is built (owner decision 24, 15 Oct 2026; runSetLimits) and
+ * so is SET ONBOARD TIME (0x09; owner decision 25, 15 Oct 2026; runSetOnboardTime). Until the
+ * others are built each is answered REFUSED 0x06 "not built", after
  * the arming check, so the order of the checks shows. The identifier reached here passed
  * isOnboardDangerous, so any other value is not expected; it is refused 0x06 and logged.
  *
@@ -721,9 +857,10 @@ uint8_t Updater::runOnboardDangerous(uint8_t id, const uint8_t * payload, uint16
   switch (id) {
     case command::kSetLimits:
       return runSetLimits(payload, length);
+    case command::kSetOnboardTime:
+      return runSetOnboardTime(payload, length);
     case command::kRestore:
     case command::kReprogram:
-    case command::kSetOnboardTime:
     case command::kReplaceKey:
       logging::line("ground: dangerous command 0x%02x passed the ARM check; not built: refused "
         "0x06", id);
@@ -777,6 +914,70 @@ uint8_t Updater::runSetLimits(const uint8_t * payload, uint16_t length)
     "(before: %s, minimum version %u, controller identity 0x%04x)", next.minimum_version,
     next.identity, before.usable ? "usable" : "not usable", before.minimum_version,
     before.identity);
+  return answer::kSuccess;
+}
+
+/**
+ * @brief Runs SET ONBOARD TIME: keeps the offset between the system clock and ground time
+ *        (decision 25).
+ *
+ * Owner decision 25 (15 Oct 2026; REQ-072, REQ-073). The field is the ground time (4), unsigned
+ * seconds of Unix time, little-endian (Interfaces Sec. 5.1 table, row 0x09). Steps, in this order:
+ * 1. difference = onboard ground time - ground time, signed seconds, taken before anything
+ * changes; 2. if its size is above config::kClockDifferenceMaxS (REQ-072), the onboard computer
+ * sends its own EVENT 0x0105 (protocol.hpp: detail the difference, 4 bytes, signed,
+ * little-endian, onboard minus ground; layout TBR); the event is sent before the write, so it is
+ * sent even when the write then fails (Proposal (TBR), awaiting the owner's acceptance); 3. the
+ * offset = ground time - system clock is written as the "clock-offset" DurableRecord; only when
+ * that succeeded does the offset change in memory and DONE follow, so DONE means the record is on
+ * storage (REQ-034). A write that fails answers REFUSED 0xFE (protocol.hpp) and leaves the offset
+ * in force as it was. The system clock itself is not set (REQ-073). A difference beyond the range
+ * of 4 signed bytes is sent as the nearest value in that range (Proposal (TBR), awaiting the
+ * owner's acceptance).
+ *
+ * @param[in]     payload  the command's payload bytes
+ * @param[in]     length   number of payload bytes; must be command::kSetOnboardTimeBytes
+ * @return answer::kSuccess: written and in force; answer::kImpossible: wrong length (not expected,
+ *         arrivalOk checked it); answer::kStorageBench: the record could not be written
+ */
+uint8_t Updater::runSetOnboardTime(const uint8_t * payload, uint16_t length)
+{
+  if (length != command::kSetOnboardTimeBytes) {
+    logging::line("SET ONBOARD TIME: %u payload bytes, not %zu; refused 0x06", length,
+      command::kSetOnboardTimeBytes);
+    return answer::kImpossible;
+  }
+  const int64_t ground_s = bytes::readU32(&payload[command::kSetOnboardTimeAt]);
+  const int64_t onboard_s = groundTimeS();
+  const int64_t difference_s = onboard_s - ground_s;
+  const bool reported = difference_s > config::kClockDifferenceMaxS ||
+                        difference_s < -config::kClockDifferenceMaxS;
+  if (reported) {
+    // Limited to what 4 signed bytes hold; the sum is cast to unsigned for the little-endian write.
+    const int64_t shown_s = (difference_s > INT32_MAX) ? INT32_MAX :
+                            (difference_s < INT32_MIN) ? INT32_MIN : difference_s;
+    std::array<uint8_t, report::kClockDifferenceDetailBytes> detail{};
+    bytes::writeU32(detail.data(), static_cast<uint32_t>(static_cast<int32_t>(shown_s)));
+    logging::line("SET ONBOARD TIME: onboard ground time %lld s, ground time %lld s: difference "
+      "%lld s is above %lld s; EVENT 0x0105", static_cast<long long>(onboard_s),
+      static_cast<long long>(ground_s), static_cast<long long>(difference_s),
+      static_cast<long long>(config::kClockDifferenceMaxS));
+    sendOwnEventDetail(report::kEventClockDiffers, detail.data(), detail.size());
+  }
+  const int64_t next_offset_s = ground_s - clocks::systemTimeS();
+  int error = 0;
+  if (!clock_record::save(clock_file_, next_offset_s, error)) {
+    logging::line("SET ONBOARD TIME: offset %lld s: the clock-offset record could not be written "
+      "(%s); refused 0xfe, the offset in force (%lld s) is unchanged",
+      static_cast<long long>(next_offset_s), std::strerror(error),
+      static_cast<long long>(clock_offset_s_));
+    return answer::kStorageBench;
+  }
+  logging::line("SET ONBOARD TIME: ground time %lld s; offset %lld s written and in force "
+    "(before: %lld s, difference %lld s)", static_cast<long long>(ground_s),
+    static_cast<long long>(next_offset_s), static_cast<long long>(clock_offset_s_),
+    static_cast<long long>(difference_s));
+  clock_offset_s_ = next_offset_s;
   return answer::kSuccess;
 }
 
@@ -1333,7 +1534,7 @@ void Updater::onFirmwareSettled(uint16_t code)
  */
 void Updater::onControllerReport(const frame::Frame & f)
 {
-  if (!reports_.accept(f.payload, f.length, clocks::onboardTimeS(), now_ms_, report_.data(),
+  if (!reports_.accept(f.payload, f.length, groundTimeStampS(), now_ms_, report_.data(),
         report_.size())) {
     return;
   }
@@ -1689,6 +1890,7 @@ void Updater::onRestartFinished(const RestartRunner::Outcome & outcome)
  *
  * The event is numbered and stamped by the report store like any report, then sent when a ground
  * has spoken (report_store.hpp; reports before that are dropped, as for the controller's).
+ * Forwards to sendOwnEventDetail.
  *
  * @param[in]     code    the event code (Interfaces Sec. 5.4, 0x0101 to 0x0106)
  * @param[in]     detail  the detail byte (for 0x0106: the reason)
@@ -1696,11 +1898,35 @@ void Updater::onRestartFinished(const RestartRunner::Outcome & outcome)
  */
 void Updater::sendOwnEvent(uint16_t code, uint8_t detail)
 {
-  std::array<uint8_t, report::kEventMinBytes + 1> event{};
+  sendOwnEventDetail(code, &detail, 1);
+}
+
+/**
+ * @brief Sends the onboard computer's own EVENT, with a detail of any length that fits, to the
+ *        ground.
+ *
+ * The event is numbered and stamped (with the onboard ground time, owner decision 25) by the
+ * report store like any report, then sent when a ground has spoken (report_store.hpp; reports
+ * before that are dropped, as for the controller's). A detail longer than the EVENT layout allows
+ * (report::kEventMaxBytes) is not sent and the log says so.
+ *
+ * @param[in]     code           the event code (Interfaces Sec. 5.4, 0x0101 to 0x0106)
+ * @param[in]     detail         the detail bytes
+ * @param[in]     detail_length  number of detail bytes, 0 to report::kEventMaxBytes - 15
+ * @return nothing
+ */
+void Updater::sendOwnEventDetail(uint16_t code, const uint8_t * detail, size_t detail_length)
+{
+  std::array<uint8_t, report::kEventMaxBytes> event{};
+  if (detail_length > event.size() - report::kEventDetailOffset) {
+    logging::line("EVENT 0x%04x not sent: detail of %zu bytes is too long", code, detail_length);
+    return;
+  }
   event[report::kOffsetKind] = report::kEvent;
   bytes::writeU16(&event[report::kOffsetEventCode], code);
-  event[report::kEventDetailOffset] = detail;
-  if (!reports_.accept(event.data(), event.size(), clocks::onboardTimeS(), now_ms_, report_.data(),
+  std::memcpy(&event[report::kEventDetailOffset], detail, detail_length);
+  const size_t size = report::kEventDetailOffset + detail_length;
+  if (!reports_.accept(event.data(), size, groundTimeStampS(), now_ms_, report_.data(),
         report_.size())) {
     logging::line("EVENT 0x%04x not sent: the report store refused it", code);
     return;
@@ -1709,7 +1935,7 @@ void Updater::sendOwnEvent(uint16_t code, uint8_t detail)
     logging::line("EVENT 0x%04x not sent: no ground has spoken yet", code);
     return;
   }
-  if (!gate_.sendReport(report_.data(), static_cast<uint16_t>(event.size()))) {
+  if (!gate_.sendReport(report_.data(), static_cast<uint16_t>(size))) {
     logging::line("EVENT 0x%04x not sent: the ground link did not take it", code);
   }
 }

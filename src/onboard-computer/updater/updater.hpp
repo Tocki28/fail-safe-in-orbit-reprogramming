@@ -11,8 +11,10 @@
  *     RECEIVED, then DONE or
  *     REFUSED (Interfaces Sec. 4.2, REQ-033). The ARM (0x0D) and the dangerous commands 0x06,
  *     0x07, 0x08, 0x09 and 0x0C are checked against an ARM as described below. SET LIMITS (0x06)
- *     has a handler (owner decision 24, 15 Oct 2026, below); 0x07, 0x08, 0x09 and 0x0C have none
- *     yet: REFUSED 0x06 after the arming check. 0x0A and 0x0B are not built: REFUSED 0x06.
+ *     has a handler (owner decision 24, 15 Oct 2026, below) and so has SET ONBOARD TIME (0x09,
+ *     owner decision 25, below); 0x07, 0x08 and 0x0C have none yet: REFUSED 0x06 after the arming
+ *     check. 0x0A and 0x0B are not built: REFUSED 0x06.
+ *   Expiry (owner decision 25, 15 Oct 2026; REQ-066, below) is checked first, on arrival.
  *   Repeats (owner decision 26, 15 Oct 2026; REQ-065, REQ-031): every command that passed the
  *     arrival checks is remembered by its ground sequence number and its exact bytes. The ARMs and
  *     dangerous commands are kept in UsedSequences (the last 64), all others in RepeatMemory (the
@@ -45,6 +47,24 @@
  *   limits stay. UPLOAD END and DELIVER's check (REQ-047) refuse an image below the minimum with
  *   0x0A and one for another identity with 0x0B. A damaged limits record fails closed (TBR): both
  *   refuse every image 0x0A, and the log says why, until a SET LIMITS writes a good record.
+ *
+ * ONBOARD CLOCK AND EXPIRY (owner decisions 25 and 42, 15 Oct 2026; REQ-066, REQ-072, REQ-073):
+ *   Onboard ground time = the system clock (seconds, Unix time) + the offset kept in the
+ *   "clock-offset" record (clock_record.hpp; 0 with no record). It stamps the onboard time of
+ *   every report sent to the ground and is the clock for expiry checks.
+ *   - Expiry, checked first in onGroundCommand (expiryCheck), before the arrival checks, the repeat
+ *     memories and the ARM: Expiry 0, or Expiry lower than the onboard ground time -> REFUSED
+ *     0x03; the command is not remembered, so a resend with a valid Expiry runs. Exempt: SET
+ *     ONBOARD TIME (0x09) and an ARM (0x0D) naming 0x09, both to the onboard computer, so that a
+ *     wrong clock can always be corrected. The order is a Proposal (TBR), awaiting the owner's
+ *     acceptance. The updater's own commands to the controller carry Expiry "never" (kNoExpiry).
+ *   - SET ONBOARD TIME (ARM first, as SET LIMITS; payload 0x09, ground time (4), unsigned seconds):
+ *     difference = onboard ground time - ground time; above kClockDifferenceMaxS in either
+ *     direction the onboard computer sends its own EVENT 0x0105 first; then it stores offset =
+ *     ground time - system clock in the record and answers DONE after the write (REQ-034). A
+ *     failed write is REFUSED 0xFE and the offset in force is unchanged.
+ *   - At start the record is read; a damaged or unreadable one gives offset 0 and a log line
+ *     (Proposal (TBR), awaiting the owner's acceptance: fail-closed is not useful for a clock).
  *
  * AFTER A DELIVERY (owner decision 22, 15 Oct 2026; REQ-052): when the controller reports EVENT
  *   0x0007 (firmware confirmed) or 0x0008 (firmware given up), the image of the last ground
@@ -137,8 +157,10 @@
 #define FSIR_UPDATER_UPDATER_HPP
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 
+#include "clock_record.hpp"
 #include "command_gate.hpp"
 #include "controller_watch.hpp"
 #include "data_link.hpp"
@@ -206,6 +228,11 @@ private:
   void onboardDangerous(const frame::Frame & c);
   uint8_t runOnboardDangerous(uint8_t id, const uint8_t * payload, uint16_t length);
   uint8_t runSetLimits(const uint8_t * payload, uint16_t length);   // decision 24
+  uint8_t runSetOnboardTime(const uint8_t * payload, uint16_t length);   // decision 25
+  void loadClockOffset();   // decision 25: reads the "clock-offset" record at start
+  int64_t groundTimeS() const;   // decision 25: system clock + offset, seconds
+  uint32_t groundTimeStampS() const;   // groundTimeS cut to 32 bits, for the report stamp
+  uint8_t expiryCheck(const frame::Frame & c) const;   // decision 25, REQ-066
   void loadLimits();   // decision 24: reads the "limits" record at start
   bool dangerousBusy() const;
   // own: the memory this kind of command belongs to; other: the other one (decision 26).
@@ -237,6 +264,8 @@ private:
   void restartWatch();   // decision H: polls the restart script every tick
   void onRestartFinished(const RestartRunner::Outcome & outcome);   // decision H
   void sendOwnEvent(uint16_t code, uint8_t detail);   // the onboard computer's own EVENT, to the ground
+  // The same with a detail of detail_length bytes (at most report::kEventMaxBytes - 15).
+  void sendOwnEventDetail(uint16_t code, const uint8_t * detail, size_t detail_length);
 
   void sendNext();
   void onTimeout();
@@ -267,6 +296,8 @@ private:
   UsedSequences used_;        // ARMs and dangerous commands, the last 64
   RepeatMemory repeats_;      // every other ground command, the last 256 (decision 26)
   DurableRecord limits_file_; // the "limits" record in the data directory (decision 24)
+  DurableRecord clock_file_;  // the "clock-offset" record in the data directory (decision 25)
+  int64_t clock_offset_s_;    // seconds added to the system clock to give onboard ground time
   bool cancel_requested_;     // decision 21: an UPLOAD CANCEL waits for the delivery to stop
   uint32_t cancel_sequence_;  // ground sequence number of that UPLOAD CANCEL
   bool have_delivered_;       // decision 22: a DELIVER ended DONE; its image is not yet deleted

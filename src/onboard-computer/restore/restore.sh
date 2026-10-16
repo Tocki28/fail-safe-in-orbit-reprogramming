@@ -11,6 +11,12 @@
 #   restore.sh full    --bootloader BL.img --last-resort LR.img --main FW.img
 #   restore.sh reset
 #
+# Modes restore and full also clear the 16 TAMP backup registers (REQ-057; step "clear backup
+# registers", after the flash is written and verified, before the final reset and run): the data
+# the bootloader and the firmware keep there across a reset (src/controller/common/backup_layout.h)
+# belongs to the firmware that was on the chip, and a restored chip starts with none. Mode reset
+# does not clear them.
+#
 # Mode reset (decision H, accepted by the owner, 13 Oct 2026; REQ-013, REQ-061, REQ-124) writes
 # nothing: OpenOCD runs "init; reset run; shutdown" under the same reset configuration, time
 # limit and result line as the other modes. The updater runs it when a trial has run past its
@@ -36,8 +42,9 @@
 # flash controller directly, with the chip held in reset.
 #
 # Requirements (verification): REQ-054/055 restore the last-resort firmware; REQ-057 clear
-# the boot state; REQ-118 write only images that passed the checks; REQ-120 last-resort
-# first; REQ-121 bootloader and main firmware back in order; REQ-060 report the result.
+# the boot state and the kept data in the backup registers (modes restore and full); REQ-118
+# write only images that passed the checks; REQ-120 last-resort first; REQ-121 bootloader and
+# main firmware back in order; REQ-060 report the result.
 #
 # OpenOCD references: OpenOCD User's Guide 0.12.0, chapter "Reset Configuration"
 # (reset_config), chapter "Flash Commands" (flash erase_address, flash write_image,
@@ -56,6 +63,26 @@ LAST_RESORT_START=0x0801A000; LAST_RESORT_BYTES=16384 # 0x4000
 BOOT_STATE_START=0x0801E000;  BOOT_STATE_BYTES=8192   # 0x2000
 RAM_START=536870912   # 0x20000000
 RAM_BYTES=32768       # 0x8000
+# ---- Backup registers (REQ-057): STM32G431, addresses as OpenOCD writes them ---------------
+# Source of every value: RM0440 Rev 9 (ST, March 2025).
+# TAMP_BKP0R: TAMP base 0x4000 2400 [Table 3, p. 87] + offset 0x100 [Sec. 38.6.8, p. 1623].
+# BKP_COUNT: 16 backup registers, TAMP_BKP0R to TAMP_BKP15R [Sec. 38.1, p. 1610], the same as
+# BACKUP_REGISTERS in src/controller/common/backup_layout.h (a copy: this script runs without
+# the repository; if that header changes, this value must change by hand).
+BKP0R_ADDR=0x40002500; BKP_COUNT=16
+# PWR_CR1: PWR base 0x4000 7000 [Table 3, p. 86] + offset 0x00 [Sec. 6.4.1, p. 253].
+# DBP is bit 8 [Sec. 6.4.1, p. 253]: 0x100. Writes to the backup registers need it set
+# [Sec. 38.3.3, p. 1612].
+PWR_CR1_ADDR=0x40007000; PWR_CR1_DBP=0x100
+# RCC_APB1ENR1: RCC base 0x4002 1000 [Table 3, p. 85] + offset 0x58 [Sec. 7.4.17, p. 309].
+# PWREN is bit 28 [Sec. 7.4.17, p. 309]: 0x10000000. The power interface clock is off after a
+# reset (bit 28 is 0 in the reset value 0x0000 0400, Sec. 7.4.17, p. 309), and a register of a
+# peripheral whose clock is off is not written [Sec. 7.4.17, p. 309, Note]; so the step turns
+# it on before it sets DBP. The reset that ends the restore turns it off again.
+# Proposal (TBR), awaiting the owner's acceptance: this clock enable is not in the bench log of
+# the failure (req-057-restore-keeps-backup.log, planted without a reset, firmware running with
+# the clock on); it is taken from the manual and not yet measured on the board.
+RCC_APB1ENR1_ADDR=0x40021058; RCC_PWREN=0x10000000
 # Image header (common/image_format.h): magic "FSIR", format 1, kind at byte 5, target
 # 0x0431 at bytes 6-7, body length at 12, body CRC-32 at 16; body starts at byte 64;
 # two 64-byte signatures follow the body. The updater checks all of it; this script only
@@ -384,6 +411,13 @@ cut_bootloader() {
 #  flash write_image FILE ADDR bin           (writes; the pages were erased before)
 #  flash verify_image FILE ADDR bin          (compares flash with the file)
 #  verify_image of an all-0xFF file          (reads the erased region back and compares)
+#  clear backup registers (REQ-057)          (modes restore and full: read-modify-write of
+#      RCC_APB1ENR1 bit PWREN and PWR_CR1 bit DBP, "mww" 0 to each of the 16 TAMP backup
+#      registers, "read_memory" of all 16 back, DBP cleared; any value not 0 is a failure; see
+#      fsir_clear_backup. The chip is halted by "reset halt". "mww" and "read_memory" are
+#      OpenOCD commands; the chapter of the User's Guide 0.12.0 that lists them was not checked
+#      here. Their behaviour is not yet measured on the board: Proposal (TBR), awaiting the
+#      owner's acceptance.)
 #  reset run                                 (start the program)
 #  shutdown                                  (leave OpenOCD; "shutdown error" = exit non-zero)
 # Each command is wrapped in "fsir_step" so the log names the step that failed. The name carries a
@@ -411,6 +445,42 @@ proc fsir_step {name body} {
         shutdown error
     }
     puts "STEPDONE: $name"
+}
+'
+
+# Tcl procedure of modes restore and full (put after the head; mode reset does not carry it).
+# The addresses come from the "set" lines written before the step (see the steps file below).
+TCL_BACKUP='
+# @brief  Clear the 16 TAMP backup registers over SWD and check that they read 0 (REQ-057).
+#
+# Why: the registers survive a system reset (RM0440 Rev 9, Sec. 38.6.8, p. 1623), so a restore
+# that leaves them keeps the kept data of the old firmware. Sequence: set PWREN, set DBP (both by
+# read-modify-write, other bits kept), write 0 to each register, read all back, clear DBP. DBP is
+# cleared whatever happened, then an error is raised if a write failed or a value is not 0.
+# Uses the global variables fsir_pwr_cr1, fsir_dbp, fsir_rcc_enr, fsir_pwren, fsir_bkp0r and
+# fsir_bkp_n, which the step file sets from restore.sh.
+#
+# @return nothing; raises an error (the step fails) if a register does not read 0
+proc fsir_clear_backup {} {
+    global fsir_pwr_cr1 fsir_dbp fsir_rcc_enr fsir_pwren fsir_bkp0r fsir_bkp_n
+    mww $fsir_rcc_enr [expr {[lindex [read_memory $fsir_rcc_enr 32 1] 0] | $fsir_pwren}]
+    mww $fsir_pwr_cr1 [expr {[lindex [read_memory $fsir_pwr_cr1 32 1] 0] | $fsir_dbp}]
+    set rc [catch {
+        for {set i 0} {$i < $fsir_bkp_n} {incr i} {
+            mww [expr {$fsir_bkp0r + 4 * $i}] 0
+        }
+        set values [read_memory $fsir_bkp0r 32 $fsir_bkp_n]
+        if {[llength $values] != $fsir_bkp_n} {
+            error "read back [llength $values] of $fsir_bkp_n registers"
+        }
+        set i 0
+        foreach v $values {
+            if {$v != 0} { error "TAMP_BKP${i}R reads $v after the write of 0" }
+            incr i
+        }
+    } err]
+    mww $fsir_pwr_cr1 [expr {[lindex [read_memory $fsir_pwr_cr1 32 1] 0] & ~$fsir_dbp}]
+    if {$rc != 0} { error $err }
 }
 '
 
@@ -582,6 +652,7 @@ EOT
 else
     {
         printf '%s\n' "$TCL_HEAD"
+        printf '%s\n' "$TCL_BACKUP"
         cat <<EOT
 fsir_step "connect" { init }
 fsir_step "halt under reset" { reset halt }
@@ -604,7 +675,16 @@ fsir_step "write main firmware (REQ-121)" { flash write_image {$MAIN_FILE} $SLOT
 fsir_step "verify main firmware" { flash verify_image {$MAIN_FILE} $SLOT_A_START bin }
 EOT
         fi
+        # REQ-057: the backup registers are cleared last, after every write and verify, so a
+        # failed write leaves them as they were and the restore reports that step.
         cat <<EOT
+set fsir_pwr_cr1 $PWR_CR1_ADDR
+set fsir_dbp $PWR_CR1_DBP
+set fsir_rcc_enr $RCC_APB1ENR1_ADDR
+set fsir_pwren $RCC_PWREN
+set fsir_bkp0r $BKP0R_ADDR
+set fsir_bkp_n $BKP_COUNT
+fsir_step "clear backup registers" { fsir_clear_backup }
 fsir_step "reset and run" { reset run }
 shutdown
 EOT

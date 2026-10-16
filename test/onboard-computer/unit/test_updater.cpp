@@ -1141,6 +1141,7 @@ class UpdaterRig
 {
 public:
   static constexpr uint16_t kPort = 47931;   // bench choice; the bench test uses 47001
+  static constexpr int kClientBufferBytes = 8 * 1024 * 1024;   // test choice: room for the store's reports
 
   /**
    * @brief Builds the rig: a fake transport, the gate on kPort, the store and the Updater.
@@ -1157,7 +1158,7 @@ public:
   UpdaterRig(const std::string & dir, uint32_t beat_ms, const std::string & restart_script = "",
     uint64_t restart_deadline_ms = config::kRestartScriptMs)
   : transport_(), link_(transport_), gate_(kPort), store_(dir.c_str()),
-    checker_(PUBLIC_KEY_A, PUBLIC_KEY_B), reports_(), watch_(5000, 0), script_(restart_script),
+    checker_(PUBLIC_KEY_A, PUBLIC_KEY_B), reports_(dir.c_str(), config::kReportStoreBytes), watch_(5000, 0), script_(restart_script),
     updater_(gate_, link_, store_, checker_, reports_, watch_, beat_ms, script_.c_str(),
       restart_deadline_ms), client_(-1), now_(1000),
     listen_(0), next_sequence_(1), parser_(), pending_()
@@ -1187,7 +1188,11 @@ public:
   bool open()
   {
     client_ = ::socket(AF_INET, SOCK_DGRAM, 0);
-    return client_ >= 0 && gate_.open() && store_.ready() && checker_.ready();
+    // A large receive buffer: SEND REPORTS (decision 29) can send tens of thousands of reports
+    // in one go. A refused setting only makes the buffer smaller, so the result is not used.
+    const int buffer_bytes = kClientBufferBytes;
+    (void)::setsockopt(client_, SOL_SOCKET, SO_RCVBUF, &buffer_bytes, sizeof buffer_bytes);
+    return client_ >= 0 && gate_.open() && store_.ready() && reports_.load() && checker_.ready();
   }
 
   /**
@@ -5375,6 +5380,824 @@ void testFlushOrder(const std::string & controller_images, const std::string & s
     "flush: syncDirectory is true for a folder and false for one that cannot be opened");
 }
 
+// ---- Decision 29: report storage between contacts (REQ-074 to REQ-078) ----------------------
+// Drafted from the contract in the brief of 16 Oct 2026, apart from the code (rule E4). Only the
+// names were read from the headers once they landed: config::kReportStoreBytes and kReportStoreName,
+// ReportStore(directory, capacity) and load().
+
+using ReportList = std::vector<std::vector<uint8_t>>;
+
+// SEND REPORTS: command identifier 0x0B, first report number (4, little-endian)
+// (Interfaces Sec. 5.1 table, row 0x0B; REQ-074); kSendReportsId (0x0B) is defined further up.
+constexpr size_t kSendReportsBytes = 1 + 4;
+// EVENT 0x0104 "health reports dropped", onboard computer's own; detail: count (4), first
+// onboard time (4), last onboard time (4) (Interfaces Sec. 5.4 table; REQ-076).
+constexpr uint16_t kEventReportsDropped = 0x0104;
+constexpr size_t kDroppedEventBytes = report::kEventMinBytes + 12;
+// Controller time field of the test reports carries a tag, so a report is recognised again after
+// it went through the store. Tags of EVENT reports start at this base, HEALTH tags count from 1.
+constexpr uint32_t kEventTagBase = 0x01000000U;
+// EVENT code the tests use for the controller's events: 0x0004 "self-test failed" (Sec. 5.4
+// table); the updater only logs it, so it starts no exchange with the controller.
+constexpr uint16_t kPlainEventCode = 0x0004;
+// Bounds of the loop that waits for the reports after SEND REPORTS (rule B2). Each round runs
+// kTicksPerRound ticks and reads the socket; the loop ends after two rounds without anything.
+constexpr size_t kTicksPerRound = 64;
+constexpr size_t kMaxRounds = 5000;
+constexpr size_t kIdleRounds = 2;
+// Real-time pause between the first and the later HEALTH reports of the overflow test, so the
+// first and the last dropped report differ by more than 2 s of onboard time. The onboard clock
+// is the real clock (clock.hpp), which the test cannot set.
+constexpr unsigned kSpanPauseUs = 2100000U;
+constexpr uint32_t kSpanMinS = 2;
+// Extra HEALTH reports beyond the store size in the overflow test (many small HEALTH).
+constexpr size_t kOverflowExtraHealth = 2000;
+// HEALTH reports added after the first SEND REPORTS of the overflow test, each of which drops one.
+constexpr uint32_t kRefillHealth = 5;
+// Bytes cut from the end of the store file, or the byte flipped, in the damage tests: 3 bytes
+// is inside the last record, whose size is at least a HEALTH report (24 bytes).
+constexpr off_t kTruncateBytes = 3;
+
+/**
+ * @brief The tag of a report: the controller clock time field, which the tests fill themselves.
+ *
+ * @param[in]     r  a report payload of at least 15 bytes
+ * @return the 4 bytes at offset 8, little-endian
+ */
+uint32_t tagOf(const std::vector<uint8_t> & r)
+{
+  return bytes::readU32(&r[report::kOffsetControllerTime]);
+}
+
+/**
+ * @brief Tells whether a report is an EVENT report.
+ *
+ * @param[in]     r  a report payload
+ * @return true: at least 15 bytes and kind EVENT; false: otherwise
+ */
+bool isEventReport(const std::vector<uint8_t> & r)
+{
+  return r.size() >= report::kEventMinBytes && r[report::kOffsetKind] == report::kEvent;
+}
+
+/**
+ * @brief Tells whether a report is the onboard computer's EVENT 0x0104.
+ *
+ * @param[in]     r  a report payload
+ * @return true: an EVENT with code 0x0104; false: otherwise
+ */
+bool isDroppedEvent(const std::vector<uint8_t> & r)
+{
+  return isEventReport(r) && bytes::readU16(&r[report::kOffsetEventCode]) == kEventReportsDropped;
+}
+
+/**
+ * @brief The tags of the reports in order, without the onboard computer's own EVENT 0x0104.
+ *
+ * @param[in]     list  report payloads as the ground received them
+ * @return the tags in the order received
+ */
+std::vector<uint32_t> tagsOf(const ReportList & list)
+{
+  std::vector<uint32_t> tags;
+  for (const std::vector<uint8_t> & r : list) {
+    if (r.size() >= report::kEventMinBytes && !isDroppedEvent(r)) {
+      tags.push_back(tagOf(r));
+    }
+  }
+  return tags;
+}
+
+/**
+ * @brief Counts the EVENT 0x0104 reports in a list.
+ *
+ * @param[in]     list  report payloads
+ * @return the count
+ */
+size_t droppedEventCount(const ReportList & list)
+{
+  size_t n = 0;
+  for (const std::vector<uint8_t> & r : list) {
+    n += isDroppedEvent(r) ? 1U : 0U;
+  }
+  return n;
+}
+
+/**
+ * @brief Puts one HEALTH report with this tag into data link A.
+ *
+ * @param[in,out] rig  the updater under test
+ * @param[in]     tag  written into the controller clock time field
+ * @return nothing
+ */
+void sendTaggedHealth(UpdaterRig & rig, uint32_t tag)
+{
+  std::vector<uint8_t> p(report::kHealthBytes, 0);
+  p[report::kOffsetKind] = report::kHealth;
+  p[report::kOffsetMode] = report::kModeOperate;
+  p[report::kOffsetFirmwareKind] = 0x02;
+  bytes::writeU32(&p[report::kOffsetControllerTime], tag);
+  rig.fromController(frame::kTypeReport, p);
+}
+
+/**
+ * @brief Puts one EVENT report (code 0x0004, no detail) with this tag into data link A.
+ *
+ * @param[in,out] rig  the updater under test
+ * @param[in]     tag  written into the controller clock time field
+ * @return nothing
+ */
+void sendTaggedEvent(UpdaterRig & rig, uint32_t tag)
+{
+  std::vector<uint8_t> p(report::kEventMinBytes, 0);
+  p[report::kOffsetKind] = report::kEvent;
+  bytes::writeU16(&p[report::kOffsetEventCode], kPlainEventCode);
+  bytes::writeU32(&p[report::kOffsetControllerTime], tag);
+  rig.fromController(frame::kTypeReport, p);
+}
+
+/**
+ * @brief The payload of SEND REPORTS.
+ *
+ * @param[in]     first  first report number to send
+ * @return the identifier, then the number in 4 bytes, little-endian
+ */
+std::vector<uint8_t> sendReportsPayload(uint32_t first)
+{
+  std::vector<uint8_t> p(kSendReportsBytes, 0);
+  p[0] = kSendReportsId;
+  bytes::writeU32(&p[1], first);
+  return p;
+}
+
+// What the ground got for one SEND REPORTS command.
+struct SendResult
+{
+  bool arrived;                        // the command reached the gate
+  std::vector<GroundAnswer> answers;   // the answers, in order
+  ReportList reports;                  // the reports, in the order they arrived
+};
+
+/**
+ * @brief Sends a command from the ground and collects every answer and report that follows.
+ *
+ * Runs ticks and reads the socket until two rounds in a row bring nothing, or kMaxRounds rounds
+ * have passed. The clock is not moved: the test must not start timers of its own.
+ *
+ * @param[in,out] rig      the updater under test
+ * @param[in]     seq      the ground's sequence number
+ * @param[in]     payload  the command payload
+ * @return the answers and the reports received
+ */
+SendResult askGround(UpdaterRig & rig, uint32_t seq, const std::vector<uint8_t> & payload)
+{
+  SendResult res{rig.fromGround(frame::kDestOnboard, seq, payload), {}, {}};
+  size_t idle = 0;
+  for (size_t round = 0; round < kMaxRounds && idle < kIdleRounds; round++) {
+    SentFrame f{};
+    for (size_t i = 0; i < kTicksPerRound; i++) {
+      (void)rig.tick(f);   // frames to the controller are not the subject here
+    }
+    std::vector<GroundAnswer> a = rig.groundAnswers();   // first: it keeps the reports it reads
+    ReportList r = rig.groundReports();
+    res.answers.insert(res.answers.end(), a.begin(), a.end());
+    res.reports.insert(res.reports.end(), r.begin(), r.end());
+    idle = (a.empty() && r.empty()) ? idle + 1 : 0;
+  }
+  return res;
+}
+
+/**
+ * @brief SEND REPORTS with a first number: DONE, then the reports.
+ *
+ * @param[in,out] rig    the updater under test
+ * @param[in]     seq    the ground's sequence number
+ * @param[in]     first  first report number
+ * @return the answers and the reports received
+ */
+SendResult sendReportsFrom(UpdaterRig & rig, uint32_t seq, uint32_t first)
+{
+  return askGround(rig, seq, sendReportsPayload(first));
+}
+
+/**
+ * @brief Lets the ground speak (GET STATUS), so reports go to it at once, and drops the answer.
+ *
+ * @param[in,out] rig  the updater under test
+ * @param[in]     seq  the ground's sequence number
+ * @return nothing
+ */
+void groundSpeaks(UpdaterRig & rig, uint32_t seq)
+{
+  (void)rig.fromGround(frame::kDestOnboard, seq, {command::kGetStatus});
+  (void)rig.groundAnswers();
+  (void)rig.groundReports();
+}
+
+/**
+ * @brief Tells whether the list is the tags in this order.
+ *
+ * @param[in]     list  report payloads received
+ * @param[in]     want  the tags expected, in order (EVENT 0x0104 ignored)
+ * @return true: equal; false: otherwise
+ */
+bool tagsAre(const ReportList & list, const std::vector<uint32_t> & want)
+{
+  return tagsOf(list) == want;
+}
+
+/**
+ * @brief The report store's file in a data directory (config::kReportStoreName).
+ *
+ * @param[in]     dir  the data directory
+ * @return the path
+ */
+std::string storeFileOf(const std::string & dir)
+{
+  return dir + "/" + config::kReportStoreName;
+}
+
+/**
+ * @brief The size of a file.
+ *
+ * @param[in]     path  the file
+ * @return its size in bytes; -1 if it cannot be read
+ */
+long long sizeOfFile(const std::string & path)
+{
+  struct stat info{};
+  return stat(path.c_str(), &info) == 0 ? static_cast<long long>(info.st_size) : -1;
+}
+
+// One EVENT 0x0104 as the ground received it.
+struct DroppedInfo
+{
+  uint32_t number;       // its report number
+  uint32_t count;        // detail: how many HEALTH were dropped
+  uint32_t first_time;   // detail: onboard time of the first dropped, s
+  uint32_t last_time;    // detail: onboard time of the last dropped, s
+};
+
+/**
+ * @brief Adds the EVENT 0x0104 reports of a list to a list of those already seen.
+ *
+ * One that equals a known one in all four fields (number, count, first, last) is the same event
+ * sent again (stored reports are sent again at a later SEND REPORTS) and is not added.
+ *
+ * @param[in]     list  report payloads as the ground received them
+ * @param[in,out] seen  the distinct EVENT 0x0104 so far, in the order first seen
+ * @return nothing
+ */
+void collectDropped(const ReportList & list, std::vector<DroppedInfo> & seen)
+{
+  for (const std::vector<uint8_t> & r : list) {
+    if (!isDroppedEvent(r) || r.size() != kDroppedEventBytes) {
+      continue;
+    }
+    const size_t at = report::kEventDetailOffset;
+    const DroppedInfo d{bytes::readU32(&r[report::kOffsetNumber]), bytes::readU32(&r[at]),
+      bytes::readU32(&r[at + 4]), bytes::readU32(&r[at + 8])};
+    bool known = false;
+    for (const DroppedInfo & k : seen) {
+      known = known || (k.number == d.number && k.count == d.count && k.first_time == d.first_time &&
+                        k.last_time == d.last_time);
+    }
+    if (!known) {
+      seen.push_back(d);
+    }
+  }
+}
+
+/**
+ * @brief Counts the reports whose tag is below a limit (the HEALTH reports of the tests).
+ *
+ * @param[in]     list   report payloads
+ * @param[in]     limit  tags below it count; the EVENT tags start at kEventTagBase
+ * @return the count; EVENT 0x0104 is not counted
+ */
+size_t countBelow(const ReportList & list, uint32_t limit)
+{
+  size_t n = 0;
+  for (uint32_t t : tagsOf(list)) {
+    n += (t < limit) ? 1U : 0U;
+  }
+  return n;
+}
+
+/**
+ * @brief The tags of the EVENT reports of the tests (not EVENT 0x0104), in the order received.
+ *
+ * @param[in]     list  report payloads
+ * @return the tags that are at or above kEventTagBase
+ */
+std::vector<uint32_t> eventTags(const ReportList & list)
+{
+  std::vector<uint32_t> tags;
+  for (uint32_t t : tagsOf(list)) {
+    if (t >= kEventTagBase) {
+      tags.push_back(t);
+    }
+  }
+  return tags;
+}
+
+/**
+ * @brief Decision 29, contract 1: a report made while no ground listens is still sent at SEND REPORTS.
+ *
+ * Requirement: REQ-074, REQ-075 (owner decision 29, 15 Oct 2026). Defect caught: reports are
+ * dropped when no ground has spoken yet (the bench limit of report_store.hpp), so a contact that
+ * begins with SEND REPORTS finds nothing. Passes when: nothing reaches the ground before it has
+ * spoken; SEND REPORTS (first number 1) answers DONE; the three reports come, each with its report
+ * number (1, 2, 3, in the order they were made) and an onboard time between the readings of the
+ * clock before and after.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreWhileNoGround(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-no-ground";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "report store: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const uint32_t t0 = clocks::onboardTimeS();
+  sendTaggedHealth(rig, 11);
+  sendTaggedEvent(rig, kEventTagBase + 12);
+  sendTaggedHealth(rig, 13);
+  const uint32_t t1 = clocks::onboardTimeS();
+  report(rig.groundReports().empty(), "report store: no ground has spoken: nothing is sent");
+  SendResult r = sendReportsFrom(rig, 1, 1);
+  report(r.arrived && hasAnswer(r.answers, 1, answer::kDone, answer::kSuccess),
+    "report store: SEND REPORTS is answered DONE");
+  report(r.reports.size() == 3U, "report store: the three reports made while no ground listened arrive");
+  bool numbers_ok = r.reports.size() == 3U;
+  bool times_ok = numbers_ok;
+  for (const std::vector<uint8_t> & p : r.reports) {
+    if (p.size() < report::kEventMinBytes) {
+      numbers_ok = false;
+      times_ok = false;
+      continue;
+    }
+    const uint32_t want = (tagOf(p) == 11U) ? 1U : (tagOf(p) == kEventTagBase + 12U) ? 2U : 3U;
+    numbers_ok = numbers_ok && bytes::readU32(&p[report::kOffsetNumber]) == want;
+    const uint32_t t = bytes::readU32(&p[report::kOffsetOnboardTime]);
+    times_ok = times_ok && t >= t0 && t <= t1;
+  }
+  report(numbers_ok, "report store: each stored report keeps the number it got (1, 2, 3 in making order)");
+  report(times_ok, "report store: each stored report keeps its onboard time (between the clock readings)");
+}
+
+/**
+ * @brief Decision 29, contract 2 and 3: EVENT reports first, then HEALTH, each by number; live path unchanged.
+ *
+ * Requirement: REQ-074, REQ-075. Defects caught: the stored reports are sent in the order made
+ * (a HEALTH flood in front of an EVENT); the order inside a group is not by report number; the live
+ * path stops sending at once to a ground that has spoken, or sends them in another order or without
+ * numbers. Passes when: five reports made after the ground spoke (HEALTH, EVENT, HEALTH, EVENT,
+ * HEALTH) reach the ground at once, in that order, with numbers 1 to 5; then SEND REPORTS (first 1)
+ * sends the two EVENT reports in number order, then the three HEALTH reports in number order.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreOrder(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-order";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "report store order: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  groundSpeaks(rig, 1);
+  const uint32_t e22 = kEventTagBase + 22;
+  const uint32_t e24 = kEventTagBase + 24;
+  sendTaggedHealth(rig, 21);
+  sendTaggedEvent(rig, e22);
+  sendTaggedHealth(rig, 23);
+  sendTaggedEvent(rig, e24);
+  sendTaggedHealth(rig, 25);
+  (void)rig.groundAnswers();
+  ReportList live = rig.groundReports();
+  bool live_numbers = live.size() == 5U;
+  for (size_t i = 0; i < live.size() && live_numbers; i++) {
+    live_numbers = live[i].size() >= report::kEventMinBytes &&
+                   bytes::readU32(&live[i][report::kOffsetNumber]) == i + 1U;
+  }
+  report(tagsAre(live, {21, e22, 23, e24, 25}) && live_numbers,
+    "report store: live path unchanged: five reports at once, in order, numbers 1 to 5");
+  SendResult r = sendReportsFrom(rig, 2, 1);
+  report(r.arrived && hasAnswer(r.answers, 2, answer::kDone, answer::kSuccess),
+    "report store order: SEND REPORTS is answered DONE");
+  report(tagsAre(r.reports, {e22, e24, 21, 23, 25}),
+    "report store order: EVENT reports first, then HEALTH, each group by report number");
+}
+
+/**
+ * @brief Decision 29, contract 2: reports below the first number are not sent, and are deleted.
+ *
+ * Requirement: REQ-074, REQ-075. Defects caught: the first-number filter is off by one or ignored
+ * (reports below it are sent, or the one at it is not); reports below it stay in the store (sent
+ * again at a later SEND REPORTS with a lower number); the number is read big-endian. Passes when:
+ * with six reports stored, first number 4 sends exactly numbers 4, 5, 6; first number 1 afterwards
+ * still sends only those three (1 to 3 are gone); first number {0,0,0,1} (16,777,216 little-endian)
+ * sends nothing; first number 1 after that sends nothing (the rest was deleted).
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreFirstNumber(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-first";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "report store first number: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const uint32_t e32 = kEventTagBase + 32;
+  const uint32_t e34 = kEventTagBase + 34;
+  sendTaggedHealth(rig, 31);
+  sendTaggedEvent(rig, e32);
+  sendTaggedHealth(rig, 33);
+  sendTaggedEvent(rig, e34);
+  sendTaggedHealth(rig, 35);
+  sendTaggedHealth(rig, 36);
+  SendResult a = sendReportsFrom(rig, 1, 4);
+  report(a.arrived && hasAnswer(a.answers, 1, answer::kDone, answer::kSuccess) &&
+           tagsAre(a.reports, {e34, 35, 36}),
+    "report store first number: first number 4 sends numbers 4, 5, 6 and no other");
+  SendResult b = sendReportsFrom(rig, 2, 1);
+  report(tagsAre(b.reports, {e34, 35, 36}),
+    "report store first number: reports below the first number were deleted (a later first number 1 does not bring them back)");
+  SendResult c = askGround(rig, 3, {kSendReportsId, 0, 0, 0, 1});
+  report(c.arrived && hasAnswer(c.answers, 3, answer::kDone, answer::kSuccess) && c.reports.empty(),
+    "report store first number: the number is little-endian (bytes 00 00 00 01 are 16,777,216: nothing sent)");
+  SendResult d = sendReportsFrom(rig, 4, 1);
+  report(d.arrived && hasAnswer(d.answers, 4, answer::kDone, answer::kSuccess) && d.reports.empty(),
+    "report store first number: everything below a high first number was deleted (nothing left)");
+}
+
+/**
+ * @brief Decision 29: SEND REPORTS is not dangerous and works in every mode.
+ *
+ * Requirement: REQ-074 (Interfaces Sec. 5.1 table, row 0x0B: mode ANY, dangerous NO). Defects
+ * caught: the command needs an ARM, or is refused 0x05 in a mode (as the commands of a single
+ * mode are). Passes when: after a HEALTH report showing OPERATE, FALLBACK and then TRIAL (the
+ * test image exchange of the trial is answered by the test), SEND REPORTS without any ARM is
+ * answered DONE each time.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreAnyMode(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-modes";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "report store modes: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  groundSpeaks(rig, 1);
+  const uint8_t modes[] = {report::kModeOperate, report::kModeFallback, report::kModeTrial};
+  const char * names[] = {"OPERATE", "FALLBACK", "TRIAL"};
+  uint32_t seq = 10;
+  for (size_t i = 0; i < 3; i++) {
+    rig.health(modes[i]);
+    SentFrame f{};
+    for (size_t k = 0; k < 40 && rig.tick(f); k++) {   // the trial's test image exchange: answer it
+      if (f.type == frame::kTypeCommand && f.destination == frame::kDestController) {
+        rig.answer(f.sequence, answer::kDone, 0);
+      }
+    }
+    (void)rig.groundAnswers();
+    (void)rig.groundReports();
+    seq++;
+    SendResult r = sendReportsFrom(rig, seq, 1);
+    report(r.arrived && hasAnswer(r.answers, seq, answer::kDone, answer::kSuccess),
+      std::string("report store modes: SEND REPORTS without ARM is answered DONE in ") + names[i]);
+  }
+}
+
+/**
+ * @brief Decision 29: SEND REPORTS with a wrong length is refused 0x06 and does nothing.
+ *
+ * Requirement: REQ-074, REQ-028. Defect caught: a short or long payload is read anyway (bytes
+ * past the end, or the extra bytes ignored), so a damaged command deletes or sends reports. Passes
+ * when: payloads of 1, 4, 6 and 33 bytes (the first number in them is 0xFFFFFFFF, which would
+ * delete everything) are each REFUSED 0x06 with no report sent; a good SEND REPORTS afterwards
+ * still sends both stored reports.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreWrongLength(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-length";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "report store length: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const uint32_t e42 = kEventTagBase + 42;
+  sendTaggedHealth(rig, 41);
+  sendTaggedEvent(rig, e42);
+  const size_t lengths[] = {1, 4, 6, 33};
+  uint32_t seq = 0;
+  bool all_refused = true;
+  bool none_sent = true;
+  for (size_t length : lengths) {
+    seq++;
+    std::vector<uint8_t> p(length, 0xFF);
+    p[0] = kSendReportsId;
+    SendResult r = askGround(rig, seq, p);
+    all_refused = all_refused && r.arrived && hasAnswer(r.answers, seq, answer::kRefused, answer::kImpossible);
+    none_sent = none_sent && r.reports.empty();
+  }
+  report(all_refused, "report store length: SEND REPORTS of 1, 4, 6 and 33 bytes is REFUSED 0x06");
+  report(none_sent, "report store length: a refused SEND REPORTS sends no report");
+  SendResult good = sendReportsFrom(rig, 10, 1);
+  report(good.arrived && hasAnswer(good.answers, 10, answer::kDone, answer::kSuccess) &&
+           tagsAre(good.reports, {e42, 41}),
+    "report store length: the refused commands deleted nothing (a good SEND REPORTS sends both)");
+}
+
+/**
+ * @brief Decision 29, contract 6: the store survives a restart of the program.
+ *
+ * Requirement: REQ-077, REQ-074. Defect caught: the store lives in memory only, or the restarted
+ * program starts an empty one, so a restart between contacts loses what the controller reported.
+ * Passes when: three reports made with the ground listening (the test keeps what it got) are
+ * sent again, byte for byte (report number and onboard time included), by a new rig on the same
+ * data directory, EVENT first.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreRestart(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-restart";
+  removeTree(dir);
+  const uint32_t e52 = kEventTagBase + 52;
+  ReportList live;
+  {
+    UpdaterRig first(dir, 0);
+    if (!first.open()) {
+      report(false, "report store restart: updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    groundSpeaks(first, 1);
+    sendTaggedHealth(first, 51);
+    sendTaggedEvent(first, e52);
+    sendTaggedHealth(first, 53);
+    (void)first.groundAnswers();
+    live = first.groundReports();
+  }
+  UpdaterRig second(dir, 0);
+  if (!second.open()) {
+    report(false, "report store restart: the second rig could not open");
+    return;
+  }
+  SendResult r = sendReportsFrom(second, 1, 1);
+  report(live.size() == 3U && r.arrived && hasAnswer(r.answers, 1, answer::kDone, answer::kSuccess) &&
+           tagsAre(r.reports, {e52, 51, 53}),
+    "report store restart: a new rig on the same data directory sends the stored reports, EVENT first");
+  bool same = live.size() == 3U && r.reports.size() == 3U;
+  for (const std::vector<uint8_t> & got : r.reports) {
+    bool found = false;
+    for (const std::vector<uint8_t> & was : live) {
+      found = found || got == was;
+    }
+    same = same && found;
+  }
+  report(same, "report store restart: each report is byte for byte the one sent live (number and onboard time kept)");
+}
+
+/**
+ * @brief Cuts or corrupts the tail of the store file between two runs of the program.
+ *
+ * @param[in]     path   the store file
+ * @param[in]     flip   true: flip the last byte (inside the last record); false: cut kTruncateBytes
+ *                       off the end (in the middle of the last record)
+ * @return true: the file was changed; false: it could not be changed
+ */
+bool damageTail(const std::string & path, bool flip)
+{
+  const long long size = sizeOfFile(path);
+  if (size <= kTruncateBytes) {
+    return false;
+  }
+  if (!flip) {
+    return ::truncate(path.c_str(), static_cast<off_t>(size) - kTruncateBytes) == 0;
+  }
+  int fd = ::open(path.c_str(), O_RDWR);
+  if (fd < 0) {
+    return false;
+  }
+  uint8_t b = 0;
+  const off_t at = static_cast<off_t>(size) - 1;
+  bool ok = ::pread(fd, &b, 1, at) == 1;
+  b = static_cast<uint8_t>(b ^ 0xFFU);
+  ok = ok && ::pwrite(fd, &b, 1, at) == 1;
+  (void)::close(fd);
+  return ok;
+}
+
+/**
+ * @brief Decision 29, contract 6: a damaged tail of the store is cut off at start; the earlier reports stay.
+ *
+ * Requirement: REQ-077, REQ-078. Defects caught: a store cut in the middle of a record (power cut
+ * while writing) or with one byte of the last record changed (a bad block) makes the whole store
+ * unreadable, or the program crash, or the damaged record is sent as if good, or the reports before
+ * it are lost; or after the cut the store cannot take new reports. Passes, for the truncated file
+ * and for the file with its last byte flipped, when: a new rig on the data directory starts, SEND
+ * REPORTS (first 1) sends the first three of four stored reports byte for byte as they were sent
+ * live and not the fourth, and a report made after the start is stored and sent with them.
+ *
+ * @param[in]     scratch  scratch directory
+ * @param[in]     flip     true: flip a byte of the last record; false: truncate in the last record
+ * @return nothing
+ */
+void testReportStoreDamagedTail(const std::string & scratch, bool flip)
+{
+  const std::string how = flip ? "last byte flipped" : "file cut in the last record";
+  std::string dir = scratch + (flip ? "/rs-damage-flip" : "/rs-damage-cut");
+  removeTree(dir);
+  const uint32_t e62 = kEventTagBase + 62;
+  ReportList live;
+  std::string store_file;
+  {
+    UpdaterRig first(dir, 0);
+    if (!first.open()) {
+      report(false, "report store damage: updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    groundSpeaks(first, 1);
+    sendTaggedHealth(first, 61);
+    sendTaggedEvent(first, e62);
+    sendTaggedHealth(first, 63);
+    sendTaggedHealth(first, 64);
+    (void)first.groundAnswers();
+    live = first.groundReports();
+    store_file = storeFileOf(dir);
+  }
+  report(live.size() == 4U && exists(store_file),
+    "report store damage (" + how + "): four reports stored, and the store file is in the data directory");
+  if (!exists(store_file) || !damageTail(store_file, flip)) {
+    report(false, "report store damage (" + how + "): the store file could not be damaged");
+    return;
+  }
+  UpdaterRig second(dir, 0);
+  if (!second.open()) {
+    report(false, "report store damage (" + how + "): the new rig could not open");
+    return;
+  }
+  SendResult r = sendReportsFrom(second, 1, 1);
+  report(r.arrived && hasAnswer(r.answers, 1, answer::kDone, answer::kSuccess) &&
+           tagsAre(r.reports, {e62, 61, 63}),
+    "report store damage (" + how + "): the damaged last report is cut off, the three before it stay");
+  bool same = live.size() == 4U && r.reports.size() == 3U;
+  for (const std::vector<uint8_t> & got : r.reports) {
+    bool found = false;
+    for (const std::vector<uint8_t> & was : live) {
+      found = found || got == was;
+    }
+    same = same && found;
+  }
+  report(same, "report store damage (" + how + "): the three that stay are byte for byte the ones sent live");
+  sendTaggedHealth(second, 65);
+  (void)second.groundAnswers();   // the ground has spoken: the live copy of 65 is not the subject
+  (void)second.groundReports();
+  SendResult again = sendReportsFrom(second, 2, 1);
+  report(tagsAre(again.reports, {e62, 61, 63, 65}),
+    "report store damage (" + how + "): a report made after the cut is stored and sent with the others");
+}
+
+/**
+ * @brief Decision 29, contract 4 and 5: past 1 MB the oldest HEALTH go, EVENT reports stay, and EVENT 0x0104 says what went.
+ *
+ * Requirement: REQ-075, REQ-076, REQ-078. Defects caught: the store grows past its limit; the
+ * newest reports are refused instead of the oldest HEALTH removed; an EVENT report is removed
+ * to make room; HEALTH removed in another order than oldest first; the dropped HEALTH are not
+ * counted, or counted wrong; the span is the wrong pair of times; EVENT 0x0104 is not sent, or
+ * sent after the stored reports, or sent at every SEND REPORTS, or the count is not reset after
+ * it was sent. Passes when: three EVENT reports (first, middle, last) and more HEALTH reports than
+ * fit (kReportStoreBytes / 24 + 2000, with a 2.1 s real-time pause after the first) are made while
+ * no ground listens, then SEND REPORTS (first 1) sends: EVENT 0x0104 first, once, with count
+ * equal to the HEALTH made minus the HEALTH received, first and last onboard time inside the
+ * clock readings and at least 2 s apart; then the three EVENT reports; then the HEALTH reports
+ * that are an unbroken run ending at the newest, together at most kReportStoreBytes of report
+ * bytes and at least half of it.
+ * A second SEND REPORTS sends no 0x0104. After 5 more HEALTH (each drops one) a third sends 0x0104
+ * with count 5 (reset), a first time not earlier than the last time of the first one.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testReportStoreOverflow(const std::string & scratch)
+{
+  std::string dir = scratch + "/rs-overflow";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, "report store overflow: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const size_t total = config::kReportStoreBytes / report::kHealthBytes + kOverflowExtraHealth;
+  const uint32_t last = static_cast<uint32_t>(total);
+  const uint32_t ev_a = kEventTagBase + 1;
+  const uint32_t ev_b = kEventTagBase + 2;
+  const uint32_t ev_c = kEventTagBase + 3;
+  const uint32_t t0 = clocks::onboardTimeS();
+  sendTaggedEvent(rig, ev_a);
+  sendTaggedHealth(rig, 1);
+  (void)::usleep(kSpanPauseUs);
+  for (uint32_t i = 2; i <= last; i++) {
+    sendTaggedHealth(rig, i);
+    if (i == last / 2U) {
+      sendTaggedEvent(rig, ev_b);
+    }
+  }
+  sendTaggedEvent(rig, ev_c);
+  const uint32_t t1 = clocks::onboardTimeS();
+  SendResult r = sendReportsFrom(rig, 1, 1);
+  report(r.arrived && hasAnswer(r.answers, 1, answer::kDone, answer::kSuccess),
+    "report store overflow: SEND REPORTS is answered DONE");
+  report(!r.reports.empty() && isDroppedEvent(r.reports[0]) && droppedEventCount(r.reports) == 1U,
+    "report store overflow: EVENT 0x0104 is the first report sent, and sent once");
+  std::vector<uint32_t> tags = tagsOf(r.reports);
+  const std::vector<uint32_t> events(tags.begin(), tags.begin() + static_cast<long>(std::min<size_t>(3, tags.size())));
+  report(events == std::vector<uint32_t>({ev_a, ev_b, ev_c}),
+    "report store overflow: all three EVENT reports are kept (and come before the HEALTH)");
+  const std::vector<uint32_t> health(tags.begin() + static_cast<long>(events.size()), tags.end());
+  bool run_ok = !health.empty() && health.back() == last;
+  for (size_t i = 1; i < health.size(); i++) {
+    run_ok = run_ok && health[i] == health[i - 1] + 1U;
+  }
+  report(run_ok, "report store overflow: the HEALTH kept are an unbroken run ending at the newest (oldest removed first)");
+  const size_t kept = health.size();
+  report(kept > 0 && kept < total && kept * report::kHealthBytes <= config::kReportStoreBytes,
+    "report store overflow: some HEALTH were removed, and the kept ones fit the limit");
+  report(kept * report::kHealthBytes >= config::kReportStoreBytes / 2U,
+    "report store overflow: not much more than needed was removed (the kept HEALTH fill at least half the limit)");
+  uint32_t count = 0;
+  uint32_t first_time = 0;
+  uint32_t last_time = 0;
+  bool shape = !r.reports.empty() && isDroppedEvent(r.reports[0]) && r.reports[0].size() == kDroppedEventBytes;
+  if (shape) {
+    const size_t at = report::kEventDetailOffset;
+    count = bytes::readU32(&r.reports[0][at]);
+    first_time = bytes::readU32(&r.reports[0][at + 4]);
+    last_time = bytes::readU32(&r.reports[0][at + 8]);
+  }
+  report(shape, "report store overflow: EVENT 0x0104 is 27 bytes (detail: count, first time, last time)");
+  std::vector<DroppedInfo> seen;
+  collectDropped(r.reports, seen);
+  // Every dropped HEALTH is counted by exactly one EVENT 0x0104. The HEALTH dropped to make room for
+  // the EVENT 0x0104 itself (it is stored like any report, contract 1) is dropped after its count
+  // was taken and is counted by the next one, so the first count may be one short of the HEALTH
+  // missing in the same answer; no more than one.
+  report(shape && count <= total - kept && total - kept - count <= 1U,
+    "report store overflow: EVENT 0x0104 count equals the HEALTH made minus the HEALTH kept (one short at most: the one dropped to store the EVENT 0x0104 itself)");
+  report(shape && first_time >= t0 && last_time <= t1 && first_time <= last_time &&
+           last_time - first_time >= kSpanMinS,
+    "report store overflow: EVENT 0x0104 span: first and last dropped onboard time inside the readings, at least 2 s apart");
+
+  SendResult again = sendReportsFrom(rig, 2, 1);
+  const size_t known = seen.size();
+  collectDropped(again.reports, seen);
+  report(again.arrived && seen.size() <= known + 1U && countBelow(again.reports, kEventTagBase) > 0U &&
+           eventTags(again.reports) == std::vector<uint32_t>({ev_a, ev_b, ev_c}),
+    "report store overflow: a second SEND REPORTS makes at most one new EVENT 0x0104 (not another one for the same drops), events all still there");
+
+  for (uint32_t i = 1; i <= kRefillHealth; i++) {
+    sendTaggedHealth(rig, last + i);
+  }
+  (void)rig.groundAnswers();
+  (void)rig.groundReports();
+  SendResult third = sendReportsFrom(rig, 3, 1);
+  collectDropped(third.reports, seen);
+  uint64_t counted = 0;
+  for (const DroppedInfo & d : seen) {
+    counted += d.count;
+  }
+  const size_t kept3 = countBelow(third.reports, kEventTagBase);
+  const uint64_t missing = static_cast<uint64_t>(total) + kRefillHealth - kept3;
+  report(third.arrived && counted <= missing && missing - counted <= 1U,
+    "report store overflow: the counts of all EVENT 0x0104 add up to the HEALTH made minus the HEALTH kept (counters reset after each send: nothing counted twice or missed)");
+  bool spans_ok = !seen.empty();
+  for (size_t k = 1; k < seen.size(); k++) {
+    spans_ok = spans_ok && seen[k].first_time >= seen[k - 1].last_time && seen[k].first_time <= seen[k].last_time;
+  }
+  report(spans_ok && seen.back().count >= kRefillHealth,
+    "report store overflow: the span restarted after each send (each first time not before the earlier last time); the 5 HEALTH dropped last are in the newest count");
+}
+
 }  // namespace
 
 /**
@@ -5450,6 +6273,15 @@ int main(int argc, char ** argv)
   testDropLogLimit();
   testStoreHardening(argv[4]);
   testFlushOrder(argv[1], argv[4]);
+  testReportStoreWhileNoGround(argv[4]);
+  testReportStoreOrder(argv[4]);
+  testReportStoreFirstNumber(argv[4]);
+  testReportStoreAnyMode(argv[4]);
+  testReportStoreWrongLength(argv[4]);
+  testReportStoreRestart(argv[4]);
+  testReportStoreDamagedTail(argv[4], false);
+  testReportStoreDamagedTail(argv[4], true);
+  testReportStoreOverflow(argv[4]);
   std::printf("unit tests: %d of %d passed\n", g_tests - g_failures, g_tests);
   return g_failures == 0 ? 0 : 1;
 }

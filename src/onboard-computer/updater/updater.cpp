@@ -23,7 +23,8 @@ constexpr uint32_t kNoExpiry = 0xFFFFFFFFU;
  * The checks on arrival for commands to the onboard computer: a command built on the bench,
  * with the payload length its fields need (Interfaces Sec. 5.1). The dangerous commands 0x06 to
  * 0x09 and 0x0C pass here with their lengths, and are then checked against an ARM
- * (isOnboardDangerous); they have no handler yet.
+ * (isOnboardDangerous); only 0x06 has a handler yet. SEND REPORTS (0x0B, first report number (4))
+ * passes with 5 bytes (owner decision 29, 15 Oct 2026).
  *
  * @param[in] id  the command identifier, payload byte 0
  * @param[in] length  payload length of the command, in bytes
@@ -53,10 +54,12 @@ bool arrivalOk(uint8_t id, uint16_t length)
       return length == command::kSetOnboardTimeBytes;
     case command::kReplaceKey:
       return length == command::kReplaceKeyBytes;
+    case command::kSendReports:   // owner decision 29, 15 Oct 2026
+      return length == command::kSendReportsBytes;
     case command::kArm:   // handled before this test (onGroundArm), which checks its own length
       return false;
   }
-  // input from the link: every other identifier (0x0A, 0x0B are not built, the rest unknown).
+  // input from the link: every other identifier (0x0A is not built, the rest unknown).
   return false;
 }
 
@@ -647,6 +650,7 @@ void Updater::onOnboardCommand(const frame::Frame & c)
     case command::kUploadCancel:  uploadCancel(c); return;
     case command::kDeliver:       deliver(c);      return;
     case command::kGetStatus:     getStatus(c);    return;
+    case command::kSendReports:   sendReports(c);  return;   // decision 29
     case command::kSetLimits:
     case command::kRestore:
     case command::kReprogram:
@@ -654,7 +658,7 @@ void Updater::onOnboardCommand(const frame::Frame & c)
     case command::kReplaceKey:
     case command::kArm:           break;
   }
-  // Not reached: arrivalOk lets only the six above in, and the dangerous ones went to
+  // Not reached: arrivalOk lets only the seven above in, and the dangerous ones went to
   // onboardDangerous, the ARM to onGroundArm.
   endRefused(c.sequence, answer::kImpossible);
 }
@@ -1319,14 +1323,16 @@ void Updater::onFirmwareSettled(uint16_t code)
 }
 
 /**
- * @brief Takes one report from the controller: numbers and stamps it, sends it to the ground,
- *        and, for a HEALTH report, lets the test-image rule see the mode.
+ * @brief Takes one report from the controller: numbers, stamps and stores it, sends it to the
+ *        ground, and, for a HEALTH report, lets the test-image rule see the mode.
  *
  * The test image is due when a HEALTH report shows mode TRIAL, once per trial (test_image.hpp).
  * Only a report that passed the Sec. 5.4 checks counts, so a damaged one cannot start or end a
  * trial. The mode is read before the ground check below: the trial happens whether or not a
  * ground has spoken yet. A restarted trial (EVENT 0x0006) makes the image due again, and the
- * trial events and modes feed the trial watch (trial_watch.hpp).
+ * trial events and modes feed the trial watch (trial_watch.hpp). The report store keeps every
+ * report on disk (accept(); owner decision 29, 15 Oct 2026), so a report not sent live because no
+ * ground has spoken yet reaches the ground at the next SEND REPORTS.
  *
  * @param[in]     f  the report frame from data link A; f.payload is valid during the call
  * @return nothing
@@ -1349,8 +1355,9 @@ void Updater::onControllerReport(const frame::Frame & f)
   }
   trialWatch(&f);   // decision H, separable: see trialWatch
   if (!gate_.haveGround()) {
-    if (reports_dropped_ == 0) {
-      logging::line("reports: no ground has spoken yet; reports are dropped until one does");
+    if (reports_dropped_ == 0) {   // counts the reports not sent live; the first is logged
+      logging::line("reports: no ground has spoken yet; reports are stored for SEND REPORTS "
+        "(decision 29) and not sent live until one does");
     }
     reports_dropped_++;
     return;
@@ -1687,8 +1694,9 @@ void Updater::onRestartFinished(const RestartRunner::Outcome & outcome)
 /**
  * @brief Sends the onboard computer's own EVENT, with a one-byte detail, to the ground.
  *
- * The event is numbered and stamped by the report store like any report, then sent when a ground
- * has spoken (report_store.hpp; reports before that are dropped, as for the controller's).
+ * The event is numbered, stamped and stored by the report store like any report, then sent when a
+ * ground has spoken (sendOwnEventDetail; owner decision 29: before one has, it waits in the store
+ * for SEND REPORTS).
  *
  * @param[in]     code    the event code (Interfaces Sec. 5.4, 0x0101 to 0x0106)
  * @param[in]     detail  the detail byte (for 0x0106: the reason)
@@ -1696,28 +1704,121 @@ void Updater::onRestartFinished(const RestartRunner::Outcome & outcome)
  */
 void Updater::sendOwnEvent(uint16_t code, uint8_t detail)
 {
-  std::array<uint8_t, report::kEventMinBytes + 1> event{};
+  sendOwnEventDetail(code, &detail, 1);
+}
+
+/**
+ * @brief Sends the onboard computer's own EVENT, with a detail of up to 32 bytes, to the ground.
+ *
+ * Built as the controller builds its reports, number and onboard time 0 (Sec. 5.4), and given to
+ * the report store, which numbers, stamps and stores it (accept()); then sent live when a ground
+ * has spoken. A detail longer than Sec. 5.4 allows (32 bytes) is not sent and is logged.
+ *
+ * @param[in]     code           the event code (Interfaces Sec. 5.4, 0x0101 to 0x0106)
+ * @param[in]     detail         the detail bytes; may be null when detail_length is 0
+ * @param[in]     detail_length  number of detail bytes, 0 to 32
+ * @return nothing
+ */
+void Updater::sendOwnEventDetail(uint16_t code, const uint8_t * detail, size_t detail_length)
+{
+  std::array<uint8_t, report::kEventMaxBytes> event{};
+  if (detail_length > event.size() - report::kEventDetailOffset) {
+    logging::line("EVENT 0x%04x not sent: a detail of %zu bytes is longer than Sec. 5.4 allows",
+      code, detail_length);
+    return;
+  }
   event[report::kOffsetKind] = report::kEvent;
   bytes::writeU16(&event[report::kOffsetEventCode], code);
-  event[report::kEventDetailOffset] = detail;
-  if (!reports_.accept(event.data(), event.size(), clocks::onboardTimeS(), now_ms_, report_.data(),
+  if (detail_length > 0) {
+    std::memcpy(&event[report::kEventDetailOffset], detail, detail_length);
+  }
+  const size_t length = report::kEventDetailOffset + detail_length;
+  if (!reports_.accept(event.data(), length, clocks::onboardTimeS(), now_ms_, report_.data(),
         report_.size())) {
     logging::line("EVENT 0x%04x not sent: the report store refused it", code);
     return;
   }
   if (!gate_.haveGround()) {
-    logging::line("EVENT 0x%04x not sent: no ground has spoken yet", code);
+    logging::line("EVENT 0x%04x stored; not sent live: no ground has spoken yet", code);
     return;
   }
-  if (!gate_.sendReport(report_.data(), static_cast<uint16_t>(event.size()))) {
-    logging::line("EVENT 0x%04x not sent: the ground link did not take it", code);
+  if (!gate_.sendReport(report_.data(), static_cast<uint16_t>(length))) {
+    logging::line("EVENT 0x%04x stored; the ground link did not take it live", code);
+  }
+}
+
+/**
+ * @brief Runs SEND REPORTS, a contact: DONE, EVENT 0x0104 if HEALTH reports were dropped, then
+ *        the stored reports, EVENT reports first.
+ *
+ * Owner decision 29, 15 Oct 2026 (REQ-074, REQ-076, REQ-078; Interfaces Sec. 5.1, row 0x0B: not
+ * dangerous, any mode). arrivalOk checked the length (5 bytes), so the first report number can be
+ * read. RECEIVED went before this (onOnboardCommand); DONE now, then the rest. The reports
+ * numbered from nextNumber() on are not part of this contact: they go to the ground live, EVENT
+ * 0x0104 among them, so it arrives before the stored ones and is not sent twice. The order in the
+ * store: the reports the ground has are deleted first, so EVENT 0x0104 does not push out HEALTH
+ * reports the ground lacks; the counters are taken; EVENT 0x0104 is stored; only then does
+ * startSend() write the zeroed counters (a power cut in between reports the drops twice, never
+ * not at all). The stored reports then go a batch per loop pass (sendStoredReports). Without a
+ * store on disk the command is refused 0xFE, the onboard computer's storage (TBR, awaiting the
+ * owner's acceptance).
+ *
+ * @param[in]     c  the SEND REPORTS command frame, 5 payload bytes
+ * @return nothing
+ */
+void Updater::sendReports(const frame::Frame & c)
+{
+  const uint32_t first = bytes::readU32(&c.payload[command::kSendReportsFirstAt]);
+  if (!reports_.onDisk()) {
+    logging::line("SEND REPORTS from number %u: no report store on disk; refused 0xfe", first);
+    endRefused(c.sequence, answer::kStorageBench);
+    return;
+  }
+  endDone(c.sequence);
+  const uint32_t end = reports_.nextNumber();
+  reports_.deleteBelow(first);
+  const DroppedHealth dropped = reports_.takeDropped();
+  if (dropped.count > 0U) {
+    std::array<uint8_t, report::kHealthDroppedDetailBytes> detail{};
+    bytes::writeU32(&detail[report::kDroppedCountAt], dropped.count);
+    bytes::writeU32(&detail[report::kDroppedFirstTimeAt], dropped.first_time_s);
+    bytes::writeU32(&detail[report::kDroppedLastTimeAt], dropped.last_time_s);
+    logging::line("SEND REPORTS: %u HEALTH reports were dropped (onboard time %u to %u); EVENT "
+      "0x0104 goes first", dropped.count, dropped.first_time_s, dropped.last_time_s);
+    sendOwnEventDetail(report::kEventHealthDropped, detail.data(), detail.size());
+  }
+  reports_.startSend(first, end);
+}
+
+/**
+ * @brief Sends the next stored reports of a contact, at most config::kStoredSendBatch.
+ *
+ * Owner decision 29. Called every loop pass (tick); does nothing when no contact runs. A report
+ * the ground link does not take is given again on the next pass (ReportStore::noteSendFailed
+ * bounds the tries). The bound of the loop is the batch size (code rules A9, B2).
+ *
+ * @return nothing
+ */
+void Updater::sendStoredReports()
+{
+  for (size_t i = 0; i < config::kStoredSendBatch && reports_.sending(); i++) {
+    size_t length = 0;
+    if (!reports_.nextToSend(report_.data(), report_.size(), length)) {
+      return;   // all sent, or the store could not be read: the store logged it
+    }
+    if (!gate_.sendReport(report_.data(), static_cast<uint16_t>(length))) {
+      reports_.noteSendFailed();
+      return;   // tried again on the next pass
+    }
+    reports_.markSent();
   }
 }
 
 /**
  * @brief Runs the timeouts, the controller watch, and sends the next frame on data link A.
  *
- * Timeouts, the controller watch, and the next frame for data link A. Every loop pass.
+ * Timeouts, the controller watch, and the next frame for data link A. Every loop pass. Then the
+ * next batch of stored reports when a SEND REPORTS is being answered (owner decision 29).
  *
  * @param[in] now_ms  current time, in ms
  * @return nothing
@@ -1732,4 +1833,5 @@ void Updater::tick(uint64_t now_ms)
   restartWatch();        // decision H: the restart script, if one runs
   watch_.check(now_ms);
   sendNext();
+  sendStoredReports();   // decision 29: a contact's stored reports, a batch per pass
 }

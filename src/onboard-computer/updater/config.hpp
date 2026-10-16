@@ -161,6 +161,34 @@ constexpr uint16_t kDefaultControllerIdentity = static_cast<uint16_t>(IMAGE_TARG
 static_assert(kDefaultControllerIdentity == 0x0431U,
   "the proposed default identity is the target the image checker demanded before decision 24");
 
+// ---- Report store (owner decision 29, 15 Oct 2026; REQ-074 to REQ-078) -----------------------
+// Room for the reports kept between contacts: 1 MB (decision 29: "Report storage between
+// contacts: 1 MB"). What counts against it is a Proposal (TBR), awaiting the owner's acceptance:
+// the stored report records as they lie in the file, each report plus its 6 bytes of framing
+// (report_store.hpp), and not the bookkeeping records or the space not yet reclaimed.
+constexpr size_t kReportStoreBytes = 1048576U;
+// The store's file in the data directory (report_store.hpp gives its layout).
+constexpr const char * kReportStoreName = "reports";
+// Space in the file that holds no stored report any more (reports sent and deleted, HEALTH
+// dropped, old bookkeeping records) is reclaimed by rewriting the file once it passes this.
+// Proposal (TBR), awaiting the owner's acceptance: one store's worth, so the file stays under
+// about twice kReportStoreBytes and is rewritten once per 1 MB of new records. Rewriting the
+// whole 1 MB for every report once the store is full would write about 1 MB of flash per
+// report. No source gives a value.
+constexpr size_t kReportDeadMaxBytes = kReportStoreBytes;
+// Stored reports sent to the ground per loop pass after SEND REPORTS. The ground socket does not
+// block, so a burst of a full store (about 35,000 reports) would overflow the socket buffers
+// and lose reports. Proposal (TBR), awaiting the owner's acceptance: 64 per pass. When idle the
+// loop passes about every kPollMs (50 ms): about 1,280 reports per second, a full store (about
+// 35,000 HEALTH reports of 30 bytes) in under 30 s. Bench value, TBD for flight: the radio's
+// rate is not known.
+constexpr size_t kStoredSendBatch = 64;
+// A stored report the ground link does not take is tried again on the next loop passes. After
+// this many failures in a row the sending stops and is logged; the reports stay stored for the
+// next SEND REPORTS. Proposal (TBR), awaiting the owner's acceptance: 20 passes, about 1 s when
+// the loop is idle (kPollMs). No source gives a value.
+constexpr uint32_t kStoredSendTriesMax = 20;
+
 // The "dropped datagram" log lines on the ground link: at most one per this many ms, so a
 // flood of bad datagrams cannot fill the log (audit finding #8).
 constexpr uint64_t kDropLogEveryMs = 1000;

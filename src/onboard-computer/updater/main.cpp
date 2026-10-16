@@ -220,7 +220,14 @@ int main(int argc, char ** argv)
   // 4. Data link A, the reports, the watch, and the wiring.
   SerialPort serial(options.device);
   DataLink link(serial);
-  ReportStore reports;
+  // The report store on disk, in the data directory (owner decision 29, 15 Oct 2026; REQ-077),
+  // loaded now so the numbering goes on from the stored reports. Without it the updater still
+  // runs, since it is also the way to recover the controller: reports then go live only, and
+  // SEND REPORTS is refused 0xFE (TBR, awaiting the owner's acceptance).
+  ReportStore reports(options.data_dir, config::kReportStoreBytes);
+  if (!reports.load()) {
+    logging::line("reports: running without the report store; reports go to the ground live only");
+  }
   ControllerWatch watch(config::kSilenceMs, clocks::nowMs());
   Updater updater(gate, link, store, checker, reports, watch, options.beat_s * 1000U,
     restart_script, config::kRestartScriptMs);

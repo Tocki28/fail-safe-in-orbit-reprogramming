@@ -1,0 +1,84 @@
+# F-3 fix on the hardware, 16 Oct 2026; restore.sh at ae40af0 (sha256 b8b1e5a87142129f…); controller images d3bb74a; board start 2026-10-16 06:16:09 UTC; mac 2026-10-16 09:16:11 EEST
+
+### install
+b8b1e5a87142129f  /usr/local/bin/restore.sh
+350d661792078279  /usr/local/bin/restore.sh.350d6617
+
+### backup registers before the plant (no reset)
+0x40002500: 00000000 00000000 00000102 fffffefd 00000000 00000000 00000000 ffffffff 
+0x40002520: 00000000 ffffffff 00000000 00000000 00000000 00000000 00000000 00000000 
+
+### plant: DBP set, BKP10R = 0x00000008, BKP11R = 0xFFFFFFF7, DBP cleared
+0x40002500: 00000000 00000000 00000102 fffffefd 00000000 00000000 00000000 ffffffff 
+0x40002520: 00000000 ffffffff 00000008 fffffff7 00000000 00000000 00000000 00000000 
+
+### restore.sh full with the d3bb74a images, console listening 30 s from 2 s before
+restore start 06:16:13.210714150
+check: bootloader image bootloader.img 21652 bytes: image check passed: /tmp/restore.dykD9p/bootloader.img: kind bootloader, version 1, 21652 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: last-resort image last-resort-v1.img 1736 bytes: image check passed: /tmp/restore.dykD9p/last-resort.img: kind last-resort, version 1, 1736 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: main firmware image firmware-A.img 20776 bytes: image check passed: /tmp/restore.dykD9p/main.img: kind main, version 1, 20776 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+exit 0
+restore end 06:16:17.285845225
+console: every EVENT, first and last HEALTH:
+report  HEALTH  #618 onboard t=1792131371 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #642 onboard t=1792131400 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### backup registers after the restore (no reset)
+0x40002500: 00000000 00000000 00000101 fffffefe 00000000 00000000 00000000 ffffffff 
+0x40002520: 00000000 ffffffff 00000000 00000000 00000000 00000000 00000000 00000000 
+
+### the restore's OpenOCD log: the clear step
+9:STEP: connect
+17:STEPDONE: connect
+18:STEP: halt under reset
+23:STEPDONE: halt under reset
+24:STEP: erase last-resort region
+29:STEPDONE: erase last-resort region
+30:STEP: write last-resort
+31:STEPDONE: write last-resort
+32:STEP: verify last-resort
+33:STEPDONE: verify last-resort
+34:STEP: erase bootloader region
+35:STEPDONE: erase bootloader region
+36:STEP: write bootloader
+38:STEPDONE: write bootloader
+39:STEP: verify bootloader
+41:STEPDONE: verify bootloader
+42:STEP: erase slot B
+43:STEPDONE: erase slot B
+44:STEP: read back slot B erased
+45:STEPDONE: read back slot B erased
+46:STEP: erase slot A
+47:STEPDONE: erase slot A
+48:STEP: read back slot A erased
+49:STEPDONE: read back slot A erased
+50:STEP: erase boot state (REQ-057)
+51:STEPDONE: erase boot state (REQ-057)
+52:STEP: read back boot state erased
+53:STEPDONE: read back boot state erased
+54:STEP: write main firmware (REQ-121)
+55:STEPDONE: write main firmware (REQ-121)
+
+### board journal from 2026-10-16 06:16:09 UTC (events)
+Oct 16 06:16:17.707039 stm32mp2unknownunknown fsir-updater[857]: [   626.870] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 06:16:17.761789 stm32mp2unknownunknown fsir-updater[857]: [   626.925] controller heard again after 5 s of silence
+# mac end 2026-10-16 09:16:44 EEST
+### the restore's OpenOCD log, step lines 45-63 (fetched at 09:17 EEST: the grep above stopped at 30 lines)
+45:STEPDONE: read back slot B erased
+46:STEP: erase slot A
+47:STEPDONE: erase slot A
+48:STEP: read back slot A erased
+49:STEPDONE: read back slot A erased
+50:STEP: erase boot state (REQ-057)
+51:STEPDONE: erase boot state (REQ-057)
+52:STEP: read back boot state erased
+53:STEPDONE: read back boot state erased
+54:STEP: write main firmware (REQ-121)
+55:STEPDONE: write main firmware (REQ-121)
+56:STEP: verify main firmware
+57:STEPDONE: verify main firmware
+58:STEP: clear backup registers
+59:STEPDONE: clear backup registers
+60:STEP: reset and run
+63:STEPDONE: reset and run

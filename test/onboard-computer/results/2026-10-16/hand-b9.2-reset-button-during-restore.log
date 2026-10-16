@@ -1,0 +1,90 @@
+# hand case B9.2, 16 Oct 2026; restore.sh ae40af0, images d3bb74a; restores back to back from board 2026-10-16 07:12:32 UTC, mac 10:12:34 EEST
+run 1: start 07:12:32.522083900 end 07:12:35.435416150: RESTORE FAILED: read back slot A erased (log: /root/restore-hand-B9.2-1.log)
+run 2: start 07:12:36.619154075 end 07:12:40.673821150: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 3: start 07:12:41.885793825 end 07:12:45.947705625: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 4: start 07:12:47.139941350 end 07:12:51.196658450: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 5: start 07:12:52.388677775 end 07:12:56.447356425: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 6: start 07:12:57.665902900 end 07:13:01.734225650: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 7: start 07:13:02.924772050 end 07:13:06.989156950: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 8: start 07:13:08.186449525 end 07:13:12.244580825: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 9: start 07:13:13.432335100 end 07:13:17.488875650: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 10: start 07:13:18.672910100 end 07:13:22.732806075: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 11: start 07:13:23.931098950 end 07:13:27.988209800: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 12: start 07:13:29.185765000 end 07:13:33.245594325: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 13: start 07:13:34.429403175 end 07:13:38.490652625: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 14: start 07:13:39.726348500 end 07:13:43.782392950: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 15: start 07:13:44.976758775 end 07:13:49.033532450: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 16: start 07:13:50.227265950 end 07:13:54.282830850: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 17: start 07:13:55.471898350 end 07:13:59.524998450: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 18: start 07:14:00.718445400 end 07:14:04.772929800: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+
+### board kernel USB lines in the window
+
+### OpenOCD lines of every failed run
+== /root/restore-hand-B9.2-1.log
+STEP: erase slot A
+STEPDONE: erase slot A
+STEP: read back slot A erased
+Error: error executing cortex_m crc algorithm
+Error: verify failed in bank at 0x08000000 starting at 0x00006000
+STEPFAIL: read back slot A erased: 
+
+### controller after
+#1012 onboard 1792134850 controller 3 OPERATE slot A failed 0
+damaged frames: 0
+# mac end 2026-10-16 10:14:11 EEST
+
+### updater journal 07:12:25 to 07:14:10 UTC (silence, its own resets, their results), fetched at mac 10:22:49 EEST
+Oct 16 07:12:36.849277 stm32mp2unknownunknown fsir-updater[8756]: [  1044.196] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:12:36.851309 stm32mp2unknownunknown fsir-updater[8756]: [  1044.198] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:12:36.951688 stm32mp2unknownunknown fsir-updater[8756]: [  1044.298] controller silent: restart script ended by itself: exit status 1, signal 0; result line "RESTORE FAILED: connect (log: /tmp/restore-openocd.log)"
+Oct 16 07:12:36.951688 stm32mp2unknownunknown fsir-updater[8756]: [  1044.298] controller silent: the restart script did not show that the controller was reset (no "RESTORE DONE: reset" and no "RESTORE FAILED: after reset"); no EVENT 0x0106 sent
+Oct 16 07:12:41.699780 stm32mp2unknownunknown fsir-updater[8756]: [  1049.046] controller heard again after 9 s of silence
+Oct 16 07:12:46.720184 stm32mp2unknownunknown fsir-updater[8756]: [  1054.067] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:12:46.722171 stm32mp2unknownunknown fsir-updater[8756]: [  1054.069] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:12:46.902642 stm32mp2unknownunknown fsir-updater[8756]: [  1054.249] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:12:46.902642 stm32mp2unknownunknown fsir-updater[8756]: [  1054.249] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:12:46.902642 stm32mp2unknownunknown fsir-updater[8756]: [  1054.249] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:12:51.770802 stm32mp2unknownunknown fsir-updater[8756]: [  1059.117] controller heard again after 10 s of silence
+Oct 16 07:12:57.270168 stm32mp2unknownunknown fsir-updater[8756]: [  1064.617] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:12:57.272148 stm32mp2unknownunknown fsir-updater[8756]: [  1064.619] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:12:57.453674 stm32mp2unknownunknown fsir-updater[8756]: [  1064.800] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:12:57.453674 stm32mp2unknownunknown fsir-updater[8756]: [  1064.800] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:12:57.453674 stm32mp2unknownunknown fsir-updater[8756]: [  1064.800] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:12:57.813225 stm32mp2unknownunknown fsir-updater[8756]: [  1065.160] controller heard again after 5 s of silence
+Oct 16 07:13:07.759839 stm32mp2unknownunknown fsir-updater[8756]: [  1075.106] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:13:07.761802 stm32mp2unknownunknown fsir-updater[8756]: [  1075.108] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:13:07.993387 stm32mp2unknownunknown fsir-updater[8756]: [  1075.340] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:13:07.993387 stm32mp2unknownunknown fsir-updater[8756]: [  1075.340] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:13:07.993387 stm32mp2unknownunknown fsir-updater[8756]: [  1075.340] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:13:13.271266 stm32mp2unknownunknown fsir-updater[8756]: [  1080.618] controller heard again after 10 s of silence
+Oct 16 07:13:23.553382 stm32mp2unknownunknown fsir-updater[8756]: [  1090.900] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:13:23.556052 stm32mp2unknownunknown fsir-updater[8756]: [  1090.903] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:13:23.741287 stm32mp2unknownunknown fsir-updater[8756]: [  1091.088] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:13:23.741287 stm32mp2unknownunknown fsir-updater[8756]: [  1091.088] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:13:23.741287 stm32mp2unknownunknown fsir-updater[8756]: [  1091.088] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:13:24.048809 stm32mp2unknownunknown fsir-updater[8756]: [  1091.395] controller heard again after 5 s of silence
+Oct 16 07:13:34.018476 stm32mp2unknownunknown fsir-updater[8756]: [  1101.365] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:13:34.020463 stm32mp2unknownunknown fsir-updater[8756]: [  1101.367] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:13:34.200855 stm32mp2unknownunknown fsir-updater[8756]: [  1101.547] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:13:34.200855 stm32mp2unknownunknown fsir-updater[8756]: [  1101.547] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:13:34.200855 stm32mp2unknownunknown fsir-updater[8756]: [  1101.547] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:13:39.517221 stm32mp2unknownunknown fsir-updater[8756]: [  1106.864] controller heard again after 10 s of silence
+Oct 16 07:13:49.854549 stm32mp2unknownunknown fsir-updater[8756]: [  1117.201] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:13:49.856531 stm32mp2unknownunknown fsir-updater[8756]: [  1117.203] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:13:50.037254 stm32mp2unknownunknown fsir-updater[8756]: [  1117.384] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:13:50.037254 stm32mp2unknownunknown fsir-updater[8756]: [  1117.384] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:13:50.037254 stm32mp2unknownunknown fsir-updater[8756]: [  1117.384] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:13:50.193988 stm32mp2unknownunknown fsir-updater[8756]: [  1117.540] controller heard again after 5 s of silence
+Oct 16 07:13:55.206435 stm32mp2unknownunknown fsir-updater[8756]: [  1122.553] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:13:55.207995 stm32mp2unknownunknown fsir-updater[8756]: [  1122.554] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:13:55.439779 stm32mp2unknownunknown fsir-updater[8756]: [  1122.786] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:13:55.439779 stm32mp2unknownunknown fsir-updater[8756]: [  1122.786] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:13:55.439779 stm32mp2unknownunknown fsir-updater[8756]: [  1122.786] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:14:00.300897 stm32mp2unknownunknown fsir-updater[8756]: [  1127.647] controller heard again after 10 s of silence
+Oct 16 07:14:05.595404 stm32mp2unknownunknown fsir-updater[8756]: [  1132.942] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:14:05.598158 stm32mp2unknownunknown fsir-updater[8756]: [  1132.945] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:14:05.779920 stm32mp2unknownunknown fsir-updater[8756]: [  1133.126] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:14:05.779920 stm32mp2unknownunknown fsir-updater[8756]: [  1133.126] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:14:05.780480 stm32mp2unknownunknown fsir-updater[8756]: [  1133.127] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:14:06.362763 stm32mp2unknownunknown fsir-updater[8756]: [  1133.709] controller heard again after 5 s of silence

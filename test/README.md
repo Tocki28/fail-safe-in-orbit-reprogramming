@@ -16,8 +16,11 @@ controller, joined by one USB serial link (data link A). It is not flight hardwa
 | Onboard computer updater | d95a67a | 15 Oct 17:16 UTC (`test/onboard-computer/results/2026-10-15/README.md`) |
 | Onboard computer updater, sha256 `6b0888f8…` | 4d6f5e8 | 15 Oct 21:00 UTC (`test/onboard-computer/results/2026-10-16/README.md`) |
 | Controller and console with decision 30 (FALLBACK, START FAILED, LEAVE FALLBACK, SWITCH refuses a given-up image) | d3bb74a | 16 Oct, board start 06:01:56 UTC, full restore (`test/ground/results/2026-10-16/decision-30/decision-30-hardware.log`) |
+| `restore.sh`, sha256 `b8b1e5a87142129f…` | ae40af0 | 16 Oct about 06:16 UTC (`test/onboard-computer/results/2026-10-16/f3-restore-clears-backup.log`) |
+| Onboard computer updater, sha256 `2b799dc2…` | d12db66 | 16 Oct about 06:55 UTC (`test/onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`) |
+| Report storage (decision 29) | — | host-tested, being merged; not on the bench |
 
-Every run of 16 Oct up to 08:39 EEST ran on 4d6f5e8; the decision 30 runs (09:01 to 09:04 EEST) ran on d3bb74a. Rows whose evidence is from an earlier commit are NOT RUN
+Every run of 16 Oct up to 08:39 EEST ran on 4d6f5e8; the decision 30 runs (09:01 to 09:09 EEST) ran on d3bb74a; the later runs ran with `restore.sh` ae40af0 and the updater d12db66 on the d3bb74a controller images. Rows whose evidence is from an earlier commit are NOT RUN
 with the reason EARLIER BUILD.
 
 ## Counts
@@ -26,22 +29,22 @@ Source: `test/fault-matrix.md`, section "Counts" (250 rows: Part A 133, Part B 1
 
 | Status | Rows |
 |---|---|
-| PASS | 70 |
-| FAIL | 2 |
-| NOT RUN | 139 |
+| PASS | 77 |
+| FAIL | 0 |
+| NOT RUN | 134 |
 | NOT ON BENCH | 7 |
 | N/A | 32 |
 
 ## Findings
 
-The two FAIL rows come from two open findings (F-2, F-3). F-1 is fixed. Each finding is described
+No row is FAIL. The three findings F-1, F-2 and F-3 are fixed and measured on the bench. Each finding is described
 in full under "Findings" in `test/fault-matrix.md`.
 
 | No. | Rows | Reproduce | State |
 |---|---|---|---|
 | F-1 | A5.4, B8.11 (both now PASS) | Deliver a firmware to slot B, `switch`, `return` (it is given up), then `switch` again with no delivery. Expected: refused. Measured: DONE and a new trial of the given-up firmware (`test/ground/results/2026-10-15/finding-37-switch-to-given-up.log`). | FIXED: decision 30, commit d3bb74a; SWITCH to a given-up image REFUSED 0x13 on the bench (`test/ground/results/2026-10-16/decision-30/decision-30-hardware.log`, steps C, D, F) |
-| F-2 | A22.3 | Deliver `slotB-v2-trial-forever.img`, `switch`, wait 5 minutes. Expected: trial given up. Measured: one reset 150.04 s after the trial start, no second reset, still in TRIAL 723 s later (`test/ground/results/2026-10-15/trial-forever-decision-h.log`). | OPEN: fix approved 16 Oct (decision 45); being built |
-| F-3 | A25.1 | Over SWD set PWR_CR1 DBP, write BKP10R 0x00000008 and BKP11R 0xfffffff7, clear DBP; run `restore.sh full`; listen for EVENT 0x0005. Expected: restore clears the kept data (REQ-057). Measured: EVENT 0x0005 at 0x08 reported after the restore (`test/onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log`). | OPEN: fix approved 16 Oct (decision 46); being built |
+| F-2 | A22.3 (now PASS) | Deliver `slotB-v2-trial-forever.img`, `switch`, wait 5 minutes. Expected: trial given up. Measured: one reset 150.04 s after the trial start, no second reset, still in TRIAL 723 s later (`test/ground/results/2026-10-15/trial-forever-decision-h.log`). | FIXED: decision 45, updater d12db66; 3 trial-watch resets 150 s apart, then the bootloader's give-up and FALLBACK, slot A (`test/onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`, Part 5) |
+| F-3 | A25.1 (now PASS) | Over SWD set PWR_CR1 DBP, write BKP10R 0x00000008 and BKP11R 0xfffffff7, clear DBP; run `restore.sh full`; listen for EVENT 0x0005. Expected: restore clears the kept data (REQ-057). Measured: EVENT 0x0005 at 0x08 reported after the restore (`test/onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log`). | FIXED: decision 46, `restore.sh` ae40af0; BKP10R and BKP11R read 0 after the restore, no EVENT 0x0005 (`test/onboard-computer/results/2026-10-16/f3-restore-clears-backup.log`) |
 
 Bench re-run of decision 30, 16 Oct 2026, controller and console d3bb74a (`test/ground/results/2026-10-16/decision-30/decision-30-hardware.log`):
 
@@ -64,11 +67,11 @@ Counts are rows with Status NOT RUN, by the Reason column of `test/fault-matrix.
 | Reason | Rows | What unblocks it |
 |---|---|---|
 | PLANNED-2 | 57 | Scripted runs (console, ssh, systemctl, sysfs) not yet done |
-| PLANNED-3 | 3 | The owner's hands on a cable or button |
+| PLANNED-3 | 1 | The owner's hands on a cable or button |
 | PLANNED-4 | 24 | Fault injection over SWD; the injection design is shown to the owner first |
 | EARLIER BUILD | 15 | A re-run on 4d6f5e8 or later; each row names the earlier commit |
-| NOT BUILT-ACCEPTED | 4 | Nothing: the owner accepted that the function is not built |
-| NOT BUILT-OPEN | 18 | A decision or the function; the rows cite `src/` of the source before d3bb74a and are not re-checked against it |
+| NOT BUILT-ACCEPTED | 3 | Nothing: the owner accepted that the function is not built |
+| NOT BUILT-OPEN | 16 | A decision or the function; the rows cite `src/` of the source before d3bb74a and are not re-checked against it |
 | NEEDS TOOL | 4 | The link tool of Verification Plan Sec. 3.0; a kill of a process id read in advance; a test firmware with a broken update receiver |
 | NEEDS DECISION | 1 | A8.4: the owner accepts the 7.58 h run or orders the 12 h run |
 | DESK | 13 | Inspections and analyses, no bench run |
@@ -90,6 +93,12 @@ lines 5 and 16), so REQ-024 cannot be shown here.
 | Quantity | Value | Source |
 |---|---|---|
 | Full restore | 17 steps in 4.154 s | `test/onboard-computer/results/2026-10-15/restore-full-49314cc.log` |
+| 14 restores back to back | each RESTORE DONE in 4.059 to 4.069 s | `test/onboard-computer/results/2026-10-16/restore-14-back-to-back.log` |
+| Cable pulled during restores (B9.1) | run 2 RESTORE FAILED: connect, 0.93 s into the run, before any flash write; runs 3 to 8 failed while unplugged; runs 9 to 23 RESTORE DONE | `test/onboard-computer/results/2026-10-16/hand-b9.1-power-cut-during-restore.log` |
+| Reset button pressed during restores (B9.2) | run 1 RESTORE FAILED: read back slot A erased; runs 2 to 18 RESTORE DONE | `test/onboard-computer/results/2026-10-16/hand-b9.2-reset-button-during-restore.log` |
+| Brick, then restore (A25.1) | BRICK DONE: flash mass-erased; the restore cleared BKP10R and BKP11R and the controller ran in OPERATE, slot A | `test/onboard-computer/results/2026-10-16/a25.1-brick-then-restore.log` |
+| Silent controller (data link A cut 75 s) | resets 1 and 2 of 3, 60.0 s apart; "controller heard again after 76 s" | `test/onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`, Part 4 |
+| Trial-forever image | trial-watch resets at 06:59:55, 07:02:25, 07:04:55 UTC (150 s apart), then FALLBACK, slot A at 07:04:57 | same, Part 5 |
 | Endurance | 100 of 100 updates confirmed; fastest 7.5 s, median 7.9 s, slowest 12.3 s | `test/ground/results/2026-10-16/endurance/summary.txt` |
 | Run without commands | 7.58 h (27,291 s) of the 12 h planned; 27,360 HEALTH reports; longest gap 1.08 s; 0 controller restarts; OPERATE, slot A, self-test PASSED throughout | `test/ground/results/2026-10-16/overnight/summary.txt` |
 | Controller clock rate | +2509 ppm against the Mac (whole-second resolution, ±73 ppm) | same |
@@ -111,7 +120,7 @@ lines 5 and 16), so REQ-024 cannot be shown here.
 
 | What | Path |
 |---|---|
-| Rows, findings, observations O-1 to O-7, decisions | `test/fault-matrix.md` |
+| Rows, findings, observations O-1 to O-10, decisions | `test/fault-matrix.md` |
 | Ground-side runs, 15 Oct | `test/ground/results/2026-10-15/README.md` |
 | Ground-side runs, 16 Oct | `test/ground/results/2026-10-16/README.md` |
 | Onboard computer runs | `test/onboard-computer/results/2026-10-15/README.md`, `test/onboard-computer/results/2026-10-16/README.md` |

@@ -1,0 +1,24 @@
+# 14 restores back to back (the owner did not act in this window; logged as a repeatability run), 16 Oct 2026; restore.sh ae40af0, images d3bb74a; board from 06:32:49 UTC, mac 09:32:52 EEST
+run 1: start 06:32:50.121303875 end 06:32:54.186382275: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 2: start 06:32:55.382435225 end 06:32:59.444603775: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 3: start 06:33:00.658744550 end 06:33:04.720671550: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 4: start 06:33:05.918125125 end 06:33:09.983562975: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 5: start 06:33:11.172937750 end 06:33:15.237083875: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 6: start 06:33:16.425671575 end 06:33:20.486383525: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 7: start 06:33:21.682944200 end 06:33:25.747484075: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 8: start 06:33:26.941902500 end 06:33:31.006949125: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 9: start 06:33:32.196807850 end 06:33:36.255477475: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 10: start 06:33:37.447233950 end 06:33:41.514328700: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 11: start 06:33:42.712682200 end 06:33:46.775632375: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 12: start 06:33:47.967679050 end 06:33:52.027326675: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 13: start 06:33:53.221592175 end 06:33:57.281237950: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 14: start 06:33:58.475753350 end 06:34:02.545172475: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+
+### board kernel USB lines in the window
+
+### OpenOCD lines of every failed run
+
+### controller after
+#1586 onboard 1792132446 controller 4 OPERATE slot A failed 0
+damaged frames: 0
+# mac end 2026-10-16 09:34:09 EEST

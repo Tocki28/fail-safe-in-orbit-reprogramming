@@ -1,0 +1,122 @@
+# updater at d12db66 on the board, 16 Oct 2026; controller d3bb74a; board start 2026-10-16 06:55:11 UTC; mac 2026-10-16 09:55:13 EEST
+
+### 1. install
+6b0888f834bd11bb
+2b799dc2e5079329
+8756
+Started fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+[     0.007] limits: stored record, minimum version 1, controller identity 0x0431
+[     0.009] clock: no offset record, starting with offset 0 s
+[     0.009] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+[     0.010] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+[     0.065] controller heard
+[     0.757] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[     0.757] reports: no ground has spoken yet; reports are dropped until one does
+#8 onboard 1792133720 controller 548 OPERATE slot A failed 0
+damaged frames: 0
+
+### 2. decision 25: expiry and SET ONBOARD TIME
+-- GET STATUS with Expiry 0: REFUSED 0x03 expected
+recv 09:55:23.154 answer seq=1791898931 REFUSED code=0x03
+-- GET STATUS with Expiry 1000: REFUSED 0x03 expected
+recv 09:55:26.246 answer seq=1791898932 REFUSED code=0x03
+-- GET STATUS with Expiry now + 60 s: DONE expected
+recv 09:55:29.341 answer seq=1791898933 RECEIVED code=0x00
+recv 09:55:29.343 answer seq=1791898933 DONE code=0x00
+-- ARM + SET LIMITS with Expiry 0 (not exempt): REFUSED 0x03 expected
+recv 09:55:32.430 answer seq=1791898934 REFUSED code=0x03
+recv 09:55:32.431 answer seq=1791898935 REFUSED code=0x03
+-- ARM + SET ONBOARD TIME = Mac time + 100 s, Expiry 0 (exempt): DONE, EVENT 0x0105 with -100 expected
+recv 09:55:35.535 answer seq=1791898936 RECEIVED code=0x00
+recv 09:55:35.536 answer seq=1791898936 DONE code=0x00
+recv 09:55:35.536 report 19 bytes, EVENT
+recv 09:55:35.554 answer seq=1791898937 DONE code=0x00
+recv 09:55:35.566 report 24 bytes, HEALTH
+recv 09:55:36.563 report 24 bytes, HEALTH
+-- ARM + SET ONBOARD TIME = Mac time, Expiry 0: DONE, EVENT 0x0105 with about +100 expected
+recv 09:55:39.638 answer seq=1791898938 RECEIVED code=0x00
+recv 09:55:39.638 answer seq=1791898938 DONE code=0x00
+recv 09:55:39.639 report 19 bytes, EVENT
+recv 09:55:39.657 answer seq=1791898939 DONE code=0x00
+recv 09:55:40.552 report 24 bytes, HEALTH
+recv 09:55:41.549 report 24 bytes, HEALTH
+[     0.009] clock: no offset record, starting with offset 0 s
+[     8.287] ground: command 0x25 sequence 1791898931 has expiry 0 s, onboard ground time is 1792133720 s; refused 0x03
+[    11.379] ground: command 0x25 sequence 1791898932 has expiry 1000 s, onboard ground time is 1792133724 s; refused 0x03
+[    17.563] ground: command 0x0d sequence 1791898934 has expiry 0 s, onboard ground time is 1792133730 s; refused 0x03
+[    17.564] ground: command 0x06 sequence 1791898935 has expiry 0 s, onboard ground time is 1792133730 s; refused 0x03
+[    20.670] SET ONBOARD TIME: onboard ground time 1792133733 s, ground time 1792133835 s: difference -102 s is above 5 s; EVENT 0x0105
+[    20.670] controller: EVENT 0x0105 (onboard computer clock differs from ground time)
+[    20.688] SET ONBOARD TIME: ground time 1792133835 s; offset 102 s written and in force (before: 0 s, difference -102 s)
+[    24.772] SET ONBOARD TIME: onboard ground time 1792133839 s, ground time 1792133739 s: difference 100 s is above 5 s; EVENT 0x0105
+[    24.772] controller: EVENT 0x0105 (onboard computer clock differs from ground time)
+[    24.791] SET ONBOARD TIME: ground time 1792133739 s; offset 2 s written and in force (before: 102 s, difference 100 s)
+
+### 3. skipped: decision 29 is not in this build
+
+### 4. decisions 27 and 20: data link A cut for 75 s (cdc_acm unbound), console listening
+#34 onboard 1792133746 controller 572 OPERATE slot A failed 0
+damaged frames: 0
+cut 06:55:47.036039525
+back 06:57:02.228111200
+console, every EVENT:
+report  EVENT   #37 onboard t=1792133753 0x0101 data link lost
+report  EVENT   #38 onboard t=1792133753 0x0106 controller restarted by the onboard computer: unknown code 0x02
+report  EVENT   #39 onboard t=1792133813 0x0106 controller restarted by the onboard computer: unknown code 0x02
+report  EVENT   #40 onboard t=1792133824 0x0102 data link working again
+#61 onboard 1792133844 controller 31 OPERATE slot A failed 0
+damaged frames: 0
+Oct 16 06:55:51.354342 stm32mp2unknownunknown fsir-updater[8756]: [    38.701] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 06:55:51.354342 stm32mp2unknownunknown fsir-updater[8756]: [    38.701] controller: EVENT 0x0101 (data link lost)
+Oct 16 06:55:51.356169 stm32mp2unknownunknown fsir-updater[8756]: [    38.703] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 06:55:51.557665 stm32mp2unknownunknown fsir-updater[8756]: [    38.904] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 06:55:51.557665 stm32mp2unknownunknown fsir-updater[8756]: [    38.904] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 06:55:51.557665 stm32mp2unknownunknown fsir-updater[8756]: [    38.904] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 06:56:51.357672 stm32mp2unknownunknown fsir-updater[8756]: [    98.704] controller silent: /usr/local/bin/restore.sh reset 2 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 06:56:51.558578 stm32mp2unknownunknown fsir-updater[8756]: [    98.905] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 06:56:51.558578 stm32mp2unknownunknown fsir-updater[8756]: [    98.905] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 06:56:51.558578 stm32mp2unknownunknown fsir-updater[8756]: [    98.905] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 06:57:02.520559 stm32mp2unknownunknown fsir-updater[8756]: [   109.867] controller heard again after 76 s of silence
+Oct 16 06:57:02.520559 stm32mp2unknownunknown fsir-updater[8756]: [   109.867] controller: EVENT 0x0102 (data link working again)
+
+### 5. F-2: trial-forever image (slot B) on trial; resets at every start expected, then the bootloader gives up
+upload  complete, 2368 bytes in 0.13 s
+deliver complete in 0.80 s
+switch  sent, answered DONE
+watching 9 min for the trial watch resets (EVENT 0x0106 reason 0x01) and the give-up
+  19 mode TRIAL, slot B, failed starts 1
+Oct 16 06:55:13.410938 stm32mp2unknownunknown fsir-updater[8756]: [     0.757] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 06:55:51.557665 stm32mp2unknownunknown fsir-updater[8756]: [    38.904] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 06:55:51.557665 stm32mp2unknownunknown fsir-updater[8756]: [    38.904] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 06:55:51.557665 stm32mp2unknownunknown fsir-updater[8756]: [    38.904] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 06:56:51.558578 stm32mp2unknownunknown fsir-updater[8756]: [    98.905] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 06:56:51.558578 stm32mp2unknownunknown fsir-updater[8756]: [    98.905] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 06:56:51.558578 stm32mp2unknownunknown fsir-updater[8756]: [    98.905] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 06:57:27.380943 stm32mp2unknownunknown fsir-updater[8756]: [   134.726] test image: 1024 bytes, image number 0xffff, to the controller (trial running)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+console.Refused: GET STATUS (seq 1791898959): no answer after 6 tries
+# mac end 2026-10-16 09:58:03 EEST
+
+### 5 (continued). The console's status gave up after 20 s (the trial-forever image answers no GET STATUS, as on 15 Oct); the board's journal from 06:57:20 UTC instead, fetched at mac 10:10:48. Restarts and trial-watch lines, then each change of HEALTH state:
+Oct 16 06:59:55.395298 stm32mp2unknownunknown fsir-updater[8756]: [   282.742] trial: no EVENT 0x0007 or 0x0008 within 120 s + 30 s margin of the trial's start (REQ-037); restarting the controller with the restart script
+Oct 16 06:59:55.397577 stm32mp2unknownunknown fsir-updater[8756]: [   282.744] trial: /usr/local/bin/restore.sh reset started (deadline 40 s, then TERM, KILL after 5 s)
+Oct 16 06:59:55.578879 stm32mp2unknownunknown fsir-updater[8756]: [   282.925] trial: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 06:59:55.578879 stm32mp2unknownunknown fsir-updater[8756]: [   282.925] trial: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x01 trial past its time
+Oct 16 06:59:55.578879 stm32mp2unknownunknown fsir-updater[8756]: [   282.925] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x01
+Oct 16 07:02:25.618503 stm32mp2unknownunknown fsir-updater[8756]: [   432.965] trial: no EVENT 0x0007 or 0x0008 within 120 s + 30 s margin of the trial's start (REQ-037); restarting the controller with the restart script
+Oct 16 07:02:25.619297 stm32mp2unknownunknown fsir-updater[8756]: [   432.966] trial: /usr/local/bin/restore.sh reset started (deadline 40 s, then TERM, KILL after 5 s)
+Oct 16 07:02:25.802686 stm32mp2unknownunknown fsir-updater[8756]: [   433.149] trial: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:02:25.802686 stm32mp2unknownunknown fsir-updater[8756]: [   433.149] trial: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x01 trial past its time
+Oct 16 07:02:25.802686 stm32mp2unknownunknown fsir-updater[8756]: [   433.149] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x01
+Oct 16 07:04:55.822917 stm32mp2unknownunknown fsir-updater[8756]: [   583.169] trial: no EVENT 0x0007 or 0x0008 within 120 s + 30 s margin of the trial's start (REQ-037); restarting the controller with the restart script
+Oct 16 07:04:55.824645 stm32mp2unknownunknown fsir-updater[8756]: [   583.171] trial: /usr/local/bin/restore.sh reset started (deadline 40 s, then TERM, KILL after 5 s)
+Oct 16 07:04:56.036039 stm32mp2unknownunknown fsir-updater[8756]: [   583.382] trial: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:04:56.036039 stm32mp2unknownunknown fsir-updater[8756]: [   583.383] trial: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x01 trial past its time
+Oct 16 07:04:56.036039 stm32mp2unknownunknown fsir-updater[8756]: [   583.383] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x01
+Oct 16 07:04:56.067302 stm32mp2unknownunknown fsir-updater[8756]: [   583.414] controller: EVENT 0x0002 (fall-back to the previous copy), refused copy 0x02 (B), check result 0x0c (trial started too often)
+---
+Oct 16 06:57:25.384538 stm32mp2unknownunknown fsir-updater[8756]: [   132.731] controller: HEALTH mode TRIAL, slot B, failed starts 1, trial time left 0 s, self-test 0x00
+Oct 16 06:59:55.595071 stm32mp2unknownunknown fsir-updater[8756]: [   282.942] controller: HEALTH mode TRIAL, slot B, failed starts 2, trial time left 0 s, self-test 0x00
+Oct 16 07:02:25.819172 stm32mp2unknownunknown fsir-updater[8756]: [   433.166] controller: HEALTH mode TRIAL, slot B, failed starts 3, trial time left 0 s, self-test 0x00
+Oct 16 07:04:57.056931 stm32mp2unknownunknown fsir-updater[8756]: [   584.403] controller: HEALTH mode FALLBACK, slot A, failed starts 0, trial time left 0 s, self-test 0x00
+# mac end 2026-10-16 10:10:49 EEST

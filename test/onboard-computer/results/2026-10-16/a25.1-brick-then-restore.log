@@ -1,0 +1,82 @@
+# A25.1 brick then restore, 16 Oct 2026; restore.sh ae40af0, images d3bb74a, updater d12db66; board start 2026-10-16 07:15:25 UTC; mac 2026-10-16 10:15:27 EEST
+
+### plant BKP10R/11R
+0x40002500: 00000000 00000000 00000101 fffffefe 00000000 00000000 00000000 ffffffff 
+0x40002520: 00000000 ffffffff 00000008 fffffff7 00000000 00000000 00000000 00000000 
+
+### brick.sh (mass erase)
+brick start 07:15:25.522062775
+BRICK DONE: flash mass-erased; no firmware can run
+exit 0
+brick end 07:15:25.747250475
+
+### flash start and backup registers after the brick
+0x08000000: ffffffff ffffffff ffffffff ffffffff 
+0x40002500: 00000000 00000000 00000101 fffffefe 00000000 00000000 00000000 ffffffff 
+0x40002520: 00000000 ffffffff 00000008 fffffff7 00000000 00000000 00000000 00000000 
+
+### restore.sh full, console listening 30 s from 2 s before
+restore start 07:15:36.302250575
+check: bootloader image bootloader.img 21652 bytes: image check passed: /tmp/restore.vDGlnu/bootloader.img: kind bootloader, version 1, 21652 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: last-resort image last-resort-v1.img 1736 bytes: image check passed: /tmp/restore.vDGlnu/last-resort.img: kind last-resort, version 1, 1736 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: main firmware image firmware-A.img 20776 bytes: image check passed: /tmp/restore.vDGlnu/main.img: kind main, version 1, 20776 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+exit 0
+restore end 07:15:40.359499800
+console, every EVENT, first and last HEALTH:
+report  EVENT   #1091 onboard t=1792134943 0x0102 data link working again
+report  HEALTH  #1092 onboard t=1792134943 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1102 onboard t=1792134953 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### backup registers after (no reset)
+0x40002500: 00000000 00000000 00000101 fffffefe 00000000 00000000 00000000 ffffffff 
+0x40002520: 00000000 ffffffff 00000000 00000000 00000000 00000000 00000000 00000000 
+
+### the restore's steps
+STEP: connect
+STEPDONE: connect
+STEP: halt under reset
+STEPDONE: halt under reset
+STEP: erase last-resort region
+STEPDONE: erase last-resort region
+STEP: write last-resort
+STEPDONE: write last-resort
+STEP: verify last-resort
+STEPDONE: verify last-resort
+STEP: erase bootloader region
+STEPDONE: erase bootloader region
+STEP: write bootloader
+STEPDONE: write bootloader
+STEP: verify bootloader
+STEPDONE: verify bootloader
+STEP: erase slot B
+STEPDONE: erase slot B
+STEP: read back slot B erased
+STEPDONE: read back slot B erased
+STEP: erase slot A
+STEPDONE: erase slot A
+STEP: read back slot A erased
+STEPDONE: read back slot A erased
+STEP: erase boot state (REQ-057)
+STEPDONE: erase boot state (REQ-057)
+STEP: read back boot state erased
+STEPDONE: read back boot state erased
+STEP: write main firmware (REQ-121)
+STEPDONE: write main firmware (REQ-121)
+STEP: verify main firmware
+STEPDONE: verify main firmware
+STEP: clear backup registers
+STEPDONE: clear backup registers
+STEP: reset and run
+STEPDONE: reset and run
+
+### updater journal in the window
+Oct 16 07:15:29.618430 stm32mp2unknownunknown fsir-updater[8756]: [  1216.965] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 07:15:29.618430 stm32mp2unknownunknown fsir-updater[8756]: [  1216.965] controller: EVENT 0x0101 (data link lost)
+Oct 16 07:15:29.622214 stm32mp2unknownunknown fsir-updater[8756]: [  1216.969] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 07:15:29.823338 stm32mp2unknownunknown fsir-updater[8756]: [  1217.170] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 07:15:29.823338 stm32mp2unknownunknown fsir-updater[8756]: [  1217.170] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+Oct 16 07:15:29.823338 stm32mp2unknownunknown fsir-updater[8756]: [  1217.170] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 07:15:41.386192 stm32mp2unknownunknown fsir-updater[8756]: [  1228.733] controller heard again after 16 s of silence
+Oct 16 07:15:41.386192 stm32mp2unknownunknown fsir-updater[8756]: [  1228.733] controller: EVENT 0x0102 (data link working again)
+# mac end 2026-10-16 10:15:55 EEST

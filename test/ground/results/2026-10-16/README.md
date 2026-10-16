@@ -51,7 +51,7 @@ only, and NOT ON BENCH marks a run the bench cannot show.
 | Given-up image across a restart and a power cut (A5.4) | PASS | after RETURN TO PREVIOUS: FALLBACK, slot B; `restore.sh reset` (RESTORE DONE: reset): still FALLBACK, SWITCH REFUSED 0x13; hub power cut 06:08:27 to 06:08:30 UTC: still FALLBACK, SWITCH REFUSED 0x13; LEAVE FALLBACK, then OPERATE | `decision-30/a5.4-given-up-across-restart.log` |
 | Onboard computer restarted during an upload (d3bb74a) | PASS | upload slowed by `--radio-loss 0.3 --seed 1`; `systemctl reboot` ordered at 06:05:23 UTC with `image-03004.part` at 296 bytes; the console stopped after 6 tries at offset 256; the updater was active again 31.4 s after the order; a plain `upload` resumed at byte 256 ("UPLOAD CHUNK image 3004 at 0: already stored"); UPLOAD END checks passed | `onboard-restart/onboard-restart-during-upload.log` |
 
-Observations O-1 to O-7 (not failures) are listed under the findings of `test/fault-matrix.md`.
+Observations O-1 to O-10 (not failures) are listed under the findings of `test/fault-matrix.md`.
 
 Note: the endurance run's own summary used a wrong pattern for the confirm line and logged every
 cycle in full; `endurance/summary.txt` is recomputed from the per-cycle records, which are as

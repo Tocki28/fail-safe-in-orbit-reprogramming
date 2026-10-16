@@ -16,6 +16,8 @@ runs. Values marked TBR are proposals awaiting the owner's acceptance (section "
 | Ground | `src/ground/console.py` | commit d95a67a |
 | Controller, console, command sender, updater | bootloader (separated, 1ba9c79), firmware A and B, console, `test/ground/send_frame.py`, images and updater | commit 4d6f5e8 since 15 Oct 21:00 UTC, installed by a full restore (`onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log`); updater sha256 `6b0888f8…`; every run of 16 Oct up to 08:39 EEST ran on this build |
 | Controller and console, decision 30 | FALLBACK, START FAILED, LEAVE FALLBACK, SWITCH refuses a given-up image (0x13) | commit d3bb74a, installed by a full restore on 16 Oct (board start 06:01:56 UTC); updater unchanged, sha256 `6b0888f8…`; only the rows that cite `df` ran on this build |
+| Updater, restore script | `fsir-updater` with decisions 25, 27, 20 and the fix of F-2 (decision 45); `restore.sh` with the fix of F-3 (decision 46) | updater d12db66 (sha256 `2b799dc2…`), installed 16 Oct about 06:55 UTC, the earlier one kept as `fsir-updater.6b0888f8`; `restore.sh` ae40af0 (sha256 `b8b1e5a87142129f…`), installed 16 Oct about 06:16 UTC, the earlier one kept as `restore.sh.350d6617`; only the rows that cite `ud`, `f3`, `b2b` or `hb` ran on these |
+| Report storage (decision 29) | built and host-tested, being merged | not on the bench; its board check follows |
 
 State at the start (15 Oct, 18:59 EEST): OPERATE, slot A, failed starts 0, self-test PASSED
 (`onboard-computer/results/2026-10-15/phase0-status-console.log`). Host baseline at d95a67a:
@@ -64,7 +66,11 @@ at commit 4d6f5e8, updater 6b0888f8); the number after the colon is the line in 
 `ground/results/2026-10-16/decision-30/decision-30-hardware.log` (commit d3bb74a, updater 6b0888f8),
 "ag" is `ground/results/2026-10-16/decision-30/a5.4-given-up-across-restart.log` (same commits) and
 "ur" is `ground/results/2026-10-16/onboard-restart/onboard-restart-during-upload.log` (console
-d3bb74a, updater 6b0888f8).
+d3bb74a, updater 6b0888f8). Four more names stand for logs in `onboard-computer/results/2026-10-16/`:
+"f3" is `f3-restore-clears-backup.log`, "b2b" is `restore-14-back-to-back.log`, "hb" is
+`hand-b9.1-power-cut-during-restore.log` and "ud" is `updater-d12db66-on-board.log` (for "ud" the
+number is the line in the file). Two more: "hr" is `hand-b9.2-reset-button-during-restore.log` and
+"ba" is `a25.1-brick-then-restore.log`, both in the same directory.
 "tom-y-n" is
 `onboard-computer/results/2026-10-15/tom-update-y-n-mp257.log` (the owner's two runs of
 15 Oct, saved from the onboard computer's volatile journal at 18:58); the number after the
@@ -72,14 +78,14 @@ colon is its line.
 
 ## Counts
 
-State of the matrix after the bench runs of 16 Oct 2026 (09:08 EEST), counted from the rows
+State of the matrix after the bench runs of 16 Oct 2026 (10:20 EEST), counted from the rows
 below by the Status and Reason columns.
 
 | Status | Part A | Part B | Total |
 |---|---|---|---|
-| PASS | 51 | 19 | 70 |
-| FAIL | 2 | 0 | 2 |
-| NOT RUN | 75 | 64 | 139 |
+| PASS | 56 | 21 | 77 |
+| FAIL | 0 | 0 | 0 |
+| NOT RUN | 72 | 62 | 134 |
 | NOT ON BENCH | 5 | 2 | 7 |
 | N/A | 0 | 32 | 32 |
 | All rows | 133 | 117 | 250 |
@@ -87,11 +93,11 @@ below by the Status and Reason columns.
 | Reason (rows that are NOT RUN or N/A) | Rows |
 |---|---|
 | PLANNED-2 | 57 |
-| PLANNED-3 | 3 |
+| PLANNED-3 | 1 |
 | PLANNED-4 | 24 |
 | EARLIER BUILD | 15 |
-| NOT BUILT-ACCEPTED | 4 |
-| NOT BUILT-OPEN | 18 |
+| NOT BUILT-ACCEPTED | 3 |
+| NOT BUILT-OPEN | 16 |
 | NEEDS TOOL | 4 |
 | NEEDS DECISION | 1 |
 | DESK | 13 |
@@ -149,7 +155,7 @@ condition").
 | A9.2 | Test-9 Command checks | Impossible values or unknown command refused 0x06 | REQ-028 | SCRIPTED | PASS | — | unknown onboard command 0x7F, unknown controller command 0x2F and GET STATUS with one byte too many each REFUSED 0x06 (cc:5, :15, :24; journal cc:720); a chunk past the stored bytes REFUSED 0x06 (B1.11); recorded: destination 0x07 gives no answer, journal "dropped" (cc:33, :727), version 0x02 gives no answer, journal "not a good frame; dropped" (cc:38, :728) |
 | A9.3 | Test-9 Command checks | Dangerous command not armed refused 0x01 (onboard computer and controller) | REQ-029, REQ-112 | SCRIPTED | PASS | — | SWITCH, CONFIRM and START FAILED (controller) and SET LIMITS (onboard computer) without an ARM each REFUSED 0x01 (cc:88, :97, :106, :115); an ARM naming another sequence number, and an ARM naming CONFIRM, then SWITCH: REFUSED 0x01 (cc:124, :136); journal "without an ARM that names it" (cc:744-763) |
 | A9.4 | Test-9 Command checks | Armed too long ago refused 0x02 | REQ-030 | SCRIPTED | PASS | — | ARM, 32 s, then SWITCH and ARM, 32 s, then CONFIRM each REFUSED 0x02 (cc:160, :204); journal "past 30000 ms" at 32002 ms and 32003 ms (cc:775, :780) |
-| A9.5 | Test-9 Command checks | Past its expiry refused 0x03 | REQ-133 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/command_gate.hpp:19-20`; `src/controller/firmware/main.cpp:221-225`; measured 16 Oct: GET STATUS with Expiry 1000 answered RECEIVED and DONE, not REFUSED 0x03 (cc:43-51) |
+| A9.5 | Test-9 Command checks | Past its expiry refused 0x03 | REQ-133 | SCRIPTED | PASS | — | GET STATUS with Expiry 0 and with Expiry 1000 each REFUSED 0x03; with Expiry now + 60 s: DONE (ud:19-25; journal "has expiry 0 s ... refused 0x03", "has expiry 1000 s ... refused 0x03", ud:44-45); built at d12db66 (decision 25); the answer of 4d6f5e8 was DONE (cc:43-51) |
 | A9.6 | Test-9 Command checks | Scheduled while the clocks disagree refused 0x0C | REQ-134 | — | NOT RUN | NOT BUILT-OPEN | `src/controller/firmware/main.cpp:221-225` |
 | A9.7 | Test-9 Command checks | ARM or dangerous command sent again runs once, answered ALREADY DONE | REQ-031 | SCRIPTED | NOT RUN | PLANNED-2 | B3.10, B7.10; the ALREADY DONE answer for ARM or a dangerous command is not in a log yet (cc:278 is GET STATUS, A9.8) |
 | A9.8 | Test-9 Command checks | Any other command sent again runs once | REQ-031 | SCRIPTED | PASS | — | GET STATUS sent 3 times with one sequence number: DONE, then ALREADY DONE twice (cc:278-290); passed on to the controller once; journal "answered ALREADY DONE, nothing else done" (cc:799, :801); built at df3aced (decision 26), measured at 4d6f5e8 |
@@ -180,7 +186,7 @@ condition").
 | A15.1 | Test-15 Limits | SET LIMITS changes the minimum version and controller identity after an ARM | REQ-053 | SCRIPTED | PASS | — | after an ARM, SET LIMITS minimum 2 with identity 0x0431, then minimum 1 with 0x0999, then minimum 1 with 0x0431, each DONE (cc:294, :392, :490); journal "written and in force" (cc:806, :896, :986); effect shown by A13.3 and A13.4; built at df3aced (decision 24), measured at 4d6f5e8 |
 | A16.1 | Test-16 Command intake | Frames not encrypted with the right key or with a bad signature refused | REQ-064, REQ-127, REQ-129 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:11-13` |
 | A16.2 | Test-16 Command intake | Old command sent again refused 0x04 | REQ-065 | SCRIPTED | PASS | — | two commands sent with a sequence number used before and other bytes (SWITCH, and an ARM naming SWITCH) each REFUSED 0x04 (cc:260, :269); journal "that sequence number was used before (other bytes)" (cc:790, :793) |
-| A16.3 | Test-16 Command intake | Past its expiry refused | REQ-066 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:19-20`; measured 16 Oct: see A9.5 |
+| A16.3 | Test-16 Command intake | Past its expiry refused | REQ-066 | SCRIPTED | PASS | — | as A9.5, and ARM and SET LIMITS with Expiry 0 each REFUSED 0x03 (ud:26-28, journal ud:46-47); updater d12db66 |
 | A16.4 | Test-16 Command intake | Commands not from the radio link refused | REQ-067 | — | NOT RUN | NOT BUILT-ACCEPTED | `src/onboard-computer/updater/command_gate.hpp:21` |
 | A16.5 | Test-16 Command intake | A dangerous command without a valid ARM is not passed on | REQ-112 | SCRIPTED | PASS | — | SWITCH, CONFIRM, START FAILED and SET LIMITS without a valid ARM each REFUSED 0x01 (cc:88-123); no "passed on to the controller" line follows them in the journal (cc:744-763) |
 | A17.1 | Test-17 Scheduled commands | Passed on at its run time, once, across a restart and a power cut; a changed held command not passed on | REQ-068, REQ-069, REQ-136 | — | NOT RUN | NOT BUILT-OPEN | no SCHEDULE in `src/onboard-computer/updater/protocol.hpp:20-35` |
@@ -188,15 +194,15 @@ condition").
 | A18.2 | Test-18 Report store | Every report time-tagged | REQ-070 | SCRIPTED | PASS | — | same log (onboard t=946685803 to 946685806) |
 | A18.3 | Test-18 Report store | A damaged report is caught on arrival | REQ-079 | — | NOT RUN | NEEDS TOOL | needs the link tool of Verification Plan Sec. 3.0 on data link A |
 | A18.4 | Test-18 Report store | Stored between contacts and through power cuts; events first; oldest HEALTH dropped first; count and span reported | REQ-074 to REQ-078 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/report_store.hpp:14-16` |
-| A18.5 | Test-18 Report store | Clock difference reported; a clock correction accepted | REQ-072, REQ-073 | — | NOT RUN | NOT BUILT-OPEN | no SET ONBOARD TIME (0x09) in `protocol.hpp:20-35` |
+| A18.5 | Test-18 Report store | Clock difference reported; a clock correction accepted | REQ-072, REQ-073 | SCRIPTED | PASS | — | SET ONBOARD TIME (after an ARM, Expiry 0, exempt) to Mac time + 100 s: DONE, EVENT 0x0105 sent to the ground, journal "difference -102 s is above 5 s", offset 102 s written and in force; then to Mac time: DONE, EVENT 0x0105, "difference 100 s", offset 2 s written (ud:29-43, journal ud:48-53); the event payload is not decoded in the log; updater d12db66 (decision 25) |
 | A19.1 | Test-19 Data links | With one link cut, all traffic continues on the other | REQ-080 | — | NOT ON BENCH | — | data link B not on the bench |
-| A19.2 | Test-19 Data links | Loss and recovery of data link A noticed and logged | REQ-081, REQ-082 | SCRIPTED | PASS | — | `lc`: in the 20 s cut, journal "controller silent: no frame from the controller for 5 s" (`lc`:45) and "controller heard again after 21 s of silence" (`lc`:55); in the second cut, silent (`lc`:68) and heard again after 9 s (`lc`:72); the report of these events to the ground was not measured |
+| A19.2 | Test-19 Data links | Loss and recovery of data link A noticed and logged | REQ-081, REQ-082 | SCRIPTED | PASS | — | `lc`: in the 20 s cut, journal "controller silent: no frame from the controller for 5 s" (`lc`:45) and "controller heard again after 21 s of silence" (`lc`:55); in the second cut, silent (`lc`:68) and heard again after 9 s (`lc`:72); at d12db66 the ground also received EVENT 0x0101 (data link lost) and, 76 s later, EVENT 0x0102 (data link working again) during a 75 s cut (ud Part 4, ud:57-80) |
 | A19.3 | Test-19 Data links | With the data links cut, the reprogramming link still works | REQ-083 | SCRIPTED | PASS | — | `lc`:17-33: data link A cut, `restore.sh reset` over SWD during the cut printed RESTORE DONE: reset (`lc`:25); controller clock 28169 s to 16 s; OPERATE slot A after the link returned (`lc`:32) |
 | A20.1 | Test-20 Key replacement | New key only in a command proven with the current one; then only the new key; a cut replacement leaves the current key | REQ-084 to REQ-086 | — | NOT RUN | NOT BUILT-OPEN | no REPLACE KEY (0x0C) in `protocol.hpp:20-35`; journal: "keys built in" |
 | A21.1 | Test-21 Command log | The ground receives a log of every command acted on | REQ-087 | — | NOT RUN | NOT BUILT-OPEN | no code names REQ-087 in `src/` (searched 15 Oct) |
 | A22.1 | Test-22 Recovery | A silent controller is noticed | REQ-061 | OPENOCD | NOT RUN | PLANNED-4 | core halted with the watchdog frozen |
-| A22.2 | Test-22 Recovery | A silent controller is brought back, and the attempt recorded | REQ-061 | — | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/controller_watch.hpp:5-7` |
-| A22.3 | Test-22 Recovery | A trial past its time: `restore.sh reset`, then EVENT 0x0106 | REQ-061, REQ-124 | SCRIPTED | FAIL | — | Finding F-2: `ground/results/2026-10-15/trial-forever-decision-h.log` (first reset 150.04 s after the trial start, EVENT 0x0106 reason 0x01; no second reset) |
+| A22.2 | Test-22 Recovery | A silent controller is brought back, and the attempt recorded | REQ-061 | SCRIPTED | NOT RUN | NOT BUILT-OPEN | `src/onboard-computer/updater/controller_watch.hpp:5-7`; measured at d12db66 (ud Part 4, ud:57-80): after 5 s of silence `restore.sh reset` 1 of 3 (RESTORE DONE: reset) with EVENT 0x0106 reason 0x02, reset 2 of 3 60.0 s later with EVENT 0x0106 reason 0x02; the link returned before reset 3; the restore after 3 resets is not built, its method awaits the owner (decision 20); the controller was not itself silent in this cut |
+| A22.3 | Test-22 Recovery | A trial past its time: `restore.sh reset`, then EVENT 0x0106 | REQ-061, REQ-124 | SCRIPTED | PASS | — | Finding F-2, fixed at d12db66 (decision 45). Trial-forever image switched at 06:57:25 UTC: trial watch reset at 06:59:55 (150 s after the start, EVENT 0x0106 reason 0x01), failed starts 2; reset at 07:02:25, failed starts 3; reset at 07:04:55, then EVENT 0x0002 (refused copy B, check 0x0c, trial started too often) and HEALTH FALLBACK slot A at 07:04:57 (ud Part 5, ud:82-121). The failure on 15 Oct: `ground/results/2026-10-15/trial-forever-decision-h.log` |
 | A22.4 | Test-22 Recovery | Updater killed: restarted, the update in progress resumes | REQ-062 | SCRIPTED | PASS | — | B1.3, B2.3, B5.3, B8.3 (`ground/results/2026-10-16/kills/`) |
 | A22.5 | Test-22 Recovery | Whole onboard computer restarted: the update in progress resumes | REQ-063 | SCRIPTED | PASS | — | `ground/results/2026-10-16/onboard-restart/onboard-restart-during-upload.log` ("ur"): `systemctl reboot` ordered at 06:05:23 UTC with `image-03004.part` at 296 bytes (ur:3-4); the console stopped after 6 tries at offset 256 (ur:16); the updater was active again 31.4 s after the order (ur:18); the part file was still 296 bytes (ur:19); a plain `upload` resumed ("UPLOAD BEGIN image 3004, 20776 bytes: resuming at byte 256", "UPLOAD CHUNK image 3004 at 0: already stored", ur:31-32) and the UPLOAD END checks passed (ur:33); upload slowed by `--radio-loss 0.3 --seed 1`; d3bb74a console, updater 6b0888f8 |
 | A23.1 | Test-23 Ground checks | Every release signed twice | REQ-088 | INSPECTION | NOT RUN | PLANNED-2 | header and both signatures of the release images |
@@ -210,10 +216,10 @@ condition").
 | A24.3 | Test-24 Ground display | The running firmware is shown | REQ-095 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/phase0-status-console.log` (slot A, kind 2, version 1) |
 | AD1.1 | Demonstration-1 Operator access | Someone without the operator's credentials cannot use the operator interface | REQ-091 | — | NOT RUN | NOT BUILT-OPEN | the console has no credential check (`src/ground/console.py:1097-1125`) |
 | AD2.1 | Demonstration-2 Planning | The operator plans commands, uploads and report retrieval | REQ-097 | — | NOT RUN | NOT BUILT-OPEN | as AD1.1 |
-| A25.1 | Test-25 Restore | Memory erased: the restore writes only checked images, the last-resort first, and clears the kept data | REQ-054, REQ-057, REQ-118, REQ-120 | SCRIPTED | FAIL | — | Finding F-3 (the kept-data part, REQ-057): `onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log`; the erased-memory part (brick, then restore) is not run yet |
+| A25.1 | Test-25 Restore | Memory erased: the restore writes only checked images, the last-resort first, and clears the kept data | REQ-054, REQ-057, REQ-118, REQ-120 | SCRIPTED | PASS | — | Finding F-3, fixed at ae40af0 (decision 46). With BKP10R and BKP11R planted 0x00000008 and 0xFFFFFFF7: `brick.sh` printed BRICK DONE: flash mass-erased (0x08000000 read ffffffff, the planted registers survived the brick); `restore.sh full` then checked the three images, wrote the last-resort firmware first, did every step, and ran "clear backup registers" before "reset and run"; BKP10R and BKP11R read 0 afterwards; the console saw no EVENT 0x0005; OPERATE slot A (ba:1-71); the updater noticed the bricked controller silent, sent EVENT 0x0101, ran reset 1 of 3 (EVENT 0x0106 reason 0x02) and sent EVENT 0x0102 when the restored controller spoke (ba:73-81); the failure on 16 Oct before the fix: `onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log` |
 | A25.2 | Test-25 Restore | Bootloader damaged: the restore brings the controller back | REQ-054 | OPENOCD | NOT RUN | PLANNED-4 | bootloader page erased |
 | A25.3 | Test-25 Restore | Restore through reprogramming link B (factory loader) | REQ-122 | — | NOT ON BENCH | — | factory-loader restore not on the bench |
-| A25.4 | Test-25 Restore | On order, the bootloader and the main firmware put back | REQ-121 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/restore-full-49314cc.log`: 17 steps done in 4.154 s; images 49314cc; restore.sh d95a67a |
+| A25.4 | Test-25 Restore | On order, the bootloader and the main firmware put back | REQ-121 | SCRIPTED | PASS | — | `onboard-computer/results/2026-10-15/restore-full-49314cc.log`: 17 steps done in 4.154 s; images 49314cc; restore.sh d95a67a; 14 restores back to back at ae40af0, each RESTORE DONE in 4.059 to 4.069 s (b2b, 2026-10-16) |
 | A25.5 | Test-25 Restore | The onboard computer restarts the controller | REQ-124 | SCRIPTED | PASS | — | `lc`:17-33: `restore.sh reset` printed RESTORE DONE: reset; controller clock 28169 s to 16 s; OPERATE slot A afterwards |
 | A25.6 | Test-25 Restore | Its copy of the last-resort firmware and the links checked between uses | REQ-059 | — | NOT RUN | NOT BUILT-OPEN | no code names REQ-059 in `src/` (searched 15 Oct) |
 | A25.7 | Test-25 Restore | The ground told the result of a restore | REQ-060 | — | NOT RUN | NOT BUILT-OPEN | no RESTORE command in `protocol.hpp:20-35`; only EVENT 0x0106 after a trial overrun |
@@ -407,8 +413,8 @@ How some faults are caused (no flight code changed):
 | B8.11 | Test-1, Test-9; REQ-019, REQ-027; Scenario-310 | CONFIRM in OPERATE refused 0x05; SWITCH with no new delivery since the given-up trial refused | SCRIPTED | PASS | — | CONFIRM in OPERATE REFUSED 0x05 (cc:148, :248; 4d6f5e8); SWITCH with no new delivery since the given-up trial REFUSED 0x13 (df:57-60, :78-80, :132-135; d3bb74a); Finding F-1 fixed |
 | B8.12 | Test-7; REQ-022, REQ-023; Scenario-620 | Core halted with the watchdog running: restart, slot A resumes; restart time measured | OPENOCD | NOT RUN | PLANNED-4 | — |
 | B8.13 | REQ-058, REQ-121 | A confirmed firmware that cannot take an update is replaced through the restore | SCRIPTED | NOT RUN | PLANNED-2 | follows B5.13 |
-| B9.1 | REQ-054, REQ-056 | Power cut during `restore.sh full`: RESTORE FAILED; a second run passes | HAND | NOT RUN | PLANNED-3 | — |
-| B9.2 | REQ-056 | Reset button during the restore: RESTORE FAILED or the verify catches it; a second run passes | HAND | NOT RUN | PLANNED-3 | — |
+| B9.1 | REQ-054, REQ-056 | Power cut during `restore.sh full`: RESTORE FAILED; a second run passes | HAND | PASS | — | hb: the owner pulled the Nucleo's USB cable during restores run back to back: kernel "USB disconnect" at 06:44:46.518 UTC; run 2 (started 06:44:45.635) ended RESTORE FAILED: connect (OpenOCD "Error: reset device failed"); runs 3 to 8 failed at connect ("open failed") while unplugged; replugged at 06:44:55.98; runs 9 to 23 all RESTORE DONE; OPERATE slot A afterwards; the cut landed in the connect step, 0.93 s into the run, before any flash write; a cut during the flash writes is not measured |
+| B9.2 | REQ-056 | Reset button during the restore: RESTORE FAILED or the verify catches it; a second run passes | HAND | PASS | — | hr: restores run back to back while the owner pressed the Nucleo's reset button; run 1 (start 07:12:32.52 UTC) ended 07:12:35.44 RESTORE FAILED: read back slot A erased (OpenOCD "error executing cortex_m crc algorithm", "verify failed in bank at 0x08000000 starting at 0x00006000", hr:2, :24-30); runs 2 to 18 all RESTORE DONE; OPERATE slot A afterwards (hr:3-19, :33); the press has no independent timestamp (the button resets only the target, no USB line), so the failure is attributed to it by its timing and its kind; updater d12db66 |
 | B9.3 | REQ-062 | `restore.sh` killed (exact PID) during the write: a second run passes | SCRIPTED | NOT RUN | PLANNED-2 | D7 |
 | B9.4 | REQ-063 | MP257 restarted during the restore: a second run passes | SCRIPTED | NOT RUN | PLANNED-2 | — |
 | B9.5 | REQ-060 | Mac link lost during the restore: the restore completes; its result line is kept | SCRIPTED | NOT RUN | PLANNED-2 | — |
@@ -426,8 +432,8 @@ How some faults are caused (no flight code changed):
 | No. | Row | Expected (source) | Actual | Reproduce | Evidence | State |
 |---|---|---|---|---|---|---|
 | F-1 | A5.4, B8.11 | A SWITCH when no new firmware has arrived is refused with the reason (ConOps Scenario-310; REQ-019, REQ-027) | SWITCH answered DONE; the given-up firmware started a new trial (HEALTH TRIAL, slot B, failed starts 1) and passed its trial tests | deliver a firmware to slot B, `switch`, `return` (it is given up), then `switch` again with no delivery | `ground/results/2026-10-15/finding-37-switch-to-given-up.log`; cause by reading: `mode_manager.cpp:648-672` checks only that slot B holds a valid image | FIXED: decision 30, commit d3bb74a, host tests pass; measured on the bench 16 Oct: SWITCH to a given-up image REFUSED 0x13 (`ground/results/2026-10-16/decision-30/decision-30-hardware.log`, steps C, D, F) |
-| F-2 | A22.3 | A trial not confirmed in time is given up and the previous firmware runs (REQ-013; decision H: the onboard computer resets an overrunning trial) | The onboard computer reset the controller once, 150.04 s after the trial started; the firmware came back still on trial (failed starts 2) and the onboard computer did not reset it again: 723 s later it was still in TRIAL on slot B | deliver `slotB-v2-trial-forever.img`, `switch`, wait 5 minutes | `ground/results/2026-10-15/trial-forever-decision-h.log`; cause by reading: `trial_watch.cpp:72-79` stops timing after the first overrun, and only EVENT 0x0006 re-arms it (`:51-57`); a firmware that does not send 0x0006 is never timed again | OPEN: fix approved 16 Oct (decision 45); being built |
-| F-3 | A25.1 | The restore clears the data the controller keeps over restarts (REQ-057) | A fault-location record planted in the backup registers before `restore.sh full` was reported by the controller after the restore as a real fault: EVENT 0x0005 at 0x08, found by the bootloader | over SWD: set PWR_CR1 DBP, write BKP10R 0x00000008 and BKP11R 0xfffffff7, clear DBP; run `restore.sh full`; listen for EVENT 0x0005 | `onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log`; cause by reading: `restore.sh:583-611` erases the boot state but never the TAMP backup registers, and a reset keeps them | OPEN: fix approved 16 Oct (decision 46); being built |
+| F-2 | A22.3 | A trial not confirmed in time is given up and the previous firmware runs (REQ-013; decision H: the onboard computer resets an overrunning trial) | The onboard computer reset the controller once, 150.04 s after the trial started; the firmware came back still on trial (failed starts 2) and the onboard computer did not reset it again: 723 s later it was still in TRIAL on slot B | deliver `slotB-v2-trial-forever.img`, `switch`, wait 5 minutes | `ground/results/2026-10-15/trial-forever-decision-h.log`; cause by reading: `trial_watch.cpp:72-79` stops timing after the first overrun, and only EVENT 0x0006 re-arms it (`:51-57`); a firmware that does not send 0x0006 is never timed again | FIXED: decision 45, updater d12db66; measured on the board 16 Oct: 3 trial-watch resets 150 s apart, then the bootloader's give-up and FALLBACK slot A (`onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`, Part 5) |
+| F-3 | A25.1 | The restore clears the data the controller keeps over restarts (REQ-057) | A fault-location record planted in the backup registers before `restore.sh full` was reported by the controller after the restore as a real fault: EVENT 0x0005 at 0x08, found by the bootloader | over SWD: set PWR_CR1 DBP, write BKP10R 0x00000008 and BKP11R 0xfffffff7, clear DBP; run `restore.sh full`; listen for EVENT 0x0005 | `onboard-computer/results/2026-10-16/req-057-restore-keeps-backup.log`; cause by reading: `restore.sh:583-611` erases the boot state but never the TAMP backup registers, and a reset keeps them | FIXED: decision 46, `restore.sh` ae40af0; measured on the board 16 Oct: BKP10R and BKP11R read 0 after the restore, no EVENT 0x0005 (`onboard-computer/results/2026-10-16/f3-restore-clears-backup.log`) |
 
 Legend. State: OPEN (reported, not fixed), FIXED (fix and regression test committed; the commit is named).
 
@@ -439,6 +445,9 @@ Observations (not failures; for the owner):
 - O-5: one upload of the 100-cycle endurance run took 5.10 s instead of about 0.8 s: the board answered a run of chunks slowly (up to 2.5 s between chunks, `ground/results/2026-10-16/endurance/endurance-log.txt` cycle 100). No resend and no failure; the likely cause, not proven, is the SD card stalling under the image writes and the journal, kept on the card since decision 2.
 - O-6: the console at 4d6f5e8 printed "REFUSED 0x12: unknown code 0x12" for a cancelled delivery (`ground/results/2026-10-16/command-checks/command-checks.log`:682); the refusal text for 0x12 was added at d3bb74a, according to the owner; the answer itself carried the code.
 - O-7: after the third power cut of the bootloader give-up run, no EVENT of the give-up reached the journal; HEALTH FALLBACK slot A arrived at 06:03:58.93 UTC (`ground/results/2026-10-16/decision-30/decision-30-hardware.log` journal at its end, :189); the same early-event loss as O-3.
+- O-8: the console at d3bb74a printed EVENT 0x0106 reason 0x02 as "controller restarted by the onboard computer: unknown code 0x02" (`onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`, Part 4); the reason is named now and the fix is being committed.
+- O-9: the updater logs its own events with the prefix "controller:" (`onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`, journal of Part 4); wording only.
+- O-10: with decision 20 on the board, an operator restore keeps the controller silent for more than 5 s, so the updater starts its own `restore.sh reset` during or just after it; both use the one ST-LINK, and when they overlap the second fails cleanly at "connect": at 07:12:36.85 UTC the updater's reset 1 of 3 ended RESTORE FAILED: connect while restore run 2 of `onboard-computer/results/2026-10-16/hand-b9.2-reset-button-during-restore.log` (hr:3) held the probe, and run 2 passed; no corruption was seen. Source of the updater side: the board journal 07:12:36 to 07:13:08 UTC as read on 16 Oct, which is not in a saved log. Proposal for the owner (TBR, a decision): a lock shared by every SWD user (`restore.sh`, `brick.sh`, the updater's reset) so that they wait for each other, and the updater pausing its silence resets while an ordered restore runs.
 
 
 ## Decisions
@@ -493,5 +502,5 @@ OPEN (not yet answered). Each answer is recorded once, here and in the code it g
 | 41 | REQ-087 and REQ-059 not built | ACCEPTED | bench limits for this phase |
 | 42 | Stale comment in command_gate.hpp:19-21 | ACCEPTED | fixed with the next updater change |
 | 43 | Bench LEDs | OPEN | the owner: "we will see" |
-| 45 | Fix F-2: the trial watch re-arms when the failed-start count in HEALTH changes | ACCEPTED | the owner, 16 Oct 2026 |
-| 46 | Fix F-3: the restore clears TAMP_BKP0R-15R | ACCEPTED | the owner, 16 Oct 2026 |
+| 45 | Fix F-2: the trial watch re-arms when the failed-start count in HEALTH changes | ACCEPTED | the owner, 16 Oct 2026; fixed at d12db66, measured 16 Oct (A22.3) |
+| 46 | Fix F-3: the restore clears TAMP_BKP0R-15R | ACCEPTED | the owner, 16 Oct 2026; fixed at ae40af0, measured 16 Oct (F-3) |

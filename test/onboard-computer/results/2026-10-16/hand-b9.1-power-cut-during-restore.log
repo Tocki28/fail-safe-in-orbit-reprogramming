@@ -1,0 +1,64 @@
+# hand case B9.1, 16 Oct 2026; restore.sh ae40af0, images d3bb74a; restores back to back from board 2026-10-16 06:44:40 UTC, mac 09:44:42 EEST
+run 1: start 06:44:40.374809650 end 06:44:44.430749475: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 2: start 06:44:45.635150125 end 06:44:46.567684900: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-2.log)
+run 3: start 06:44:47.751758475 end 06:44:47.951772325: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-3.log)
+run 4: start 06:44:49.138895850 end 06:44:49.338993425: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-4.log)
+run 5: start 06:44:50.536282150 end 06:44:50.737438800: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-5.log)
+run 6: start 06:44:51.923890900 end 06:44:52.124275150: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-6.log)
+run 7: start 06:44:53.318059850 end 06:44:53.521424750: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-7.log)
+run 8: start 06:44:54.705541975 end 06:44:54.908514825: RESTORE FAILED: connect (log: /root/restore-hand-B9.1-8.log)
+run 9: start 06:44:56.095100625 end 06:45:00.329867250: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 10: start 06:45:01.523322800 end 06:45:05.582287950: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 11: start 06:45:06.777579300 end 06:45:10.833464300: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 12: start 06:45:12.019979350 end 06:45:16.071611925: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 13: start 06:45:17.269152175 end 06:45:21.328918575: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 14: start 06:45:22.510994000 end 06:45:26.576681050: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 15: start 06:45:27.782181200 end 06:45:31.836404825: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 16: start 06:45:33.030222600 end 06:45:37.088781450: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 17: start 06:45:38.274964925 end 06:45:42.329537150: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 18: start 06:45:43.516023825 end 06:45:47.584385775: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 19: start 06:45:48.773223500 end 06:45:52.832929375: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 20: start 06:45:54.028223125 end 06:45:58.084710875: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 21: start 06:45:59.289390100 end 06:46:03.346866300: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 22: start 06:46:04.577364675 end 06:46:08.630108475: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 23: start 06:46:09.826913100 end 06:46:13.882289850: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+
+### board kernel USB lines in the window
+Oct 16 06:44:46.518127 stm32mp2unknownunknown kernel: usb 1-1.1: USB disconnect, device number 7
+Oct 16 06:44:55.982008 stm32mp2unknownunknown kernel: usb 1-1.1: new high-speed USB device number 8 using ehci-platform
+Oct 16 06:44:56.170104 stm32mp2unknownunknown kernel: cdc_acm 1-1.1:1.2: ttyACM0: USB ACM device
+
+### OpenOCD lines of every failed run
+== /root/restore-hand-B9.1-2.log
+STEP: connect
+Error: reset device failed
+STEPFAIL: connect: 
+== /root/restore-hand-B9.1-3.log
+STEP: connect
+Error: open failed
+STEPFAIL: connect: 
+== /root/restore-hand-B9.1-4.log
+STEP: connect
+Error: open failed
+STEPFAIL: connect: 
+== /root/restore-hand-B9.1-5.log
+STEP: connect
+Error: open failed
+STEPFAIL: connect: 
+== /root/restore-hand-B9.1-6.log
+STEP: connect
+Error: open failed
+STEPFAIL: connect: 
+== /root/restore-hand-B9.1-7.log
+STEP: connect
+Error: open failed
+STEPFAIL: connect: 
+== /root/restore-hand-B9.1-8.log
+STEP: connect
+Error: open failed
+STEPFAIL: connect: 
+
+### controller after
+#2163 onboard 1792133177 controller 4 OPERATE slot A failed 0
+damaged frames: 0
+# mac end 2026-10-16 09:46:20 EEST

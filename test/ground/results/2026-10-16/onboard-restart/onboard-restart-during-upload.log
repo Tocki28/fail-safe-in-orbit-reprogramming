@@ -1,0 +1,34 @@
+# onboard computer restarted during an upload, 16 Oct 2026; console d3bb74a, updater 6b0888f8; board start 2026-10-16 06:05:18 UTC; mac 2026-10-16 09:05:20 EEST
+$ upload firmware-A.img (d3bb74a, 20776 bytes) as image 3004 with --radio-loss 0.3 --seed 1, in the background
+-rw-r--r-- 1 root root   296 Oct 16 06:05 image-03004.part
+board 06:05:23.269799450 reboot ordered
+upload exit 1
+waiting: seq 1791898740 UPLOAD CHUNK offset 256, sent 3.0 s ago, RECEIVED no
+no answer to UPLOAD CHUNK offset 256 (seq 1791898740) within 3 s, sending again
+waiting: seq 1791898740 UPLOAD CHUNK offset 256, sent 6.0 s ago, RECEIVED no
+no answer to UPLOAD CHUNK offset 256 (seq 1791898740) within 3 s, sending again
+waiting: seq 1791898740 UPLOAD CHUNK offset 256, sent 9.0 s ago, RECEIVED no
+no answer to UPLOAD CHUNK offset 256 (seq 1791898740) within 3 s, sending again
+waiting: seq 1791898740 UPLOAD CHUNK offset 256, sent 12.0 s ago, RECEIVED no
+no answer to UPLOAD CHUNK offset 256 (seq 1791898740) within 3 s, sending again
+waiting: seq 1791898740 UPLOAD CHUNK offset 256, sent 15.0 s ago, RECEIVED no
+waiting: seq 1791898740 UPLOAD CHUNK offset 256, sent 18.0 s ago, RECEIVED no
+FAILED: UPLOAD CHUNK offset 256 (seq 1791898740): no answer after 6 tries; bytes before offset 256 were accepted; the chunk at 256 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 3004 --offset 256`; if that is refused 0x06, run `upload IMAGE --number 3004` from the start (no --offset)
+radio simulator: dropped 3 of 9 outgoing datagrams
+fsir-updater active again 31.4 s after the reboot order (found: 1)
+-rw-r--r-- 1 root root   296 Oct 16 06:05 image-03004.part
+$ plain upload of the same image as image 3004 (must resume from the bytes kept)
+report  HEALTH  #10 onboard t=1792130760 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+
+upload  complete, 20776 bytes in 0.85 s
+-rw-r--r-- 1 root root 20776 Oct 16 06:06 image-03004.img
+
+### board journal: previous boot (end) and this boot (upload lines)
+Oct 16 05:38:27.525657 stm32mp2unknownunknown fsir-updater[862]: [    15.330] UPLOAD BEGIN image 906, 20424 bytes: starting at byte 0
+Oct 16 05:38:28.673928 stm32mp2unknownunknown fsir-updater[862]: [    16.478] UPLOAD END image 906: checks passed (kind 0x02, version 1); stored
+---
+Oct 16 06:05:50.925054 stm32mp2unknown fsir-updater[857]: [     0.088] limits: stored record, minimum version 1, controller identity 0x0431
+Oct 16 06:06:00.061939 stm32mp2unknownunknown fsir-updater[857]: [     9.225] UPLOAD BEGIN image 3004, 20776 bytes: resuming at byte 256
+Oct 16 06:06:00.064184 stm32mp2unknownunknown fsir-updater[857]: [     9.228] UPLOAD CHUNK image 3004 at 0: already stored
+Oct 16 06:06:00.885808 stm32mp2unknownunknown fsir-updater[857]: [    10.049] UPLOAD END image 3004: checks passed (kind 0x02, version 1); stored
+# mac end 2026-10-16 09:06:03 EEST

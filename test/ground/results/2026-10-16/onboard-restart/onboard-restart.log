@@ -1,0 +1,133 @@
+# onboard computer restarted, 16 Oct 2026; everything 4d6f5e8, updater 6b0888f8; mac 2026-10-16 08:37:44 EEST
+
+### run 1 (A8.1, B8.4): systemctl reboot in OPERATE
+controller before:
+#686 onboard 1792129066 controller 67 OPERATE slot A failed 0
+damaged frames: 0
+ 05:37:46 up 13:55,  1 user,  load average: 0.46, 0.14, 0.05
+board 2026-10-16 05:37:46
+reboot ordered at mac 08:37:48
+ssh answers 32.7 s after the reboot order
+fsir-updater active 33.1 s after the reboot order
+ 05:38:24 up 0 min,  1 user,  load average: 0.93, 0.21, 0.07
+board 2026-10-16 05:38:24
+862
+controller after:
+#15 onboard 1792129106 controller 17 OPERATE slot A failed 0
+damaged frames: 0
+
+### run 2 (A22.5, B1.4): reboot during an upload of firmware-B.img as image 906
+-rw-r--r-- 1 root root 20424 Oct 16 05:38 image-00906.img
+board 05:38:29.076484675
+reboot ordered at mac 08:38:31
+upload exit 0
+upload  19200/20424 bytes (94 %)   
+upload  19456/20424 bytes (95 %)   
+upload  19712/20424 bytes (96 %)   
+upload  19968/20424 bytes (97 %)   
+upload  20224/20424 bytes (99 %)   
+upload  20424/20424 bytes (100 %)   
+
+upload  complete, 20424 bytes in 1.16 s
+ssh answers 30.7 s after the reboot order
+fsir-updater active 31.0 s after the reboot order
+-rw-r--r-- 1 root root 20424 Oct 16 05:38 image-00906.img
+plain upload after the restart (must resume from the bytes kept):
+upload  18944/20424 bytes (92 %)   
+upload  19200/20424 bytes (94 %)   
+upload  19456/20424 bytes (95 %)   
+upload  19712/20424 bytes (96 %)   
+upload  19968/20424 bytes (97 %)   
+upload  20224/20424 bytes (99 %)   
+upload  20424/20424 bytes (100 %)   
+upload  complete, 20424 bytes in 0.79 s
+CANCEL image 906 (free the storage):
+sent 08:39:08.769 seq=1791898512 dest=0x01 payload=048a03
+recv 08:39:08.771 answer seq=1791898512 RECEIVED code=0x00
+recv 08:39:08.787 answer seq=1791898512 DONE code=0x00
+recv 08:39:09.517 report 24 bytes, HEALTH
+recv 08:39:10.515 report 24 bytes, HEALTH
+recv 08:39:11.513 report 24 bytes, HEALTH
+total 132
+drwxr-xr-x 2 root root  4096 Oct 16 05:39 .
+drwxr-xr-x 3 root root  4096 Jan  1  2000 ..
+-rw-r--r-- 1 root root 15436 Jan  1  2000 image-00004.img
+-rw-r--r-- 1 root root 20424 Oct 15 20:12 image-00010.img
+-rw-r--r-- 1 root root  2368 Oct 15 20:13 image-00011.img
+-rw-r--r-- 1 root root 20424 Oct 15 20:46 image-00030.img
+-rw-r--r-- 1 root root 20424 Oct 15 21:04 image-00041.img
+-rw-r--r-- 1 root root 20424 Oct 15 21:06 image-00042.img
+-rw-r--r-- 1 root root 20424 Oct 15 21:31 image-00044.img
+-rw------- 1 root root    10 Oct 16 05:34 limits
+controller after:
+#19 onboard 1792129152 controller 21 OPERATE slot A failed 0
+damaged frames: 0
+
+### board journal of the boots (fsir-updater and kernel USB lines)
+Oct 16 05:38:28.490489 stm32mp2unknownunknown fsir-updater[862]: [    16.295] ground: command 0x02 sequence 1791898410 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.497807 stm32mp2unknownunknown fsir-updater[862]: [    16.302] ground: command 0x02 sequence 1791898411 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.507753 stm32mp2unknownunknown fsir-updater[862]: [    16.312] ground: command 0x02 sequence 1791898412 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.515846 stm32mp2unknownunknown fsir-updater[862]: [    16.320] ground: command 0x02 sequence 1791898413 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.522702 stm32mp2unknownunknown fsir-updater[862]: [    16.327] ground: command 0x02 sequence 1791898414 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.529415 stm32mp2unknownunknown fsir-updater[862]: [    16.334] ground: command 0x02 sequence 1791898415 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.536774 stm32mp2unknownunknown fsir-updater[862]: [    16.341] ground: command 0x02 sequence 1791898416 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.546103 stm32mp2unknownunknown fsir-updater[862]: [    16.350] ground: command 0x02 sequence 1791898417 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.553602 stm32mp2unknownunknown fsir-updater[862]: [    16.358] ground: command 0x02 sequence 1791898418 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.561556 stm32mp2unknownunknown fsir-updater[862]: [    16.366] ground: command 0x02 sequence 1791898419 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.568839 stm32mp2unknownunknown fsir-updater[862]: [    16.373] ground: command 0x02 sequence 1791898420 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.576289 stm32mp2unknownunknown fsir-updater[862]: [    16.380] ground: command 0x02 sequence 1791898421 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.589396 stm32mp2unknownunknown fsir-updater[862]: [    16.393] ground: command 0x02 sequence 1791898422 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.596313 stm32mp2unknownunknown fsir-updater[862]: [    16.400] ground: command 0x02 sequence 1791898423 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.603567 stm32mp2unknownunknown fsir-updater[862]: [    16.408] ground: command 0x02 sequence 1791898424 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.611092 stm32mp2unknownunknown fsir-updater[862]: [    16.415] ground: command 0x02 sequence 1791898425 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.618370 stm32mp2unknownunknown fsir-updater[862]: [    16.422] ground: command 0x02 sequence 1791898426 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.625911 stm32mp2unknownunknown fsir-updater[862]: [    16.430] ground: command 0x02 sequence 1791898427 for the onboard computer (263 payload bytes)
+Oct 16 05:38:28.637484 stm32mp2unknownunknown fsir-updater[862]: [    16.442] ground: command 0x02 sequence 1791898428 for the onboard computer (207 payload bytes)
+Oct 16 05:38:28.645392 stm32mp2unknownunknown fsir-updater[862]: [    16.449] ground: command 0x03 sequence 1791898429 for the onboard computer (3 payload bytes)
+Oct 16 05:38:28.673928 stm32mp2unknownunknown fsir-updater[862]: [    16.478] UPLOAD END image 906: checks passed (kind 0x02, version 1); stored
+Oct 16 05:38:29.764130 stm32mp2unknownunknown systemd[1]: Stopping fsir-updater: onboard computer update manager (ground link UDP, data link A serial)...
+Oct 16 05:38:29.765066 stm32mp2unknownunknown fsir-updater[862]: [    17.569] fsir-updater: stopped
+Oct 16 05:38:30.181909 stm32mp2unknownunknown systemd[1]: fsir-updater.service: Deactivated successfully.
+Oct 16 05:38:30.183690 stm32mp2unknownunknown systemd[1]: Stopped fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+---
+Oct 16 05:38:53.768898 stm32mp2unknownunknown systemd[1]: Started fsir-updater: onboard computer update manager (ground link UDP, data link A serial).
+Oct 16 05:38:53.906118 stm32mp2unknownunknown fsir-updater[861]: [     0.081] limits: stored record, minimum version 1, controller identity 0x0431
+Oct 16 05:38:53.906118 stm32mp2unknownunknown fsir-updater[861]: [     0.081] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+Oct 16 05:38:53.916400 stm32mp2unknownunknown fsir-updater[861]: [     0.082] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 05:38:53.964927 stm32mp2unknownunknown fsir-updater[861]: [     0.140] controller heard
+Oct 16 05:38:54.460909 stm32mp2unknownunknown fsir-updater[861]: [     0.636] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 05:38:54.460909 stm32mp2unknownunknown fsir-updater[861]: [     0.636] reports: no ground has spoken yet; reports are dropped until one does
+Oct 16 05:39:05.802528 stm32mp2unknownunknown fsir-updater[861]: [    11.977] ground link: answers and reports now go to 192.168.7.85:50180
+Oct 16 05:39:05.802528 stm32mp2unknownunknown fsir-updater[861]: [    11.977] ground: command 0x01 sequence 1791898430 for the onboard computer (7 payload bytes)
+Oct 16 05:39:05.822448 stm32mp2unknownunknown fsir-updater[861]: [    11.997] UPLOAD BEGIN image 906, 20424 bytes: starting at byte 0
+Oct 16 05:39:05.823985 stm32mp2unknownunknown fsir-updater[861]: [    11.999] ground: command 0x02 sequence 1791898431 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.841769 stm32mp2unknownunknown fsir-updater[861]: [    12.017] ground: command 0x02 sequence 1791898432 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.852508 stm32mp2unknownunknown fsir-updater[861]: [    12.027] ground: command 0x02 sequence 1791898433 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.862224 stm32mp2unknownunknown fsir-updater[861]: [    12.037] ground: command 0x02 sequence 1791898434 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.871277 stm32mp2unknownunknown fsir-updater[861]: [    12.046] ground: command 0x02 sequence 1791898435 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.880919 stm32mp2unknownunknown fsir-updater[861]: [    12.056] ground: command 0x02 sequence 1791898436 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.892866 stm32mp2unknownunknown fsir-updater[861]: [    12.068] ground: command 0x02 sequence 1791898437 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.900302 stm32mp2unknownunknown fsir-updater[861]: [    12.075] ground: command 0x02 sequence 1791898438 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.907958 stm32mp2unknownunknown fsir-updater[861]: [    12.083] ground: command 0x02 sequence 1791898439 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.915362 stm32mp2unknownunknown fsir-updater[861]: [    12.090] ground: command 0x02 sequence 1791898440 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.922829 stm32mp2unknownunknown fsir-updater[861]: [    12.098] ground: command 0x02 sequence 1791898441 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.933027 stm32mp2unknownunknown fsir-updater[861]: [    12.108] ground: command 0x02 sequence 1791898442 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.941058 stm32mp2unknownunknown fsir-updater[861]: [    12.116] ground: command 0x02 sequence 1791898443 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.948486 stm32mp2unknownunknown fsir-updater[861]: [    12.123] ground: command 0x02 sequence 1791898444 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.955920 stm32mp2unknownunknown fsir-updater[861]: [    12.131] ground: command 0x02 sequence 1791898445 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.963915 stm32mp2unknownunknown fsir-updater[861]: [    12.139] ground: command 0x02 sequence 1791898446 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.975908 stm32mp2unknownunknown fsir-updater[861]: [    12.151] ground: command 0x02 sequence 1791898447 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.983200 stm32mp2unknownunknown fsir-updater[861]: [    12.158] ground: command 0x02 sequence 1791898448 for the onboard computer (263 payload bytes)
+Oct 16 05:39:05.990988 stm32mp2unknownunknown fsir-updater[861]: [    12.166] ground: command 0x02 sequence 1791898449 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.002331 stm32mp2unknownunknown fsir-updater[861]: [    12.177] ground: command 0x02 sequence 1791898450 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.010721 stm32mp2unknownunknown fsir-updater[861]: [    12.186] ground: command 0x02 sequence 1791898451 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.018538 stm32mp2unknownunknown fsir-updater[861]: [    12.194] ground: command 0x02 sequence 1791898452 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.027862 stm32mp2unknownunknown fsir-updater[861]: [    12.203] ground: command 0x02 sequence 1791898453 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.035041 stm32mp2unknownunknown fsir-updater[861]: [    12.210] ground: command 0x02 sequence 1791898454 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.043332 stm32mp2unknownunknown fsir-updater[861]: [    12.218] ground: command 0x02 sequence 1791898455 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.050426 stm32mp2unknownunknown fsir-updater[861]: [    12.225] ground: command 0x02 sequence 1791898456 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.057546 stm32mp2unknownunknown fsir-updater[861]: [    12.233] ground: command 0x02 sequence 1791898457 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.065504 stm32mp2unknownunknown fsir-updater[861]: [    12.240] ground: command 0x02 sequence 1791898458 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.075518 stm32mp2unknownunknown fsir-updater[861]: [    12.250] ground: command 0x02 sequence 1791898459 for the onboard computer (263 payload bytes)
+Oct 16 05:39:06.083691 stm32mp2unknownunknown fsir-updater[861]: [    12.259] ground: command 0x02 sequence 1791898460 for the onboard computer (263 payload bytes)
+# mac end 2026-10-16 08:39:15 EEST

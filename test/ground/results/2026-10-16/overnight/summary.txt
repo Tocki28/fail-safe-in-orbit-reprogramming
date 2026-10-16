@@ -1,0 +1,9 @@
+# Test-8 run without commands (decision 4): planned 12 h; ended early at the owner's word on 16 Oct 08:2x EEST (an email due before 12:00).
+# One GET STATUS at the start registered the Mac as the ground; the updater's beat was off (systemd drop-in) for the run.
+first report 2026-10-16 00:50:46, last 2026-10-16 08:25:37 EEST: 27291 s (7.58 h)
+reports: 27360; HEALTH: 27360; event reports: 0
+longest gap between HEALTH reports: 1.08 s; gaps over 1.5 s: 0
+controller restarts seen (controller clock went back): 0
+states seen (mode, slot, failed starts, self-test): [('OPERATE', 'A', '0', 'PASSED')]
+controller clock: 27359 s counted in 27291 s of Mac time: +2509 ppm (whole-second resolution, +/- 73 ppm)
+onboard clock: 27291 s in 27291 s: +17 ppm; last onboard minus Mac -2.0 s (onboard time is stamped in whole seconds)

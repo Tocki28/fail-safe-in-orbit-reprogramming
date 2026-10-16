@@ -45,7 +45,8 @@ changes it: NASA applies these processes "iteratively and recursively"
 8. **Implementation:** Strict compilation rules, zero warnings, mandatory
    static analysis. *Not started.*
 9. **Verification:** Unit tests, integration, hardware-in-the-loop, and
-   deliberate fault injection. *Not started.*
+   deliberate fault injection. **Campaign of 15 and 16 October 2026:** see the
+   [final report](test/README.md).
 
 ## Core Rules
 

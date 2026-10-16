@@ -1,0 +1,81 @@
+# data link A cut, 16 Oct 2026; everything 4d6f5e8, updater 6b0888f8; board start 2026-10-16 05:35:57 UTC; mac 2026-10-16 08:35:59 EEST
+
+### run 1 (A8.2, B8.6, A19.2): 20 s cut in OPERATE; the controller keeps running
+controller before:
+#610 onboard 1792128960 controller 28134 OPERATE slot A failed 0
+damaged frames: 0
+sh: write error: No such device
+cut 05:36:01.297691700
+ls: cannot access '/dev/ttyACM*': No such file or directory
+sh: write error: No such device
+back 05:36:21.498508600
+/dev/ttyACM0
+controller after:
+#621 onboard 1792128992 controller 28166 OPERATE slot A failed 0
+damaged frames: 0
+
+### run 2 (A19.3): cut, restore.sh reset over SWD during the cut, link back
+controller before:
+#624 onboard 1792128995 controller 28169 OPERATE slot A failed 0
+damaged frames: 0
+sh: write error: No such device
+cut 05:36:35.908244425
+ls: cannot access '/dev/ttyACM*': No such file or directory
+reset start 05:36:39.113182150
+RESTORE DONE: reset
+exit 0
+reset end 05:36:39.293997225
+sh: write error: No such device
+back 05:36:44.484420000
+/dev/ttyACM0
+controller after:
+#635 onboard 1792129015 controller 16 OPERATE slot A failed 0
+damaged frames: 0
+
+### board journal from 2026-10-16 05:35:57 UTC
+Oct 16 05:35:58.005183 stm32mp2unknownunknown fsir-updater[43310]: [   605.832] ground link: answers and reports now go to 192.168.7.85:58558
+Oct 16 05:35:58.005183 stm32mp2unknownunknown fsir-updater[43310]: [   605.832] ground: command 0x25 sequence 1791898342 for the controller (1 payload bytes)
+Oct 16 05:35:58.005183 stm32mp2unknownunknown fsir-updater[43310]: [   605.833] ground command 0x25 sequence 1791898342 passed on to the controller as sequence 324
+Oct 16 05:35:58.011552 stm32mp2unknownunknown fsir-updater[43310]: [   605.839] controller: answer 0x02 code 0x00 to ground sequence 1791898342
+Oct 16 05:36:01.293093 stm32mp2unknownunknown fsir-updater[43310]: [   609.121] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+Oct 16 05:36:01.343603 stm32mp2unknownunknown fsir-updater[43310]: [   609.171] data link A: sending sequence 326 failed
+Oct 16 05:36:02.299018 stm32mp2unknownunknown fsir-updater[43310]: [   610.127] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+Oct 16 05:36:03.355625 stm32mp2unknownunknown fsir-updater[43310]: [   611.183] data link A: sending sequence 327 failed
+Oct 16 05:36:05.366962 stm32mp2unknownunknown fsir-updater[43310]: [   613.195] data link A: sending sequence 328 failed
+Oct 16 05:36:05.517933 stm32mp2unknownunknown fsir-updater[43310]: [   613.346] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 05:36:07.378685 stm32mp2unknownunknown fsir-updater[43310]: [   615.206] data link A: sending sequence 329 failed
+Oct 16 05:36:09.388283 stm32mp2unknownunknown fsir-updater[43310]: [   617.216] data link A: sending sequence 330 failed
+Oct 16 05:36:11.394726 stm32mp2unknownunknown fsir-updater[43310]: [   619.222] data link A: sending sequence 331 failed
+Oct 16 05:36:13.405447 stm32mp2unknownunknown fsir-updater[43310]: [   621.233] data link A: sending sequence 332 failed
+Oct 16 05:36:15.415293 stm32mp2unknownunknown fsir-updater[43310]: [   623.243] data link A: sending sequence 333 failed
+Oct 16 05:36:17.425614 stm32mp2unknownunknown fsir-updater[43310]: [   625.253] data link A: sending sequence 334 failed
+Oct 16 05:36:19.435721 stm32mp2unknownunknown fsir-updater[43310]: [   627.263] data link A: sending sequence 335 failed
+Oct 16 05:36:21.444791 stm32mp2unknownunknown fsir-updater[43310]: [   629.272] data link A: sending sequence 336 failed
+Oct 16 05:36:22.403700 stm32mp2unknownunknown fsir-updater[43310]: [   630.231] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 05:36:22.426248 stm32mp2unknownunknown fsir-updater[43310]: [   630.254] controller heard again after 21 s of silence
+Oct 16 05:36:29.582203 stm32mp2unknownunknown fsir-updater[43310]: [   637.410] ground link: answers and reports now go to 192.168.7.85:57643
+Oct 16 05:36:29.582203 stm32mp2unknownunknown fsir-updater[43310]: [   637.410] ground: command 0x25 sequence 1791898343 for the controller (1 payload bytes)
+Oct 16 05:36:29.582203 stm32mp2unknownunknown fsir-updater[43310]: [   637.410] ground command 0x25 sequence 1791898343 passed on to the controller as sequence 340
+Oct 16 05:36:29.588654 stm32mp2unknownunknown fsir-updater[43310]: [   637.416] controller: answer 0x02 code 0x00 to ground sequence 1791898343
+Oct 16 05:36:32.664328 stm32mp2unknownunknown fsir-updater[43310]: [   640.492] ground link: answers and reports now go to 192.168.7.85:64937
+Oct 16 05:36:32.664328 stm32mp2unknownunknown fsir-updater[43310]: [   640.492] ground: command 0x25 sequence 1791898344 for the controller (1 payload bytes)
+Oct 16 05:36:32.664328 stm32mp2unknownunknown fsir-updater[43310]: [   640.492] ground command 0x25 sequence 1791898344 passed on to the controller as sequence 343
+Oct 16 05:36:32.670910 stm32mp2unknownunknown fsir-updater[43310]: [   640.499] controller: answer 0x02 code 0x00 to ground sequence 1791898344
+Oct 16 05:36:35.903469 stm32mp2unknownunknown fsir-updater[43310]: [   643.731] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+Oct 16 05:36:36.907537 stm32mp2unknownunknown fsir-updater[43310]: [   644.735] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+Oct 16 05:36:37.710919 stm32mp2unknownunknown fsir-updater[43310]: [   645.539] data link A: sending sequence 346 failed
+Oct 16 05:36:39.724027 stm32mp2unknownunknown fsir-updater[43310]: [   647.552] data link A: sending sequence 347 failed
+Oct 16 05:36:40.729137 stm32mp2unknownunknown fsir-updater[43310]: [   648.557] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 05:36:41.734221 stm32mp2unknownunknown fsir-updater[43310]: [   649.562] data link A: sending sequence 348 failed
+Oct 16 05:36:43.743600 stm32mp2unknownunknown fsir-updater[43310]: [   651.571] data link A: sending sequence 349 failed
+Oct 16 05:36:44.954922 stm32mp2unknownunknown fsir-updater[43310]: [   652.783] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 05:36:45.286657 stm32mp2unknownunknown fsir-updater[43310]: [   653.114] controller heard again after 9 s of silence
+Oct 16 05:36:52.566193 stm32mp2unknownunknown fsir-updater[43310]: [   660.394] ground link: answers and reports now go to 192.168.7.85:49478
+Oct 16 05:36:52.566193 stm32mp2unknownunknown fsir-updater[43310]: [   660.394] ground: command 0x25 sequence 1791898345 for the controller (1 payload bytes)
+Oct 16 05:36:52.566193 stm32mp2unknownunknown fsir-updater[43310]: [   660.394] ground command 0x25 sequence 1791898345 passed on to the controller as sequence 354
+Oct 16 05:36:52.576782 stm32mp2unknownunknown fsir-updater[43310]: [   660.401] controller: answer 0x02 code 0x00 to ground sequence 1791898345
+
+### kernel log (USB, cdc_acm) from 2026-10-16 05:35:57 UTC
+Oct 16 05:36:21.496833 stm32mp2unknownunknown kernel: cdc_acm 1-1.1:1.2: ttyACM0: USB ACM device
+Oct 16 05:36:44.484989 stm32mp2unknownunknown kernel: cdc_acm 1-1.1:1.2: ttyACM0: USB ACM device
+# mac end 2026-10-16 08:36:57 EEST

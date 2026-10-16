@@ -1,0 +1,196 @@
+# decision 30 on the hardware, 16 Oct 2026; controller and console d3bb74a; updater 6b0888f8; board start 2026-10-16 06:01:56 UTC; mac 2026-10-16 09:01:58 EEST
+83ebe258fd16e6c60ccaf1fbbb7e4e4ef91e63d592583e2a07aad5d5f8909207  <checkout of d3bb74a>/src/controller/build/images/bootloader.img
+66644e5560a67065702a095c0593c48f693ddc490e857ed258f8e31d9c3c3b78  <checkout of d3bb74a>/src/controller/build/images/firmware-A.img
+c4d5ae4066b7939c0bc9d0dfa802048b7cf080b30942f9e496b4b0f40695ffda  <checkout of d3bb74a>/src/controller/build/images/firmware-B.img
+
+### A. full restore with the d3bb74a images
+83ebe258fd16e6c60ccaf1fbbb7e4e4ef91e63d592583e2a07aad5d5f8909207  bootloader.img
+66644e5560a67065702a095c0593c48f693ddc490e857ed258f8e31d9c3c3b78  firmware-A.img
+c4d5ae4066b7939c0bc9d0dfa802048b7cf080b30942f9e496b4b0f40695ffda  firmware-B.img
+543288491bfd6ba863ff55a38bb39ae05feec6a014f98636d84f533b5b56ca1a  last-resort-v1.img
+921e5f5ba991aff9c357cb9166a5ebe04ccc87047378d8dd94ecfd17224d8fe5  slotB-v2-trial-forever.img
+check: bootloader image bootloader.img 21652 bytes: image check passed: /tmp/restore.S5KRfR/bootloader.img: kind bootloader, version 1, 21652 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: last-resort image last-resort-v1.img 1736 bytes: image check passed: /tmp/restore.S5KRfR/last-resort.img: kind last-resort, version 1, 1736 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: main firmware image firmware-A.img 20776 bytes: image check passed: /tmp/restore.S5KRfR/main.img: kind main, version 1, 20776 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+exit 0
+$ status --seconds 4
+report  HEALTH  #1394 onboard t=1792130528 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1397 onboard t=1792130531 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### B. update to slot B answered n (trial, tests pass, no CONFIRM)
+$ bash -c echo n | python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater update --number 3001 --image-dir <checkout of d3bb74a>/src/controller/build/images
+update  reading a HEALTH report
+report  HEALTH  #1400 onboard t=1792130534 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image <checkout of d3bb74a>/src/controller/build/images/firmware-B.img
+report  HEALTH  #1401 onboard t=1792130535 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+upload  complete, 20776 bytes in 1.02 s
+report  HEALTH  #1402 onboard t=1792130537 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1403 onboard t=1792130538 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1404 onboard t=1792130539 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #1405 onboard t=1792130540 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #1406 onboard t=1792130541 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #1407 onboard t=1792130541 0x000a trial tests passed
+report  HEALTH  #1408 onboard t=1792130542 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+UPDATE NOT CONFIRMED (no answer): nothing sent. The controller returns to the previous copy when its trial time ends.
+exit 3
+
+### B. RETURN TO PREVIOUS during the trial: firmware give-up
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater return
+report  EVENT   #1409 onboard t=1792130542 0x0008 firmware given up
+return to previous  sent, answered DONE
+exit 0
+$ status --seconds 4
+report  HEALTH  #1418 onboard t=1792130551 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1421 onboard t=1792130554 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### C. SWITCH to the given-up image (F-1): REFUSED 0x13 expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater switch
+FAILED: SWITCH (seq 1791898610) REFUSED 0x13: The image was given up; START FAILED starts it again
+exit 1
+$ status --seconds 2
+report  HEALTH  #1424 onboard t=1792130557 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1425 onboard t=1792130558 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### D. LEAVE FALLBACK: DONE, OPERATE expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater leave-fallback
+leave fallback  sent, answered DONE
+exit 0
+$ status --seconds 3
+report  HEALTH  #1427 onboard t=1792130560 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1429 onboard t=1792130562 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### D. LEAVE FALLBACK again in OPERATE: REFUSED 0x05 expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater leave-fallback
+FAILED: LEAVE FALLBACK (seq 1791898616) REFUSED 0x05: Not allowed in the current mode
+exit 1
+
+### D. SWITCH after LEAVE FALLBACK: still REFUSED 0x13 expected (mark kept)
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater switch
+FAILED: SWITCH (seq 1791898618) REFUSED 0x13: The image was given up; START FAILED starts it again
+exit 1
+
+### E. START FAILED copy B: DONE, trial of B expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater start-failed --copy B
+start failed  sent, answered DONE
+exit 0
+$ status --seconds 20 (trial start and trial tests)
+report  HEALTH  #1437 onboard t=1792130569 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 116 s, self-test PASSED
+report  HEALTH  #1438 onboard t=1792130570 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 115 s, self-test PASSED
+report  HEALTH  #1439 onboard t=1792130571 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 114 s, self-test PASSED
+report  HEALTH  #1440 onboard t=1792130572 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 113 s, self-test PASSED
+report  HEALTH  #1441 onboard t=1792130573 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 112 s, self-test PASSED
+report  HEALTH  #1442 onboard t=1792130574 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 111 s, self-test PASSED
+
+### E. RETURN TO PREVIOUS: given up again, FALLBACK expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater return
+report  EVENT   #1457 onboard t=1792130588 0x0008 firmware given up
+return to previous  sent, answered DONE
+exit 0
+$ status --seconds 4
+report  HEALTH  #1466 onboard t=1792130597 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1469 onboard t=1792130600 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### F. bootloader give-up: trial-forever image (image 3002) into slot B, SWITCH, 3 power cuts
+
+### F. upload of slotB-v2-trial-forever.img as image 3002
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater upload <scratch>/tf-from-board.img --number 3002
+
+upload  complete, 2368 bytes in 0.13 s
+exit 0
+
+### F. deliver image 3002
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater deliver --number 3002
+report  HEALTH  #1471 onboard t=1792130603 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 0.80 s
+exit 0
+
+### F. SWITCH to the trial-forever image (a different image from the mark): DONE expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater switch
+switch  sent, answered DONE
+exit 0
+cut 1 off 06:03:30
+cut 1 on 06:03:33
+cut 2 off 06:03:41
+cut 2 on 06:03:45
+cut 3 off 06:03:53
+cut 3 on 06:03:57
+$ status --seconds 4
+report  HEALTH  #1504 onboard t=1792130649 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1507 onboard t=1792130652 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+### F. SWITCH to the given-up trial-forever image: REFUSED 0x13 expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater switch
+FAILED: SWITCH (seq 1791898644) REFUSED 0x13: The image was given up; START FAILED starts it again
+exit 1
+
+### G. normal update from FALLBACK with firmware-B.img (d3bb74a) as image 3003: confirmed expected
+$ python3 <checkout of d3bb74a>/src/ground/console.py --check-tool <checkout of d3bb74a>/src/onboard-computer/updater/build/host/fsir-updater update --yes --number 3003 --image-dir <checkout of d3bb74a>/src/controller/build/images
+update  reading a HEALTH report
+report  HEALTH  #1509 onboard t=1792130654 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image <checkout of d3bb74a>/src/controller/build/images/firmware-B.img
+
+upload  complete, 20776 bytes in 0.84 s
+report  HEALTH  #1510 onboard t=1792130656 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1511 onboard t=1792130657 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1512 onboard t=1792130658 mode FALLBACK, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #1513 onboard t=1792130659 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #1514 onboard t=1792130660 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #1515 onboard t=1792130660 0x000a trial tests passed
+report  HEALTH  #1516 onboard t=1792130661 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #1517 onboard t=1792130661 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #1518 onboard t=1792130662 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (7.5 s)
+exit 0
+$ status --seconds 3
+report  HEALTH  #1519 onboard t=1792130663 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #1521 onboard t=1792130665 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+
+### board journal from 2026-10-16 06:01:56 UTC (events and answers)
+Oct 16 06:02:20.159846 stm32mp2unknownunknown fsir-updater[861]: [  1406.335] controller: EVENT 0x0006 (trial started)
+Oct 16 06:02:21.149729 stm32mp2unknownunknown fsir-updater[861]: [  1407.325] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+Oct 16 06:02:21.288321 stm32mp2unknownunknown fsir-updater[861]: [  1407.463] controller: EVENT 0x000a (trial tests passed)
+Oct 16 06:02:22.541659 stm32mp2unknownunknown fsir-updater[861]: [  1408.717] controller: EVENT 0x0008 (firmware given up)
+Oct 16 06:02:22.551422 stm32mp2unknownunknown fsir-updater[861]: [  1408.726] EVENT 0x0008 (firmware given up): the delivered image 3001 was deleted from storage (image-03001.img)
+Oct 16 06:02:23.669966 stm32mp2unknownunknown fsir-updater[861]: [  1409.845] controller: HEALTH mode FALLBACK, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 06:02:36.481897 stm32mp2unknownunknown fsir-updater[861]: [  1422.657] controller: answer 0x03 code 0x13 to ground sequence 1791898610
+Oct 16 06:02:44.939159 stm32mp2unknownunknown fsir-updater[861]: [  1431.114] controller: answer 0x03 code 0x05 to ground sequence 1791898616
+Oct 16 06:02:45.159882 stm32mp2unknownunknown fsir-updater[861]: [  1431.335] controller: answer 0x03 code 0x13 to ground sequence 1791898618
+Oct 16 06:02:45.662485 stm32mp2unknownunknown fsir-updater[861]: [  1431.837] controller: EVENT 0x0006 (trial started)
+Oct 16 06:02:46.654307 stm32mp2unknownunknown fsir-updater[861]: [  1432.829] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+Oct 16 06:02:46.792842 stm32mp2unknownunknown fsir-updater[861]: [  1432.968] controller: EVENT 0x000a (trial tests passed)
+Oct 16 06:03:08.856227 stm32mp2unknownunknown fsir-updater[861]: [  1455.031] controller: EVENT 0x0008 (firmware given up)
+Oct 16 06:03:08.856227 stm32mp2unknownunknown fsir-updater[861]: [  1455.031] EVENT 0x0008 (firmware given up): no delivered image to delete
+Oct 16 06:03:09.984504 stm32mp2unknownunknown fsir-updater[861]: [  1456.159] controller: HEALTH mode FALLBACK, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 06:03:23.815856 stm32mp2unknownunknown fsir-updater[861]: [  1469.991] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v2, failed starts 1, trial time left 0 s, self-test 0x00
+Oct 16 06:03:35.168024 stm32mp2unknownunknown fsir-updater[861]: [  1481.343] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v2, failed starts 2, trial time left 0 s, self-test 0x00
+Oct 16 06:03:47.039404 stm32mp2unknownunknown fsir-updater[861]: [  1493.214] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v2, failed starts 3, trial time left 0 s, self-test 0x00
+Oct 16 06:03:58.926668 stm32mp2unknownunknown fsir-updater[861]: [  1505.102] controller: HEALTH mode FALLBACK, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 06:04:14.607292 stm32mp2unknownunknown fsir-updater[861]: [  1520.782] controller: answer 0x03 code 0x13 to ground sequence 1791898644
+Oct 16 06:04:19.204566 stm32mp2unknownunknown fsir-updater[861]: [  1525.379] controller: EVENT 0x0006 (trial started)
+Oct 16 06:04:20.194287 stm32mp2unknownunknown fsir-updater[861]: [  1526.369] controller: HEALTH mode TRIAL, slot B, firmware kind 0x02 v1, failed starts 1, trial time left 119 s, self-test 0x00
+Oct 16 06:04:20.329952 stm32mp2unknownunknown fsir-updater[861]: [  1526.505] controller: EVENT 0x000a (trial tests passed)
+Oct 16 06:04:21.232021 stm32mp2unknownunknown fsir-updater[861]: [  1527.407] controller: EVENT 0x0007 (firmware confirmed)
+Oct 16 06:04:21.238937 stm32mp2unknownunknown fsir-updater[861]: [  1527.414] EVENT 0x0007 (firmware confirmed): the delivered image 3003 was deleted from storage (image-03003.img)
+# mac end 2026-10-16 09:04:28 EEST

@@ -8,6 +8,13 @@
  * confirmed), EVENT 0x0008 (firmware given up) or a HEALTH report showing another mode ends
  * it. If none arrives within config::kTrialMs + config::kTrialMarginMs, expired() says so once.
  *
+ * Re-arming (finding F-2, test/fault-matrix.md; owner's approval 16 Oct 2026): a firmware that is
+ * alive but never confirms and never gives up is reset once and started again by the bootloader,
+ * with no EVENT 0x0006 (bench, test/ground/results/2026-10-15/trial-forever-decision-h.log). So
+ * while the mode stays TRIAL, a HEALTH report whose failed-starts count differs from the last one
+ * seen starts the full time plus margin again. The bootloader gives the trial up at its third
+ * failed start, which bounds the number of resets.
+  *
  * STATUS: decision H, accepted by the owner, 13 Oct 2026 (trial time 120 s stays the bench value
  * for TBD-trial; margin 30 s). Separable: this file, trial_watch.cpp, restart_runner.*, the
  * constants in config.hpp, Updater::trialWatch with its two calls, and the restart members of
@@ -27,8 +34,9 @@ class TrialWatch
 public:
   TrialWatch(uint64_t trial_ms, uint64_t margin_ms);
 
-  // A HEALTH report arrived showing this mode (protocol.hpp, report::kMode...).
-  void onHealthMode(uint8_t mode, uint64_t now_ms);
+  // A HEALTH report arrived showing this mode and this failed-starts count (protocol.hpp,
+  // report::kMode..., report::kOffsetFailedStarts).
+  void onHealthMode(uint8_t mode, uint8_t failed_starts, uint64_t now_ms);
 
   // An EVENT arrived with this code (protocol.hpp, report::kEvent...).
   void onEvent(uint16_t code, uint64_t now_ms);
@@ -40,11 +48,15 @@ public:
   bool running() const;
 
 private:
+  void end();
+
   uint64_t trial_ms_;
   uint64_t margin_ms_;
   bool running_;
   bool fired_;   // the overrun was reported; wait for the trial to end before timing again
   uint64_t started_ms_;
+  bool count_seen_;        // a HEALTH TRIAL report was seen since the trial began or ended
+  uint8_t last_failed_starts_;   // failed-starts count of that report; valid if count_seen_
 };
 
 #endif  // FSIR_UPDATER_TRIAL_WATCH_HPP

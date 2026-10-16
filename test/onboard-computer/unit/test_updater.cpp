@@ -2532,13 +2532,13 @@ void testTestImageOnEvent(const std::string & scratch)
 void testTrialWatch()
 {
   TrialWatch w(config::kTrialMs, config::kTrialMarginMs);
-  w.onHealthMode(report::kModeTrial, 1000);
+  w.onHealthMode(report::kModeTrial, 0, 1000);
   report(!w.expired(1000 + 150000), "trial watch: exactly trial time + margin (150 s): not expired");
   report(w.expired(1000 + 150001) && !w.expired(1000 + 160000), "trial watch: 150.001 s: expired, once");
-  w.onHealthMode(report::kModeTrial, 200000);
+  w.onHealthMode(report::kModeTrial, 0, 200000);
   report(!w.expired(200000 + 999999), "trial watch: HEALTH reports still showing TRIAL do not start a new timing");
-  w.onHealthMode(report::kModeOperate, 300000);
-  w.onHealthMode(report::kModeTrial, 300000);
+  w.onHealthMode(report::kModeOperate, 0, 300000);
+  w.onHealthMode(report::kModeTrial, 0, 300000);
   w.onEvent(report::kEventFirmwareConfirmed, 310000);
   report(!w.expired(300000 + 400000), "trial watch: EVENT 0x0007 ends the timing");
   w.onEvent(report::kEventTrialStarted, 1000000);
@@ -5390,6 +5390,384 @@ void testTrialOverrunKeepsReasonOne(const std::string & scratch)
     "trial overrun with a talking controller: one reset, EVENT 0x0106 with reason 0x01 (not 0x02), no 0x0101");
 }
 
+// ---- Trial watch re-armed by a new failed-starts count (finding F-2, decision H) ----
+// Contract: a HEALTH TRIAL whose failed-starts count differs from the last one seen re-arms the
+// watch (deadline = now + trial time + margin); EVENT 0x0006 arms it; the same count does not move
+// it; one reset and one EVENT 0x0106 reason 0x01 per arming; EVENT 0x0007, 0x0008 or a HEALTH that
+// is not TRIAL ends it. Only names from protocol.hpp and config.hpp are used (read as headers).
+
+/** Time of the last frame before the deadline test: trial time + margin, ms (decision H). */
+constexpr uint64_t kWatchMs = config::kTrialMs + config::kTrialMarginMs;
+
+/**
+ * @brief Sends a HEALTH report with a mode and a failed-starts count from the fake controller.
+ *
+ * The rig's own health() leaves the count at 0; the F-2 tests need the count (HEALTH byte 20,
+ * report::kOffsetFailedStarts) because a changed count is what re-arms the watch.
+ *
+ * @param[in,out] rig            the updater under test
+ * @param[in]     mode           report::kMode...
+ * @param[in]     failed_starts  failed-starts count to report
+ * @return nothing
+ */
+void sendCountedHealth(UpdaterRig & rig, uint8_t mode, uint8_t failed_starts)
+{
+  std::vector<uint8_t> p(report::kHealthBytes, 0);
+  p[report::kOffsetKind] = report::kHealth;
+  p[report::kOffsetMode] = mode;
+  p[report::kOffsetFirmwareKind] = 0x02;
+  p[report::kOffsetFailedStarts] = failed_starts;
+  rig.fromController(frame::kTypeReport, p);
+}
+
+/**
+ * @brief Sends an EVENT report with a code (no detail) from the fake controller.
+ *
+ * @param[in,out] rig   the updater under test
+ * @param[in]     code  event code (report::kEvent...)
+ * @return nothing
+ */
+void sendPlainEvent(UpdaterRig & rig, uint16_t code)
+{
+  std::vector<uint8_t> p(report::kEventMinBytes, 0);
+  p[report::kOffsetKind] = report::kEvent;
+  bytes::writeU16(&p[report::kOffsetEventCode], code);
+  rig.fromController(frame::kTypeReport, p);
+}
+
+/**
+ * @brief Counts the EVENT 0x0106 reports with detail 0x01 (trial past time) in a list.
+ *
+ * @param[in]     reports  report payloads the ground received
+ * @return the count
+ */
+size_t countTrialRestartEvents(const std::vector<std::vector<uint8_t>> & reports)
+{
+  size_t n = 0;
+  for (const std::vector<uint8_t> & p : reports) {
+    if (p.size() == report::kEventMinBytes + 1 && p[report::kOffsetKind] == report::kEvent &&
+        bytes::readU16(&p[report::kOffsetEventCode]) == report::kEventControllerRestarted &&
+        p[report::kEventDetailOffset] == report::kRestartReasonTrialPastTime) {
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * @brief A rig with a mock restart script that counts its calls, for the trial-watch tests.
+ *
+ * The script appends one line to "calls" and says "RESTORE DONE: reset", so each reset the Updater
+ * starts is one line in the file and, once the script has ended, one EVENT 0x0106 to the ground.
+ * The members dir, data and script come before the rig: the store keeps the pointer to data.
+ */
+struct WatchFixture
+{
+  std::string dir;
+  std::string data;
+  std::string script;
+  bool made;
+  UpdaterRig rig;
+  std::vector<std::vector<uint8_t>> reports;
+  uint8_t mode;    /**< mode of the HEALTH reports the fake controller keeps sending */
+  uint8_t count;   /**< failed-starts count of those HEALTH reports */
+
+  /**
+   * @brief Makes the directory and the mock script, builds the rig.
+   *
+   * @param[in]     base  scratch directory of the F-2 tests
+   * @param[in]     name  name of this test's subdirectory
+   * @return nothing (constructor)
+   */
+  WatchFixture(const std::string & base, const std::string & name)
+  : dir(base + "/" + name), data(dir + "/data"), script(dir + "/restore.sh"),
+    made(prepare(dir, script)), rig(data, 0, script), reports(), mode(report::kModeTrial), count(0)
+  {
+  }
+
+  /**
+   * @brief Removes the old directory, makes it and writes the mock script.
+   *
+   * @param[in]     d  the directory
+   * @param[in]     s  the script path
+   * @return true: the script was written
+   */
+  static bool prepare(const std::string & d, const std::string & s)
+  {
+    removeTree(d);
+    (void)::mkdir(d.c_str(), 0755);
+    return writeScript(s, "echo x >> " + d + "/calls\necho 'RESTORE DONE: reset'\ntouch " + d + "/finished\n", 0755);
+  }
+
+  /**
+   * @brief Opens the rig and lets the ground speak, as testTrialOverrunRestart does.
+   *
+   * @return true: opened
+   */
+  bool start()
+  {
+    if (!made || !rig.open()) {
+      return false;
+    }
+    SentFrame f{};
+    (void)rig.fromGround(frame::kDestController, 1, {command::kGetStatus});
+    (void)rig.tick(f);
+    rig.answer(f.sequence, answer::kDone, 0);
+    return true;
+  }
+
+  /**
+   * @brief Sends one HEALTH report now and keeps sending that mode and count from then on.
+   *
+   * The fake controller talks at least every 4 s (decision 20: silence resets begin after 5 s),
+   * so pass() repeats the last mode and count said here. Repeating the same count does not re-arm
+   * the watch (TrialWatch::onHealthMode), so the keep-alive does not change what a test asks.
+   *
+   * @param[in]     m  report::kMode...
+   * @param[in]     c  failed-starts count to report
+   * @return nothing
+   */
+  void say(uint8_t m, uint8_t c)
+  {
+    mode = m;
+    count = c;
+    sendCountedHealth(rig, mode, count);
+  }
+
+  /**
+   * @brief Moves the rig's clock on, runs a tick and serves the Updater until a script has ended.
+   *
+   * With a reset expected it waits for the script's "finished" file (the first start of sh can
+   * take over 600 ms, as testRestartRunner notes); otherwise it serves for the fixed 300 ms. The
+   * clock moves in steps of at most 4 s (below config::kSilenceMs, 5 s) and the fake controller
+   * sends its HEALTH (mode and count as last said) after each step, as advanceTalking does.
+   *
+   * @param[in]     ms            time to move on, ms
+   * @param[in]     expect_reset  true: the script should start now and is waited for
+   * @return nothing
+   */
+  void pass(uint64_t ms, bool expect_reset = false)
+  {
+    SentFrame f{};
+    (void)::unlink((dir + "/finished").c_str());
+    constexpr uint64_t kStepMs = 4000;   // below config::kSilenceMs (5 s), so no silence begins
+    for (uint64_t left = ms; left > 0;) {
+      uint64_t step = left < kStepMs ? left : kStepMs;
+      rig.advance(step);
+      left -= step;
+      sendCountedHealth(rig, mode, count);
+      (void)rig.groundReports();
+    }
+    (void)rig.tick(f);
+    serveUntilScriptEnds(rig, expect_reset ? dir + "/finished" : "", reports);
+  }
+
+  /**
+   * @brief Counts the times the mock script was called.
+   *
+   * @return the number of lines in the calls file; 0 if there is none
+   */
+  size_t calls() const
+  {
+    std::FILE * file = std::fopen((dir + "/calls").c_str(), "rb");
+    if (file == nullptr) {
+      return 0;
+    }
+    size_t lines = 0;
+    for (int c = std::fgetc(file); c != EOF; c = std::fgetc(file)) {
+      lines += (c == '\n') ? 1U : 0U;
+    }
+    (void)std::fclose(file);
+    return lines;
+  }
+
+  /**
+   * @brief Tells whether script calls and EVENT 0x0106 (reason 0x01) both equal n.
+   *
+   * @param[in]     n  the expected number of resets
+   * @return true: both counts are n
+   */
+  bool resets(size_t n) const
+  {
+    return calls() == n && countTrialRestartEvents(reports) == n;
+  }
+};
+
+/**
+ * @brief F-2 regression: a firmware that never confirms and never gives up is reset at every new count.
+ *
+ * Catches: the watch fires once and never re-arms, so a controller that the bootloader restarted
+ * (failed starts 2, 3, ...) with no EVENT 0x0006 stays in TRIAL for ever (bench log
+ * test/ground/results/2026-10-15/trial-forever-decision-h.log). Passes when: EVENT 0x0006 and
+ * HEALTH TRIAL count 1 give one reset at 150 s + 1 ms and none at 150 s; count 2 gives a second
+ * reset 150 s after that count was seen; count 3 a third; HEALTH FALLBACK ends it, no more resets
+ * however long the run goes. Written before the fix; it fails on the code that fires once.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatchRearmOnNewCount(const std::string & scratch)
+{
+  const std::string kPrefix = "trial watch F-2: ";
+  WatchFixture w(scratch + "/f2", "rearm");
+  if (!w.start()) {
+    report(false, kPrefix + "rig did not open");
+    return;
+  }
+  sendPlainEvent(w.rig, report::kEventTrialStarted);
+  w.say(report::kModeTrial, 1);
+  w.pass(kWatchMs);
+  report(w.resets(0), kPrefix + "count 1: exactly at 150 s: no reset");
+  w.pass(1, true);
+  report(w.resets(1), kPrefix + "count 1: 150 s + 1 ms: one reset, one EVENT 0x0106 reason 0x01");
+  w.pass(10000);
+  w.say(report::kModeTrial, 2);
+  w.pass(kWatchMs);
+  report(w.resets(1), kPrefix + "count 2 seen: 150 s after it: no second reset yet");
+  w.pass(1, true);
+  report(w.resets(2), kPrefix + "count 2: 150 s + 1 ms after it was seen: a second reset");
+  w.pass(5000);
+  w.say(report::kModeTrial, 3);
+  w.pass(kWatchMs + 1, true);
+  report(w.resets(3), kPrefix + "count 3: 150 s + 1 ms after it was seen: a third reset");
+  w.say(report::kModeFallback, 3);
+  w.pass(kWatchMs + 1);
+  w.pass(1000000);
+  report(w.resets(3), kPrefix + "HEALTH FALLBACK ends the watch: no further reset however long");
+}
+
+/**
+ * @brief The same failed-starts count again must not postpone the reset.
+ *
+ * Catches: a re-arm on every HEALTH TRIAL (instead of on a changed count), which a hung firmware
+ * that keeps reporting once a second would use to postpone the reset for ever. Passes when HEALTH
+ * TRIAL count 1 repeated at 100 s and 149 s still gives the reset at 150 s + 1 ms after the arming.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatchSameCountNoPostpone(const std::string & scratch)
+{
+  const std::string kPrefix = "trial watch F-2: ";
+  WatchFixture w(scratch + "/f2", "same-count");
+  if (!w.start()) {
+    report(false, kPrefix + "same count: rig did not open");
+    return;
+  }
+  sendPlainEvent(w.rig, report::kEventTrialStarted);
+  w.say(report::kModeTrial, 1);
+  w.pass(100000);
+  w.say(report::kModeTrial, 1);
+  w.pass(49000);
+  w.say(report::kModeTrial, 1);
+  w.pass(1000);
+  report(w.resets(0), kPrefix + "same count repeated: exactly at 150 s: no reset");
+  w.pass(1, true);
+  report(w.resets(1), kPrefix + "same count repeated: 150 s + 1 ms after arming: reset, not postponed");
+}
+
+/**
+ * @brief EVENT 0x0007 and EVENT 0x0008 end the watch.
+ *
+ * Catches: a re-arm path that outlives the end of the trial, so a confirmed or given-up firmware
+ * is reset anyway. Passes when, after 0x0006 and HEALTH TRIAL count 1, each of the two events
+ * (separate runs) leaves no reset however long the run goes.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatchEndEvents(const std::string & scratch)
+{
+  const std::string kPrefix = "trial watch F-2: ";
+  const uint16_t codes[2] = {report::kEventFirmwareConfirmed, report::kEventFirmwareGivenUp};
+  const char * names[2] = {"EVENT 0x0007", "EVENT 0x0008"};
+  const uint8_t modes_after[2] = {report::kModeOperate, report::kModeFallback};
+  for (size_t i = 0; i < 2; i++) {
+    WatchFixture w(scratch + "/f2", std::string("end-event-") + std::to_string(i));
+    if (!w.start()) {
+      report(false, kPrefix + names[i] + ": rig did not open");
+      continue;
+    }
+    sendPlainEvent(w.rig, report::kEventTrialStarted);
+    w.say(report::kModeTrial, 1);
+    w.pass(10000);
+    sendPlainEvent(w.rig, codes[i]);
+    w.mode = modes_after[i];   // the controller's HEALTH after the event; keeps it talking
+    w.pass(kWatchMs + 1);
+    w.pass(1000000);
+    report(w.resets(0), kPrefix + names[i] + " ends the watch: no reset afterwards");
+  }
+}
+
+/**
+ * @brief A HEALTH report whose mode is OPERATE ends the watch.
+ *
+ * Catches: a watch that ignores the mode and resets a controller that is no longer in a trial.
+ * Passes when HEALTH OPERATE after 0x0006 and HEALTH TRIAL count 1 leaves no reset.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatchOperateEnds(const std::string & scratch)
+{
+  const std::string kPrefix = "trial watch F-2: ";
+  WatchFixture w(scratch + "/f2", "operate");
+  if (!w.start()) {
+    report(false, kPrefix + "OPERATE: rig did not open");
+    return;
+  }
+  sendPlainEvent(w.rig, report::kEventTrialStarted);
+  w.say(report::kModeTrial, 1);
+  w.pass(10000);
+  w.say(report::kModeOperate, 1);
+  w.pass(kWatchMs + 1);
+  w.pass(1000000);
+  report(w.resets(0), kPrefix + "HEALTH OPERATE ends the watch: no reset afterwards");
+}
+
+/**
+ * @brief Decision H unchanged: EVENT 0x0006 and silence give exactly one reset at 150 s.
+ *
+ * Catches: a re-arm that fires repeatedly with no new count, or a change of the 120 s + 30 s
+ * timing. Passes when 0x0006 alone gives no reset at 150 s, one at 150 s + 1 ms, and still one
+ * after a long further silence.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatchDecisionHUnchanged(const std::string & scratch)
+{
+  const std::string kPrefix = "trial watch F-2: ";
+  WatchFixture w(scratch + "/f2", "decision-h");
+  if (!w.start()) {
+    report(false, kPrefix + "decision H: rig did not open");
+    return;
+  }
+  sendPlainEvent(w.rig, report::kEventTrialStarted);
+  w.pass(kWatchMs);
+  report(w.resets(0), kPrefix + "decision H: 0x0006 then silence: exactly at 150 s: no reset");
+  w.pass(1, true);
+  report(w.resets(1), kPrefix + "decision H: 150 s + 1 ms: exactly one reset");
+  w.pass(1000000);
+  report(w.resets(1), kPrefix + "decision H: no new count: still exactly one reset");
+}
+
+/**
+ * @brief Runs the F-2 trial-watch tests.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialWatchRearm(const std::string & scratch)
+{
+  (void)::mkdir((scratch + "/f2").c_str(), 0755);
+  testTrialWatchRearmOnNewCount(scratch);
+  testTrialWatchSameCountNoPostpone(scratch);
+  testTrialWatchEndEvents(scratch);
+  testTrialWatchOperateEnds(scratch);
+  testTrialWatchDecisionHUnchanged(scratch);
+}
+
 /**
  * @brief Decision S: the controller does not answer an ARM; the ground's dangerous command is refused 0xFF.
  *
@@ -6362,6 +6740,7 @@ int main(int argc, char ** argv)
   testDeliveredImageFreed(argv[1], argv[4]);
   testCancelDelivery(argv[1], argv[4]);
   testTrialOverrunRestart(argv[4]);
+  testTrialWatchRearm(argv[4]);
   testSilenceLinkEvents(argv[4]);
   testSilentResetSequence(argv[4]);
   testSilentResetsStopOnFrame(argv[4]);

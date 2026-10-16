@@ -47,4 +47,20 @@ uint32_t onboardTimeS()
   return static_cast<uint32_t>(now.tv_sec);
 }
 
+/**
+ * @brief Reads the system real-time clock in whole seconds, signed 64-bit.
+ *
+ * Uses CLOCK_REALTIME; the fractional second is dropped. The base of the onboard ground time
+ * (owner decision 25, 15 Oct 2026).
+ * @return seconds since 1970; 0 if the clock could not be read (then the offset alone shows)
+ */
+int64_t systemTimeS()
+{
+  timespec now{};
+  if (clock_gettime(CLOCK_REALTIME, &now) != 0) {
+    return 0;
+  }
+  return static_cast<int64_t>(now.tv_sec);
+}
+
 }  // namespace clocks

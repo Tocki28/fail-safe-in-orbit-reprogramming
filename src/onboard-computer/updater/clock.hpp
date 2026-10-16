@@ -4,10 +4,14 @@
  * nowMs: milliseconds of a clock that only moves forward (CLOCK_MONOTONIC), for timeouts and
  * the controller watch. Setting the date does not move it.
  *
- * onboardTimeS: the onboard computer clock time put into every report (REQ-070), in seconds
- * of CLOCK_REALTIME (since 1970), cut to 32 bits. Bench limit: the Interfaces document gives
- * this field 4 bytes but no unit or epoch (Sec. 5.4), and on the bench nothing sets the board's
- * clock from ground time (REQ-072, REQ-073: clock keeper, not built).
+ * systemTimeS: the system clock (CLOCK_REALTIME) in whole seconds since 1970, signed 64-bit. The
+ * onboard ground time is this plus the stored offset (clock_record.hpp, owner decision 25,
+ * 15 Oct 2026; Updater::groundTimeS); it stamps every report (REQ-070) and is the clock for
+ * expiry checks (REQ-066). The system clock itself is never set (REQ-073).
+ *
+ * onboardTimeS: the system clock alone, in seconds, cut to 32 bits, without the offset. Since
+ * decision 25 the updater stamps reports with the ground time instead; this stays as the raw
+ * system clock.
  */
 #ifndef FSIR_UPDATER_CLOCK_HPP
 #define FSIR_UPDATER_CLOCK_HPP
@@ -20,6 +24,8 @@ namespace clocks
 uint64_t nowMs();
 
 uint32_t onboardTimeS();
+
+int64_t systemTimeS();
 
 }  // namespace clocks
 

@@ -49,6 +49,7 @@
 #include <netinet/in.h>
 #include <poll.h>
 #include <string>
+#include <ctime>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -1289,12 +1290,15 @@ public:
    * @param[in]     destination  frame::kDestOnboard or kDestController
    * @param[in]     sequence     the ground's sequence number
    * @param[in]     payload      the command's payload
+   * @param[in]     expiry       the Expiry field; default 0xFFFFFFFF, the latest time (decision 25:
+   *                             Expiry 0 is refused, so no test sends it as "no expiry")
    * @return true: the gate received it; false: it did not arrive in 1 s
    */
-  bool fromGround(uint8_t destination, uint32_t sequence, const std::vector<uint8_t> & payload)
+  bool fromGround(uint8_t destination, uint32_t sequence, const std::vector<uint8_t> & payload,
+    uint32_t expiry = 0xFFFFFFFFU)
   {
     frame::Frame f{frame::kTypeCommand, destination, 0, static_cast<uint16_t>(payload.size()),
-                   sequence, 0xFFFFFFFFU, payload.data()};
+                   sequence, expiry, payload.data()};
     std::array<uint8_t, frame::kMaxBytes> out{};
     size_t n = frame::encode(f, out.data(), out.size());
     sockaddr_in to{};
@@ -2388,10 +2392,10 @@ void testOnboardArm(const std::string & scratch)
   }
 
   // 4. A valid ARM: the arming check passes, then "not built": REFUSED 0x06 only. SET LIMITS is
-  // built (decision 24: DONE), so it is not in this loop; RESTORE, REPROGRAM, SET ONBOARD TIME and
-  // REPLACE KEY still are.
+  // built (decision 24: DONE) and so is SET ONBOARD TIME (decision 25), so they are not in this loop;
+  // RESTORE, REPROGRAM and REPLACE KEY still are.
   for (const OnboardDangerous & d : kOnboardDangerous) {
-    if (d.id == command::kSetLimits) {
+    if (d.id == command::kSetLimits || d.id == 0x09) {   // 0x09: built by decision 25 (own tests)
       continue;
     }
     uint32_t arm_seq = next();
@@ -3986,6 +3990,486 @@ void testLimitsDamaged(const std::string & controller_images, const std::string 
   }
 }
 
+// ---- Owner decision 25 (15 Oct 2026): the onboard ground time and the Expiry check ---------------
+// Drafted from the contract alone, apart from the code (code rule E4). Names the code adds (the
+// refusal constant, the event constant, the record name, kClockDifferenceMaxS) are not used here:
+// the tests carry their own copies below, so the contract and the code are compared, not the code
+// with itself. The updater reads the real clock (clocks::onboardTimeS), which a test cannot move,
+// so every time below is taken from ::time() and every comparison has a stated tolerance.
+
+constexpr uint8_t kRefusedPastExpiry = 0x03;          // Interfaces Sec. 4.2: command past its Expiry
+constexpr uint8_t kSetOnboardTimeId = 0x09;           // Interfaces Sec. 5.1 table, row 0x09
+constexpr uint16_t kClockDifferenceEvent = 0x0105;    // decision 25: onboard time differs from ground
+constexpr int64_t kClockDifferenceBoundS = 5;         // decision 25: kClockDifferenceMaxS
+constexpr const char * kClockRecordFile = "clock-offset";   // decision 25: the DurableRecord's name
+constexpr uint32_t kExpiryNone = 0;                   // Expiry 0: no expiry, refused except 0x09/ARM
+constexpr int64_t kExpiryMarginS = 3600;              // bench choice: an hour is far from any race
+constexpr int64_t kShiftS = 1000;                     // bench choice: the corrected clock moves 1000 s
+constexpr int64_t kShiftHalfS = 500;                  // bench choice: an Expiry between the two clocks
+constexpr int64_t kReportToleranceS = 3;              // bench choice: the clock moves while a test runs
+
+/**
+ * @brief The system clock as seconds since 1970, cut to 32 bits.
+ *
+ * Same clock the updater reads (CLOCK_REALTIME), so a test can build an Expiry relative to now.
+ *
+ * @return seconds
+ */
+int64_t systemNowS()
+{
+  return static_cast<int64_t>(::time(nullptr));
+}
+
+/**
+ * @brief An Expiry value the given number of seconds from the system clock.
+ *
+ * @param[in]     delta_s  seconds from now; negative: in the past
+ * @return the Expiry field value (seconds of ground time while the offset is 0)
+ */
+uint32_t expiryFromNow(int64_t delta_s)
+{
+  return static_cast<uint32_t>(systemNowS() + delta_s);
+}
+
+/**
+ * @brief The payload of SET ONBOARD TIME: identifier, ground time (4, little-endian).
+ *
+ * @param[in]     ground_time  unsigned Unix seconds
+ * @return the payload (Interfaces Sec. 5.1 table, row 0x09)
+ */
+std::vector<uint8_t> setOnboardTimePayload(uint32_t ground_time)
+{
+  std::vector<uint8_t> p(1 + 4, 0);
+  p[0] = kSetOnboardTimeId;
+  bytes::writeU32(&p[1], ground_time);
+  return p;
+}
+
+/**
+ * @brief Sends a payload to Destination 0x01 with a given Expiry and reads the answers.
+ *
+ * @param[in,out] rig      the updater under test
+ * @param[in]     seq      the ground sequence number
+ * @param[in]     payload  the command payload
+ * @param[in]     expiry   the Expiry field
+ * @return the answers; empty if the datagram did not reach the gate
+ */
+std::vector<GroundAnswer> sendOnboardExpiry(UpdaterRig & rig, uint32_t seq,
+  const std::vector<uint8_t> & payload, uint32_t expiry)
+{
+  if (!rig.fromGround(frame::kDestOnboard, seq, payload, expiry)) {
+    return {};
+  }
+  return rig.groundAnswers();
+}
+
+/**
+ * @brief Sends the ARM for SET ONBOARD TIME and then SET ONBOARD TIME, both with one Expiry.
+ *
+ * @param[in,out] rig          the updater under test
+ * @param[in]     seq          the ARM's sequence number; the command takes seq + 1
+ * @param[in]     ground_time  the time to set, unsigned Unix seconds
+ * @param[in]     expiry       the Expiry field of both frames
+ * @return the answers to SET ONBOARD TIME (those of the ARM are read and dropped)
+ */
+std::vector<GroundAnswer> armedSetOnboardTime(UpdaterRig & rig, uint32_t seq,
+  uint32_t ground_time, uint32_t expiry)
+{
+  (void)sendOnboardExpiry(rig, seq, armOf(kSetOnboardTimeId, seq + 1), expiry);
+  return sendOnboardExpiry(rig, seq + 1, setOnboardTimePayload(ground_time), expiry);
+}
+
+/**
+ * @brief The details of the EVENT 0x0105 reports among the reports, as signed values.
+ *
+ * @param[in]     reports  report payloads the ground received
+ * @return one signed 32-bit value per EVENT 0x0105 with a 4-byte detail, in order
+ */
+std::vector<int32_t> clockDifferences(const std::vector<std::vector<uint8_t>> & reports)
+{
+  std::vector<int32_t> out;
+  for (const std::vector<uint8_t> & r : reports) {
+    if (r.size() == report::kEventMinBytes + 4 && r[report::kOffsetKind] == report::kEvent &&
+        bytes::readU16(&r[report::kOffsetEventCode]) == kClockDifferenceEvent) {
+      out.push_back(static_cast<int32_t>(bytes::readU32(&r[report::kEventDetailOffset])));
+    }
+  }
+  return out;
+}
+
+/**
+ * @brief The onboard time of the newest HEALTH report the ground gets after a controller report.
+ *
+ * Sends a HEALTH report from the controller; the updater passes it on stamped with its onboard
+ * time. The time is read from the report as the ground sees it.
+ *
+ * @param[in,out] rig  the updater under test (a command is sent first so a ground address is known)
+ * @param[out]    time_s  the report's onboard time, seconds
+ * @return true: a HEALTH report reached the ground; false: none
+ */
+bool healthReportTime(UpdaterRig & rig, int64_t & time_s)
+{
+  // Reports are dropped until a ground has spoken (log: "no ground has spoken yet"), so one
+  // command first. DELIVER of an image that is not stored is refused and changes nothing.
+  static uint32_t hello_sequence = 9000;
+  (void)sendOnboardExpiry(rig, hello_sequence++, {command::kDeliver, 3, 0},
+    expiryFromNow(kExpiryMarginS));
+  (void)rig.groundReports();
+  rig.health(report::kModeOperate);
+  std::vector<std::vector<uint8_t>> reports = rig.groundReports();
+  for (size_t i = reports.size(); i > 0; i--) {
+    const std::vector<uint8_t> & r = reports[i - 1];
+    if (r.size() >= report::kHealthBytes && r[report::kOffsetKind] == report::kHealth) {
+      time_s = static_cast<int64_t>(bytes::readU32(&r[report::kOffsetOnboardTime]));
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Tells whether a report time equals the system clock plus an offset, within a tolerance.
+ *
+ * @param[in]     time_s    the report's onboard time
+ * @param[in]     offset_s  the offset that should be in force
+ * @return true: |time - (system clock + offset)| <= kReportToleranceS
+ */
+bool timeIsClockPlus(int64_t time_s, int64_t offset_s)
+{
+  int64_t d = time_s - (systemNowS() + offset_s);
+  return d >= -kReportToleranceS && d <= kReportToleranceS;
+}
+
+/**
+ * @brief Tells whether a command with this Expiry is accepted by a controller-bound path.
+ *
+ * Sends GET STATUS to Destination 0x02 and looks for the answer and the forwarded frame.
+ *
+ * @param[in,out] rig     the updater under test
+ * @param[in]     seq     the ground sequence number
+ * @param[in]     expiry  the Expiry field
+ * @param[out]    refused true: REFUSED 0x03 only and nothing sent on link A; false: otherwise
+ * @return true: the command was forwarded to the controller (the frame is consumed)
+ */
+bool controllerCommandForwarded(UpdaterRig & rig, uint32_t seq, uint32_t expiry, bool & refused)
+{
+  bool got = rig.fromGround(frame::kDestController, seq, {command::kGetStatus}, expiry);
+  std::vector<GroundAnswer> g = rig.groundAnswers();
+  SentFrame f{};
+  bool sent = rig.tick(f);
+  refused = got && isOnlyRefused(g, seq, kRefusedPastExpiry) && !sent;
+  if (sent) {
+    // The controller answers, so link A is free for the next command (one outstanding at a time).
+    rig.answer(f.sequence, answer::kDone, 0);
+    (void)rig.groundAnswers();
+  }
+  return got && sent && isCommand(f, {command::kGetStatus});
+}
+
+/**
+ * @brief Decision 25, rule 2 and 3: Expiry 0 and a past Expiry are refused 0x03, a future one runs.
+ *
+ * Requirement: TBD (owner decision 25, 15 Oct 2026; no REQ number assigned yet).
+ * Defects caught, by case: (1) a command with Expiry 0 is accepted ("no expiry"), onboard or
+ * controller-bound, so a stale or replayed command runs for ever; (2) a controller-bound command
+ * with Expiry 0 or a past Expiry is passed on to the controller before or in spite of the check;
+ * (3) a past Expiry is accepted; (4) a future Expiry is refused, or refused with another code;
+ * (5) the check runs after the command (the onboard command already ran) instead of at arrival;
+ * (6) a refused command is remembered as done, so the resend with a valid Expiry is answered
+ * ALREADY DONE and never runs.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testExpiryRefusals(const std::string & scratch)
+{
+  const std::string kPrefix = "expiry: ";
+  std::string dir = scratch + "/expiry-refusals";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const std::vector<uint8_t> deliver = {command::kDeliver, 3, 0};
+  bool refused = false;
+
+  // Onboard command, Expiry 0 and a past Expiry: REFUSED 0x03 only, before the command runs.
+  report(isOnlyRefused(sendOnboardExpiry(rig, 1, deliver, kExpiryNone), 1, kRefusedPastExpiry) &&
+         quiet(rig), kPrefix + "onboard command with Expiry 0: REFUSED 0x03 only, nothing sent on");
+  report(isOnlyRefused(sendOnboardExpiry(rig, 2, deliver, expiryFromNow(-kExpiryMarginS)), 2,
+           kRefusedPastExpiry) && quiet(rig),
+    kPrefix + "onboard command with an Expiry an hour in the past: REFUSED 0x03 only");
+
+  // Controller-bound command: refused and nothing passed on to the controller.
+  (void)controllerCommandForwarded(rig, 10, kExpiryNone, refused);
+  report(refused, kPrefix + "controller command with Expiry 0: REFUSED 0x03 only, nothing passed "
+    "on to the controller");
+  (void)controllerCommandForwarded(rig, 11, expiryFromNow(-kExpiryMarginS), refused);
+  report(refused, kPrefix + "controller command with a past Expiry: REFUSED 0x03 only, nothing "
+    "passed on to the controller");
+
+  // A future Expiry is accepted: the controller command is passed on, an onboard command runs.
+  report(controllerCommandForwarded(rig, 12, expiryFromNow(kExpiryMarginS), refused),
+    kPrefix + "controller command with a future Expiry: passed on to the controller");
+  (void)sendOnboardExpiry(rig, 20, armOf(command::kSetLimits, 21), expiryFromNow(kExpiryMarginS));
+  report(isOnly(sendOnboardExpiry(rig, 21, setLimitsPayload(config::kDefaultMinimumVersion,
+           config::kDefaultControllerIdentity), expiryFromNow(kExpiryMarginS)), 21, answer::kDone,
+           answer::kSuccess),
+    kPrefix + "armed onboard command (SET LIMITS) with a future Expiry: DONE");
+
+  // A refused command is not remembered: the resend with a valid Expiry runs.
+  (void)controllerCommandForwarded(rig, 30, kExpiryNone, refused);
+  bool first_refused = refused;
+  bool forwarded = controllerCommandForwarded(rig, 30, expiryFromNow(kExpiryMarginS), refused);
+  report(first_refused && forwarded,
+    kPrefix + "controller command refused for Expiry 0, resent with the same sequence number and "
+    "a valid Expiry: it runs (passed on), not ALREADY DONE");
+  report(isOnlyRefused(sendOnboardExpiry(rig, 31, deliver, kExpiryNone), 31, kRefusedPastExpiry),
+    kPrefix + "onboard command refused for Expiry 0 ...");
+  std::vector<GroundAnswer> g = sendOnboardExpiry(rig, 31, deliver,
+    expiryFromNow(kExpiryMarginS));
+  report(!g.empty() && !hasAnswer(g, 31, answer::kAlreadyDone, 0) &&
+         !hasAnswer(g, 31, answer::kRefused, kRefusedPastExpiry),
+    kPrefix + "... resent with a valid Expiry: it runs (any answer but ALREADY DONE or 0x03)");
+}
+
+/**
+ * @brief Decision 25, rule 2 and 3: the exceptions. SET ONBOARD TIME and its ARM with Expiry 0.
+ *
+ * Requirement: TBD (owner decision 25, 15 Oct 2026; no REQ number assigned yet).
+ * Defects caught, by case: (1) SET ONBOARD TIME refused for Expiry 0, so a computer whose clock is
+ * wrong can never be corrected (the Expiry check would lock out its own cure); (2) the ARM naming
+ * SET ONBOARD TIME refused for Expiry 0, same lock-out; (3) the exception also covers the other
+ * ARMs (an ARM naming SET LIMITS with Expiry 0 is accepted); (4) the exception drops the arming
+ * check (SET ONBOARD TIME with Expiry 0 and no ARM runs, or is refused with 0x03 instead of 0x01).
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testExpiryExceptions(const std::string & scratch)
+{
+  const std::string kPrefix = "expiry exception: ";
+  std::string dir = scratch + "/expiry-exceptions";
+  removeTree(dir);
+  UpdaterRig rig(dir, 0);
+  if (!rig.open()) {
+    report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const uint32_t now_s = static_cast<uint32_t>(systemNowS());
+  report(isOnlyRefused(sendOnboardExpiry(rig, 1, setOnboardTimePayload(now_s), kExpiryNone), 1,
+           answer::kNotArmed) && quiet(rig),
+    kPrefix + "SET ONBOARD TIME with Expiry 0 and no ARM: REFUSED 0x01 (the arming check stays)");
+  std::vector<GroundAnswer> arm = sendOnboardExpiry(rig, 10, armOf(kSetOnboardTimeId, 11),
+    kExpiryNone);
+  report(!hasAnswer(arm, 10, answer::kRefused, kRefusedPastExpiry) && !arm.empty() &&
+         hasAnswer(arm, 10, answer::kDone, answer::kSuccess),
+    kPrefix + "ARM naming SET ONBOARD TIME with Expiry 0: accepted (RECEIVED/DONE, not 0x03)");
+  report(isOnly(sendOnboardExpiry(rig, 11, setOnboardTimePayload(now_s), kExpiryNone), 11,
+           answer::kDone, answer::kSuccess),
+    kPrefix + "SET ONBOARD TIME with Expiry 0 and its ARM: DONE");
+  report(isOnlyRefused(sendOnboardExpiry(rig, 20, armOf(command::kSetLimits, 21), kExpiryNone), 20,
+           kRefusedPastExpiry),
+    kPrefix + "ARM naming SET LIMITS with Expiry 0: REFUSED 0x03 (the exception is only for 0x09)");
+  report(isOnlyRefused(sendOnboardExpiry(rig, 30, armOf(kSetOnboardTimeId, 31),
+           expiryFromNow(-kExpiryMarginS)), 30, kRefusedPastExpiry) == false,
+    kPrefix + "ARM naming SET ONBOARD TIME with a past Expiry: not refused for it either");
+}
+
+/**
+ * @brief Decision 25, rule 5: EVENT 0x0105 only when the difference is over 5 s, signed.
+ *
+ * Requirement: TBD (owner decision 25, 15 Oct 2026; no REQ number assigned yet).
+ * Defects caught, by case: (1) an event for a small difference (4 s) floods the ground; (2) no
+ * event for a 6 s difference, so a clock that drifted is corrected silently; (3) the sign is
+ * reversed (the contract is onboard minus ground: onboard ahead of ground is positive); (4) the
+ * detail is big-endian, unsigned, or not 4 bytes; (5) the event is lost because the report is
+ * made after the offset has changed.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testClockDifferenceEvent(const std::string & scratch)
+{
+  const std::string kPrefix = "set onboard time: ";
+  struct Case
+  {
+    const char * name;
+    int64_t ground_minus_now;   // ground time sent, relative to the system clock, s
+    bool event;
+    int64_t onboard_minus_ground;   // expected detail, before the clock moved on
+  };
+  const std::array<Case, 3> cases = {{
+    {"4 s ahead", -4, false, 4},
+    {"6 s ahead", -6, true, 6},
+    {"6 s behind", 6, true, -6},
+  }};
+  for (size_t i = 0; i < cases.size(); i++) {
+    std::string dir = scratch + "/set-time-event-" + std::to_string(i);
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    const std::string what = kPrefix + std::string("onboard ") + cases[i].name + " of ground: ";
+    (void)rig.groundReports();
+    const int64_t before = systemNowS();
+    std::vector<GroundAnswer> g = armedSetOnboardTime(rig, 1,
+      static_cast<uint32_t>(before + cases[i].ground_minus_now), kExpiryNone);
+    const int64_t after = systemNowS();
+    std::vector<int32_t> events = clockDifferences(rig.groundReports());
+    report(isOnly(g, 2, answer::kDone, answer::kSuccess), what + "DONE");
+    if (!cases[i].event) {
+      report(events.empty(), what + "no EVENT 0x0105 (difference not over 5 s)");
+    } else {
+      // The clock may move on while the test runs: the detail lies between the two samples.
+      const int64_t lo = cases[i].onboard_minus_ground;
+      const int64_t hi = lo + (after - before);
+      report(events.size() == 1 && events[0] >= lo && events[0] <= hi,
+        what + "one EVENT 0x0105, detail 4 bytes signed onboard minus ground (" +
+        std::to_string(lo) + ")");
+    }
+  }
+  // The bound itself: kClockDifferenceBoundS is 5 s, so 4 s is below and 6 s above it.
+  report(kClockDifferenceBoundS == 5, kPrefix + "the test's copy of the bound is 5 s (decision 25)");
+}
+
+/**
+ * @brief Decision 25, rule 1 and 5: after SET ONBOARD TIME, reports and the Expiry check use the
+ * new time; the old clock no longer counts.
+ *
+ * Requirement: TBD (owner decision 25, 15 Oct 2026; no REQ number assigned yet).
+ * Defects caught, by case: (1) the report keeps the system clock after the correction; (2) the
+ * Expiry check keeps the system clock; (3) the check uses the corrected clock only for reports
+ * (a command valid only by the corrected clock is refused); (4) the correction is applied with
+ * the wrong sign (a command valid only by the old clock is still accepted after the clock moved
+ * forward); (5) a report before any correction is not the system clock (the default offset is 0).
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testClockCorrectionUsed(const std::string & scratch)
+{
+  const std::string kPrefix = "corrected clock: ";
+  bool refused = false;
+  int64_t t = 0;
+  {
+    std::string dir = scratch + "/clock-behind";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    report(healthReportTime(rig, t) && timeIsClockPlus(t, 0),
+      kPrefix + "default offset 0: a report's onboard time is the system clock");
+    // Ground time 1000 s behind the system clock: the onboard clock must now run 1000 s back.
+    std::vector<GroundAnswer> g = armedSetOnboardTime(rig, 1,
+      expiryFromNow(-kShiftS), kExpiryNone);
+    report(isOnly(g, 2, answer::kDone, answer::kSuccess), kPrefix + "SET ONBOARD TIME (-1000 s): DONE");
+    report(healthReportTime(rig, t) && timeIsClockPlus(t, -kShiftS),
+      kPrefix + "after it a report's onboard time is the system clock minus 1000 s");
+    // Expiry 500 s in the past by the system clock, but 500 s ahead by the corrected clock.
+    (void)controllerCommandForwarded(rig, 10, expiryFromNow(-kShiftHalfS), refused);
+    report(!refused, kPrefix + "Expiry valid only by the corrected clock: accepted");
+    // Expiry 1500 s behind the system clock is behind the corrected clock too.
+    (void)controllerCommandForwarded(rig, 11, expiryFromNow(-kShiftS - kShiftHalfS), refused);
+    report(refused, kPrefix + "Expiry past by the corrected clock as well: REFUSED 0x03");
+  }
+  {
+    std::string dir = scratch + "/clock-ahead";
+    removeTree(dir);
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    std::vector<GroundAnswer> g = armedSetOnboardTime(rig, 1,
+      expiryFromNow(kShiftS), kExpiryNone);
+    report(isOnly(g, 2, answer::kDone, answer::kSuccess), kPrefix + "SET ONBOARD TIME (+1000 s): DONE");
+    report(healthReportTime(rig, t) && timeIsClockPlus(t, kShiftS),
+      kPrefix + "after it a report's onboard time is the system clock plus 1000 s");
+    // Expiry 500 s in the future by the system clock, but past by the corrected clock.
+    (void)controllerCommandForwarded(rig, 10, expiryFromNow(kShiftHalfS), refused);
+    report(refused, kPrefix + "Expiry valid only by the old clock: REFUSED 0x03");
+    (void)controllerCommandForwarded(rig, 11, expiryFromNow(kShiftS + kShiftHalfS), refused);
+    report(!refused, kPrefix + "Expiry valid by the corrected clock: accepted");
+  }
+}
+
+/**
+ * @brief Decision 25, rule 5 and 6: the offset is stored, survives a restart, and a damaged
+ * record gives offset 0; a failed write is REFUSED 0xFE and changes nothing.
+ *
+ * Requirement: TBD (owner decision 25, 15 Oct 2026; no REQ number assigned yet).
+ * Defects caught, by case: (1) the offset is kept in memory only, so every restart loses the
+ * correction; (2) DONE is sent before the write or in spite of its failure; (3) a failed write
+ * still changes the offset in force; (4) a damaged record is read as an offset (garbage clock) or
+ * stops the start instead of giving offset 0; (5) the record is not the file "clock-offset"
+ * (the name is the contract's), or has no check value (a one-byte file is accepted).
+ * The failed write uses the same fault as testSetLimitsCommand: a directory where the temporary
+ * file must go.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testClockOffsetStored(const std::string & scratch)
+{
+  const std::string kPrefix = "clock offset record: ";
+  std::string dir = scratch + "/clock-offset";
+  removeTree(dir);
+  const std::string tmp_dir = dir + "/" + kClockRecordFile + ".tmp";
+  bool refused = false;
+  int64_t t = 0;
+  {
+    UpdaterRig rig(dir, 0);
+    if (!rig.open()) {
+      report(false, kPrefix + "updater rig could not open (UDP port 47931 in use?)");
+      return;
+    }
+    std::vector<GroundAnswer> g = armedSetOnboardTime(rig, 1, expiryFromNow(kShiftS), kExpiryNone);
+    report(isOnly(g, 2, answer::kDone, answer::kSuccess) &&
+           readFile(dir + "/" + kClockRecordFile).size() > DurableRecord::kCrcBytes,
+      kPrefix + "SET ONBOARD TIME: DONE and the file `clock-offset` exists (record plus check value)");
+
+    // A failed write: a directory where the temporary file must go.
+    report(::mkdir(tmp_dir.c_str(), 0755) == 0, kPrefix + "setup: clock-offset.tmp made a directory");
+    g = armedSetOnboardTime(rig, 10, expiryFromNow(-kShiftS), kExpiryNone);
+    report(isOnlyRefused(g, 11, answer::kStorageBench),
+      kPrefix + "a write that fails: REFUSED 0xFE only (not DONE)");
+    report(healthReportTime(rig, t) && timeIsClockPlus(t, kShiftS),
+      kPrefix + "and the offset in force did not change: reports still show system clock + 1000 s");
+    (void)controllerCommandForwarded(rig, 20, expiryFromNow(kShiftHalfS), refused);
+    report(refused, kPrefix + "and the Expiry check did not change: valid only by the old clock "
+      "is still REFUSED 0x03");
+  }
+  report(::rmdir(tmp_dir.c_str()) == 0, kPrefix + "cleanup: clock-offset.tmp removed");
+  {
+    UpdaterRig rig(dir, 0);
+    report(rig.open() && healthReportTime(rig, t) && timeIsClockPlus(t, kShiftS),
+      kPrefix + "a new Updater on the same directory (a restart): the stored offset is in force");
+    (void)controllerCommandForwarded(rig, 1, expiryFromNow(kShiftHalfS), refused);
+    report(refused, kPrefix + "and the Expiry check uses it after the restart");
+  }
+  const std::vector<uint8_t> one_byte(1, 0x5A);
+  const std::vector<uint8_t> wrong_check(12, 0x5A);
+  const std::array<const std::vector<uint8_t> *, 3> garbage = {&one_byte, &wrong_check,
+    nullptr};
+  const std::array<const char *, 3> names = {"one byte", "12 bytes with a wrong check value",
+    "empty file"};
+  for (size_t i = 0; i < garbage.size(); i++) {
+    const std::vector<uint8_t> content = garbage[i] != nullptr ? *garbage[i] : std::vector<uint8_t>();
+    bool ok = overwriteFile(dir + "/" + kClockRecordFile, content);
+    UpdaterRig rig(dir, 0);
+    report(ok && rig.open() && healthReportTime(rig, t) && timeIsClockPlus(t, 0),
+      kPrefix + "record damaged (" + names[i] + "): the Updater starts with offset 0");
+    (void)controllerCommandForwarded(rig, 1, expiryFromNow(kShiftHalfS), refused);
+    report(!refused, kPrefix + "and the Expiry check uses offset 0 (damaged: " + names[i] + ")");
+  }
+}
+
 /**
  * @brief Decision 22: the delivered image is deleted when the controller reports it settled.
  *
@@ -5432,6 +5916,11 @@ int main(int argc, char ** argv)
   testLimitsNoRecord(argv[1], argv[4]);
   testLimitsInForce(argv[1], argv[2], argv[4]);
   testLimitsDamaged(argv[1], argv[4]);
+  testExpiryRefusals(argv[4]);
+  testExpiryExceptions(argv[4]);
+  testClockDifferenceEvent(argv[4]);
+  testClockCorrectionUsed(argv[4]);
+  testClockOffsetStored(argv[4]);
   testDeliveredImageFreed(argv[1], argv[4]);
   testCancelDelivery(argv[1], argv[4]);
   testTrialOverrunRestart(argv[4]);

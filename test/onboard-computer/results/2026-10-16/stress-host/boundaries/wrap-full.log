@@ -1,0 +1,21 @@
+2026-10-16 11:10:40 EEST | a504b0d | make -C test/onboard-computer/stress/boundaries wrap-full
+load: 15.62 14.91 11.64
+INFO     wrap-full | command 0 sent | measured: 0 s elapsed
+INFO     wrap-full | command 268435456 sent | measured: 70 s elapsed
+INFO     wrap-full | command 536870912 sent | measured: 139 s elapsed
+INFO     wrap-full | command 805306368 sent | measured: 235 s elapsed
+INFO     wrap-full | command 1073741824 sent | measured: 333 s elapsed
+INFO     wrap-full | command 1342177280 sent | measured: 428 s elapsed
+INFO     wrap-full | command 1610612736 sent | measured: 522 s elapsed
+INFO     wrap-full | command 1879048192 sent | measured: 599 s elapsed
+INFO     wrap-full | command 2147483648 sent | measured: 669 s elapsed
+INFO     wrap-full | command 2415919104 sent | measured: 740 s elapsed
+INFO     wrap-full | command 2684354560 sent | measured: 835 s elapsed
+INFO     wrap-full | command 2952790016 sent | measured: 925 s elapsed
+INFO     wrap-full | command 3221225472 sent | measured: 1014 s elapsed
+INFO     wrap-full | command 3489660928 sent | measured: 1091 s elapsed
+INFO     wrap-full | command 3758096384 sent | measured: 1152 s elapsed
+INFO     wrap-full | command 4026531840 sent | measured: 1227 s elapsed
+INFO     wrap-full | command 4294967296 sent | measured: 1310 s elapsed
+OK       wrap-full | 4294967298 commands through one DataLink, 2^32 - 1 numbers and the wrap | expected: 1..2^32-1 then 1 again, never 0 [data_link.cpp:81-82] | actual: as expected; next number 4; 1310 s
+load at end: 13.35 18.41 19.28

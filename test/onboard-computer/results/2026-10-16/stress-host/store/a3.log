@@ -1,0 +1,66 @@
+2026-10-16 11:48:50 EEST | a504b0d | make -C test/onboard-computer/stress/store run
+uptime load averages at start: 19.17 18.88 18.01
+clock_record::save: file-system calls of one good write:
+  step 1  open(clock-offset.tmp)
+  step 2  write(clock-offset.tmp)
+  step 3  fsync(clock-offset.tmp)
+  step 4  close(clock-offset.tmp)
+  step 5  rename(clock-offset)   <- rename
+  step 6  open(work)
+  step 7  fsync(work)   <- directory fsync
+  step 8  close(work)
+limits_record::save: file-system calls of one good write:
+  step 1  open(limits.tmp)
+  step 2  write(limits.tmp)
+  step 3  fsync(limits.tmp)
+  step 4  close(limits.tmp)
+  step 5  rename(limits)   <- rename
+  step 6  open(work)
+  step 7  fsync(work)   <- directory fsync
+  step 8  close(work)
+
+write | step call | variant : result counts over all values and both old states
+clock_record::save | step 1 open(clock-offset.tmp) | after : old=5 old (no record)=5
+clock_record::save | step 1 open(clock-offset.tmp) | before : old=5 old (no record)=5
+clock_record::save | step 2 write(clock-offset.tmp) | after : old=5 old (no record)=5
+clock_record::save | step 2 write(clock-offset.tmp) | before : old=5 old (no record)=5
+clock_record::save | step 2 write(clock-offset.tmp) | half : old=5 old (no record)=5
+clock_record::save | step 3 fsync(clock-offset.tmp) | after : old=5 old (no record)=5
+clock_record::save | step 3 fsync(clock-offset.tmp) | before : old=5 old (no record)=5
+clock_record::save | step 4 close(clock-offset.tmp) | after : old=5 old (no record)=5
+clock_record::save | step 4 close(clock-offset.tmp) | before : old=5 old (no record)=5
+clock_record::save | step 5 rename(clock-offset) | after : new=10
+clock_record::save | step 5 rename(clock-offset) | after+lost-rename : old=5 old (no record)=5
+clock_record::save | step 5 rename(clock-offset) | before : old=5 old (no record)=5
+clock_record::save | step 6 open(work) | after : new=10
+clock_record::save | step 6 open(work) | after+lost-rename : old=5 old (no record)=5
+clock_record::save | step 6 open(work) | before : new=10
+clock_record::save | step 6 open(work) | before+lost-rename : old=5 old (no record)=5
+clock_record::save | step 7 fsync(work) | after : new=10
+clock_record::save | step 7 fsync(work) | before : new=10
+clock_record::save | step 7 fsync(work) | before+lost-rename : old=5 old (no record)=5
+clock_record::save | step 8 close(work) | after : new=10
+clock_record::save | step 8 close(work) | before : new=10
+limits_record::save | step 1 open(limits.tmp) | after : old=3 old (no record)=3
+limits_record::save | step 1 open(limits.tmp) | before : old=3 old (no record)=3
+limits_record::save | step 2 write(limits.tmp) | after : old=3 old (no record)=3
+limits_record::save | step 2 write(limits.tmp) | before : old=3 old (no record)=3
+limits_record::save | step 2 write(limits.tmp) | half : old=3 old (no record)=3
+limits_record::save | step 3 fsync(limits.tmp) | after : old=3 old (no record)=3
+limits_record::save | step 3 fsync(limits.tmp) | before : old=3 old (no record)=3
+limits_record::save | step 4 close(limits.tmp) | after : old=3 old (no record)=3
+limits_record::save | step 4 close(limits.tmp) | before : old=3 old (no record)=3
+limits_record::save | step 5 rename(limits) | after : new=6
+limits_record::save | step 5 rename(limits) | after+lost-rename : old=3 old (no record)=3
+limits_record::save | step 5 rename(limits) | before : old=3 old (no record)=3
+limits_record::save | step 6 open(work) | after : new=6
+limits_record::save | step 6 open(work) | after+lost-rename : old=3 old (no record)=3
+limits_record::save | step 6 open(work) | before : new=6
+limits_record::save | step 6 open(work) | before+lost-rename : old=3 old (no record)=3
+limits_record::save | step 7 fsync(work) | after : new=6
+limits_record::save | step 7 fsync(work) | before : new=6
+limits_record::save | step 7 fsync(work) | before+lost-rename : old=3 old (no record)=3
+limits_record::save | step 8 close(work) | after : new=6
+limits_record::save | step 8 close(work) | before : new=6
+A.3 total: 336 cases, 0 failed (full table in the csv)
+uptime load averages at end: 18.84 18.82 17.99

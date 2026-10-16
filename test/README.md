@@ -44,20 +44,24 @@ with the reason EARLIER BUILD.
 
 ## Counts
 
-Source: `test/fault-matrix.md`, section "Counts" (250 rows: Part A 133, Part B 117).
+Source: `test/fault-matrix.md`, section "Counts" (269 rows: Part A 133, Part B 117, Part C 19).
+Part C holds the stress audit of 16 Oct 2026 (section "Stress audit, 16 October 2026" below).
+Before the stress audit the 250 rows of Parts A and B counted PASS 80, FAIL 0, NOT RUN 131,
+NOT ON BENCH 7 and N/A 32.
 
-| Status | Rows |
-|---|---|
-| PASS | 80 |
-| FAIL | 0 |
-| NOT RUN | 131 |
-| NOT ON BENCH | 7 |
-| N/A | 32 |
+| Status | Part A | Part B | Part C | Total |
+|---|---|---|---|---|
+| PASS | 59 | 28 | 9 | 96 |
+| FAIL | 0 | 1 | 7 | 8 |
+| NOT RUN | 69 | 54 | 2 | 125 |
+| NOT ON BENCH | 5 | 2 | 0 | 7 |
+| N/A | 0 | 32 | 1 | 33 |
 
 ## Findings
 
-No row is FAIL. The three findings F-1, F-2 and F-3 are fixed and measured on the bench. Each finding is described
-in full under "Findings" in `test/fault-matrix.md`.
+Before the stress audit no row was FAIL. The three findings F-1, F-2 and F-3 are fixed and measured on the bench. Each finding is described
+in full under "Findings" in `test/fault-matrix.md`. The FAIL rows of the stress audit and its
+findings ST-001 to ST-017 are in the section "Stress audit, 16 October 2026" below.
 
 | No. | Rows | Reproduce | State |
 |---|---|---|---|
@@ -85,14 +89,14 @@ Counts are rows with Status NOT RUN, by the Reason column of `test/fault-matrix.
 
 | Reason | Rows | What unblocks it |
 |---|---|---|
-| PLANNED-2 | 55 | Scripted runs (console, ssh, systemctl, sysfs) not yet done |
+| PLANNED-2 | 52 | Scripted runs (console, ssh, systemctl, sysfs) not yet done |
 | PLANNED-3 | 1 | The owner's hands on a cable or button |
-| PLANNED-4 | 24 | Fault injection over SWD; the injection design is shown to the owner first |
+| PLANNED-4 | 19 | Fault injection over SWD; the injection design is shown to the owner first |
 | EARLIER BUILD | 15 | A re-run on 4d6f5e8 or later; each row names the earlier commit |
 | NOT BUILT-ACCEPTED | 3 | Nothing: the owner accepted that the function is not built |
 | NOT BUILT-OPEN | 15 | A decision or the function; the rows cite `src/` of the source before d3bb74a and are not re-checked against it |
-| NEEDS TOOL | 4 | The link tool of Verification Plan Sec. 3.0; a kill of a process id read in advance; a test firmware with a broken update receiver |
-| NEEDS DECISION | 1 | A8.4: the owner accepts the 7.58 h run or orders the 12 h run |
+| NEEDS TOOL | 7 | The link tool of Verification Plan Sec. 3.0; a kill of a process id read in advance; a test firmware with a broken update receiver; a reset that stops a flash write (B4.2, B7.2, SB5.2) |
+| NEEDS DECISION | 0 | A8.4 was answered on 16 Oct 2026: the owner accepted the 7.58 h run (decision 47) |
 | DESK | 13 | Inspections and analyses, no bench run |
 
 NOT ON BENCH (7 rows):
@@ -137,11 +141,89 @@ lines 5 and 16), so REQ-024 cannot be shown here.
 | SWITCH during a trial | REFUSED 0x05 | `test/ground/results/2026-10-16/decision-30/switch-in-trial.log` |
 | Command checks | refusals 0x01, 0x02, 0x04, 0x05, 0x06, 0x0A, 0x0B, 0x12 each measured; a repeated command answered ALREADY DONE | `test/ground/results/2026-10-16/command-checks/command-checks.log` |
 
+## Stress audit, 16 October 2026
+
+The owner ordered a stress audit on 16 Oct 2026. Its conditions are Part C of
+`test/fault-matrix.md`: rows SA1 to SA8 ran as harnesses on the Mac, rows SB1 to SB8 on the bench.
+The audit also changed rows of Parts A and B. A8.4, B2.5, B2.10, B2.11, B3.1, B4.1 and B7.1 are
+PASS. B2.6 is FAIL. B4.2 and B7.2 are NOT RUN with the reason NEEDS TOOL.
+
+Build under test (`test/ground/results/2026-10-16/stress/session.log`, lines 10 to 15):
+
+| Unit | Commit |
+|---|---|
+| Controller bootloader, firmware A and B, last-resort firmware, installed by `restore.sh full` at 11:51 EEST | a504b0d (`src/controller` identical to d3bb74a; only the build id string and the signatures differ) |
+| Onboard computer updater on the board, sha256 `5f0c5f49…` | bc34e8d |
+| `restore.sh`, sha256 `b8b1e5a8…` | ae40af0 |
+| Console | a504b0d (`src/ground` identical to 615a83f) |
+| Host harnesses | a504b0d |
+
+Part C counts 19 rows: PASS 9, FAIL 7, NOT RUN 2 (SB2.1 PLANNED-2, SB5.2 NEEDS TOOL), N/A 1 (SB6).
+
+| Quantity | Value | Source |
+|---|---|---|
+| 1,000 updates (SB1) | 997 of 1,000 confirmed; console time fastest 7.4 s, median 8.2 s, slowest 14.5 s; 3 deliveries refused 0xff (cycles 171, 329, 704), each followed by a passing cycle | `test/ground/results/2026-10-16/stress/sb1-endurance/summary.txt`, `endurance-cycles.txt` |
+| Updater during the 1,000 updates | 8 "controller silent" lines and 2 resets of the controller in the board journal; 0 restarts of the updater | same directory, `board-at-end.txt` |
+| Radio loss 0.5 to 0.7 with resume (SB2.1, stopped, NOT RUN) | loss 0.5: seed 1 not confirmed within the 600 s run bound (6 attempts, upload reached 13312 bytes), seed 2 confirmed after 3 attempts in 806 s, seed 3 after 2 attempts in 315 s; loss 0.6 seed 1 not confirmed within 600 s (9 attempts, 16128 bytes); the "resumed at" field is empty in every line and does not show whether an upload resumed, because the driver looked for "resuming at byte" in the console's output, which the updater writes only to its journal (the coordinator's account); stopped by the coordinator at 16:07:16 EEST on the loss of the USB network link between the Mac and the onboard computer; loss 0.6 seeds 2 and 3 and loss 0.7 not run | `test/ground/results/2026-10-16/stress/sb2-loss/sb2-loss-summary.txt` |
+| Floods during a delivery (SB2.2) | 4 of 4 deliveries completed; slot A, slot B and the last-resort firmware read back IDENTICAL in each run; switch and confirm exit 0 in each | `test/ground/results/2026-10-16/stress/sb2-floods/sb2-flood-summary.txt` |
+| Data link A flapping (SB3) | 0 of 1,144 updates confirmed in 600 s of 3 s unbound, 3 s bound; afterwards 77 failed sends in 5.7 min, no silence noticed; 2 of 2 updates confirmed (7.7 s, 8.7 s) after a hub power cycle | `test/ground/results/2026-10-16/stress/sb3-flap/sb3-flap.log`, `stuck-link-evidence.txt` |
+| Onboard computer restarted during uploads (SB4) | 10 of 10 uploads completed after the restart; updater active again 28.4 to 40.3 s after the order (runs 2 to 10); 7 resumed at byte 256 to 2304, 2 started at byte 0; 3026 EVENT reports stored throughout, 0 dropped | `test/ground/results/2026-10-16/stress/sb4-reboot/sb4-reboot-summary.txt`, `sb4-reboot.log` |
+| Power cut at the 9 flash operations of an update (SB5.1) | 9 of 9 cut points: OPERATE slot A after hits 1 to 3; TRIAL slot B, failed starts 2 after hits 4 to 6; TRIAL slot B, failed starts 3 after hits 7 to 9; a complete boot-state copy after each cut | `test/onboard-computer/results/2026-10-16/stress/sb5-flash-cuts/cuts-summary.txt`, `cuts.log` |
+| Restores overlapping the updater's resets (SB7) | 10 of 10 RESTORE DONE: full, 4.06 to 4.21 s each; 5 resets by the updater, each RESTORE DONE: reset, each on a controller heard again 33 to 43 ms after the reset started | `test/onboard-computer/results/2026-10-16/stress/sb7-overlap.log` |
+| Data directory full (SB8) | 22 uploads stored before the first refusal; then REFUSED 0xfe (storage) at UPLOAD END, at a chunk and at UPLOAD BEGIN; 0 restarts of the updater; 45 reports not stored in 44 s | `test/onboard-computer/results/2026-10-16/stress/sb8-disk.log` |
+| fsync on the idle board | 1,200 writes 0.1 s apart: longest 301 ms, 0 over 500 ms | `test/onboard-computer/results/2026-10-16/stress/fsync-probe.log` |
+| Updater fuzz (SA1) | 7 targets: frame, parser, imagefile, records and reports 1,000,000 inputs each, image 1,676,512, updater 1,119,449 frames in 500 sessions; 0 findings; 8 of 8 deliberate defects caught; mutation-based, without coverage feedback | `test/onboard-computer/results/2026-10-16/stress-host/fuzz/` |
+| Controller fuzz (SA2) | 5 targets: frame, image, boot state and backup registers 1,000,000 inputs each, command 1,000,386; 0 failures; 20 of 20 deliberate defects caught; mutation-based, without coverage feedback | `test/controller/results/2026-10-16/stress-host/fuzz/` |
+| Report store cut at every byte (SA3) | 340 cuts, 0 failed | `test/onboard-computer/results/2026-10-16/stress-host/store/a2.log` |
+| Durable records cut at every step (SA4) | 336 cases, 0 failed | `test/onboard-computer/results/2026-10-16/stress-host/store/a3.log` |
+| Boot state cut at every flash step (SA5) | 162,901 cases: old 93,107, new 68,660, blank to damaged 1,134, third 0, lost 0; first save from blank flash: 1,114 of 2,000 random cuts damaged | `test/controller/results/2026-10-16/stress-host/powercut/powercut_bootstate.log` |
+| Wrap, boundary and repeat cases (SA6, SA8) | updater: 244 OK, 28 FINDING, 5 NOTE and 1 DIED lines; the data-link sequence through its full 2^32 wrap in 1,310 s; controller: 24 and 3 checks, 0 failed | `test/onboard-computer/results/2026-10-16/stress-host/boundaries/boundaries.log`, `wrap-full.log`; `test/controller/results/2026-10-16/stress-host/powercut/boundaries_mode.log`, `clock_wrap.log` |
+| Floods against the host updater (SA7) | 31 scenarios at about 10,000 frames a second, the updater alive after each; valid flood: 40 to 45 % answered DONE, median latency 0.90 to 1.02 s, CPU mean 80 to 92 %, 3 of 9 uploads failed; from another address: no DONE reached the ground for 9 deliveries; 0.9 to 2.1 MB of log a second | `test/onboard-computer/results/2026-10-16/stress-host/flood/summary.txt` and its scenario logs |
+
+Findings of the stress audit. Each is described in full under "Stress findings" in
+`test/fault-matrix.md`. All are OPEN.
+
+| No. | Severity (TBR) | Summary | Rows | Log |
+|---|---|---|---|---|
+| ST-001 | 1 | After 63 other ARMs, a resent ARM pushes its own SWITCH out of the 64-entry repeat memory, and the SWITCH is passed on a second time. | SA8 | `test/onboard-computer/results/2026-10-16/stress-host/boundaries/boundaries.log` |
+| ST-002 | 1 | The 64 entries protect only the last 32 ARM and command pairs, so an old dangerous command runs again after 32 pairs or an updater restart. | SA8 | same |
+| ST-003 | 1 | An old SET ONBOARD TIME, exempt from expiry, runs again once it has left the repeat memory. | SA8 | same |
+| ST-004 | 2 | A power cut during the first boot-state save after a full restore leaves both copies damaged, and only the last-resort firmware starts. | SA5 | `test/controller/results/2026-10-16/stress-host/powercut/powercut_bootstate.log` |
+| ST-005 | 2 | Answers go to the most recent sender, so any second sender of valid commands takes the downlink. | SA7, SB2.2 | `test/onboard-computer/results/2026-10-16/stress-host/flood/summary.txt`; `test/ground/results/2026-10-16/stress/sb2-floods/sb2-flood.log` |
+| ST-006 | 2 | Under 10,000 valid commands a second the updater answers 40 to 45 % of them about 1 s late, and 3 of 9 uploads fail. | SA7 | `test/onboard-computer/results/2026-10-16/stress-host/flood/summary.txt` |
+| ST-007 | 3 | Each accepted command writes a log line with no rate limit: 0.9 to 2.1 MB of log a second under a flood. | SA7 | the scenario logs in `test/onboard-computer/results/2026-10-16/stress-host/flood/` |
+| ST-008 | 3 | Each repeat is answered ALREADY DONE, so a repeat flood is mirrored on the downlink. | SA7 | `test/onboard-computer/results/2026-10-16/stress-host/flood/upload-repeat.log` |
+| ST-009 | 3 | Single uploads stalled for 43.4 s and 34.6 s under repeat and mixed floods, then completed; the cause is not traced. | SA7 | `test/onboard-computer/results/2026-10-16/stress-host/flood/summary.txt` |
+| ST-010 | 2 | After a pause in reading the controller, the updater resets a controller that is heard again at once and refuses deliveries 0xff; the cause is open. | SB1, SB5.1, SB7 | `test/ground/results/2026-10-16/stress/sb1-endurance/`; `test/onboard-computer/results/2026-10-16/stress/sb7-overlap.log` |
+| ST-011 | 3 | The report store is not wrap-aware: numbers are reused after 0xFFFFFFFF, and unsent reports after the wrap can be deleted. | SA6 | `test/onboard-computer/results/2026-10-16/stress-host/store/a4.log` |
+| ST-012 | 4 | A boot-state write at sequence 0xFFFFFFFF answers success and has no effect. | SA6 | `test/controller/results/2026-10-16/stress-host/powercut/powercut_bootstate.log` |
+| ST-013 | 4 | The updater has a signed overflow for a stored clock offset that no command can store. | SA6 | `test/onboard-computer/results/2026-10-16/stress-host/boundaries/boundaries.log` |
+| ST-014 | 4 | The firmware's image check underflows for a region under 192 bytes, which no caller passes. | SA2 | `test/controller/results/2026-10-16/stress-host/fuzz/fz_image.log` |
+| ST-015 | 4 | Code rule C8 (lines of 100 characters or fewer) is not checked, and committed lines break it. | — | the coordinator's count; no log |
+| ST-016 | 2 | After rapid unbind and bind of data link A the updater stayed blind for 5.7 min: no silence noticed, no reset, no reopen. | B2.6, SB3 | `test/ground/results/2026-10-16/stress/sb3-flap/stuck-link-evidence.txt` |
+| ST-017 | 3 | On a full disk every report is lost from the store, with one log line per report; whether they count as dropped is not shown. | SB8.2 | `test/onboard-computer/results/2026-10-16/stress/sb8-disk.log` |
+
+Severity (TBR): 1, a safety function can be defeated; 2, a function is lost (crash, hang,
+unbounded growth, lost records, an update that can never complete, a timer late by more than its
+period); 3, degraded; 4, hygiene. Proposal (TBR), awaiting the owner's acceptance.
+
+Questions Q-1 to Q-13, on behaviour that no source specifies, are listed after "Decisions" in
+`test/fault-matrix.md`. Observations O-12 to O-15 cover the stress audit; O-14 lists its
+test-method notes.
+
+Note: the result logs under `test/controller/results/2026-10-16/` and
+`test/onboard-computer/results/2026-10-16/stress-host/` were changed by the coordinator on
+16 Oct 2026 at about 15:18 EEST in one way only. The absolute path of the local checkout was
+replaced by `<checkout of a504b0d>` (745 places in 120 files). In 21 lines where a fixed line
+width had cut that path short, it reads `<workspace>/failsafe-remot`. Every other byte of each log
+is as recorded.
+
 ## Where the evidence is
 
 | What | Path |
 |---|---|
-| Rows, findings, observations O-1 to O-11, decisions | `test/fault-matrix.md` |
+| Rows, findings, stress findings ST-001 to ST-017, observations O-1 to O-15, decisions, questions Q-1 to Q-13 | `test/fault-matrix.md` |
+| Stress audit runs, 16 Oct | `test/ground/results/2026-10-16/stress/`, `test/onboard-computer/results/2026-10-16/stress/`, `test/onboard-computer/results/2026-10-16/stress-host/`, `test/controller/results/2026-10-16/stress-host/` |
 | Ground-side runs, 15 Oct | `test/ground/results/2026-10-15/README.md` |
 | Ground-side runs, 16 Oct | `test/ground/results/2026-10-16/README.md` |
 | Onboard computer runs | `test/onboard-computer/results/2026-10-15/README.md`, `test/onboard-computer/results/2026-10-16/README.md` |
@@ -151,7 +233,9 @@ lines 5 and 16), so REQ-024 cannot be shown here.
 
 | Item | What is needed |
 |---|---|
-| A8.4 | Accept the 7.58 h run without commands, or order the 12 h run (decision 4) |
+| A8.4 | Accept the 7.58 h run without commands, or order the 12 h run (decision 4); answered 16 Oct 2026: the 7.58 h run accepted (decision 47) |
+| Severity scale (TBR) | Accept or change the severity scale of the stress findings, a proposal awaiting the owner's acceptance (`test/fault-matrix.md`, "Stress findings") |
+| Questions Q-1 to Q-13 | State the expected behaviour for each open question of the stress audit (`test/fault-matrix.md`, after "Decisions") |
 | O-10 | Decide on a lock shared by every SWD user and on the updater pausing its silence resets during an ordered restore (proposal marked TBR) |
 | O-11 | Decide whether to fix the -6 s case of `testClockDifferenceEvent` |
 | TBR proposals | Accept or change each proposal still marked TBR |

@@ -1,0 +1,14 @@
+# SB4 onboard computer restarted during uploads; mac start 2026-10-16 14:44:09 EEST; restart ordered 5 s into an upload at --radio-loss 0.3
+run 1: back None s; resume exit 0; no resume line; ypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+# SB4 onboard computer restarted during uploads; mac start 2026-10-16 14:48:32 EEST; restart ordered 5 s into an upload at --radio-loss 0.3
+run 2: back 34.3 s; resume exit 0; [     9.156] UPLOAD BEGIN image 811, 20776 bytes: resuming at byte 256; 886 of 1048576 bytes), next report number 17071, 0 dropped HEALTH reports not yet reported
+run 3: back 34.3 s; resume exit 0; [     8.608] UPLOAD BEGIN image 812, 20776 bytes: resuming at byte 768; 456 of 1048576 bytes), next report number 17090, 0 dropped HEALTH reports not yet reported
+run 4: back 28.4 s; resume exit 0; [     3.242] UPLOAD BEGIN image 813, 20776 bytes: starting at byte 0; 026 of 1048576 bytes), next report number 17109, 0 dropped HEALTH reports not yet reported
+run 5: back 34.3 s; resume exit 0; [     7.882] UPLOAD BEGIN image 814, 20776 bytes: resuming at byte 2304; 476 of 1048576 bytes), next report number 17124, 0 dropped HEALTH reports not yet reported
+run 6: back 34.3 s; resume exit 0; [    10.168] UPLOAD BEGIN image 815, 20776 bytes: resuming at byte 512; 016 of 1048576 bytes), next report number 17142, 0 dropped HEALTH reports not yet reported
+run 7: back 34.4 s; resume exit 0; [     7.261] UPLOAD BEGIN image 816, 20776 bytes: resuming at byte 256; 616 of 1048576 bytes), next report number 17162, 0 dropped HEALTH reports not yet reported
+run 8: back 34.4 s; resume exit 0; [     5.486] UPLOAD BEGIN image 817, 20776 bytes: starting at byte 0; 126 of 1048576 bytes), next report number 17179, 0 dropped HEALTH reports not yet reported
+run 9: back 40.3 s; resume exit 0; [    11.108] UPLOAD BEGIN image 818, 20776 bytes: resuming at byte 512; 606 of 1048576 bytes), next report number 17195, 0 dropped HEALTH reports not yet reported
+run 10: back 34.3 s; resume exit 0; [     8.860] UPLOAD BEGIN image 819, 20776 bytes: resuming at byte 1280; 236 of 1048576 bytes), next report number 17216, 0 dropped HEALTH reports not yet reported
+# mac end 2026-10-16 14:55:11 EEST; end state ('OPERATE', 'B')

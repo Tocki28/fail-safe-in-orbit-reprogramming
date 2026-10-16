@@ -1,0 +1,2 @@
+# fsync probe: board 2026-10-16 11:19:17 UTC; 30-byte append + fsync (dd conv=fsync) to /root/fsync-probe on the root SD card file system (the same as /var/lib/fsir/images, df 16 Oct), fsir-updater running; 1200 writes 0.1 s apart
+writes 1200; max 301 ms; over 100 ms: 6; over 500 ms: 0; over 1000 ms: 0; end 11:21:43 UTC

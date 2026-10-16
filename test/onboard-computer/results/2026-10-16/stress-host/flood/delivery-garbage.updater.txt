@@ -1,0 +1,203 @@
+2026-10-16 11:36:49 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario delivery --flood garbage --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag delivery-garbage
+updater log: 32062 bytes, 376 lines; first 200 and last 200 lines
+---- first lines ----
+[     0.006] reports: no store file; <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/delivery-garbage/images/reports made, empty, next report number 1
+[     0.006] limits: no record, starting with minimum version 1, controller identity 0x0431
+[     0.006] clock: no offset record, starting with offset 0 s
+[     0.006] fsir-updater: ground on UDP port 53969 (all interfaces); data link A on /dev/ttys007; images in <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/delivery-garbage/images; keys built in; beat off; restart script <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/delivery-garbage/restore.py
+[     0.007] data link A: /dev/ttys007 open, 115200 8N1 raw
+[     0.491] controller heard
+[     0.491] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[     0.491] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and not sent live until one does
+[     0.574] ground link: answers and reports now go to 127.0.0.1:61226
+[     0.574] ground: command 0x01 sequence 1 for the onboard computer (7 payload bytes)
+[     0.574] UPLOAD BEGIN image 1, 20776 bytes: starting at byte 0
+[     0.575] ground: command 0x02 sequence 2 for the onboard computer (263 payload bytes)
+[     0.576] ground: command 0x02 sequence 3 for the onboard computer (263 payload bytes)
+[     0.576] ground: command 0x02 sequence 4 for the onboard computer (263 payload bytes)
+[     0.577] ground: command 0x02 sequence 5 for the onboard computer (263 payload bytes)
+[     0.578] ground: command 0x02 sequence 6 for the onboard computer (263 payload bytes)
+[     0.578] ground: command 0x02 sequence 7 for the onboard computer (263 payload bytes)
+[     0.579] ground: command 0x02 sequence 8 for the onboard computer (263 payload bytes)
+[     0.579] ground: command 0x02 sequence 9 for the onboard computer (263 payload bytes)
+[     0.580] ground: command 0x02 sequence 10 for the onboard computer (263 payload bytes)
+[     0.580] ground: command 0x02 sequence 11 for the onboard computer (263 payload bytes)
+[     0.581] ground: command 0x02 sequence 12 for the onboard computer (263 payload bytes)
+[     0.582] ground: command 0x02 sequence 13 for the onboard computer (263 payload bytes)
+[     0.583] ground: command 0x02 sequence 14 for the onboard computer (263 payload bytes)
+[     0.584] ground: command 0x02 sequence 15 for the onboard computer (263 payload bytes)
+[     0.585] ground: command 0x02 sequence 16 for the onboard computer (263 payload bytes)
+[     0.585] ground: command 0x02 sequence 17 for the onboard computer (263 payload bytes)
+[     0.586] ground: command 0x02 sequence 18 for the onboard computer (263 payload bytes)
+[     0.586] ground: command 0x02 sequence 19 for the onboard computer (263 payload bytes)
+[     0.587] ground: command 0x02 sequence 20 for the onboard computer (263 payload bytes)
+[     0.587] ground: command 0x02 sequence 21 for the onboard computer (263 payload bytes)
+[     0.588] ground: command 0x02 sequence 22 for the onboard computer (263 payload bytes)
+[     0.589] ground: command 0x02 sequence 23 for the onboard computer (263 payload bytes)
+[     0.589] ground: command 0x02 sequence 24 for the onboard computer (263 payload bytes)
+[     0.590] ground: command 0x02 sequence 25 for the onboard computer (263 payload bytes)
+[     0.591] ground: command 0x02 sequence 26 for the onboard computer (263 payload bytes)
+[     0.592] ground: command 0x02 sequence 27 for the onboard computer (263 payload bytes)
+[     0.593] ground: command 0x02 sequence 28 for the onboard computer (263 payload bytes)
+[     0.593] ground: command 0x02 sequence 29 for the onboard computer (263 payload bytes)
+[     0.594] ground: command 0x02 sequence 30 for the onboard computer (263 payload bytes)
+[     0.594] ground: command 0x02 sequence 31 for the onboard computer (263 payload bytes)
+[     0.595] ground: command 0x02 sequence 32 for the onboard computer (263 payload bytes)
+[     0.595] ground: command 0x02 sequence 33 for the onboard computer (263 payload bytes)
+[     0.596] ground: command 0x02 sequence 34 for the onboard computer (263 payload bytes)
+[     0.596] ground: command 0x02 sequence 35 for the onboard computer (263 payload bytes)
+[     0.597] ground: command 0x02 sequence 36 for the onboard computer (263 payload bytes)
+[     0.598] ground: command 0x02 sequence 37 for the onboard computer (263 payload bytes)
+[     0.599] ground: command 0x02 sequence 38 for the onboard computer (263 payload bytes)
+[     0.599] ground: command 0x02 sequence 39 for the onboard computer (263 payload bytes)
+[     0.600] ground: command 0x02 sequence 40 for the onboard computer (263 payload bytes)
+[     0.601] ground: command 0x02 sequence 41 for the onboard computer (263 payload bytes)
+[     0.601] ground: command 0x02 sequence 42 for the onboard computer (263 payload bytes)
+[     0.602] ground: command 0x02 sequence 43 for the onboard computer (263 payload bytes)
+[     0.602] ground: command 0x02 sequence 44 for the onboard computer (263 payload bytes)
+[     0.603] ground: command 0x02 sequence 45 for the onboard computer (263 payload bytes)
+[     0.603] ground: command 0x02 sequence 46 for the onboard computer (263 payload bytes)
+[     0.604] ground: command 0x02 sequence 47 for the onboard computer (263 payload bytes)
+[     0.604] ground: command 0x02 sequence 48 for the onboard computer (263 payload bytes)
+[     0.605] ground: command 0x02 sequence 49 for the onboard computer (263 payload bytes)
+[     0.605] ground: command 0x02 sequence 50 for the onboard computer (263 payload bytes)
+[     0.606] ground: command 0x02 sequence 51 for the onboard computer (263 payload bytes)
+[     0.606] ground: command 0x02 sequence 52 for the onboard computer (263 payload bytes)
+[     0.607] ground: command 0x02 sequence 53 for the onboard computer (263 payload bytes)
+[     0.607] ground: command 0x02 sequence 54 for the onboard computer (263 payload bytes)
+[     0.608] ground: command 0x02 sequence 55 for the onboard computer (263 payload bytes)
+[     0.608] ground: command 0x02 sequence 56 for the onboard computer (263 payload bytes)
+[     0.609] ground: command 0x02 sequence 57 for the onboard computer (263 payload bytes)
+[     0.610] ground: command 0x02 sequence 58 for the onboard computer (263 payload bytes)
+[     0.610] ground: command 0x02 sequence 59 for the onboard computer (263 payload bytes)
+[     0.611] ground: command 0x02 sequence 60 for the onboard computer (263 payload bytes)
+[     0.611] ground: command 0x02 sequence 61 for the onboard computer (263 payload bytes)
+[     0.612] ground: command 0x02 sequence 62 for the onboard computer (263 payload bytes)
+[     0.612] ground: command 0x02 sequence 63 for the onboard computer (263 payload bytes)
+[     0.613] ground: command 0x02 sequence 64 for the onboard computer (263 payload bytes)
+[     0.613] ground: command 0x02 sequence 65 for the onboard computer (263 payload bytes)
+[     0.614] ground: command 0x02 sequence 66 for the onboard computer (263 payload bytes)
+[     0.614] ground: command 0x02 sequence 67 for the onboard computer (263 payload bytes)
+[     0.615] ground: command 0x02 sequence 68 for the onboard computer (263 payload bytes)
+[     0.616] ground: command 0x02 sequence 69 for the onboard computer (263 payload bytes)
+[     0.617] ground: command 0x02 sequence 70 for the onboard computer (263 payload bytes)
+[     0.617] ground: command 0x02 sequence 71 for the onboard computer (263 payload bytes)
+[     0.618] ground: command 0x02 sequence 72 for the onboard computer (263 payload bytes)
+[     0.618] ground: command 0x02 sequence 73 for the onboard computer (263 payload bytes)
+[     0.619] ground: command 0x02 sequence 74 for the onboard computer (263 payload bytes)
+[     0.619] ground: command 0x02 sequence 75 for the onboard computer (263 payload bytes)
+[     0.620] ground: command 0x02 sequence 76 for the onboard computer (263 payload bytes)
+[     0.620] ground: command 0x02 sequence 77 for the onboard computer (263 payload bytes)
+[     0.621] ground: command 0x02 sequence 78 for the onboard computer (263 payload bytes)
+[     0.621] ground: command 0x02 sequence 79 for the onboard computer (263 payload bytes)
+[     0.622] ground: command 0x02 sequence 80 for the onboard computer (263 payload bytes)
+[     0.622] ground: command 0x02 sequence 81 for the onboard computer (263 payload bytes)
+[     0.623] ground: command 0x02 sequence 82 for the onboard computer (263 payload bytes)
+[     0.623] ground: command 0x02 sequence 83 for the onboard computer (47 payload bytes)
+[     0.624] ground: command 0x03 sequence 84 for the onboard computer (3 payload bytes)
+[     0.626] UPLOAD END image 1: checks passed (kind 0x02, version 1); stored
+[     0.645] ground: command 0x05 sequence 85 for the onboard computer (3 payload bytes)
+[     0.646] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     1.844] DELIVER image 1: done; the controller accepted UPLOAD END
+[     1.845] ground: command 0x05 sequence 86 for the onboard computer (3 payload bytes)
+[     1.846] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     3.045] DELIVER image 1: done; the controller accepted UPLOAD END
+[     3.046] ground: command 0x05 sequence 87 for the onboard computer (3 payload bytes)
+[     3.047] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     4.256] DELIVER image 1: done; the controller accepted UPLOAD END
+[     4.257] ground: command 0x05 sequence 88 for the onboard computer (3 payload bytes)
+[     4.258] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     5.492] DELIVER image 1: done; the controller accepted UPLOAD END
+[     5.493] ground: command 0x05 sequence 89 for the onboard computer (3 payload bytes)
+[     5.494] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     6.121] ground link: datagram of 279 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[     6.725] DELIVER image 1: done; the controller accepted UPLOAD END
+[     6.725] ground: command 0x05 sequence 90 for the onboard computer (3 payload bytes)
+[     6.726] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     7.121] ground link: 9997 more datagrams dropped since the last such line
+[     7.121] ground link: datagram of 5 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[     7.967] DELIVER image 1: done; the controller accepted UPLOAD END
+[     7.969] ground: command 0x05 sequence 91 for the onboard computer (3 payload bytes)
+[     7.970] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     8.121] ground link: 9992 more datagrams dropped since the last such line
+[     8.121] ground link: datagram of 2048 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[     9.121] ground link: 9999 more datagrams dropped since the last such line
+[     9.121] ground link: datagram of 2048 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[     9.170] DELIVER image 1: done; the controller accepted UPLOAD END
+[     9.170] ground: command 0x05 sequence 92 for the onboard computer (3 payload bytes)
+[     9.171] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    10.122] ground link: 10013 more datagrams dropped since the last such line
+[    10.122] ground link: datagram of 21 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    10.410] DELIVER image 1: done; the controller accepted UPLOAD END
+[    10.410] ground: command 0x05 sequence 93 for the onboard computer (3 payload bytes)
+[    10.411] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    11.122] ground link: 10003 more datagrams dropped since the last such line
+[    11.122] ground link: datagram of 21 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    11.651] DELIVER image 1: done; the controller accepted UPLOAD END
+[    11.651] ground: command 0x05 sequence 94 for the onboard computer (3 payload bytes)
+[    11.652] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    12.122] ground link: 9999 more datagrams dropped since the last such line
+[    12.122] ground link: datagram of 21 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    12.885] DELIVER image 1: done; the controller accepted UPLOAD END
+[    12.885] ground: command 0x05 sequence 95 for the onboard computer (3 payload bytes)
+[    12.887] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    13.123] ground link: 10006 more datagrams dropped since the last such line
+[    13.123] ground link: datagram of 815 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    14.107] DELIVER image 1: done; the controller accepted UPLOAD END
+[    14.108] ground: command 0x05 sequence 96 for the onboard computer (3 payload bytes)
+[    14.109] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    14.123] ground link: 9999 more datagrams dropped since the last such line
+[    14.123] ground link: datagram of 602 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    15.123] ground link: 10002 more datagrams dropped since the last such line
+[    15.123] ground link: datagram of 2048 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    15.341] DELIVER image 1: done; the controller accepted UPLOAD END
+[    15.342] ground: command 0x05 sequence 97 for the onboard computer (3 payload bytes)
+[    15.343] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    16.123] ground link: 9997 more datagrams dropped since the last such line
+[    16.123] ground link: datagram of 21 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    16.581] DELIVER image 1: done; the controller accepted UPLOAD END
+[    16.582] ground: command 0x05 sequence 98 for the onboard computer (3 payload bytes)
+[    16.583] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    17.124] ground link: 10001 more datagrams dropped since the last such line
+[    17.124] ground link: datagram of 2048 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    17.817] DELIVER image 1: done; the controller accepted UPLOAD END
+[    17.818] ground: command 0x05 sequence 99 for the onboard computer (3 payload bytes)
+[    17.819] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    18.124] ground link: 10008 more datagrams dropped since the last such line
+[    18.124] ground link: datagram of 599 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    19.064] DELIVER image 1: done; the controller accepted UPLOAD END
+[    19.064] ground: command 0x05 sequence 100 for the onboard computer (3 payload bytes)
+[    19.065] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    19.124] ground link: 9992 more datagrams dropped since the last such line
+[    19.124] ground link: datagram of 21 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    20.126] ground link: 10024 more datagrams dropped since the last such line
+[    20.126] ground link: datagram of 13 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    20.282] DELIVER image 1: done; the controller accepted UPLOAD END
+[    20.283] ground: command 0x05 sequence 101 for the onboard computer (3 payload bytes)
+[    20.284] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    21.126] ground link: 10001 more datagrams dropped since the last such line
+[    21.126] ground link: datagram of 928 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    21.514] DELIVER image 1: done; the controller accepted UPLOAD END
+[    21.514] ground: command 0x05 sequence 102 for the onboard computer (3 payload bytes)
+[    21.516] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    22.126] ground link: 9995 more datagrams dropped since the last such line
+[    22.126] ground link: datagram of 918 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    22.761] DELIVER image 1: done; the controller accepted UPLOAD END
+[    22.762] ground: command 0x05 sequence 103 for the onboard computer (3 payload bytes)
+[    22.763] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    23.127] ground link: 10014 more datagrams dropped since the last such line
+[    23.127] ground link: datagram of 2048 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    24.021] DELIVER image 1: done; the controller accepted UPLOAD END
+[    24.022] ground: command 0x05 sequence 104 for the onboard computer (3 payload bytes)
+[    24.023] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    24.127] ground link: 10001 more datagrams dropped since the last such line
+[    24.127] ground link: datagram of 21 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    25.128] ground link: 10000 more datagrams dropped since the last such line
+[    25.128] ground link: datagram of 4 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    25.258] DELIVER image 1: done; the controller accepted UPLOAD END
+[    25.259] ground: command 0x05 sequence 105 for the onboard computer (3 payload bytes)
+[    25.260] DELIVER image 1: 20776 bytes, version 1, to the controller
+[    26.129] ground link: 10012 more datagrams dropped since the last such line
+[    26.129] ground link: datagram of 2048 bytes from 127.0.0.1:61226 is not a good frame; dropped
+[    26.583] DELIVER image 1: done; the controller accepted UPLOAD END
+[    26.583] ground: command 0x05 sequence 106 for the onboard computer (3 payload bytes)

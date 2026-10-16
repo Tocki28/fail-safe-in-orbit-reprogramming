@@ -1,0 +1,145 @@
+2026-10-16 11:22:55 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario upload --flood valid --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag upload-valid
+load averages at start (11.87109375, 16.21533203125, 15.32373046875), at end (53.0224609375, 33.8017578125, 22.5361328125)
+{
+ "tag": "upload-valid",
+ "scenario": "upload",
+ "flood": {
+  "kind": "valid",
+  "source": "same",
+  "seed": 1,
+  "cmd": [
+   "/usr/local/opt/python@3.14/bin/python3.14",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/flood_sender.py",
+   "--port",
+   "60852",
+   "--kind",
+   "valid",
+   "--rate",
+   "10000",
+   "--seconds",
+   "75.0",
+   "--seed",
+   "1",
+   "--stats",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/upload-valid/flood-stats.json",
+   "--fd",
+   "6",
+   "--times",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/upload-valid/flood-times.bin"
+  ],
+  "rate_target": 10000,
+  "seconds_target": 75.0,
+  "elapsed_s": 74.59188093594275,
+  "attempted": 745861,
+  "sent": 745861,
+  "send_errors": 0,
+  "rate_reached": 9999.224991263094,
+  "foreign_answers": 0,
+  "valid_frames": 745861,
+  "per_second_stats": {
+   "n": 74,
+   "min": 9943,
+   "p50": 10005,
+   "p95": 10043,
+   "p99": 10056,
+   "max": 10056,
+   "mean": 9999.31081081081,
+   "std": 26.07314330964505
+  },
+  "answers_to_flood": {
+   "RECEIVED": 300066,
+   "DONE": 300066
+  },
+  "valid_done_share": 0.40230820487999774,
+  "valid_done_latency_ms": {
+   "n": 300066,
+   "min": 0.43010013177990913,
+   "p50": 1019.9019180145115,
+   "p95": 1175.3876951988786,
+   "p99": 1269.8233742266893,
+   "max": 1339.8818611167371,
+   "mean": 1019.6603682972917,
+   "std": 128.2492797855373
+  },
+  "udp_delta_system_wide": {
+   "received": 3705904,
+   "dropped_full_buffer": 1224344
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:22:55 EEST",
+ "loadavg_start": [
+  11.87109375,
+  16.21533203125,
+  15.32373046875
+ ],
+ "image_bytes": 20776,
+ "upload": {
+  "cycles": 9,
+  "completed_identical": 5,
+  "failed": 3,
+  "cut_by_end_of_scenario": 1,
+  "failures": [
+   "command 32 of 84: no final answer",
+   "command 0 of 84: no final answer",
+   "command 2 of 84: no final answer"
+  ],
+  "seconds": {
+   "n": 5,
+   "min": 0.05930327787064016,
+   "p50": 0.06209238013252616,
+   "p95": 0.0695573459379375,
+   "p99": 0.0695573459379375,
+   "max": 0.0695573459379375,
+   "mean": 0.06330545959062875,
+   "std": 0.0037297858358605355
+  },
+  "resends": 21,
+  "commands": 468,
+  "window_s": 74.96648452105
+ },
+ "updater": {
+  "samples": 78,
+  "rss_kb": {
+   "first": 4236,
+   "last": 4548,
+   "max": 4548
+  },
+  "cpu_pct": {
+   "n": 77,
+   "min": 33.73261773223681,
+   "p50": 87.97262105276529,
+   "p95": 94.37112795417228,
+   "p99": 95.60747305051403,
+   "max": 95.60747305051403,
+   "mean": 86.40502983223945,
+   "std": 9.548017159315684
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 300534,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 81507879,
+   "lines": 600623
+  }
+ },
+ "probe": null,
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  53.0224609375,
+  33.8017578125,
+  22.5361328125
+ ]
+}

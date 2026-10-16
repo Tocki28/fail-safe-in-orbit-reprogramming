@@ -1,0 +1,56 @@
+# SB7 restore overlap; mac 2026-10-16 14:55:48 EEST; sb7_overlap.sh (sha256 2e0cc68af1210df6) 10 runs, 1 s apart; restore.sh b8b1e5a8, updater bc34e8d (PID restarted in SB3), images a504b0d
+SB7 start 2026-10-16 11:55:45 UTC; 10 restores, 1 s apart; images /root/bench-images-a504b0d
+run 1: 11:55:45.993 to 11:55:50.202 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 2: 11:55:51.208 to 11:55:55.290 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 3: 11:55:56.295 to 11:56:00.366 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 4: 11:56:01.373 to 11:56:05.464 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 5: 11:56:06.470 to 11:56:10.534 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 6: 11:56:11.541 to 11:56:15.623 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 7: 11:56:16.629 to 11:56:20.694 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 8: 11:56:21.702 to 11:56:25.779 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 9: 11:56:26.784 to 11:56:30.844 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+run 10: 11:56:31.850 to 11:56:35.933 UTC: RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+--- fsir-updater journal 2026-10-16 11:55:45 to 2026-10-16 11:56:51 UTC: silence, resets and their results
+Oct 16 11:55:51.174891 stm32mp2unknownunknown fsir-updater[859]: [    54.172] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 11:55:51.174891 stm32mp2unknownunknown fsir-updater[859]: [    54.172] controller: EVENT 0x0101 (data link lost)
+Oct 16 11:55:51.193527 stm32mp2unknownunknown fsir-updater[859]: [    54.191] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 11:55:51.228661 stm32mp2unknownunknown fsir-updater[859]: [    54.224] controller heard again after 5 s of silence
+Oct 16 11:55:51.228661 stm32mp2unknownunknown fsir-updater[859]: [    54.224] controller: EVENT 0x0102 (data link working again)
+Oct 16 11:55:51.450108 stm32mp2unknownunknown fsir-updater[859]: [    54.446] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 11:55:51.450108 stm32mp2unknownunknown fsir-updater[859]: [    54.446] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silen
+Oct 16 11:55:51.450108 stm32mp2unknownunknown fsir-updater[859]: [    54.446] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 11:56:01.327862 stm32mp2unknownunknown fsir-updater[859]: [    64.325] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 11:56:01.327862 stm32mp2unknownunknown fsir-updater[859]: [    64.325] controller: EVENT 0x0101 (data link lost)
+Oct 16 11:56:01.339121 stm32mp2unknownunknown fsir-updater[859]: [    64.336] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 11:56:01.382429 stm32mp2unknownunknown fsir-updater[859]: [    64.379] controller heard again after 5 s of silence
+Oct 16 11:56:01.382429 stm32mp2unknownunknown fsir-updater[859]: [    64.379] controller: EVENT 0x0102 (data link working again)
+Oct 16 11:56:01.579650 stm32mp2unknownunknown fsir-updater[859]: [    64.575] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 11:56:01.579650 stm32mp2unknownunknown fsir-updater[859]: [    64.575] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silen
+Oct 16 11:56:01.579650 stm32mp2unknownunknown fsir-updater[859]: [    64.575] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 11:56:11.507703 stm32mp2unknownunknown fsir-updater[859]: [    74.505] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 11:56:11.507703 stm32mp2unknownunknown fsir-updater[859]: [    74.505] controller: EVENT 0x0101 (data link lost)
+Oct 16 11:56:11.517779 stm32mp2unknownunknown fsir-updater[859]: [    74.515] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 11:56:11.564646 stm32mp2unknownunknown fsir-updater[859]: [    74.557] controller heard again after 5 s of silence
+Oct 16 11:56:11.564646 stm32mp2unknownunknown fsir-updater[859]: [    74.557] controller: EVENT 0x0102 (data link working again)
+Oct 16 11:56:11.766503 stm32mp2unknownunknown fsir-updater[859]: [    74.763] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 11:56:11.766503 stm32mp2unknownunknown fsir-updater[859]: [    74.763] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silen
+Oct 16 11:56:11.766503 stm32mp2unknownunknown fsir-updater[859]: [    74.763] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 11:56:21.666602 stm32mp2unknownunknown fsir-updater[859]: [    84.664] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 11:56:21.666602 stm32mp2unknownunknown fsir-updater[859]: [    84.664] controller: EVENT 0x0101 (data link lost)
+Oct 16 11:56:21.676727 stm32mp2unknownunknown fsir-updater[859]: [    84.674] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 11:56:21.720182 stm32mp2unknownunknown fsir-updater[859]: [    84.716] controller heard again after 5 s of silence
+Oct 16 11:56:21.720182 stm32mp2unknownunknown fsir-updater[859]: [    84.716] controller: EVENT 0x0102 (data link working again)
+Oct 16 11:56:21.925244 stm32mp2unknownunknown fsir-updater[859]: [    84.922] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 11:56:21.925739 stm32mp2unknownunknown fsir-updater[859]: [    84.923] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silen
+Oct 16 11:56:21.925739 stm32mp2unknownunknown fsir-updater[859]: [    84.923] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+Oct 16 11:56:31.816758 stm32mp2unknownunknown fsir-updater[859]: [    94.814] controller silent: no frame from the controller for 5 s (REQ-061)
+Oct 16 11:56:31.816758 stm32mp2unknownunknown fsir-updater[859]: [    94.814] controller: EVENT 0x0101 (data link lost)
+Oct 16 11:56:31.829696 stm32mp2unknownunknown fsir-updater[859]: [    94.827] controller silent: /usr/local/bin/restore.sh reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+Oct 16 11:56:31.873089 stm32mp2unknownunknown fsir-updater[859]: [    94.870] controller heard again after 5 s of silence
+Oct 16 11:56:31.873089 stm32mp2unknownunknown fsir-updater[859]: [    94.870] controller: EVENT 0x0102 (data link working again)
+Oct 16 11:56:32.082366 stm32mp2unknownunknown fsir-updater[859]: [    95.079] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+Oct 16 11:56:32.082366 stm32mp2unknownunknown fsir-updater[859]: [    95.079] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silen
+Oct 16 11:56:32.082366 stm32mp2unknownunknown fsir-updater[859]: [    95.079] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+SB7 end 2026-10-16 11:56:51 UTC
+# mac 14:56:55: console status after
+report  HEALTH  #17307 onboard t=1792151816 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED

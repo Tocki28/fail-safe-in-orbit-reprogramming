@@ -1,0 +1,37 @@
+scenario,mode,first,end,events_sent,health_sent,reports_in_file
+W0 nothing fetched,live,FFFFFFF0,00000009,0,0,16
+W0 nothing fetched,live,FFFFFFF8,00000009,0,0,8
+W0 nothing fetched,live,FFFFFFFF,00000009,0,0,1
+W0 nothing fetched,live,00000001,00000009,2,6,24
+W0 nothing fetched,live,00000003,00000009,2,4,22
+W0 nothing fetched,live,00000000,00000009,2,6,24
+W0 nothing fetched,restart,FFFFFFF0,00000001,0,0,16
+W0 nothing fetched,restart,FFFFFFF8,00000001,0,0,8
+W0 nothing fetched,restart,FFFFFFFF,00000001,0,0,1
+W0 nothing fetched,restart,00000001,00000001,0,0,24
+W0 nothing fetched,restart,00000003,00000001,0,0,22
+W0 nothing fetched,restart,00000000,00000001,0,0,24
+W1 fetched below FFFFFFE0,live,FFFFFFF0,00000009,0,0,16
+W1 fetched below FFFFFFE0,live,FFFFFFF8,00000009,0,0,8
+W1 fetched below FFFFFFE0,live,FFFFFFFF,00000009,0,0,1
+W1 fetched below FFFFFFE0,live,00000001,00000009,0,0,16
+W1 fetched below FFFFFFE0,live,00000003,00000009,0,0,16
+W1 fetched below FFFFFFE0,live,00000000,00000009,0,0,16
+W1 fetched below FFFFFFE0,restart,FFFFFFF0,00000001,0,0,16
+W1 fetched below FFFFFFE0,restart,FFFFFFF8,00000001,0,0,8
+W1 fetched below FFFFFFE0,restart,FFFFFFFF,00000001,0,0,1
+W1 fetched below FFFFFFE0,restart,00000001,00000001,0,0,16
+W1 fetched below FFFFFFE0,restart,00000003,00000001,0,0,16
+W1 fetched below FFFFFFE0,restart,00000000,00000001,0,0,16
+W2 small store overflows,live,FFFFFFF0,00000019,0,0,6
+W2 small store overflows,live,FFFFFFF8,00000019,0,0,3
+W2 small store overflows,live,FFFFFFFF,00000019,0,0,1
+W2 small store overflows,live,00000001,00000019,8,0,14
+W2 small store overflows,live,00000003,00000019,8,0,14
+W2 small store overflows,live,00000000,00000019,8,0,14
+W2 small store overflows,restart,FFFFFFF0,00000001,0,0,6
+W2 small store overflows,restart,FFFFFFF8,00000001,0,0,3
+W2 small store overflows,restart,FFFFFFFF,00000001,0,0,1
+W2 small store overflows,restart,00000001,00000001,0,0,14
+W2 small store overflows,restart,00000003,00000001,0,0,14
+W2 small store overflows,restart,00000000,00000001,0,0,14

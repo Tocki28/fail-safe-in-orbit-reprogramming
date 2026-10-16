@@ -1,0 +1,342 @@
+=== hit 3 cut, image 970, mac 15:02:08
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 1, confirm exit -
+  | openocd pid 2621 started 12:02:20.671 UTC, mode cut, stop at hit 3
+  | halt line seen 12:02:21.010 UTC; hub port off 12:02:21.213 UTC
+  | hub port on 12:02:24.682 UTC
+  | SB5 armed mode cut stop_at 3 ms 1150778380
+  | SB5 hit 1 ms 1150778466 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1150778521 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1150778555 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 HALTED at hit 3
+  after: ('OPERATE', 'A', '0')
+  | dump at 12:02:52.382 UTC: openocd exit 0
+  | page 0:  01 00 00 00 01 00 00 00 00 00 00 00 9e 8a da 2c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  02 00 00 00 01 02 00 00 ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 1 cut, image 970, mac 15:03:05
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 1, confirm exit -
+  | openocd pid 2936 started 12:03:16.875 UTC, mode cut, stop at hit 1
+  | halt line seen 12:03:18.367 UTC; hub port off 12:03:18.564 UTC
+  | hub port on 12:03:22.006 UTC
+  | SB5 armed mode cut stop_at 1 ms 1150834586
+  | SB5 hit 1 ms 1150835919 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 HALTED at hit 1
+  after: ('OPERATE', 'A', '0')
+  | dump at 12:03:49.775 UTC: openocd exit 0
+  | page 0:  01 00 00 00 01 00 00 00 00 00 00 00 9e 8a da 2c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 2 cut, image 971, mac 15:03:52
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 1, confirm exit -
+  | openocd pid 3296 started 12:04:04.627 UTC, mode cut, stop at hit 2
+  | halt line seen 12:04:06.170 UTC; hub port off 12:04:06.367 UTC
+  | hub port on 12:04:09.842 UTC
+  | SB5 armed mode cut stop_at 2 ms 1150882340
+  | SB5 hit 1 ms 1150883659 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1150883713 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 HALTED at hit 2
+  after: ('OPERATE', 'A', '0')
+  | dump at 12:04:37.514 UTC: openocd exit 0
+  | page 0:  01 00 00 00 01 00 00 00 00 00 00 00 9e 8a da 2c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 4 cut, image 972, mac 15:04:40
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit -
+  | openocd pid 3656 started 12:04:52.506 UTC, mode cut, stop at hit 4
+  | halt line seen 12:04:52.916 UTC; hub port off 12:04:53.107 UTC
+  | hub port on 12:04:56.582 UTC
+  | SB5 armed mode cut stop_at 4 ms 1150930203
+  | SB5 hit 1 ms 1150930301 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1150930356 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1150930389 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1150930475 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 HALTED at hit 4
+  after: ('TRIAL', 'B', '2')
+  | dump at 12:05:14.469 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 5 cut, image 973, mac 15:05:17
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit -
+  | openocd pid 3964 started 12:05:30.090 UTC, mode cut, stop at hit 5
+  | halt line seen 12:05:31.810 UTC; hub port off 12:05:32.022 UTC
+  | hub port on 12:05:35.493 UTC
+  | SB5 armed mode cut stop_at 5 ms 1150967802
+  | SB5 hit 1 ms 1150969136 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1150969192 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1150969227 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1150969312 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1150969367 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 HALTED at hit 5
+  after: ('TRIAL', 'B', '2')
+  | dump at 12:05:53.358 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 6 cut, image 974, mac 15:05:56
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit -
+  | openocd pid 4323 started 12:06:08.270 UTC, mode cut, stop at hit 6
+  | halt line seen 12:06:08.808 UTC; hub port off 12:06:09.014 UTC
+  | hub port on 12:06:12.501 UTC
+  | SB5 armed mode cut stop_at 6 ms 1151005975
+  | SB5 hit 1 ms 1151006086 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151006140 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151006174 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151006258 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151006314 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151006347 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 HALTED at hit 6
+  after: ('TRIAL', 'B', '2')
+  | dump at 12:06:30.347 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 7 cut, image 975, mac 15:06:33
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit 1
+  | openocd pid 4631 started 12:06:45.447 UTC, mode cut, stop at hit 7
+  | halt line seen 12:06:53.994 UTC; hub port off 12:06:54.209 UTC
+  | hub port on 12:06:57.650 UTC
+  | SB5 armed mode cut stop_at 7 ms 1151043156
+  | SB5 hit 1 ms 1151043255 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151043310 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151043343 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151043430 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151043485 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151043519 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 hit 7 ms 1151051533 pc 0x08012320 r0 0x0801f000 r5 0x00000001
+  | SB5 HALTED at hit 7
+  after: ('TRIAL', 'B', '3')
+  | dump at 12:07:25.489 UTC: openocd exit 0
+  | page 0:  05 00 00 00 01 02 03 00 00 00 00 00 66 d2 d7 3e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 8 cut, image 976, mac 15:07:28
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit 1
+  | openocd pid 5274 started 12:07:40.566 UTC, mode cut, stop at hit 8
+  | halt line seen 12:07:50.402 UTC; hub port off 12:07:50.611 UTC
+  | hub port on 12:07:54.097 UTC
+  | SB5 armed mode cut stop_at 8 ms 1151098270
+  | SB5 hit 1 ms 1151099584 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151099639 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151099672 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151099757 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151099812 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151099846 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 hit 7 ms 1151107899 pc 0x08012320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 8 ms 1151107954 pc 0x080123ec r0 0x00000001 r5 0x0801f000
+  | SB5 HALTED at hit 8
+  after: ('TRIAL', 'B', '3')
+  | dump at 12:08:21.882 UTC: openocd exit 0
+  | page 0:  05 00 00 00 01 02 03 00 00 00 00 00 66 d2 d7 3e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 9 cut, image 977, mac 15:08:24
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit 1
+  | openocd pid 5973 started 12:08:37.066 UTC, mode cut, stop at hit 9
+  | halt line seen 12:08:46.919 UTC; hub port off 12:08:47.098 UTC
+  | hub port on 12:08:50.570 UTC
+  | SB5 armed mode cut stop_at 9 ms 1151154780
+  | SB5 hit 1 ms 1151156090 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151156145 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151156179 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151156264 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151156319 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151156352 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 hit 7 ms 1151164381 pc 0x08012320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 8 ms 1151164437 pc 0x080123ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 9 ms 1151164471 pc 0x080123ec r0 0x00000001 r5 0x0801f008
+  | SB5 HALTED at hit 9
+  after: ('TRIAL', 'B', '3')
+  | dump at 12:09:18.375 UTC: openocd exit 0
+  | page 0:  05 00 00 00 01 02 03 00 00 00 00 00 66 d2 d7 3e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 1 reset, image 978, mac 15:09:21
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 1, confirm exit -
+  | openocd pid 6671 started 12:09:33.467 UTC, mode reset, stop at hit 1
+  | SB5 armed mode reset stop_at 1 ms 1151211178
+  | SB5 hit 1 ms 1151212552 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 RESET at hit 1
+  after: ('OPERATE', 'A', '0')
+  | dump at 12:10:06.443 UTC: openocd exit 0
+  | page 0:  01 00 00 00 01 00 00 00 00 00 00 00 9e 8a da 2c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 2 reset, image 979, mac 15:10:09
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 1, confirm exit -
+  | openocd pid 6833 started 12:10:24.237 UTC, mode reset, stop at hit 2
+  | SB5 armed mode reset stop_at 2 ms 1151261945
+  | SB5 hit 1 ms 1151263275 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151263330 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 RESET at hit 2
+  after: ('TRIAL', 'B', '1')
+  | dump at 12:10:57.217 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  02 00 00 00 01 02 00 00 00 00 00 00 47 49 db cc ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 3 reset, image 980, mac 15:11:00
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 1, confirm exit -
+  | openocd pid 6988 started 12:11:12.304 UTC, mode reset, stop at hit 3
+  | SB5 armed mode reset stop_at 3 ms 1151310005
+  | SB5 hit 1 ms 1151310134 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151310188 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151310221 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 RESET at hit 3
+  after: ('TRIAL', 'B', '1')
+  | dump at 12:11:44.013 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  02 00 00 00 01 02 00 00 00 00 00 00 47 49 db cc ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 4 reset, image 981, mac 15:11:47
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit -
+  | openocd pid 7137 started 12:11:58.901 UTC, mode reset, stop at hit 4
+  | SB5 armed mode reset stop_at 4 ms 1151356612
+  | SB5 hit 1 ms 1151357958 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151358012 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151358045 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151358130 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 RESET at hit 4
+  after: ('TRIAL', 'B', '1')
+  | dump at 12:12:14.151 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  02 00 00 00 01 02 00 00 00 00 00 00 47 49 db cc ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 5 reset, image 982, mac 15:12:17
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit -
+  | openocd pid 7275 started 12:12:29.030 UTC, mode reset, stop at hit 5
+  | SB5 armed mode reset stop_at 5 ms 1151386733
+  | SB5 hit 1 ms 1151388045 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151388099 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151388132 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151388217 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151388271 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 RESET at hit 5
+  after: ('TRIAL', 'B', '2')
+  | dump at 12:12:44.254 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 6 reset, image 983, mac 15:12:47
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit -
+  | openocd pid 7417 started 12:12:59.634 UTC, mode reset, stop at hit 6
+  | SB5 armed mode reset stop_at 6 ms 1151417347
+  | SB5 hit 1 ms 1151418663 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151418718 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151418750 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151418835 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151418889 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151418922 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 RESET at hit 6
+  after: ('TRIAL', 'B', '2')
+  | dump at 12:13:14.902 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 7 reset, image 984, mac 15:13:18
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit 1
+  | openocd pid 7558 started 12:13:29.730 UTC, mode reset, stop at hit 7
+  | SB5 armed mode reset stop_at 7 ms 1151447433
+  | SB5 hit 1 ms 1151448778 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151448832 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151448865 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151448949 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151449003 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151449036 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 hit 7 ms 1151457056 pc 0x08012320 r0 0x0801f000 r5 0x00000001
+  | SB5 RESET at hit 7
+  after: ('TRIAL', 'B', '2')
+  | dump at 12:14:11.034 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 01 02 02 00 00 00 00 00 ac 4d 2e 6e ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 8 reset, image 985, mac 15:14:14
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit 1
+  | openocd pid 7720 started 12:14:25.964 UTC, mode reset, stop at hit 8
+  | SB5 armed mode reset stop_at 8 ms 1151503660
+  | SB5 hit 1 ms 1151503752 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151503807 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151503839 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151503924 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151503979 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151504012 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 hit 7 ms 1151512022 pc 0x08012320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 8 ms 1151512076 pc 0x080123ec r0 0x00000001 r5 0x0801f000
+  | SB5 RESET at hit 8
+  after: ('OPERATE', 'B', '0')
+  | dump at 12:15:05.961 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 02 00 00 00 00 00 00 00 6d fa f6 3a ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+=== hit 9 reset, image 986, mac 15:15:09
+  restore: RESTORE DONE: full: bootloader, last-resort, main firmware i; state ('OPERATE', 'A', '0')
+  upload exit 0, deliver exit 0
+  switch exit 0, confirm exit 1
+  | openocd pid 7898 started 12:15:21.044 UTC, mode reset, stop at hit 9
+  | SB5 armed mode reset stop_at 9 ms 1151558751
+  | SB5 hit 1 ms 1151560077 pc 0x08008320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 2 ms 1151560131 pc 0x080083ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 3 ms 1151560164 pc 0x080083ec r0 0x00000001 r5 0x0801f008
+  | SB5 hit 4 ms 1151560249 pc 0x0800163c r0 0x0801e000 r5 0x20007ef0
+  | SB5 hit 5 ms 1151560303 pc 0x0800177a r0 0x0801e000 r5 0x17fe9f04
+  | SB5 hit 6 ms 1151560336 pc 0x0800177a r0 0x0801e008 r5 0x17fe9f04
+  | SB5 hit 7 ms 1151568330 pc 0x08012320 r0 0x0801f000 r5 0x00000001
+  | SB5 hit 8 ms 1151568384 pc 0x080123ec r0 0x00000001 r5 0x0801f000
+  | SB5 hit 9 ms 1151568417 pc 0x080123ec r0 0x00000001 r5 0x0801f008
+  | SB5 RESET at hit 9
+  after: ('OPERATE', 'B', '0')
+  | dump at 12:16:02.383 UTC: openocd exit 0
+  | page 0:  03 00 00 00 01 02 01 00 00 00 00 00 8d d6 22 9c ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 1:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*
+  | page 2:  04 00 00 00 02 00 00 00 00 00 00 00 6d fa f6 3a ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+  | page 3:  ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff*

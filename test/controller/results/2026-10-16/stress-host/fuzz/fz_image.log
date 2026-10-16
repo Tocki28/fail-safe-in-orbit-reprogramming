@@ -1,0 +1,31 @@
+Mac time (EEST) 2026-10-16 11:45:12 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz run N=1000000 SEED=20261016
+target fz_image; command: build/fz_image --seed 20261016 --n 1000000 --log <checkout of a504b0d>/test/controller/results/2026-10-16/stress-host/fuzz --dir build/images/src --dir build/images/test
+seed 20261016; mutation-based fuzzer without coverage feedback (no libFuzzer runtime on this Mac); UBSan on, -fno-sanitize-recover=undefined
+load averages at the start (1, 5, 15 min): 16.42 16.28 16.95
+image seeds: 13
+contents results (IMAGE_OK=0 EMPTY=1 MAGIC=2 FORMAT=3 KIND=4 TARGET=5 LENGTH=6 START=7 BODY=8): 128108 3654 101179 29359 427126 17229 21145 181280 90920
+inputs that passed the contents checks and reached the signatures: 128108; accepted by both: 22165 (all unchanged copies of a seed: 22165)
+small-region observations (the callers pass 0xA000 and 0x4000 only; region bytes: common / bootloader; the region holds the first bytes of slotA-v1.img):
+  region 0: crash (signal) / fault reaction
+  region 1: crash (signal) / fault reaction
+  region 63: crash (signal) / fault reaction
+  region 64: crash (signal) / returned
+  region 100: crash (signal) / returned
+  region 191: crash (signal) / returned
+  region 192: returned / returned
+  region 200: returned / returned
+  region 456: returned / returned
+inputs run: 1000000 in 183.0 s (5463 inputs/s); load averages at the end 17.03 18.30 17.77
+slowest 10 inputs (index: time):
+  435491: 242.720 ms
+  196347: 227.742 ms
+  217073: 169.367 ms
+  131191: 128.783 ms
+  196520: 127.271 ms
+  171130: 113.632 ms
+  202334: 104.682 ms
+  59476: 99.866 ms
+  183785: 96.615 ms
+  594020: 89.911 ms
+failures: 0
+result: no failure

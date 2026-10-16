@@ -1,0 +1,9 @@
+# board at end: 2026-10-16 11:16:50 UTC; fsir-updater MainPID 859, NRestarts 0
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "controller silent": 8
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "no last answer": 3
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "refused 0xff": 3
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "reset [0-9] of": 2
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "EVENT 0x0007": 1994
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "EVENT 0x0006": 997
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "EVENT 0x0008": 0
+journal 2026-10-16 08:52:33 to 2026-10-16 11:16:45 UTC, lines matching "EVENT 0x0002": 0

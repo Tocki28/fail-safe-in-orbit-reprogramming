@@ -1,0 +1,24 @@
+Mac time (EEST) 2026-10-16 11:49:07 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz selfcheck
+uptime: 11:49  up 16 days, 21:06, 2 users, load averages: 21.38 19.37 18.20
+PASS  frame-no-gap-rule: caught:   20 accepted-gap   20 controller-only   20 onboard-only   20 recovery 
+PASS  frame-no-flags-rule: caught:   20 flags 
+PASS  frame-no-crc-rule: caught:   20 accepted-bad   20 controller-only 
+PASS  frame-length-limit: caught:    1 onboard-only 
+PASS  arm-sequence-ignored: caught:   20 no-arm 
+PASS  arm-never-expires: caught:   20 no-arm 
+PASS  arm-not-used-up: caught:   20 no-arm 
+PASS  dangerous-without-arm: caught:   20 no-arm 
+PASS  upload-trial-allowed: caught:   20 write-bad-state 
+PASS  upload-chunk-offset-unchecked: caught:   20 chunk-order 
+PASS  upload-end-early: caught:   20 end-early 
+PASS  upload-begin-length: caught:   20 begin-range 
+PASS  testimage-crc-unchecked: caught:   20 testimage-end 
+PASS  image-signature-b-skipped: caught:   20 signatures-differ 
+PASS  image-bl-body-check-skipped: caught:   20 contents-differ 
+PASS  bootstate-start-limit: caught:   20 load-differs   20 read-differs   20 read-state-differs   20 state-differs   20 write-differs 
+PASS  bootstate-common-tie: caught:   20 read-state-differs   20 state-differs   20 write-differs 
+PASS  backup-skip-threshold: caught:   20 skip-decision 
+PASS  backup-first-fault-overwritten: caught:   20 first-fault   20 later-count 
+PASS  backup-pair-check-skipped: caught:   20 first-fault   20 give-up   20 later-count   20 restart-count   20 skip-decision 
+selfcheck: every mutant was caught
+wall time: 450 s

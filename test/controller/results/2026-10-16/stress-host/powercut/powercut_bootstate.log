@@ -1,0 +1,67 @@
+2026-10-16 11:04:16 EEST commit a504b0d command: make -C test/controller/stress/powercut run (powercut_bootstate)
+load: load averages: 22.08 16.02 10.27
+phase 1  checker self-test: PASS
+phase 2  matrix: 13 scenarios x 2 writers x 2 copy parities
+legend: o old state, n new state, D blank->damaged (observation), X third state, L state lost, d readers disagree
+per step letters in variant order: E: not-done, half-low, half-high, half-even, done; P: not-done, torn-1st, torn-1st+ECC, torn-2nd, torn-2nd+ECC, done
+S00 fw-write par0 steps=3 [EPP] E:ooooo P:oDDDDD P:DDDDDn  bl default save on blank (main.c load_state)
+S00 bl-write par0 steps=3 [EPP] E:ooooo P:oDDDDD P:DDDDDn  bl default save on blank (main.c load_state)
+S01 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH (mode_manager.cpp runSwitch), no mark
+S01 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH (mode_manager.cpp runSwitch), no mark
+S01 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH (mode_manager.cpp runSwitch), no mark
+S01 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH (mode_manager.cpp runSwitch), no mark
+S02 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH keeps mark, clears FALLBACK
+S02 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH keeps mark, clears FALLBACK
+S02 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH keeps mark, clears FALLBACK
+S02 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw SWITCH keeps mark, clears FALLBACK
+S03 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw START FAILED clears mark (runSwitch)
+S03 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw START FAILED clears mark (runSwitch)
+S03 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw START FAILED clears mark (runSwitch)
+S03 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw START FAILED clears mark (runSwitch)
+S04 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 1 (main.c count_trial_start)
+S04 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 1 (main.c count_trial_start)
+S04 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 1 (main.c count_trial_start)
+S04 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 1 (main.c count_trial_start)
+S05 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 2
+S05 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 2
+S05 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 2
+S05 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 2
+S06 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 3
+S06 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 3
+S06 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 3
+S06 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl counts start 3
+S07 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw CONFIRM keeps mark (runConfirm)
+S07 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw CONFIRM keeps mark (runConfirm)
+S07 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw CONFIRM keeps mark (runConfirm)
+S07 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw CONFIRM keeps mark (runConfirm)
+S08 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up after 3 starts (give_up_trial), mark
+S08 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up after 3 starts (give_up_trial), mark
+S08 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up after 3 starts (give_up_trial), mark
+S08 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up after 3 starts (give_up_trial), mark
+S09 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw RETURN TO PREVIOUS / giveUp (giveUpState)
+S09 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw RETURN TO PREVIOUS / giveUp (giveUpState)
+S09 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw RETURN TO PREVIOUS / giveUp (giveUpState)
+S09 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw RETURN TO PREVIOUS / giveUp (giveUpState)
+S10 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up with B confirmed, A on trial
+S10 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up with B confirmed, A on trial
+S10 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up with B confirmed, A on trial
+S10 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up with B confirmed, A on trial
+S11 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw LEAVE FALLBACK (runLeaveFallback)
+S11 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw LEAVE FALLBACK (runLeaveFallback)
+S11 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw LEAVE FALLBACK (runLeaveFallback)
+S11 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  fw LEAVE FALLBACK (runLeaveFallback)
+S12 fw-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up replaces an older mark
+S12 fw-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up replaces an older mark
+S12 bl-write par0 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up replaces an older mark
+S12 bl-write par1 steps=3 [EPP] E:ooooo P:oooooo P:ooooon  bl give-up replaces an older mark
+phase 3  random: 10000 sequences x 16 writes, 96073 writes cut (80149 fw, 79851 bl writes), 54110 cut writes directly after a cut write, failing sequences 0
+         cuts by kind: not-done 14609, done 14424, half-low 5279, half-high 5238, half-even 5354, torn-1st 9268(+ECC 9196), torn-2nd 9009(+ECC 9154), random 14542
+phase 4  first write from blank flash, 2000 random cuts: blank(o) 794, written(n) 92, damaged(D) 1114, other 0
+phase 5  fw: write at sequence 0xFFFFFFFE answered 1, flash now sequence 0xFFFFFFFF trial 2
+         write at sequence 0xFFFFFFFF answered 1 (record sequence 0); readers: agree, sequence 0xFFFFFFFF trial 2 (the new record has trial 0)
+phase 5  bl: write at sequence 0xFFFFFFFE answered 1, flash now sequence 0xFFFFFFFF trial 2
+         write at sequence 0xFFFFFFFF answered 1 (record sequence 0); readers: agree, sequence 0xFFFFFFFF trial 2 (the new record has trial 0)
+totals   cases 162901: old 93107, new 68660, blank->damaged 1134, third 0, lost 0, readers-disagree 0
+         structure failures 0, illegal flash operations 0, recovery failures 0, read/load mismatches 0, uncut-write failures 0
+PASS  boot state through a power cut (invariant)
+wall 3 s

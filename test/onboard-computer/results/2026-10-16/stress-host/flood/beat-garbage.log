@@ -1,0 +1,141 @@
+2026-10-16 11:36:49 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario beat --flood garbage --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag beat-garbage
+load averages at start (12.0986328125, 15.7099609375, 17.91015625), at end (15.27880859375, 15.9697265625, 17.83447265625)
+{
+ "tag": "beat-garbage",
+ "scenario": "beat",
+ "flood": {
+  "kind": "garbage",
+  "source": "same",
+  "seed": 1,
+  "cmd": [
+   "/usr/local/opt/python@3.14/bin/python3.14",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/flood_sender.py",
+   "--port",
+   "64015",
+   "--kind",
+   "garbage",
+   "--rate",
+   "10000",
+   "--seconds",
+   "75.0",
+   "--seed",
+   "1",
+   "--stats",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/beat-garbage/flood-stats.json",
+   "--fd",
+   "6"
+  ],
+  "rate_target": 10000,
+  "seconds_target": 75.0,
+  "elapsed_s": 59.621573308017105,
+  "attempted": 596171,
+  "sent": 596171,
+  "send_errors": 0,
+  "rate_reached": 9999.249716542367,
+  "foreign_answers": 0,
+  "valid_frames": 0,
+  "per_second_stats": {
+   "n": 59,
+   "min": 9668,
+   "p50": 10000,
+   "p95": 10023,
+   "p99": 10313,
+   "max": 10313,
+   "mean": 9999.627118644068,
+   "std": 60.73027288132469
+  },
+  "answers_to_flood": {},
+  "valid_done_latency_ms": {
+   "n": 0
+  },
+  "udp_delta_system_wide": {
+   "received": 2059915,
+   "dropped_full_buffer": 0
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:36:49 EEST",
+ "loadavg_start": [
+  12.0986328125,
+  15.7099609375,
+  17.91015625
+ ],
+ "image_bytes": 20776,
+ "beat": {
+  "why_beat_s": "1 s is the smallest non-zero --beat-s [options.cpp:parseOptions, parseNumber min 0 and whole seconds]: 60 intervals in 65 s, and the 50 ms loop pass (kPollMs, config.hpp:222) is 5 percent of it, measurable",
+  "beat_s": 1,
+  "beats": 63,
+  "interval_ms": {
+   "n": 62,
+   "min": 998.9680910948664,
+   "p50": 1000.9674672037363,
+   "p95": 1002.4601959157735,
+   "p99": 1044.559780973941,
+   "max": 1044.559780973941,
+   "mean": 1001.480681630182,
+   "std": 5.6441966137542945
+  },
+  "error_ms_mean": 1.480681630181948,
+  "error_ms_max": 44.55978097394109,
+  "jitter_std_ms": 5.6441966137542945,
+  "window_s": 63.0049966131337
+ },
+ "updater": {
+  "samples": 68,
+  "rss_kb": {
+   "first": 4200,
+   "last": 4212,
+   "max": 4212
+  },
+  "cpu_pct": {
+   "n": 67,
+   "min": 0.0,
+   "p50": 25.982096934569427,
+   "p95": 28.977849278043674,
+   "p99": 29.936579984127054,
+   "max": 29.936579984127054,
+   "mean": 23.475001763719227,
+   "std": 8.16948263626102
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 651,
+   "not a good frame": 60,
+   "more datagrams dropped": 59,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 182826,
+   "lines": 1430
+  }
+ },
+ "probe": {
+  "sent": 651,
+  "answered": 651,
+  "share": 1.0,
+  "latency_ms": {
+   "n": 651,
+   "min": 0.23852591402828693,
+   "p50": 0.3793190699070692,
+   "p95": 0.7286570034921169,
+   "p99": 3.064377000555396,
+   "max": 28.974547050893307,
+   "mean": 0.5138910174535762,
+   "std": 1.2289254360897919
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  15.27880859375,
+  15.9697265625,
+  17.83447265625
+ ]
+}

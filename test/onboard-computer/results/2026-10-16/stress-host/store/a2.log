@@ -1,0 +1,19 @@
+2026-10-16 11:39:19 EEST | a504b0d | make -C test/onboard-computer/stress/store run
+uptime load averages at start: 10.16 14.25 17.01
+Next-number classes after a reload (new = number the first report stored after the reload got; highest = highest number in a surviving report record):
+  contig = new is highest + 1; gap-explained = new is past highest + 1 and the state record in force already names it (the cut report's own number is lost: its record was cut after its state record); gap = past highest + 1 with no state record naming it; REUSE = new is a number a surviving record holds (a failure).
+
+A fill: 100000 reports (29832 EVENT, 70168 HEALTH) in 83.9 s; the file reached 2097115 bytes at most, was 1910312 at the end of the fill; compactions seen during the fill: 3; capacity 1048576 bytes
+A: S3/S2 use deleteBelow(50001): a forced rewrite of the file
+A-S1-after-fill: file 1910312 bytes, 56750 records; last records: [R n=99998 22 B] [S n=0 30 B] [S n=0 30 B]
+A-S1-after-fill: 85 cuts (records from the end: 3,2,1), 0 failed; next-number classes: contig=31 gap-explained=54
+A-S3-compacted: file 553354 bytes, 14972 records; last records: [R n=99994 23 B] [R n=99995 21 B] [R n=99998 22 B]
+A-S3-compacted: 69 cuts (records from the end: 3,2,1), 0 failed; next-number classes: gap-explained=69
+A-S2-after-compaction: file 553661 bytes, 14982 records; last records: [R n=100008 27 B] [R n=100009 33 B] [R n=100010 30 B]
+A-S2-after-compaction: 93 cuts (records from the end: 3,2,1), 0 failed; next-number classes: contig=93
+
+B fill: 60000 reports (5971 EVENT, 54029 HEALTH) in 51.2 s; the file reached 2097085 bytes at most, was 1564543 at the end of the fill; compactions seen during the fill: 1; capacity 1048576 bytes
+B-S1-after-fill: file 1564543 bytes, 50762 records; last records: [R n=59999 30 B] [S n=0 30 B] [R n=60000 30 B]
+B-S1-after-fill: 93 cuts (records from the end: 3,2,1), 0 failed; next-number classes: contig=32 gap-explained=61
+A.2 total: 340 cuts, 0 failed, 570.6 s
+uptime load averages at end: 19.17 18.88 18.01

@@ -1,0 +1,1381 @@
+# SB3 mac start 2026-10-16 14:25:45 EEST, board 2026-10-16 11:25:42
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html UTC; 1-1.1:1.2 unbound 3 s, bound 3 s, for 600 s; state ('OPERATE', 'B')
+update 1: mac 14:25:47, exit 1, 6.3 s; FAILED: DELIVER (seq 1791990510) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 2: mac 14:25:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990511) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 3: mac 14:25:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990512) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 4: mac 14:25:53, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990513) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 5: mac 14:25:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990514) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 6: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990515) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 7: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990516) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 8: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990517) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 9: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990518) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 10: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990519) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 11: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990520) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 12: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990521) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 13: mac 14:25:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990522) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 14: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990523) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 15: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990524) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 16: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990525) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 17: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990526) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 18: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990527) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 19: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990528) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 20: mac 14:25:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990529) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 21: mac 14:25:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990530) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 22: mac 14:25:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990531) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 23: mac 14:25:56, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990532) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 24: mac 14:25:56, exit 1, 5.1 s; FAILED: DELIVER (seq 1791990618) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 25: mac 14:26:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990619) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 26: mac 14:26:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990620) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 27: mac 14:26:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990621) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 28: mac 14:26:02, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990622) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 29: mac 14:26:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990623) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 30: mac 14:26:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990624) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 31: mac 14:26:02, exit 1, 5.1 s; FAILED: DELIVER (seq 1791990710) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 32: mac 14:26:07, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990711) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 33: mac 14:26:07, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990712) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 34: mac 14:26:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990713) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 35: mac 14:26:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990714) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 36: mac 14:26:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990715) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 37: mac 14:26:08, exit 1, 3.1 s; FAILED: DELIVER (seq 1791990801) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 38: mac 14:26:11, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990802) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 39: mac 14:26:11, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990803) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 40: mac 14:26:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990804) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 41: mac 14:26:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990805) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 42: mac 14:26:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990806) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 43: mac 14:26:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990807) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 44: mac 14:26:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990808) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 45: mac 14:26:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990809) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 46: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990810) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 47: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990811) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 48: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990812) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 49: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990813) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 50: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990814) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 51: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990815) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 52: mac 14:26:13, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990816) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 53: mac 14:26:14, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990817) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 54: mac 14:26:14, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990818) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 55: mac 14:26:14, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990819) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 56: mac 14:26:14, exit 1, 5.2 s; FAILED: DELIVER (seq 1791990905) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 57: mac 14:26:19, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791990906) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 58: mac 14:26:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990907) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 59: mac 14:26:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990908) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 60: mac 14:26:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990909) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 61: mac 14:26:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990910) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 62: mac 14:26:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990911) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 63: mac 14:26:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990912) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 64: mac 14:26:20, exit 1, 3.1 s; FAILED: DELIVER (seq 1791990998) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 65: mac 14:26:23, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791990999) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 66: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991000) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 67: mac 14:26:24, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791991001) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 68: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991002) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 69: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991003) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 70: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991004) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 71: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991005) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 72: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991006) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 73: mac 14:26:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991007) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 74: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991008) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 75: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991009) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 76: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991010) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 77: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991011) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 78: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991012) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 79: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991013) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 80: mac 14:26:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991014) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 81: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991015) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 82: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991016) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 83: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991017) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 84: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991018) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 85: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991019) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 86: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991020) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 87: mac 14:26:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991021) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 88: mac 14:26:26, exit 1, 3.0 s; FAILED: DELIVER (seq 1791991107) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 89: mac 14:26:29, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991108) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 90: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991109) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 91: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991110) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 92: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991111) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 93: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991112) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 94: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991113) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 95: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991114) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 96: mac 14:26:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991115) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 97: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991116) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 98: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991117) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 99: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991118) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 100: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991119) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 101: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991120) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 102: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991121) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 103: mac 14:26:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991122) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 104: mac 14:26:31, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791991123) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 105: mac 14:26:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991124) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 106: mac 14:26:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991125) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 107: mac 14:26:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991126) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 108: mac 14:26:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991127) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 109: mac 14:26:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991128) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 110: mac 14:26:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991129) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 111: mac 14:26:32, exit 1, 5.1 s; FAILED: DELIVER (seq 1791991215) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 112: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991216) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 113: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991217) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 114: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991218) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 115: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991219) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 116: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991220) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 117: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991221) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 118: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991222) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 119: mac 14:26:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991223) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 120: mac 14:26:38, exit 1, 3.1 s; FAILED: DELIVER (seq 1791991309) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 121: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991310) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 122: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991311) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 123: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991312) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 124: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991313) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 125: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991314) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 126: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991315) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 127: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991316) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 128: mac 14:26:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991317) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 129: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991318) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 130: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991319) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 131: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991320) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 132: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991321) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 133: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991322) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 134: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991323) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 135: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991324) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 136: mac 14:26:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991325) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 137: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991326) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 138: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991327) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 139: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991328) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 140: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991329) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 141: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991330) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 142: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991331) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 143: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991332) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 144: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991333) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 145: mac 14:26:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991334) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 146: mac 14:26:45, exit 1, 5.1 s; FAILED: DELIVER (seq 1791991420) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 147: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991421) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 148: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991422) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 149: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991423) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 150: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991424) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 151: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991425) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 152: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991426) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 153: mac 14:26:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991427) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 154: mac 14:26:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991428) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 155: mac 14:26:51, exit 1, 5.1 s; FAILED: DELIVER (seq 1791991514) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 156: mac 14:26:56, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791991515) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 157: mac 14:26:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991516) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 158: mac 14:26:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991517) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 159: mac 14:26:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991518) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 160: mac 14:26:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991519) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 161: mac 14:26:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991520) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 162: mac 14:26:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991521) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 163: mac 14:26:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991522) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 164: mac 14:26:57, exit 1, 3.1 s; FAILED: DELIVER (seq 1791991608) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 165: mac 14:27:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991609) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 166: mac 14:27:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991610) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 167: mac 14:27:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991611) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 168: mac 14:27:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991612) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 169: mac 14:27:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991613) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 170: mac 14:27:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991614) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 171: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991615) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 172: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991616) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 173: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991617) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 174: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991618) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 175: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991619) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 176: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991620) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 177: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991621) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 178: mac 14:27:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991622) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 179: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991623) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 180: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991624) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 181: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991625) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 182: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991626) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 183: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991627) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 184: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991628) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 185: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991629) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 186: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991630) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 187: mac 14:27:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991631) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 188: mac 14:27:03, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991632) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 189: mac 14:27:03, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991633) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 190: mac 14:27:03, exit 1, 3.1 s; FAILED: DELIVER (seq 1791991719) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 191: mac 14:27:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991720) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 192: mac 14:27:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991721) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 193: mac 14:27:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991722) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 194: mac 14:27:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991723) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 195: mac 14:27:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991724) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 196: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991725) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 197: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991726) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 198: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991727) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 199: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991728) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 200: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991729) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 201: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991730) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 202: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991731) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 203: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991732) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 204: mac 14:27:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991733) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 205: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991734) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 206: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991735) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 207: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991736) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 208: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991737) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 209: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991738) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 210: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991739) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 211: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991740) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 212: mac 14:27:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991741) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 213: mac 14:27:09, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991742) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 214: mac 14:27:09, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991743) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 215: mac 14:27:09, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991744) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 216: mac 14:27:09, exit 1, 5.1 s; FAILED: DELIVER (seq 1791991830) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 217: mac 14:27:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991831) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 218: mac 14:27:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991832) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 219: mac 14:27:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991833) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 220: mac 14:27:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991834) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 221: mac 14:27:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991835) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 222: mac 14:27:15, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991836) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 223: mac 14:27:15, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991837) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 224: mac 14:27:15, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991838) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 225: mac 14:27:15, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991839) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 226: mac 14:27:15, exit 1, 3.1 s; FAILED: DELIVER (seq 1791991925) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 227: mac 14:27:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991926) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 228: mac 14:27:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991927) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 229: mac 14:27:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991928) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 230: mac 14:27:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991929) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 231: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991930) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 232: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991931) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 233: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991932) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 234: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991933) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 235: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991934) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 236: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991935) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 237: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991936) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 238: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991937) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 239: mac 14:27:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991938) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 240: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991939) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 241: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991940) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 242: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991941) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 243: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991942) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 244: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991943) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 245: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991944) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 246: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991945) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 247: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991946) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 248: mac 14:27:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991947) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 249: mac 14:27:21, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991948) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 250: mac 14:27:21, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991949) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 251: mac 14:27:21, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991950) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 252: mac 14:27:21, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991951) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 253: mac 14:27:21, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991952) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 254: mac 14:27:21, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791991953) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 255: mac 14:27:21, exit 1, 4.8 s; FAILED: DELIVER (seq 1791992039) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 256: mac 14:27:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992040) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 257: mac 14:27:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992041) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 258: mac 14:27:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992042) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 259: mac 14:27:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992043) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 260: mac 14:27:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992044) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 261: mac 14:27:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992045) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 262: mac 14:27:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992046) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 263: mac 14:27:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992047) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 264: mac 14:27:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992048) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 265: mac 14:27:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992049) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 266: mac 14:27:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992050) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 267: mac 14:27:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992051) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 268: mac 14:27:27, exit 1, 3.0 s; FAILED: DELIVER (seq 1791992137) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 269: mac 14:27:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992138) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 270: mac 14:27:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992139) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 271: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992140) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 272: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992141) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 273: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992142) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 274: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992143) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 275: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992144) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 276: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992145) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 277: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992146) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 278: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992147) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 279: mac 14:27:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992148) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 280: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992149) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 281: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992150) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 282: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992151) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 283: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992152) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 284: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992153) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 285: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992154) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 286: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992155) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 287: mac 14:27:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992156) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 288: mac 14:27:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992157) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 289: mac 14:27:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992158) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 290: mac 14:27:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992159) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 291: mac 14:27:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992160) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 292: mac 14:27:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992161) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 293: mac 14:27:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992162) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 294: mac 14:27:33, exit 1, 3.1 s; FAILED: DELIVER (seq 1791992248) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 295: mac 14:27:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992249) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 296: mac 14:27:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992250) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 297: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992251) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 298: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992252) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 299: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992253) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 300: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992254) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 301: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992255) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 302: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992256) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 303: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992257) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 304: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992258) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 305: mac 14:27:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992259) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 306: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992260) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 307: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992261) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 308: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992262) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 309: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992263) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 310: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992264) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 311: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992265) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 312: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992266) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 313: mac 14:27:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992267) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 314: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992268) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 315: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992269) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 316: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992270) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 317: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992271) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 318: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992272) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 319: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992273) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 320: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992274) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 321: mac 14:27:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992275) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 322: mac 14:27:39, exit 1, 3.0 s; FAILED: DELIVER (seq 1791992361) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 323: mac 14:27:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992362) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 324: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992363) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 325: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992364) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 326: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992365) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 327: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992366) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 328: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992367) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 329: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992368) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 330: mac 14:27:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992369) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 331: mac 14:27:43, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992370) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 332: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992371) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 333: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992372) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 334: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992373) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 335: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992374) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 336: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992375) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 337: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992376) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 338: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992377) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 339: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992378) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 340: mac 14:27:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992379) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 341: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992380) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 342: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992381) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 343: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992382) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 344: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992383) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 345: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992384) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 346: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992385) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 347: mac 14:27:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992386) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 348: mac 14:27:45, exit 1, 3.1 s; FAILED: DELIVER (seq 1791992472) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 349: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992473) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 350: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992474) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 351: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992475) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 352: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992476) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 353: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992477) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 354: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992478) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 355: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992479) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 356: mac 14:27:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992480) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 357: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992481) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 358: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992482) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 359: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992483) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 360: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992484) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 361: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992485) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 362: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992486) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 363: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992487) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 364: mac 14:27:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992488) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 365: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992489) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 366: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992490) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 367: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992491) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 368: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992492) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 369: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992493) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 370: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992494) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 371: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992495) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 372: mac 14:27:51, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992496) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 373: mac 14:27:52, exit 1, 3.0 s; FAILED: DELIVER (seq 1791992582) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 374: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992583) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 375: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992584) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 376: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992585) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 377: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992586) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 378: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992587) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 379: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992588) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 380: mac 14:27:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992589) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 381: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992590) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 382: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992591) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 383: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992592) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 384: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992593) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 385: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992594) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 386: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992595) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 387: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992596) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 388: mac 14:27:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992597) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 389: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992598) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 390: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992599) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 391: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992600) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 392: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992601) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 393: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992602) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 394: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992603) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 395: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992604) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 396: mac 14:27:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791992605) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 397: mac 14:27:58, exit 1, 3.0 s; FAILED: DELIVER (seq 1791992691) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 398: mac 14:28:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992692) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 399: mac 14:28:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992693) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 400: mac 14:28:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992694) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 401: mac 14:28:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992695) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 402: mac 14:28:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992696) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 403: mac 14:28:02, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992697) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 404: mac 14:28:02, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992698) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 405: mac 14:28:02, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992699) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 406: mac 14:28:02, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992700) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 407: mac 14:28:02, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992701) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 408: mac 14:28:03, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992702) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 409: mac 14:28:03, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992703) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 410: mac 14:28:03, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992704) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 411: mac 14:28:03, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992705) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 412: mac 14:28:03, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992706) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 413: mac 14:28:04, exit 1, 5.1 s; FAILED: DELIVER (seq 1791992792) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 414: mac 14:28:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992793) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 415: mac 14:28:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992794) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 416: mac 14:28:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992795) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 417: mac 14:28:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992796) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 418: mac 14:28:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992797) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 419: mac 14:28:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992798) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 420: mac 14:28:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992799) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 421: mac 14:28:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992800) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 422: mac 14:28:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992801) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 423: mac 14:28:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992802) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 424: mac 14:28:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992803) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 425: mac 14:28:11, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992804) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 426: mac 14:28:11, exit 1, 4.7 s; FAILED: DELIVER (seq 1791992890) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 427: mac 14:28:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992891) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 428: mac 14:28:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992892) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 429: mac 14:28:16, exit 1, 3.1 s; FAILED: DELIVER (seq 1791992978) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 430: mac 14:28:19, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992979) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 431: mac 14:28:19, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992980) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 432: mac 14:28:19, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992981) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 433: mac 14:28:19, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992982) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 434: mac 14:28:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992983) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 435: mac 14:28:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992984) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 436: mac 14:28:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992985) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 437: mac 14:28:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992986) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 438: mac 14:28:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992987) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 439: mac 14:28:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992988) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 440: mac 14:28:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992989) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 441: mac 14:28:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992990) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 442: mac 14:28:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992991) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 443: mac 14:28:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992992) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 444: mac 14:28:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992993) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 445: mac 14:28:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992994) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 446: mac 14:28:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992995) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 447: mac 14:28:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992996) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 448: mac 14:28:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791992997) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 449: mac 14:28:22, exit 1, 5.1 s; FAILED: DELIVER (seq 1791993083) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 450: mac 14:28:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993084) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 451: mac 14:28:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993085) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 452: mac 14:28:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993086) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 453: mac 14:28:27, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993087) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 454: mac 14:28:28, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993088) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 455: mac 14:28:28, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993089) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 456: mac 14:28:28, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993090) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 457: mac 14:28:28, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993091) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 458: mac 14:28:28, exit 1, 5.0 s; FAILED: DELIVER (seq 1791993177) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 459: mac 14:28:33, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993178) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 460: mac 14:28:33, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993179) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 461: mac 14:28:33, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993180) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 462: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993181) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 463: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993182) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 464: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993183) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 465: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993184) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 466: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993185) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 467: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993186) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 468: mac 14:28:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993187) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 469: mac 14:28:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993188) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 470: mac 14:28:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993189) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 471: mac 14:28:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993190) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 472: mac 14:28:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993191) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 473: mac 14:28:35, exit 1, 4.9 s; FAILED: DELIVER (seq 1791993277) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 474: mac 14:28:40, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993278) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 475: mac 14:28:40, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993279) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 476: mac 14:28:40, exit 1, 3.0 s; FAILED: DELIVER (seq 1791993365) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 477: mac 14:28:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993366) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 478: mac 14:28:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993367) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 479: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993368) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 480: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993369) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 481: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993370) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 482: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993371) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 483: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993372) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 484: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993373) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 485: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993374) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 486: mac 14:28:44, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993375) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 487: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993376) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 488: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993377) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 489: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993378) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 490: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993379) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 491: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993380) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 492: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993381) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 493: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993382) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 494: mac 14:28:45, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993383) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 495: mac 14:28:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993384) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 496: mac 14:28:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993385) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 497: mac 14:28:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993386) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 498: mac 14:28:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993387) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 499: mac 14:28:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993388) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 500: mac 14:28:46, exit 1, 5.5 s; FAILED: DELIVER (seq 1791993474) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 501: mac 14:28:52, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993475) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 502: mac 14:28:52, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993476) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 503: mac 14:28:52, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993477) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 504: mac 14:28:52, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993478) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 505: mac 14:28:52, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993479) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 506: mac 14:28:52, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993480) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 507: mac 14:28:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993481) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 508: mac 14:28:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993482) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 509: mac 14:28:53, exit 1, 2.5 s; FAILED: DELIVER (seq 1791993568) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 510: mac 14:28:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993569) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 511: mac 14:28:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993570) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 512: mac 14:28:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993571) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 513: mac 14:28:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993572) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 514: mac 14:28:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993573) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 515: mac 14:28:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993574) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 516: mac 14:28:56, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993575) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 517: mac 14:28:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993576) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 518: mac 14:28:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993577) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 519: mac 14:28:57, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993578) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 520: mac 14:28:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993579) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 521: mac 14:28:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993580) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 522: mac 14:28:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993581) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 523: mac 14:28:57, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791993582) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 524: mac 14:28:57, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993583) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 525: mac 14:28:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993584) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 526: mac 14:28:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993585) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 527: mac 14:28:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993586) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 528: mac 14:28:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993587) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 529: mac 14:28:58, exit 1, 5.1 s; FAILED: DELIVER (seq 1791993673) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 530: mac 14:29:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993674) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 531: mac 14:29:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993675) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 532: mac 14:29:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993676) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 533: mac 14:29:04, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791993677) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 534: mac 14:29:04, exit 1, 3.1 s; FAILED: DELIVER (seq 1791993763) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 535: mac 14:29:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993764) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 536: mac 14:29:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993765) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 537: mac 14:29:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993766) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 538: mac 14:29:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993767) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 539: mac 14:29:08, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993768) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 540: mac 14:29:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993769) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 541: mac 14:29:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993770) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 542: mac 14:29:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993771) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 543: mac 14:29:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993772) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 544: mac 14:29:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993773) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 545: mac 14:29:09, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993774) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 546: mac 14:29:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993775) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 547: mac 14:29:10, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791993776) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 548: mac 14:29:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993777) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 549: mac 14:29:10, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993778) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 550: mac 14:29:11, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993779) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 551: mac 14:29:11, exit 1, 5.0 s; FAILED: DELIVER (seq 1791993865) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 552: mac 14:29:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993866) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 553: mac 14:29:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993867) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 554: mac 14:29:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993868) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 555: mac 14:29:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993869) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 556: mac 14:29:16, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993870) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 557: mac 14:29:17, exit 1, 3.1 s; FAILED: DELIVER (seq 1791993956) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 558: mac 14:29:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993957) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 559: mac 14:29:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993958) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 560: mac 14:29:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993959) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 561: mac 14:29:20, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993960) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 562: mac 14:29:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993961) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 563: mac 14:29:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993962) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 564: mac 14:29:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993963) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 565: mac 14:29:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993964) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 566: mac 14:29:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993965) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 567: mac 14:29:21, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993966) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 568: mac 14:29:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993967) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 569: mac 14:29:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993968) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 570: mac 14:29:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993969) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 571: mac 14:29:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993970) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 572: mac 14:29:22, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993971) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 573: mac 14:29:23, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791993972) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 574: mac 14:29:23, exit 1, 5.1 s; FAILED: DELIVER (seq 1791994058) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 575: mac 14:29:28, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994059) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 576: mac 14:29:28, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994060) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 577: mac 14:29:28, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994061) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 578: mac 14:29:28, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994062) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 579: mac 14:29:29, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994063) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 580: mac 14:29:29, exit 1, 5.1 s; FAILED: DELIVER (seq 1791994149) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 581: mac 14:29:34, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994150) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 582: mac 14:29:34, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994151) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 583: mac 14:29:34, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994152) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 584: mac 14:29:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994153) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 585: mac 14:29:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994154) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 586: mac 14:29:35, exit 1, 3.1 s; FAILED: DELIVER (seq 1791994240) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 587: mac 14:29:38, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994241) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 588: mac 14:29:38, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994242) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 589: mac 14:29:38, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994243) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 590: mac 14:29:39, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994244) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 591: mac 14:29:39, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994245) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 592: mac 14:29:39, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994246) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 593: mac 14:29:39, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994247) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 594: mac 14:29:40, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994248) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 595: mac 14:29:40, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994249) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 596: mac 14:29:40, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994250) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 597: mac 14:29:40, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994251) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 598: mac 14:29:41, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994252) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 599: mac 14:29:41, exit 1, 3.1 s; FAILED: DELIVER (seq 1791994338) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 600: mac 14:29:44, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994339) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 601: mac 14:29:44, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994340) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 602: mac 14:29:45, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994341) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 603: mac 14:29:45, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994342) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 604: mac 14:29:45, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994343) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 605: mac 14:29:45, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994344) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 606: mac 14:29:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994345) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 607: mac 14:29:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994346) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 608: mac 14:29:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994347) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 609: mac 14:29:46, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994348) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 610: mac 14:29:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994349) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 611: mac 14:29:47, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994350) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 612: mac 14:29:47, exit 1, 5.2 s; FAILED: DELIVER (seq 1791994436) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 613: mac 14:29:52, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994437) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 614: mac 14:29:52, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994438) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 615: mac 14:29:53, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994439) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 616: mac 14:29:53, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994440) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 617: mac 14:29:53, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994441) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 618: mac 14:29:53, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994442) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 619: mac 14:29:54, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994443) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 620: mac 14:29:54, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994444) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 621: mac 14:29:54, exit 1, 4.1 s; FAILED: DELIVER (seq 1791994530) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 622: mac 14:29:58, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994531) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 623: mac 14:29:59, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994532) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 624: mac 14:29:59, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994533) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 625: mac 14:29:59, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994534) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 626: mac 14:29:59, exit 1, 3.1 s; FAILED: DELIVER (seq 1791994620) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 627: mac 14:30:02, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994621) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 628: mac 14:30:03, exit 1, 0.4 s; FAILED: GET STATUS (seq 1791994622) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 629: mac 14:30:03, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994623) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 630: mac 14:30:03, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994624) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 631: mac 14:30:04, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994625) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 632: mac 14:30:04, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994626) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 633: mac 14:30:04, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994627) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 634: mac 14:30:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994628) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 635: mac 14:30:05, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994629) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 636: mac 14:30:05, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994630) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 637: mac 14:30:05, exit 1, 5.9 s; FAILED: DELIVER (seq 1791994716) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 638: mac 14:30:11, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994717) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 639: mac 14:30:12, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994718) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 640: mac 14:30:12, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994719) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 641: mac 14:30:12, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994720) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 642: mac 14:30:12, exit 1, 5.1 s; FAILED: DELIVER (seq 1791994806) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 643: mac 14:30:18, exit 1, 5.1 s; FAILED: DELIVER (seq 1791994892) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 644: mac 14:30:23, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994893) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 645: mac 14:30:23, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791994894) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 646: mac 14:30:23, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994895) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 647: mac 14:30:23, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994896) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 648: mac 14:30:24, exit 1, 5.1 s; FAILED: DELIVER (seq 1791994982) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 649: mac 14:30:29, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994983) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 650: mac 14:30:29, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994984) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 651: mac 14:30:29, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994985) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 652: mac 14:30:29, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994986) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 653: mac 14:30:30, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791994987) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 654: mac 14:30:30, exit 1, 5.0 s; FAILED: DELIVER (seq 1791995073) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 655: mac 14:30:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995074) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 656: mac 14:30:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995075) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 657: mac 14:30:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995076) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 658: mac 14:30:35, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995077) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 659: mac 14:30:36, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995078) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 660: mac 14:30:36, exit 1, 5.1 s; FAILED: DELIVER (seq 1791995164) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 661: mac 14:30:41, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995165) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 662: mac 14:30:41, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995166) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 663: mac 14:30:41, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995167) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 664: mac 14:30:41, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995168) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 665: mac 14:30:42, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995169) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 666: mac 14:30:42, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995170) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 667: mac 14:30:42, exit 1, 3.0 s; FAILED: DELIVER (seq 1791995256) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 668: mac 14:30:45, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995257) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 669: mac 14:30:45, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995258) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 670: mac 14:30:45, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995259) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 671: mac 14:30:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995260) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 672: mac 14:30:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995261) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 673: mac 14:30:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995262) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 674: mac 14:30:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995263) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 675: mac 14:30:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995264) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 676: mac 14:30:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995265) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 677: mac 14:30:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995266) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 678: mac 14:30:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995267) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 679: mac 14:30:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995268) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 680: mac 14:30:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995269) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 681: mac 14:30:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995270) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 682: mac 14:30:48, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995271) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 683: mac 14:30:48, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995272) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 684: mac 14:30:48, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995273) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 685: mac 14:30:48, exit 1, 5.0 s; FAILED: DELIVER (seq 1791995359) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 686: mac 14:30:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995360) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 687: mac 14:30:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995361) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 688: mac 14:30:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995362) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 689: mac 14:30:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995363) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 690: mac 14:30:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995364) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 691: mac 14:30:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995365) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 692: mac 14:30:54, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995366) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 693: mac 14:30:54, exit 1, 5.0 s; FAILED: DELIVER (seq 1791995452) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 694: mac 14:30:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995453) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 695: mac 14:30:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995454) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 696: mac 14:30:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995455) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 697: mac 14:31:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995456) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 698: mac 14:31:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995457) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 699: mac 14:31:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995458) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 700: mac 14:31:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995459) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 701: mac 14:31:00, exit 1, 5.0 s; FAILED: DELIVER (seq 1791995545) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 702: mac 14:31:05, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995546) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 703: mac 14:31:05, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995547) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 704: mac 14:31:05, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995548) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 705: mac 14:31:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995549) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 706: mac 14:31:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995550) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 707: mac 14:31:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995551) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 708: mac 14:31:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995552) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 709: mac 14:31:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995553) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 710: mac 14:31:06, exit 1, 3.0 s; FAILED: DELIVER (seq 1791995639) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 711: mac 14:31:09, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995640) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 712: mac 14:31:09, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995641) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 713: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995642) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 714: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995643) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 715: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995644) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 716: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995645) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 717: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995646) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 718: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995647) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 719: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995648) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 720: mac 14:31:10, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995649) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 721: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995650) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 722: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995651) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 723: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995652) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 724: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995653) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 725: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995654) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 726: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995655) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 727: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995656) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 728: mac 14:31:11, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995657) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 729: mac 14:31:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995658) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 730: mac 14:31:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995659) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 731: mac 14:31:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995660) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 732: mac 14:31:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995661) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 733: mac 14:31:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995662) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 734: mac 14:31:12, exit 1, 3.1 s; FAILED: DELIVER (seq 1791995748) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 735: mac 14:31:15, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995749) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 736: mac 14:31:15, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995750) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 737: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995751) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 738: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995752) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 739: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995753) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 740: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995754) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 741: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995755) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 742: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995756) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 743: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995757) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 744: mac 14:31:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995758) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 745: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995759) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 746: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995760) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 747: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995761) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 748: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995762) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 749: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995763) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 750: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995764) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 751: mac 14:31:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995765) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 752: mac 14:31:17, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995766) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 753: mac 14:31:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995767) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 754: mac 14:31:18, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995768) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 755: mac 14:31:18, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995769) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 756: mac 14:31:18, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791995770) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 757: mac 14:31:18, exit 1, 5.8 s; FAILED: DELIVER (seq 1791995856) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 758: mac 14:31:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995857) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 759: mac 14:31:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995858) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 760: mac 14:31:24, exit 1, 5.0 s; FAILED: DELIVER (seq 1791995944) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 761: mac 14:31:29, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995945) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 762: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995946) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 763: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995947) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 764: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995948) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 765: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995949) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 766: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995950) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 767: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995951) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 768: mac 14:31:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791995952) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 769: mac 14:31:31, exit 1, 3.0 s; FAILED: DELIVER (seq 1791996038) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 770: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996039) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 771: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996040) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 772: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996041) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 773: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996042) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 774: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996043) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 775: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996044) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 776: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996045) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 777: mac 14:31:34, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996046) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 778: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996047) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 779: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996048) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 780: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996049) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 781: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996050) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 782: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996051) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 783: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996052) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 784: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996053) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 785: mac 14:31:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996054) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 786: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996055) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 787: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996056) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 788: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996057) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 789: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996058) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 790: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996059) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 791: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996060) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 792: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996061) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 793: mac 14:31:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996062) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 794: mac 14:31:37, exit 1, 5.0 s; FAILED: DELIVER (seq 1791996148) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 795: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996149) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 796: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996150) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 797: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996151) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 798: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996152) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 799: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996153) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 800: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996154) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 801: mac 14:31:42, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996155) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 802: mac 14:31:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996156) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 803: mac 14:31:43, exit 1, 3.1 s; FAILED: DELIVER (seq 1791996242) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 804: mac 14:31:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996243) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 805: mac 14:31:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996244) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 806: mac 14:31:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996245) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 807: mac 14:31:46, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996246) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 808: mac 14:31:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996247) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 809: mac 14:31:46, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996248) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 810: mac 14:31:47, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996249) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 811: mac 14:31:47, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996250) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 812: mac 14:31:47, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996251) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 813: mac 14:31:47, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996252) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 814: mac 14:31:47, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996253) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 815: mac 14:31:47, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996254) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 816: mac 14:31:47, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996255) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 817: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996256) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 818: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996257) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 819: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996258) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 820: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996259) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 821: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996260) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 822: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996261) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 823: mac 14:31:48, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996262) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 824: mac 14:31:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996263) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 825: mac 14:31:49, exit 1, 4.8 s; FAILED: DELIVER (seq 1791996349) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 826: mac 14:31:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996350) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 827: mac 14:31:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996351) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 828: mac 14:31:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996352) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 829: mac 14:31:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996353) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 830: mac 14:31:54, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996354) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 831: mac 14:31:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996355) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 832: mac 14:31:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996356) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 833: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996357) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 834: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996358) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 835: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996359) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 836: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996360) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 837: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996361) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 838: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996362) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 839: mac 14:31:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996363) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 840: mac 14:31:56, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996364) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 841: mac 14:31:56, exit 1, 2.2 s; FAILED: DELIVER (seq 1791996450) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 842: mac 14:31:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996451) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 843: mac 14:31:58, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996452) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 844: mac 14:31:58, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996453) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 845: mac 14:31:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996454) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 846: mac 14:31:58, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996455) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 847: mac 14:31:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996456) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 848: mac 14:31:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996457) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 849: mac 14:31:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996458) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 850: mac 14:31:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996459) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 851: mac 14:31:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996460) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 852: mac 14:31:59, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996461) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 853: mac 14:32:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996462) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 854: mac 14:32:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996463) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 855: mac 14:32:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996464) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 856: mac 14:32:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996465) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 857: mac 14:32:00, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996466) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 858: mac 14:32:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996467) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 859: mac 14:32:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996468) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 860: mac 14:32:01, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996469) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 861: mac 14:32:01, exit 1, 3.1 s; FAILED: DELIVER (seq 1791996555) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 862: mac 14:32:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996556) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 863: mac 14:32:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996557) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 864: mac 14:32:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996558) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 865: mac 14:32:04, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996559) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 866: mac 14:32:05, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996560) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 867: mac 14:32:05, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996561) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 868: mac 14:32:05, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996562) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 869: mac 14:32:05, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996563) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 870: mac 14:32:05, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996564) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 871: mac 14:32:05, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996565) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 872: mac 14:32:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996566) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 873: mac 14:32:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996567) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 874: mac 14:32:06, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996568) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 875: mac 14:32:06, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996569) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 876: mac 14:32:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996570) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 877: mac 14:32:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996571) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 878: mac 14:32:06, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996572) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 879: mac 14:32:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996573) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 880: mac 14:32:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996574) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 881: mac 14:32:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996575) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 882: mac 14:32:07, exit 1, 5.0 s; FAILED: DELIVER (seq 1791996661) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 883: mac 14:32:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996662) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 884: mac 14:32:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996663) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 885: mac 14:32:12, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996664) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 886: mac 14:32:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996665) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 887: mac 14:32:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996666) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 888: mac 14:32:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996667) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 889: mac 14:32:13, exit 1, 3.1 s; FAILED: DELIVER (seq 1791996753) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 890: mac 14:32:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996754) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 891: mac 14:32:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996755) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 892: mac 14:32:16, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996756) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 893: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996757) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 894: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996758) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 895: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996759) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 896: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996760) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 897: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996761) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 898: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996762) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 899: mac 14:32:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996763) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 900: mac 14:32:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996764) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 901: mac 14:32:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996765) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 902: mac 14:32:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996766) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 903: mac 14:32:18, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996767) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 904: mac 14:32:18, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791996768) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 905: mac 14:32:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996769) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 906: mac 14:32:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996770) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 907: mac 14:32:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996771) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 908: mac 14:32:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996772) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 909: mac 14:32:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996773) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 910: mac 14:32:19, exit 1, 5.1 s; FAILED: DELIVER (seq 1791996859) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 911: mac 14:32:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996860) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 912: mac 14:32:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996861) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 913: mac 14:32:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996862) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 914: mac 14:32:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996863) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 915: mac 14:32:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996864) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 916: mac 14:32:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996865) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 917: mac 14:32:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996866) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 918: mac 14:32:25, exit 1, 5.1 s; FAILED: DELIVER (seq 1791996952) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 919: mac 14:32:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996953) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 920: mac 14:32:30, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996954) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 921: mac 14:32:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996955) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 922: mac 14:32:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996956) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 923: mac 14:32:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996957) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 924: mac 14:32:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996958) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 925: mac 14:32:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791996959) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 926: mac 14:32:31, exit 1, 3.1 s; FAILED: DELIVER (seq 1791997045) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 927: mac 14:32:34, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997046) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 928: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997047) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 929: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997048) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 930: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997049) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 931: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997050) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 932: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997051) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 933: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997052) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 934: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997053) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 935: mac 14:32:35, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997054) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 936: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997055) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 937: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997056) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 938: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997057) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 939: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997058) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 940: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997059) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 941: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997060) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 942: mac 14:32:36, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997061) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 943: mac 14:32:37, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997062) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 944: mac 14:32:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997063) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 945: mac 14:32:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997064) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 946: mac 14:32:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997065) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 947: mac 14:32:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997066) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 948: mac 14:32:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997067) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 949: mac 14:32:37, exit 1, 5.1 s; FAILED: DELIVER (seq 1791997153) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 950: mac 14:32:42, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997154) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 951: mac 14:32:43, exit 1, 0.3 s; FAILED: GET STATUS (seq 1791997155) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 952: mac 14:32:43, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997156) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 953: mac 14:32:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997157) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 954: mac 14:32:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997158) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 955: mac 14:32:43, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997159) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 956: mac 14:32:43, exit 1, 5.1 s; FAILED: DELIVER (seq 1791997245) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 957: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997246) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 958: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997247) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 959: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997248) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 960: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997249) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 961: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997250) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 962: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997251) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 963: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997252) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 964: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997253) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 965: mac 14:32:49, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997254) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 966: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997255) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 967: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997256) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 968: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997257) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 969: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997258) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 970: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997259) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 971: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997260) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 972: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997261) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 973: mac 14:32:50, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997262) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 974: mac 14:32:51, exit 1, 2.1 s; FAILED: DELIVER (seq 1791997348) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 975: mac 14:32:53, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997349) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 976: mac 14:32:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997350) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 977: mac 14:32:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997351) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 978: mac 14:32:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997352) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 979: mac 14:32:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997353) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 980: mac 14:32:53, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997354) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 981: mac 14:32:53, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997355) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 982: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997356) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 983: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997357) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 984: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997358) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 985: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997359) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 986: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997360) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 987: mac 14:32:54, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997361) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 988: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997362) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 989: mac 14:32:54, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997363) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 990: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997364) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 991: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997365) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 992: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997366) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 993: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997367) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 994: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997368) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 995: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997369) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 996: mac 14:32:55, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997370) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 997: mac 14:32:55, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997371) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 998: mac 14:32:56, exit 1, 3.1 s; FAILED: DELIVER (seq 1791997457) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 999: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997458) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1000: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997459) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1001: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997460) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1002: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997461) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1003: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997462) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1004: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997463) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1005: mac 14:32:59, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997464) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1006: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997465) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1007: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997466) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1008: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997467) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1009: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997468) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1010: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997469) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1011: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997470) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1012: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997471) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1013: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997472) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1014: mac 14:33:00, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997473) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1015: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997474) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1016: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997475) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1017: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997476) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1018: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997477) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1019: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997478) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1020: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997479) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1021: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997480) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1022: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997481) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1023: mac 14:33:01, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997482) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1024: mac 14:33:02, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997483) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1025: mac 14:33:02, exit 1, 5.0 s; FAILED: DELIVER (seq 1791997569) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 1026: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997570) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1027: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997571) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1028: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997572) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1029: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997573) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1030: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997574) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1031: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997575) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1032: mac 14:33:07, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997576) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1033: mac 14:33:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997577) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1034: mac 14:33:08, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997578) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1035: mac 14:33:08, exit 1, 4.4 s; FAILED: DELIVER (seq 1791997664) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1036: mac 14:33:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997665) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1037: mac 14:33:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997666) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1038: mac 14:33:12, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997667) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1039: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997668) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1040: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997669) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1041: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997670) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1042: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997671) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1043: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997672) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1044: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997673) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1045: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997674) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1046: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997675) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1047: mac 14:33:13, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997676) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1048: mac 14:33:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997677) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1049: mac 14:33:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997678) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1050: mac 14:33:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997679) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1051: mac 14:33:14, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997680) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1052: mac 14:33:14, exit 1, 2.9 s; FAILED: DELIVER (seq 1791997766) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1053: mac 14:33:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997767) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1054: mac 14:33:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997768) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1055: mac 14:33:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997769) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1056: mac 14:33:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997770) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1057: mac 14:33:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997771) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1058: mac 14:33:17, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997772) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1059: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997773) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1060: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997774) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1061: mac 14:33:18, exit 1, 0.2 s; FAILED: GET STATUS (seq 1791997775) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1062: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997776) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1063: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997777) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1064: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997778) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1065: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997779) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1066: mac 14:33:18, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997780) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1067: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997781) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1068: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997782) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1069: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997783) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1070: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997784) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1071: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997785) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1072: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997786) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1073: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997787) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1074: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997788) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1075: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997789) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1076: mac 14:33:19, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997790) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1077: mac 14:33:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997791) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1078: mac 14:33:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997792) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1079: mac 14:33:20, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997793) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1080: mac 14:33:20, exit 1, 3.1 s; FAILED: DELIVER (seq 1791997879) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1081: mac 14:33:23, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997880) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1082: mac 14:33:23, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997881) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1083: mac 14:33:23, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997882) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1084: mac 14:33:23, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997883) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1085: mac 14:33:23, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997884) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1086: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997885) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1087: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997886) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1088: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997887) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1089: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997888) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1090: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997889) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1091: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997890) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1092: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997891) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1093: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997892) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1094: mac 14:33:24, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997893) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1095: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997894) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1096: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997895) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1097: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997896) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1098: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997897) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1099: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997898) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1100: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997899) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1101: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997900) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1102: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997901) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1103: mac 14:33:25, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997902) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1104: mac 14:33:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997903) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1105: mac 14:33:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997904) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1106: mac 14:33:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997905) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1107: mac 14:33:26, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997906) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1108: mac 14:33:26, exit 1, 5.1 s; FAILED: DELIVER (seq 1791997992) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 1109: mac 14:33:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997993) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1110: mac 14:33:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997994) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1111: mac 14:33:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997995) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1112: mac 14:33:31, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997996) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1113: mac 14:33:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997997) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1114: mac 14:33:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997998) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1115: mac 14:33:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791997999) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1116: mac 14:33:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998000) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1117: mac 14:33:32, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998001) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1118: mac 14:33:32, exit 1, 5.1 s; FAILED: DELIVER (seq 1791998087) REFUSED 0xff: bench: the controller did not answer within its timeout
+update 1119: mac 14:33:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998088) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1120: mac 14:33:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998089) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1121: mac 14:33:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998090) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1122: mac 14:33:37, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998091) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1123: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998092) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1124: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998093) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1125: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998094) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1126: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998095) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1127: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998096) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1128: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998097) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1129: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998098) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1130: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998099) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1131: mac 14:33:38, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998100) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1132: mac 14:33:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998101) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1133: mac 14:33:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998102) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1134: mac 14:33:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998103) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1135: mac 14:33:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998104) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1136: mac 14:33:39, exit 1, 0.1 s; FAILED: GET STATUS (seq 1791998105) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+update 1137: mac 14:33:39, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998106): no answer after 6 tries
+update 1138: mac 14:33:57, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998107): no answer after 6 tries
+update 1139: mac 14:34:15, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998108): no answer after 6 tries
+update 1140: mac 14:34:34, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998109): no answer after 6 tries
+update 1141: mac 14:34:52, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998110): no answer after 6 tries
+update 1142: mac 14:35:10, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998111): no answer after 6 tries
+update 1143: mac 14:35:28, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998112): no answer after 6 tries
+--- flapper (ssh exit 0), board UTC:
+unbind 11:25:44.997
+bind 11:25:48.009
+unbind 11:25:51.083
+bind 11:25:54.096
+unbind 11:25:57.163
+bind 11:26:00.179
+unbind 11:26:03.254
+bind 11:26:06.268
+unbind 11:26:09.337
+bind 11:26:12.346
+unbind 11:26:15.415
+bind 11:26:18.429
+unbind 11:26:21.496
+bind 11:26:24.505
+unbind 11:26:27.573
+bind 11:26:30.584
+unbind 11:26:33.649
+bind 11:26:36.663
+unbind 11:26:39.728
+bind 11:26:42.740
+unbind 11:26:45.813
+bind 11:26:48.827
+unbind 11:26:51.896
+bind 11:26:54.907
+unbind 11:26:57.977
+bind 11:27:00.992
+unbind 11:27:04.056
+bind 11:27:07.072
+unbind 11:27:10.139
+bind 11:27:13.160
+unbind 11:27:16.228
+bind 11:27:19.239
+unbind 11:27:22.307
+bind 11:27:25.331
+unbind 11:27:28.396
+bind 11:27:31.415
+unbind 11:27:34.479
+bind 11:27:37.492
+unbind 11:27:40.565
+bind 11:27:43.576
+unbind 11:27:46.643
+bind 11:27:49.658
+unbind 11:27:52.727
+bind 11:27:55.738
+unbind 11:27:58.803
+bind 11:28:01.815
+unbind 11:28:04.881
+bind 11:28:07.909
+unbind 11:28:10.980
+bind 11:28:13.992
+unbind 11:28:17.063
+bind 11:28:20.072
+unbind 11:28:23.149
+bind 11:28:26.160
+unbind 11:28:29.228
+bind 11:28:32.251
+unbind 11:28:35.323
+bind 11:28:38.333
+unbind 11:28:41.400
+bind 11:28:44.415
+unbind 11:28:47.484
+bind 11:28:50.496
+unbind 11:28:53.574
+bind 11:28:56.588
+unbind 11:28:59.653
+bind 11:29:02.667
+unbind 11:29:05.732
+bind 11:29:08.748
+unbind 11:29:11.815
+bind 11:29:14.829
+unbind 11:29:17.893
+bind 11:29:20.904
+unbind 11:29:23.969
+bind 11:29:26.979
+unbind 11:29:30.046
+bind 11:29:33.060
+unbind 11:29:36.127
+bind 11:29:39.138
+unbind 11:29:42.205
+bind 11:29:45.220
+unbind 11:29:48.293
+bind 11:29:51.306
+unbind 11:29:54.381
+bind 11:29:57.401
+unbind 11:30:00.468
+bind 11:30:03.485
+unbind 11:30:06.553
+bind 11:30:09.568
+unbind 11:30:12.642
+bind 11:30:15.655
+unbind 11:30:18.723
+bind 11:30:21.738
+unbind 11:30:24.811
+bind 11:30:27.821
+unbind 11:30:30.890
+bind 11:30:33.905
+unbind 11:30:36.974
+bind 11:30:39.991
+unbind 11:30:43.056
+bind 11:30:46.067
+unbind 11:30:49.136
+bind 11:30:52.146
+unbind 11:30:55.213
+bind 11:30:58.230
+unbind 11:31:01.294
+bind 11:31:04.305
+unbind 11:31:07.371
+bind 11:31:10.385
+unbind 11:31:13.457
+bind 11:31:16.465
+unbind 11:31:19.533
+bind 11:31:22.544
+unbind 11:31:25.608
+bind 11:31:28.629
+unbind 11:31:31.684
+bind 11:31:34.696
+unbind 11:31:37.759
+bind 11:31:40.774
+unbind 11:31:43.848
+bind 11:31:46.860
+unbind 11:31:49.937
+bind 11:31:52.949
+unbind 11:31:56.013
+bind 11:31:59.028
+unbind 11:32:02.096
+bind 11:32:05.107
+unbind 11:32:08.181
+bind 11:32:11.190
+unbind 11:32:14.257
+bind 11:32:17.274
+unbind 11:32:20.339
+bind 11:32:23.353
+unbind 11:32:26.419
+bind 11:32:29.433
+unbind 11:32:32.496
+bind 11:32:35.507
+unbind 11:32:38.577
+bind 11:32:41.593
+unbind 11:32:44.661
+bind 11:32:47.672
+unbind 11:32:50.744
+bind 11:32:53.753
+unbind 11:32:56.819
+bind 11:32:59.833
+unbind 11:33:02.897
+bind 11:33:05.908
+unbind 11:33:08.977
+bind 11:33:11.989
+unbind 11:33:15.055
+bind 11:33:18.069
+unbind 11:33:21.133
+bind 11:33:24.155
+unbind 11:33:27.219
+bind 11:33:30.231
+unbind 11:33:33.301
+bind 11:33:36.310
+unbind 11:33:39.387
+bind 11:33:42.400
+unbind 11:33:45.469
+bind 11:33:48.483
+unbind 11:33:51.555
+bind 11:33:54.573
+unbind 11:33:57.652
+bind 11:34:00.663
+unbind 11:34:03.727
+bind 11:34:06.741
+unbind 11:34:09.812
+bind 11:34:12.826
+unbind 11:34:15.901
+bind 11:34:18.912
+unbind 11:34:21.991
+bind 11:34:25.003
+unbind 11:34:28.082
+bind 11:34:31.092
+unbind 11:34:34.165
+bind 11:34:37.176
+unbind 11:34:40.247
+bind 11:34:43.260
+unbind 11:34:46.333
+bind 11:34:49.343
+unbind 11:34:52.424
+bind 11:34:55.435
+unbind 11:34:58.509
+bind 11:35:01.518
+unbind 11:35:04.600
+bind 11:35:07.619
+unbind 11:35:10.705
+bind 11:35:13.718
+unbind 11:35:16.796
+bind 11:35:19.807
+unbind 11:35:22.880
+bind 11:35:25.894
+unbind 11:35:28.973
+bind 11:35:31.982
+unbind 11:35:35.055
+bind 11:35:38.069
+unbind 11:35:41.137
+bind 11:35:44.148
+/dev/ttyACM0
+flapping ended, interface bound
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+
+update 1144: mac 14:35:46, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998113): no answer after 6 tries
+update 1145: mac 14:36:14, exit 1, 18.1 s; FAILED: GET STATUS (seq 1791998114): no answer after 6 tries
+update 1146: mac 14:36:32, exit 1, 10.6 s; FAILED: GET STATUS (seq 1791998115) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+  SWD read-back (ssh exit 0):
+openocd exit 0
+region A 0x08006000 20776 bytes: DIFFERENT from firmware-A.img
+region B 0x08010000 20776 bytes: IDENTICAL to firmware-B.img
+region LR 0x0801A000 1736 bytes: IDENTICAL to last-resort-v1.img
+--- updater journal 2026-10-16 11:25:42
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html to 2026-10-16 11:36:59
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html UTC: 'controller silent' count first, then the most frequent result lines:
+0
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+Failed to parse timestamp: 2026-10-16 11:25:42
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+Failed to parse timestamp: 2026-10-16 11:25:42
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+
+# SB3 end mac 14:37:02: updates during flapping 0 of 1144 confirmed; after it 0 of 2; end state ? slot ?

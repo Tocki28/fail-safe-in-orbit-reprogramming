@@ -1,0 +1,404 @@
+2026-10-16 11:14:11 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario silence --flood none --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag silence-none-rerun
+updater log: 545759 bytes, 4175 lines; first 200 and last 200 lines
+---- first lines ----
+[     0.008] reports: no store file; <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-none-rerun/images/reports made, empty, next report number 1
+[     0.008] limits: no record, starting with minimum version 1, controller identity 0x0431
+[     0.008] clock: no offset record, starting with offset 0 s
+[     0.009] fsir-updater: ground on UDP port 51480 (all interfaces); data link A on /dev/ttys005; images in <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-none-rerun/images; keys built in; beat off; restart script <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-none-rerun/restore.py
+[     0.009] data link A: /dev/ttys005 open, 115200 8N1 raw
+[     0.470] controller heard
+[     0.470] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[     0.470] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and not sent live until one does
+[     0.498] ground link: answers and reports now go to 127.0.0.1:63348
+[     0.498] ground: command 0x25 sequence 1 for the onboard computer (1 payload bytes)
+[     0.498] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     0.600] ground: command 0x25 sequence 2 for the onboard computer (1 payload bytes)
+[     0.600] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     0.698] ground: command 0x25 sequence 3 for the onboard computer (1 payload bytes)
+[     0.698] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     0.801] ground: command 0x25 sequence 4 for the onboard computer (1 payload bytes)
+[     0.801] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     0.899] ground: command 0x25 sequence 5 for the onboard computer (1 payload bytes)
+[     0.899] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     0.999] ground: command 0x25 sequence 6 for the onboard computer (1 payload bytes)
+[     0.999] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     1.099] ground: command 0x25 sequence 7 for the onboard computer (1 payload bytes)
+[     1.099] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     1.201] ground: command 0x25 sequence 8 for the onboard computer (1 payload bytes)
+[     1.203] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     1.302] ground: command 0x25 sequence 9 for the onboard computer (1 payload bytes)
+[     1.302] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     1.402] ground: command 0x25 sequence 10 for the onboard computer (1 payload bytes)
+[     1.402] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 1; last report number 1
+[     1.499] ground: command 0x25 sequence 11 for the onboard computer (1 payload bytes)
+[     1.499] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     1.598] ground: command 0x25 sequence 12 for the onboard computer (1 payload bytes)
+[     1.599] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     1.698] ground: command 0x25 sequence 13 for the onboard computer (1 payload bytes)
+[     1.698] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     1.802] ground: command 0x25 sequence 14 for the onboard computer (1 payload bytes)
+[     1.802] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     1.901] ground: command 0x25 sequence 15 for the onboard computer (1 payload bytes)
+[     1.901] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     1.999] ground: command 0x25 sequence 16 for the onboard computer (1 payload bytes)
+[     1.999] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     2.102] ground: command 0x25 sequence 17 for the onboard computer (1 payload bytes)
+[     2.135] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     2.203] ground: command 0x25 sequence 18 for the onboard computer (1 payload bytes)
+[     2.203] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     2.298] ground: command 0x25 sequence 19 for the onboard computer (1 payload bytes)
+[     2.299] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     2.401] ground: command 0x25 sequence 20 for the onboard computer (1 payload bytes)
+[     2.401] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 2; last report number 2
+[     2.501] ground: command 0x25 sequence 21 for the onboard computer (1 payload bytes)
+[     2.501] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     2.602] ground: command 0x25 sequence 22 for the onboard computer (1 payload bytes)
+[     2.602] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     2.698] ground: command 0x25 sequence 23 for the onboard computer (1 payload bytes)
+[     2.699] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     2.798] ground: command 0x25 sequence 24 for the onboard computer (1 payload bytes)
+[     2.799] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     2.901] ground: command 0x25 sequence 25 for the onboard computer (1 payload bytes)
+[     2.901] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.001] ground: command 0x25 sequence 26 for the onboard computer (1 payload bytes)
+[     3.001] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.098] ground: command 0x25 sequence 27 for the onboard computer (1 payload bytes)
+[     3.099] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.199] ground: command 0x25 sequence 28 for the onboard computer (1 payload bytes)
+[     3.200] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.300] ground: command 0x25 sequence 29 for the onboard computer (1 payload bytes)
+[     3.300] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.401] ground: command 0x25 sequence 30 for the onboard computer (1 payload bytes)
+[     3.401] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.501] ground: command 0x25 sequence 31 for the onboard computer (1 payload bytes)
+[     3.501] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.602] ground: command 0x25 sequence 32 for the onboard computer (1 payload bytes)
+[     3.602] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.700] ground: command 0x25 sequence 33 for the onboard computer (1 payload bytes)
+[     3.700] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.798] ground: command 0x25 sequence 34 for the onboard computer (1 payload bytes)
+[     3.798] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     3.899] ground: command 0x25 sequence 35 for the onboard computer (1 payload bytes)
+[     3.899] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.003] ground: command 0x25 sequence 36 for the onboard computer (1 payload bytes)
+[     4.003] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.098] ground: command 0x25 sequence 37 for the onboard computer (1 payload bytes)
+[     4.098] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.201] ground: command 0x25 sequence 38 for the onboard computer (1 payload bytes)
+[     4.201] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.302] ground: command 0x25 sequence 39 for the onboard computer (1 payload bytes)
+[     4.302] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.398] ground: command 0x25 sequence 40 for the onboard computer (1 payload bytes)
+[     4.398] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.499] ground: command 0x25 sequence 41 for the onboard computer (1 payload bytes)
+[     4.500] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.602] ground: command 0x25 sequence 42 for the onboard computer (1 payload bytes)
+[     4.602] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.698] ground: command 0x25 sequence 43 for the onboard computer (1 payload bytes)
+[     4.699] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.801] ground: command 0x25 sequence 44 for the onboard computer (1 payload bytes)
+[     4.801] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.899] ground: command 0x25 sequence 45 for the onboard computer (1 payload bytes)
+[     4.899] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     4.999] ground: command 0x25 sequence 46 for the onboard computer (1 payload bytes)
+[     4.999] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.151] ground: command 0x25 sequence 47 for the onboard computer (1 payload bytes)
+[     5.151] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.198] ground: command 0x25 sequence 48 for the onboard computer (1 payload bytes)
+[     5.199] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.299] ground: command 0x25 sequence 49 for the onboard computer (1 payload bytes)
+[     5.316] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.399] ground: command 0x25 sequence 50 for the onboard computer (1 payload bytes)
+[     5.406] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.499] ground: command 0x25 sequence 51 for the onboard computer (1 payload bytes)
+[     5.499] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.598] ground: command 0x25 sequence 52 for the onboard computer (1 payload bytes)
+[     5.598] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.700] ground: command 0x25 sequence 53 for the onboard computer (1 payload bytes)
+[     5.700] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.802] ground: command 0x25 sequence 54 for the onboard computer (1 payload bytes)
+[     5.802] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     5.902] ground: command 0x25 sequence 55 for the onboard computer (1 payload bytes)
+[     5.902] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.001] ground: command 0x25 sequence 56 for the onboard computer (1 payload bytes)
+[     6.002] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.098] ground: command 0x25 sequence 57 for the onboard computer (1 payload bytes)
+[     6.099] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.202] ground: command 0x25 sequence 58 for the onboard computer (1 payload bytes)
+[     6.202] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.298] ground: command 0x25 sequence 59 for the onboard computer (1 payload bytes)
+[     6.298] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.402] ground: command 0x25 sequence 60 for the onboard computer (1 payload bytes)
+[     6.402] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.499] ground: command 0x25 sequence 61 for the onboard computer (1 payload bytes)
+[     6.499] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.602] ground: command 0x25 sequence 62 for the onboard computer (1 payload bytes)
+[     6.602] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.703] ground: command 0x25 sequence 63 for the onboard computer (1 payload bytes)
+[     6.703] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.802] ground: command 0x25 sequence 64 for the onboard computer (1 payload bytes)
+[     6.802] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     6.898] ground: command 0x25 sequence 65 for the onboard computer (1 payload bytes)
+[     6.898] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     7.002] ground: command 0x25 sequence 66 for the onboard computer (1 payload bytes)
+[     7.002] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     7.102] ground: command 0x25 sequence 67 for the onboard computer (1 payload bytes)
+[     7.102] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     7.201] ground: command 0x25 sequence 68 for the onboard computer (1 payload bytes)
+[     7.201] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     7.298] ground: command 0x25 sequence 69 for the onboard computer (1 payload bytes)
+[     7.299] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     7.400] ground: command 0x25 sequence 70 for the onboard computer (1 payload bytes)
+[     7.401] status: upload none (0 bytes stored); delivery idle; controller heard, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 3
+[     7.501] controller silent: no frame from the controller for 5 s (REQ-061)
+[     7.501] controller: EVENT 0x0101 (data link lost)
+[     7.505] controller silent: <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-none-rerun/restore.py reset 1 of 3 started (REQ-061; next one in 60 s if still silent)
+[     7.505] ground: command 0x25 sequence 71 for the onboard computer (1 payload bytes)
+[     7.505] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     7.599] ground: command 0x25 sequence 72 for the onboard computer (1 payload bytes)
+[     7.599] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     7.702] ground: command 0x25 sequence 73 for the onboard computer (1 payload bytes)
+[     7.702] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     7.801] ground: command 0x25 sequence 74 for the onboard computer (1 payload bytes)
+[     7.801] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     7.899] ground: command 0x25 sequence 75 for the onboard computer (1 payload bytes)
+[     7.899] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     7.998] ground: command 0x25 sequence 76 for the onboard computer (1 payload bytes)
+[     7.999] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.100] ground: command 0x25 sequence 77 for the onboard computer (1 payload bytes)
+[     8.100] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.198] ground: command 0x25 sequence 78 for the onboard computer (1 payload bytes)
+[     8.198] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.300] ground: command 0x25 sequence 79 for the onboard computer (1 payload bytes)
+[     8.301] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.401] ground: command 0x25 sequence 80 for the onboard computer (1 payload bytes)
+[     8.401] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.500] ground: command 0x25 sequence 81 for the onboard computer (1 payload bytes)
+[     8.500] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.598] ground: command 0x25 sequence 82 for the onboard computer (1 payload bytes)
+[     8.598] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.700] ground: command 0x25 sequence 83 for the onboard computer (1 payload bytes)
+[     8.716] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.802] ground: command 0x25 sequence 84 for the onboard computer (1 payload bytes)
+[     8.802] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.899] ground: command 0x25 sequence 85 for the onboard computer (1 payload bytes)
+[     8.899] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     8.999] ground: command 0x25 sequence 86 for the onboard computer (1 payload bytes)
+[     8.999] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 4
+[     9.050] controller silent: restart script ended by itself: exit status 0, signal 0; result line "RESTORE DONE: reset"
+[     9.050] controller silent: the controller was reset; sending EVENT 0x0106 (controller restarted by the onboard computer), reason 0x02 controller silent
+[     9.050] controller: EVENT 0x0106 (controller restarted by the onboard computer), detail 0x02
+[     9.102] ground: command 0x25 sequence 87 for the onboard computer (1 payload bytes)
+[     9.102] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 5
+[     9.199] ground: command 0x25 sequence 88 for the onboard computer (1 payload bytes)
+[     9.199] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 5
+[     9.298] ground: command 0x25 sequence 89 for the onboard computer (1 payload bytes)
+[     9.299] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 5
+[     9.401] ground: command 0x25 sequence 90 for the onboard computer (1 payload bytes)
+[     9.402] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 5
+[     9.502] ground: command 0x25 sequence 91 for the onboard computer (1 payload bytes)
+[     9.502] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 5
+[     9.600] ground: command 0x25 sequence 92 for the onboard computer (1 payload bytes)
+[     9.600] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 5
+[     9.701] ground: command 0x25 sequence 93 for the onboard computer (1 payload bytes)
+---- last lines ----
+[   198.005] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.104] ground: command 0x25 sequence 1977 for the onboard computer (1 payload bytes)
+[   198.104] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.208] ground: command 0x25 sequence 1978 for the onboard computer (1 payload bytes)
+[   198.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.304] ground: command 0x25 sequence 1979 for the onboard computer (1 payload bytes)
+[   198.304] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.407] ground: command 0x25 sequence 1980 for the onboard computer (1 payload bytes)
+[   198.407] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.504] ground: command 0x25 sequence 1981 for the onboard computer (1 payload bytes)
+[   198.504] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.604] ground: command 0x25 sequence 1982 for the onboard computer (1 payload bytes)
+[   198.604] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.705] ground: command 0x25 sequence 1983 for the onboard computer (1 payload bytes)
+[   198.705] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.808] ground: command 0x25 sequence 1984 for the onboard computer (1 payload bytes)
+[   198.809] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   198.908] ground: command 0x25 sequence 1985 for the onboard computer (1 payload bytes)
+[   198.908] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.009] ground: command 0x25 sequence 1986 for the onboard computer (1 payload bytes)
+[   199.009] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.107] ground: command 0x25 sequence 1987 for the onboard computer (1 payload bytes)
+[   199.107] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.208] ground: command 0x25 sequence 1988 for the onboard computer (1 payload bytes)
+[   199.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.308] ground: command 0x25 sequence 1989 for the onboard computer (1 payload bytes)
+[   199.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.404] ground: command 0x25 sequence 1990 for the onboard computer (1 payload bytes)
+[   199.404] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.508] ground: command 0x25 sequence 1991 for the onboard computer (1 payload bytes)
+[   199.508] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.604] ground: command 0x25 sequence 1992 for the onboard computer (1 payload bytes)
+[   199.604] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.707] ground: command 0x25 sequence 1993 for the onboard computer (1 payload bytes)
+[   199.707] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.808] ground: command 0x25 sequence 1994 for the onboard computer (1 payload bytes)
+[   199.809] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   199.906] ground: command 0x25 sequence 1995 for the onboard computer (1 payload bytes)
+[   199.906] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.008] ground: command 0x25 sequence 1996 for the onboard computer (1 payload bytes)
+[   200.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.107] ground: command 0x25 sequence 1997 for the onboard computer (1 payload bytes)
+[   200.107] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.208] ground: command 0x25 sequence 1998 for the onboard computer (1 payload bytes)
+[   200.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.308] ground: command 0x25 sequence 1999 for the onboard computer (1 payload bytes)
+[   200.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.404] ground: command 0x25 sequence 2000 for the onboard computer (1 payload bytes)
+[   200.404] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.508] ground: command 0x25 sequence 2001 for the onboard computer (1 payload bytes)
+[   200.508] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.607] ground: command 0x25 sequence 2002 for the onboard computer (1 payload bytes)
+[   200.607] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.708] ground: command 0x25 sequence 2003 for the onboard computer (1 payload bytes)
+[   200.708] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.808] ground: command 0x25 sequence 2004 for the onboard computer (1 payload bytes)
+[   200.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   200.908] ground: command 0x25 sequence 2005 for the onboard computer (1 payload bytes)
+[   200.908] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.009] ground: command 0x25 sequence 2006 for the onboard computer (1 payload bytes)
+[   201.009] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.104] ground: command 0x25 sequence 2007 for the onboard computer (1 payload bytes)
+[   201.104] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.204] ground: command 0x25 sequence 2008 for the onboard computer (1 payload bytes)
+[   201.204] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.308] ground: command 0x25 sequence 2009 for the onboard computer (1 payload bytes)
+[   201.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.408] ground: command 0x25 sequence 2010 for the onboard computer (1 payload bytes)
+[   201.408] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.504] ground: command 0x25 sequence 2011 for the onboard computer (1 payload bytes)
+[   201.504] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.608] ground: command 0x25 sequence 2012 for the onboard computer (1 payload bytes)
+[   201.608] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.707] ground: command 0x25 sequence 2013 for the onboard computer (1 payload bytes)
+[   201.707] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.808] ground: command 0x25 sequence 2014 for the onboard computer (1 payload bytes)
+[   201.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   201.907] ground: command 0x25 sequence 2015 for the onboard computer (1 payload bytes)
+[   201.907] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.008] ground: command 0x25 sequence 2016 for the onboard computer (1 payload bytes)
+[   202.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.108] ground: command 0x25 sequence 2017 for the onboard computer (1 payload bytes)
+[   202.108] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.207] ground: command 0x25 sequence 2018 for the onboard computer (1 payload bytes)
+[   202.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.309] ground: command 0x25 sequence 2019 for the onboard computer (1 payload bytes)
+[   202.309] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.408] ground: command 0x25 sequence 2020 for the onboard computer (1 payload bytes)
+[   202.408] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.509] ground: command 0x25 sequence 2021 for the onboard computer (1 payload bytes)
+[   202.509] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.607] ground: command 0x25 sequence 2022 for the onboard computer (1 payload bytes)
+[   202.608] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.708] ground: command 0x25 sequence 2023 for the onboard computer (1 payload bytes)
+[   202.708] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.807] ground: command 0x25 sequence 2024 for the onboard computer (1 payload bytes)
+[   202.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   202.907] ground: command 0x25 sequence 2025 for the onboard computer (1 payload bytes)
+[   202.907] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.008] ground: command 0x25 sequence 2026 for the onboard computer (1 payload bytes)
+[   203.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.108] ground: command 0x25 sequence 2027 for the onboard computer (1 payload bytes)
+[   203.108] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.207] ground: command 0x25 sequence 2028 for the onboard computer (1 payload bytes)
+[   203.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.308] ground: command 0x25 sequence 2029 for the onboard computer (1 payload bytes)
+[   203.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.407] ground: command 0x25 sequence 2030 for the onboard computer (1 payload bytes)
+[   203.407] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.508] ground: command 0x25 sequence 2031 for the onboard computer (1 payload bytes)
+[   203.508] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.607] ground: command 0x25 sequence 2032 for the onboard computer (1 payload bytes)
+[   203.607] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.704] ground: command 0x25 sequence 2033 for the onboard computer (1 payload bytes)
+[   203.704] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.808] ground: command 0x25 sequence 2034 for the onboard computer (1 payload bytes)
+[   203.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   203.908] ground: command 0x25 sequence 2035 for the onboard computer (1 payload bytes)
+[   203.908] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.008] ground: command 0x25 sequence 2036 for the onboard computer (1 payload bytes)
+[   204.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.108] ground: command 0x25 sequence 2037 for the onboard computer (1 payload bytes)
+[   204.108] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.208] ground: command 0x25 sequence 2038 for the onboard computer (1 payload bytes)
+[   204.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.308] ground: command 0x25 sequence 2039 for the onboard computer (1 payload bytes)
+[   204.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.408] ground: command 0x25 sequence 2040 for the onboard computer (1 payload bytes)
+[   204.408] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.509] ground: command 0x25 sequence 2041 for the onboard computer (1 payload bytes)
+[   204.509] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.608] ground: command 0x25 sequence 2042 for the onboard computer (1 payload bytes)
+[   204.608] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.704] ground: command 0x25 sequence 2043 for the onboard computer (1 payload bytes)
+[   204.704] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.808] ground: command 0x25 sequence 2044 for the onboard computer (1 payload bytes)
+[   204.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   204.908] ground: command 0x25 sequence 2045 for the onboard computer (1 payload bytes)
+[   204.908] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.008] ground: command 0x25 sequence 2046 for the onboard computer (1 payload bytes)
+[   205.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.108] ground: command 0x25 sequence 2047 for the onboard computer (1 payload bytes)
+[   205.108] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.205] ground: command 0x25 sequence 2048 for the onboard computer (1 payload bytes)
+[   205.205] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.308] ground: command 0x25 sequence 2049 for the onboard computer (1 payload bytes)
+[   205.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.408] ground: command 0x25 sequence 2050 for the onboard computer (1 payload bytes)
+[   205.408] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.507] ground: command 0x25 sequence 2051 for the onboard computer (1 payload bytes)
+[   205.508] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.604] ground: command 0x25 sequence 2052 for the onboard computer (1 payload bytes)
+[   205.604] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.707] ground: command 0x25 sequence 2053 for the onboard computer (1 payload bytes)
+[   205.708] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.804] ground: command 0x25 sequence 2054 for the onboard computer (1 payload bytes)
+[   205.805] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   205.908] ground: command 0x25 sequence 2055 for the onboard computer (1 payload bytes)
+[   205.908] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.008] ground: command 0x25 sequence 2056 for the onboard computer (1 payload bytes)
+[   206.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.108] ground: command 0x25 sequence 2057 for the onboard computer (1 payload bytes)
+[   206.108] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.208] ground: command 0x25 sequence 2058 for the onboard computer (1 payload bytes)
+[   206.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.305] ground: command 0x25 sequence 2059 for the onboard computer (1 payload bytes)
+[   206.305] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.408] ground: command 0x25 sequence 2060 for the onboard computer (1 payload bytes)
+[   206.408] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.506] ground: command 0x25 sequence 2061 for the onboard computer (1 payload bytes)
+[   206.506] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.608] ground: command 0x25 sequence 2062 for the onboard computer (1 payload bytes)
+[   206.608] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.708] ground: command 0x25 sequence 2063 for the onboard computer (1 payload bytes)
+[   206.708] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.808] ground: command 0x25 sequence 2064 for the onboard computer (1 payload bytes)
+[   206.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   206.908] ground: command 0x25 sequence 2065 for the onboard computer (1 payload bytes)
+[   206.921] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.008] ground: command 0x25 sequence 2066 for the onboard computer (1 payload bytes)
+[   207.008] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.108] ground: command 0x25 sequence 2067 for the onboard computer (1 payload bytes)
+[   207.108] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.208] ground: command 0x25 sequence 2068 for the onboard computer (1 payload bytes)
+[   207.208] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.308] ground: command 0x25 sequence 2069 for the onboard computer (1 payload bytes)
+[   207.308] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.408] ground: command 0x25 sequence 2070 for the onboard computer (1 payload bytes)
+[   207.408] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.508] ground: command 0x25 sequence 2071 for the onboard computer (1 payload bytes)
+[   207.508] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.608] ground: command 0x25 sequence 2072 for the onboard computer (1 payload bytes)
+[   207.608] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.708] ground: command 0x25 sequence 2073 for the onboard computer (1 payload bytes)
+[   207.708] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.808] ground: command 0x25 sequence 2074 for the onboard computer (1 payload bytes)
+[   207.808] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.908] ground: command 0x25 sequence 2075 for the onboard computer (1 payload bytes)
+[   207.908] status: upload none (0 bytes stored); delivery idle; controller silent, last HEALTH mode OPERATE; data link A frames sent 0, received 3; last report number 7
+[   207.948] fsir-updater: stopped

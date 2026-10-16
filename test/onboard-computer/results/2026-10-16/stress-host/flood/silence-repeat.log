@@ -1,0 +1,191 @@
+2026-10-16 11:31:10 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario silence --flood repeat --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag silence-repeat
+load averages at start (12.25, 19.6826171875, 19.76611328125), at end (12.0986328125, 15.7099609375, 17.91015625)
+{
+ "tag": "silence-repeat",
+ "scenario": "silence",
+ "flood": {
+  "kind": "repeat",
+  "source": "same",
+  "seed": 1,
+  "cmd": [
+   "/usr/local/opt/python@3.14/bin/python3.14",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/flood_sender.py",
+   "--port",
+   "52939",
+   "--kind",
+   "repeat",
+   "--rate",
+   "10000",
+   "--seconds",
+   "215.0",
+   "--seed",
+   "1",
+   "--stats",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-repeat/flood-stats.json",
+   "--fd",
+   "6"
+  ],
+  "rate_target": 10000,
+  "seconds_target": 215.0,
+  "elapsed_s": 215.00101066101342,
+  "attempted": 2149976,
+  "sent": 2149976,
+  "send_errors": 0,
+  "rate_reached": 9999.841365349728,
+  "foreign_answers": 0,
+  "valid_frames": 0,
+  "per_second_stats": {
+   "n": 215,
+   "min": 9580,
+   "p50": 10000,
+   "p95": 10030,
+   "p99": 10038,
+   "max": 10408,
+   "mean": 9999.888372093023,
+   "std": 43.533110677470496
+  },
+  "answers_to_flood": {
+   "RECEIVED": 64,
+   "DONE": 64,
+   "ALREADY_DONE": 1380748
+  },
+  "valid_done_latency_ms": {
+   "n": 0
+  },
+  "udp_delta_system_wide": {
+   "received": 6333059,
+   "dropped_full_buffer": 1399511
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:31:10 EEST",
+ "loadavg_start": [
+  12.25,
+  19.6826171875,
+  19.76611328125
+ ],
+ "image_bytes": 20776,
+ "silence": {
+  "last_frame_wall": 1792139474.264881,
+  "expected_s_after_last_frame": [
+   5.0,
+   65.0,
+   125.0,
+   185.0
+  ],
+  "restore_calls": 3,
+  "script_error_s": [
+   0.08831906318664551,
+   0.09401917457580566,
+   0.10881900787353516
+  ],
+  "log_error_s": [
+   0.0019109249114990234,
+   0.0019109249114990234,
+   0.0029108524322509766
+  ],
+  "silent_line_error_s": [
+   -8.893013000488281e-05
+  ],
+  "spawn_delay_s": [
+   0.08640813827514648,
+   0.09210824966430664,
+   0.10590815544128418
+  ],
+  "log_lines": [
+   [
+    5.0,
+    "controller silent: no frame from the controller for 5 s (REQ"
+   ],
+   [
+    5.002,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    65.002,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    125.003,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    185.0,
+    "controller still silent after 3 resets; restore not run (dec"
+   ]
+  ],
+  "events_0106": [
+   [
+    2,
+    5.097
+   ],
+   [
+    2,
+    65.102
+   ],
+   [
+    2,
+    125.116
+   ]
+  ],
+  "window_s": 271.10197893413715
+ },
+ "updater": {
+  "samples": 274,
+  "rss_kb": {
+   "first": 4168,
+   "last": 4220,
+   "max": 4220
+  },
+  "cpu_pct": {
+   "n": 273,
+   "min": 0.0,
+   "p50": 94.73809171674169,
+   "p95": 97.41043877715232,
+   "p99": 97.94665346779485,
+   "max": 98.12110331287862,
+   "mean": 74.41351456265011,
+   "std": 38.13155109105079
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 1383193,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 316834514,
+   "lines": 2766411
+  }
+ },
+ "probe": {
+  "sent": 2712,
+  "answered": 2381,
+  "share": 0.8779498525073747,
+  "latency_ms": {
+   "n": 2381,
+   "min": 0.337009085342288,
+   "p50": 591.07486018911,
+   "p95": 821.6023708228022,
+   "p99": 1015.9710349980742,
+   "max": 1191.4374460466206,
+   "mean": 495.49349883754326,
+   "std": 297.3155879279666
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  12.0986328125,
+  15.7099609375,
+  17.91015625
+ ]
+}

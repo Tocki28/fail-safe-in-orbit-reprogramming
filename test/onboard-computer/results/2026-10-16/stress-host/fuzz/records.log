@@ -1,0 +1,17 @@
+2026-10-16 12:19:18 EEST, commit a504b0d, build/fuzz records --seed 20261016 --n 1000000 --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/fuzz --work build/work/records --ctrl-images <checkout of a504b0d>/src/controller/build/images --test-images <checkout of a504b0d>/test/controller/build/images
+uptime at start: 12:19  up 16 days, 21:36, 2 users, load averages: 4.75 5.69 10.75
+mutation-based fuzzer without coverage feedback (no libFuzzer, AFL or honggfuzz here); seed 20261016; 1000000 inputs; UBSan on, no recovery
+progress: 100000 inputs, 0 findings, 5.1 s under test
+progress: 200000 inputs, 0 findings, 13.8 s under test
+progress: 300000 inputs, 0 findings, 18.4 s under test
+progress: 400000 inputs, 0 findings, 22.8 s under test
+progress: 500000 inputs, 0 findings, 27.9 s under test
+progress: 600000 inputs, 0 findings, 33.3 s under test
+progress: 700000 inputs, 0 findings, 38.0 s under test
+progress: 800000 inputs, 0 findings, 46.8 s under test
+progress: 900000 inputs, 0 findings, 54.5 s under test
+progress: 1000000 inputs, 0 findings, 58.9 s under test
+records: 213370 reads gave RECORD_OK (58247 of them with a CRC-32 made valid on purpose). There is one copy only: <name>, plus <name>.tmp that write() uses and read() never opens (checked: a good record in .tmp is not read).
+SUMMARY target records: 1000000 inputs, 0 findings, 0 notes, 58.9 s in the code under test
+slowest inputs (ms, index): 26.172@780377 30.095@104054 39.724@580843 34.569@510696 51.147@803184 35.285@411979 34.872@448109 39.076@479184 48.338@584215 29.553@295368
+exit status 0; wall time 573 s; uptime at end: 12:28  up 16 days, 21:46, 2 users, load averages: 10.43 10.34 10.88

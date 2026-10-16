@@ -1,0 +1,18 @@
+2026-10-16 12:19:18 EEST, commit a504b0d, build/fuzz reports --seed 20261016 --n 1000000 --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/fuzz --work build/work/reports --ctrl-images <checkout of a504b0d>/src/controller/build/images --test-images <checkout of a504b0d>/test/controller/build/images
+uptime at start: 12:19  up 16 days, 21:36, 2 users, load averages: 4.75 5.69 10.75
+mutation-based fuzzer without coverage feedback (no libFuzzer, AFL or honggfuzz here); seed 20261016; 1000000 inputs; UBSan on, no recovery
+reports: 48 seed store files, 611 distinct seed reports
+progress: 100000 inputs, 0 findings, 49.7 s under test
+progress: 200000 inputs, 0 findings, 90.1 s under test
+progress: 300000 inputs, 0 findings, 124.3 s under test
+progress: 400000 inputs, 0 findings, 163.3 s under test
+progress: 500000 inputs, 0 findings, 208.8 s under test
+progress: 600000 inputs, 0 findings, 268.6 s under test
+progress: 700000 inputs, 0 findings, 300.7 s under test
+progress: 800000 inputs, 0 findings, 330.4 s under test
+progress: 900000 inputs, 0 findings, 355.9 s under test
+progress: 1000000 inputs, 0 findings, 383.8 s under test
+reports: damaged files (good records end before the file's end): 828376; of these 538884 had 4311813 whole, CRC-valid records after the cut that load() dropped (cut at the first damage, as report_store.hpp says: TBR). Read-backs: 82320, reports read 617878; valid reports skipped by the number-order rule: 5590
+SUMMARY target reports: 1000000 inputs, 0 findings, 0 notes, 383.8 s in the code under test
+slowest inputs (ms, index): 123.931@39324 112.419@523654 146.248@475075 160.263@504728 102.824@598034 183.333@332085 131.848@63599 127.107@529277 103.010@287380 127.537@505029
+exit status 0; wall time 754 s; uptime at end: 12:31  up 16 days, 21:49, 2 users, load averages: 4.04 7.52 9.60

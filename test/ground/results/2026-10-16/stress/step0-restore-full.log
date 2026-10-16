@@ -1,0 +1,15 @@
+# mac 2026-10-16 11:51:19 EEST; step 0: restore.sh full with the a504b0d images; then console status
+board start 08:51:16.616 UTC
+check: bootloader image /root/bench-images-a504b0d/bootloader.img 21652 bytes: image check passed: /tmp/restore.tmIYRX/bootloader.img: kind bootloader, version 1, 21652 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: last-resort image /root/bench-images-a504b0d/last-resort-v1.img 1736 bytes: image check passed: /tmp/restore.tmIYRX/last-resort.img: kind last-resort, version 1, 1736 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+check: main firmware image /root/bench-images-a504b0d/firmware-A.img 20776 bytes: image check passed: /tmp/restore.tmIYRX/main.img: kind main, version 1, 20776 bytes, both signatures valid; limits: stored record, minimum version 1, identity 0x0431
+RESTORE DONE: full: bootloader, last-resort, main firmware in slot A written and verified; slot B and boot state erased; chip running
+exit=0
+board end 08:51:20.849 UTC
+# mac 11:51:31: console status
+report  HEALTH  #5149 onboard t=1792140695 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5150 onboard t=1792140696 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5151 onboard t=1792140697 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5152 onboard t=1792140698 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5153 onboard t=1792140699 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5154 onboard t=1792140700 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED

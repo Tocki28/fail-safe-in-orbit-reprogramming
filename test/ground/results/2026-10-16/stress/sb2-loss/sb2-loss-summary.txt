@@ -1,0 +1,6 @@
+# SB2 radio loss with resume; mac start 2026-10-16 15:16:34 EEST; run bound 600 s; attempt k of seed S uses seed S*100+k
+loss 0.5 seed 1: NOT CONFIRMED in 600 s, 6 attempts, upload reached 13312 bytes; resumed at []; dropped 203 of 422
+loss 0.5 seed 2: CONFIRMED slot B after 3 attempts, 806 s; resumed at []; dropped 163 of 326 datagrams
+loss 0.5 seed 3: CONFIRMED slot A after 2 attempts, 315 s; resumed at []; dropped 101 of 213 datagrams
+loss 0.6 seed 1: NOT CONFIRMED in 600 s, 9 attempts, upload reached 16128 bytes; resumed at []; dropped 242 of 423
+# STOPPED by the coordinator at mac 16:07:16 (PID 69016): the USB network link Mac to onboard computer was lost (ping 192.168.7.1 100 % loss; no 192.168.7.x interface on the Mac at 16:06:57); from loss 0.6 seed 2 on, the attempts failed on the lost link, not on radio loss, and are not results

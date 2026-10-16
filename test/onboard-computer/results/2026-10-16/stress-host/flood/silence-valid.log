@@ -1,0 +1,200 @@
+2026-10-16 11:24:36 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario silence --flood valid --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag silence-valid
+load averages at start (53.0224609375, 33.8017578125, 22.5361328125), at end (13.15673828125, 22.50048828125, 20.65625)
+{
+ "tag": "silence-valid",
+ "scenario": "silence",
+ "flood": {
+  "kind": "valid",
+  "source": "same",
+  "seed": 1,
+  "cmd": [
+   "/usr/local/opt/python@3.14/bin/python3.14",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/flood_sender.py",
+   "--port",
+   "63002",
+   "--kind",
+   "valid",
+   "--rate",
+   "10000",
+   "--seconds",
+   "215.0",
+   "--seed",
+   "1",
+   "--stats",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-valid/flood-stats.json",
+   "--fd",
+   "6",
+   "--times",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/silence-valid/flood-times.bin"
+  ],
+  "rate_target": 10000,
+  "seconds_target": 215.0,
+  "elapsed_s": 215.00210972107016,
+  "attempted": 2149978,
+  "sent": 2149978,
+  "send_errors": 0,
+  "rate_reached": 9999.79954982415,
+  "foreign_answers": 0,
+  "valid_frames": 2149978,
+  "per_second_stats": {
+   "n": 215,
+   "min": 9947,
+   "p50": 9999,
+   "p95": 10038,
+   "p99": 10046,
+   "max": 10054,
+   "mean": 9999.897674418604,
+   "std": 22.132344933740974
+  },
+  "answers_to_flood": {
+   "RECEIVED": 967194,
+   "DONE": 967194
+  },
+  "valid_done_share": 0.4498622776605156,
+  "valid_done_latency_ms": {
+   "n": 967194,
+   "min": 0.5382469389587641,
+   "p50": 904.7756581567228,
+   "p95": 1100.009914021939,
+   "p99": 1226.536254864186,
+   "max": 1394.4400588516146,
+   "mean": 909.5518714637119,
+   "std": 117.43938759099325
+  },
+  "udp_delta_system_wide": {
+   "received": 7173751,
+   "dropped_full_buffer": 2126961
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:24:36 EEST",
+ "loadavg_start": [
+  53.0224609375,
+  33.8017578125,
+  22.5361328125
+ ],
+ "image_bytes": 20776,
+ "silence": {
+  "last_frame_wall": 1792139080.487732,
+  "expected_s_after_last_frame": [
+   5.0,
+   65.0,
+   125.0,
+   185.0
+  ],
+  "restore_calls": 3,
+  "script_error_s": [
+   0.10646796226501465,
+   0.09036803245544434,
+   0.10026812553405762
+  ],
+  "log_error_s": [
+   0.0036880970001220703,
+   0.001688241958618164,
+   0.009688138961791992
+  ],
+  "silent_line_error_s": [
+   -0.00031185150146484375
+  ],
+  "spawn_delay_s": [
+   0.10277986526489258,
+   0.08867979049682617,
+   0.09057998657226562
+  ],
+  "log_lines": [
+   [
+    5.0,
+    "controller silent: no frame from the controller for 5 s (REQ"
+   ],
+   [
+    5.004,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    65.002,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    125.01,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    185.0,
+    "controller still silent after 3 resets; restore not run (dec"
+   ]
+  ],
+  "events_0106": [
+   [
+    2,
+    5.118
+   ],
+   [
+    2,
+    65.098
+   ],
+   [
+    2,
+    125.11
+   ]
+  ],
+  "window_s": 250.8793454610277
+ },
+ "updater": {
+  "samples": 254,
+  "rss_kb": {
+   "first": 4224,
+   "last": 4284,
+   "max": 4284
+  },
+  "cpu_pct": {
+   "n": 253,
+   "min": 0.0,
+   "p50": 93.80744127676857,
+   "p95": 97.1548978457616,
+   "p99": 97.83980854336768,
+   "max": 97.96653385259205,
+   "mean": 79.51309036020784,
+   "std": 32.994980165602634
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 969055,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 259673246,
+   "lines": 1938135
+  }
+ },
+ "probe": {
+  "sent": 2509,
+  "answered": 1861,
+  "share": 0.7417297728178557,
+  "latency_ms": {
+   "n": 1861,
+   "min": 0.3585859667509794,
+   "p50": 879.7471870202571,
+   "p95": 1083.5797500330955,
+   "p99": 1216.7255110107362,
+   "max": 1381.424343911931,
+   "mean": 739.0912363627472,
+   "std": 372.72845947951464
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  13.15673828125,
+  22.50048828125,
+  20.65625
+ ]
+}

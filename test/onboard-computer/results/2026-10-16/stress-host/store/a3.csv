@@ -1,0 +1,337 @@
+write,value,old_record,step,call,variant,result,verdict
+clock_record::save,0,present,1,open(clock-offset.tmp),before,old,ok
+clock_record::save,0,present,1,open(clock-offset.tmp),after,old,ok
+clock_record::save,0,present,2,write(clock-offset.tmp),before,old,ok
+clock_record::save,0,present,2,write(clock-offset.tmp),after,old,ok
+clock_record::save,0,present,2,write(clock-offset.tmp),half,old,ok
+clock_record::save,0,present,3,fsync(clock-offset.tmp),before,old,ok
+clock_record::save,0,present,3,fsync(clock-offset.tmp),after,old,ok
+clock_record::save,0,present,4,close(clock-offset.tmp),before,old,ok
+clock_record::save,0,present,4,close(clock-offset.tmp),after,old,ok
+clock_record::save,0,present,5,rename(clock-offset),before,old,ok
+clock_record::save,0,present,5,rename(clock-offset),after,new,ok
+clock_record::save,0,present,5,rename(clock-offset),after+lost-rename,old,ok
+clock_record::save,0,present,6,open(work),before,new,ok
+clock_record::save,0,present,6,open(work),before+lost-rename,old,ok
+clock_record::save,0,present,6,open(work),after,new,ok
+clock_record::save,0,present,6,open(work),after+lost-rename,old,ok
+clock_record::save,0,present,7,fsync(work),before,new,ok
+clock_record::save,0,present,7,fsync(work),before+lost-rename,old,ok
+clock_record::save,0,present,7,fsync(work),after,new,ok
+clock_record::save,0,present,8,close(work),before,new,ok
+clock_record::save,0,present,8,close(work),after,new,ok
+clock_record::save,0,absent,1,open(clock-offset.tmp),before,old (no record),ok
+clock_record::save,0,absent,1,open(clock-offset.tmp),after,old (no record),ok
+clock_record::save,0,absent,2,write(clock-offset.tmp),before,old (no record),ok
+clock_record::save,0,absent,2,write(clock-offset.tmp),after,old (no record),ok
+clock_record::save,0,absent,2,write(clock-offset.tmp),half,old (no record),ok
+clock_record::save,0,absent,3,fsync(clock-offset.tmp),before,old (no record),ok
+clock_record::save,0,absent,3,fsync(clock-offset.tmp),after,old (no record),ok
+clock_record::save,0,absent,4,close(clock-offset.tmp),before,old (no record),ok
+clock_record::save,0,absent,4,close(clock-offset.tmp),after,old (no record),ok
+clock_record::save,0,absent,5,rename(clock-offset),before,old (no record),ok
+clock_record::save,0,absent,5,rename(clock-offset),after,new,ok
+clock_record::save,0,absent,5,rename(clock-offset),after+lost-rename,old (no record),ok
+clock_record::save,0,absent,6,open(work),before,new,ok
+clock_record::save,0,absent,6,open(work),before+lost-rename,old (no record),ok
+clock_record::save,0,absent,6,open(work),after,new,ok
+clock_record::save,0,absent,6,open(work),after+lost-rename,old (no record),ok
+clock_record::save,0,absent,7,fsync(work),before,new,ok
+clock_record::save,0,absent,7,fsync(work),before+lost-rename,old (no record),ok
+clock_record::save,0,absent,7,fsync(work),after,new,ok
+clock_record::save,0,absent,8,close(work),before,new,ok
+clock_record::save,0,absent,8,close(work),after,new,ok
+clock_record::save,-1,present,1,open(clock-offset.tmp),before,old,ok
+clock_record::save,-1,present,1,open(clock-offset.tmp),after,old,ok
+clock_record::save,-1,present,2,write(clock-offset.tmp),before,old,ok
+clock_record::save,-1,present,2,write(clock-offset.tmp),after,old,ok
+clock_record::save,-1,present,2,write(clock-offset.tmp),half,old,ok
+clock_record::save,-1,present,3,fsync(clock-offset.tmp),before,old,ok
+clock_record::save,-1,present,3,fsync(clock-offset.tmp),after,old,ok
+clock_record::save,-1,present,4,close(clock-offset.tmp),before,old,ok
+clock_record::save,-1,present,4,close(clock-offset.tmp),after,old,ok
+clock_record::save,-1,present,5,rename(clock-offset),before,old,ok
+clock_record::save,-1,present,5,rename(clock-offset),after,new,ok
+clock_record::save,-1,present,5,rename(clock-offset),after+lost-rename,old,ok
+clock_record::save,-1,present,6,open(work),before,new,ok
+clock_record::save,-1,present,6,open(work),before+lost-rename,old,ok
+clock_record::save,-1,present,6,open(work),after,new,ok
+clock_record::save,-1,present,6,open(work),after+lost-rename,old,ok
+clock_record::save,-1,present,7,fsync(work),before,new,ok
+clock_record::save,-1,present,7,fsync(work),before+lost-rename,old,ok
+clock_record::save,-1,present,7,fsync(work),after,new,ok
+clock_record::save,-1,present,8,close(work),before,new,ok
+clock_record::save,-1,present,8,close(work),after,new,ok
+clock_record::save,-1,absent,1,open(clock-offset.tmp),before,old (no record),ok
+clock_record::save,-1,absent,1,open(clock-offset.tmp),after,old (no record),ok
+clock_record::save,-1,absent,2,write(clock-offset.tmp),before,old (no record),ok
+clock_record::save,-1,absent,2,write(clock-offset.tmp),after,old (no record),ok
+clock_record::save,-1,absent,2,write(clock-offset.tmp),half,old (no record),ok
+clock_record::save,-1,absent,3,fsync(clock-offset.tmp),before,old (no record),ok
+clock_record::save,-1,absent,3,fsync(clock-offset.tmp),after,old (no record),ok
+clock_record::save,-1,absent,4,close(clock-offset.tmp),before,old (no record),ok
+clock_record::save,-1,absent,4,close(clock-offset.tmp),after,old (no record),ok
+clock_record::save,-1,absent,5,rename(clock-offset),before,old (no record),ok
+clock_record::save,-1,absent,5,rename(clock-offset),after,new,ok
+clock_record::save,-1,absent,5,rename(clock-offset),after+lost-rename,old (no record),ok
+clock_record::save,-1,absent,6,open(work),before,new,ok
+clock_record::save,-1,absent,6,open(work),before+lost-rename,old (no record),ok
+clock_record::save,-1,absent,6,open(work),after,new,ok
+clock_record::save,-1,absent,6,open(work),after+lost-rename,old (no record),ok
+clock_record::save,-1,absent,7,fsync(work),before,new,ok
+clock_record::save,-1,absent,7,fsync(work),before+lost-rename,old (no record),ok
+clock_record::save,-1,absent,7,fsync(work),after,new,ok
+clock_record::save,-1,absent,8,close(work),before,new,ok
+clock_record::save,-1,absent,8,close(work),after,new,ok
+clock_record::save,1,present,1,open(clock-offset.tmp),before,old,ok
+clock_record::save,1,present,1,open(clock-offset.tmp),after,old,ok
+clock_record::save,1,present,2,write(clock-offset.tmp),before,old,ok
+clock_record::save,1,present,2,write(clock-offset.tmp),after,old,ok
+clock_record::save,1,present,2,write(clock-offset.tmp),half,old,ok
+clock_record::save,1,present,3,fsync(clock-offset.tmp),before,old,ok
+clock_record::save,1,present,3,fsync(clock-offset.tmp),after,old,ok
+clock_record::save,1,present,4,close(clock-offset.tmp),before,old,ok
+clock_record::save,1,present,4,close(clock-offset.tmp),after,old,ok
+clock_record::save,1,present,5,rename(clock-offset),before,old,ok
+clock_record::save,1,present,5,rename(clock-offset),after,new,ok
+clock_record::save,1,present,5,rename(clock-offset),after+lost-rename,old,ok
+clock_record::save,1,present,6,open(work),before,new,ok
+clock_record::save,1,present,6,open(work),before+lost-rename,old,ok
+clock_record::save,1,present,6,open(work),after,new,ok
+clock_record::save,1,present,6,open(work),after+lost-rename,old,ok
+clock_record::save,1,present,7,fsync(work),before,new,ok
+clock_record::save,1,present,7,fsync(work),before+lost-rename,old,ok
+clock_record::save,1,present,7,fsync(work),after,new,ok
+clock_record::save,1,present,8,close(work),before,new,ok
+clock_record::save,1,present,8,close(work),after,new,ok
+clock_record::save,1,absent,1,open(clock-offset.tmp),before,old (no record),ok
+clock_record::save,1,absent,1,open(clock-offset.tmp),after,old (no record),ok
+clock_record::save,1,absent,2,write(clock-offset.tmp),before,old (no record),ok
+clock_record::save,1,absent,2,write(clock-offset.tmp),after,old (no record),ok
+clock_record::save,1,absent,2,write(clock-offset.tmp),half,old (no record),ok
+clock_record::save,1,absent,3,fsync(clock-offset.tmp),before,old (no record),ok
+clock_record::save,1,absent,3,fsync(clock-offset.tmp),after,old (no record),ok
+clock_record::save,1,absent,4,close(clock-offset.tmp),before,old (no record),ok
+clock_record::save,1,absent,4,close(clock-offset.tmp),after,old (no record),ok
+clock_record::save,1,absent,5,rename(clock-offset),before,old (no record),ok
+clock_record::save,1,absent,5,rename(clock-offset),after,new,ok
+clock_record::save,1,absent,5,rename(clock-offset),after+lost-rename,old (no record),ok
+clock_record::save,1,absent,6,open(work),before,new,ok
+clock_record::save,1,absent,6,open(work),before+lost-rename,old (no record),ok
+clock_record::save,1,absent,6,open(work),after,new,ok
+clock_record::save,1,absent,6,open(work),after+lost-rename,old (no record),ok
+clock_record::save,1,absent,7,fsync(work),before,new,ok
+clock_record::save,1,absent,7,fsync(work),before+lost-rename,old (no record),ok
+clock_record::save,1,absent,7,fsync(work),after,new,ok
+clock_record::save,1,absent,8,close(work),before,new,ok
+clock_record::save,1,absent,8,close(work),after,new,ok
+clock_record::save,INT64_MIN,present,1,open(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MIN,present,1,open(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MIN,present,2,write(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MIN,present,2,write(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MIN,present,2,write(clock-offset.tmp),half,old,ok
+clock_record::save,INT64_MIN,present,3,fsync(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MIN,present,3,fsync(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MIN,present,4,close(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MIN,present,4,close(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MIN,present,5,rename(clock-offset),before,old,ok
+clock_record::save,INT64_MIN,present,5,rename(clock-offset),after,new,ok
+clock_record::save,INT64_MIN,present,5,rename(clock-offset),after+lost-rename,old,ok
+clock_record::save,INT64_MIN,present,6,open(work),before,new,ok
+clock_record::save,INT64_MIN,present,6,open(work),before+lost-rename,old,ok
+clock_record::save,INT64_MIN,present,6,open(work),after,new,ok
+clock_record::save,INT64_MIN,present,6,open(work),after+lost-rename,old,ok
+clock_record::save,INT64_MIN,present,7,fsync(work),before,new,ok
+clock_record::save,INT64_MIN,present,7,fsync(work),before+lost-rename,old,ok
+clock_record::save,INT64_MIN,present,7,fsync(work),after,new,ok
+clock_record::save,INT64_MIN,present,8,close(work),before,new,ok
+clock_record::save,INT64_MIN,present,8,close(work),after,new,ok
+clock_record::save,INT64_MIN,absent,1,open(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MIN,absent,1,open(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MIN,absent,2,write(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MIN,absent,2,write(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MIN,absent,2,write(clock-offset.tmp),half,old (no record),ok
+clock_record::save,INT64_MIN,absent,3,fsync(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MIN,absent,3,fsync(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MIN,absent,4,close(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MIN,absent,4,close(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MIN,absent,5,rename(clock-offset),before,old (no record),ok
+clock_record::save,INT64_MIN,absent,5,rename(clock-offset),after,new,ok
+clock_record::save,INT64_MIN,absent,5,rename(clock-offset),after+lost-rename,old (no record),ok
+clock_record::save,INT64_MIN,absent,6,open(work),before,new,ok
+clock_record::save,INT64_MIN,absent,6,open(work),before+lost-rename,old (no record),ok
+clock_record::save,INT64_MIN,absent,6,open(work),after,new,ok
+clock_record::save,INT64_MIN,absent,6,open(work),after+lost-rename,old (no record),ok
+clock_record::save,INT64_MIN,absent,7,fsync(work),before,new,ok
+clock_record::save,INT64_MIN,absent,7,fsync(work),before+lost-rename,old (no record),ok
+clock_record::save,INT64_MIN,absent,7,fsync(work),after,new,ok
+clock_record::save,INT64_MIN,absent,8,close(work),before,new,ok
+clock_record::save,INT64_MIN,absent,8,close(work),after,new,ok
+clock_record::save,INT64_MAX,present,1,open(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MAX,present,1,open(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MAX,present,2,write(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MAX,present,2,write(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MAX,present,2,write(clock-offset.tmp),half,old,ok
+clock_record::save,INT64_MAX,present,3,fsync(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MAX,present,3,fsync(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MAX,present,4,close(clock-offset.tmp),before,old,ok
+clock_record::save,INT64_MAX,present,4,close(clock-offset.tmp),after,old,ok
+clock_record::save,INT64_MAX,present,5,rename(clock-offset),before,old,ok
+clock_record::save,INT64_MAX,present,5,rename(clock-offset),after,new,ok
+clock_record::save,INT64_MAX,present,5,rename(clock-offset),after+lost-rename,old,ok
+clock_record::save,INT64_MAX,present,6,open(work),before,new,ok
+clock_record::save,INT64_MAX,present,6,open(work),before+lost-rename,old,ok
+clock_record::save,INT64_MAX,present,6,open(work),after,new,ok
+clock_record::save,INT64_MAX,present,6,open(work),after+lost-rename,old,ok
+clock_record::save,INT64_MAX,present,7,fsync(work),before,new,ok
+clock_record::save,INT64_MAX,present,7,fsync(work),before+lost-rename,old,ok
+clock_record::save,INT64_MAX,present,7,fsync(work),after,new,ok
+clock_record::save,INT64_MAX,present,8,close(work),before,new,ok
+clock_record::save,INT64_MAX,present,8,close(work),after,new,ok
+clock_record::save,INT64_MAX,absent,1,open(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MAX,absent,1,open(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MAX,absent,2,write(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MAX,absent,2,write(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MAX,absent,2,write(clock-offset.tmp),half,old (no record),ok
+clock_record::save,INT64_MAX,absent,3,fsync(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MAX,absent,3,fsync(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MAX,absent,4,close(clock-offset.tmp),before,old (no record),ok
+clock_record::save,INT64_MAX,absent,4,close(clock-offset.tmp),after,old (no record),ok
+clock_record::save,INT64_MAX,absent,5,rename(clock-offset),before,old (no record),ok
+clock_record::save,INT64_MAX,absent,5,rename(clock-offset),after,new,ok
+clock_record::save,INT64_MAX,absent,5,rename(clock-offset),after+lost-rename,old (no record),ok
+clock_record::save,INT64_MAX,absent,6,open(work),before,new,ok
+clock_record::save,INT64_MAX,absent,6,open(work),before+lost-rename,old (no record),ok
+clock_record::save,INT64_MAX,absent,6,open(work),after,new,ok
+clock_record::save,INT64_MAX,absent,6,open(work),after+lost-rename,old (no record),ok
+clock_record::save,INT64_MAX,absent,7,fsync(work),before,new,ok
+clock_record::save,INT64_MAX,absent,7,fsync(work),before+lost-rename,old (no record),ok
+clock_record::save,INT64_MAX,absent,7,fsync(work),after,new,ok
+clock_record::save,INT64_MAX,absent,8,close(work),before,new,ok
+clock_record::save,INT64_MAX,absent,8,close(work),after,new,ok
+limits_record::save,(1,0x0431),present,1,open(limits.tmp),before,old,ok
+limits_record::save,(1,0x0431),present,1,open(limits.tmp),after,old,ok
+limits_record::save,(1,0x0431),present,2,write(limits.tmp),before,old,ok
+limits_record::save,(1,0x0431),present,2,write(limits.tmp),after,old,ok
+limits_record::save,(1,0x0431),present,2,write(limits.tmp),half,old,ok
+limits_record::save,(1,0x0431),present,3,fsync(limits.tmp),before,old,ok
+limits_record::save,(1,0x0431),present,3,fsync(limits.tmp),after,old,ok
+limits_record::save,(1,0x0431),present,4,close(limits.tmp),before,old,ok
+limits_record::save,(1,0x0431),present,4,close(limits.tmp),after,old,ok
+limits_record::save,(1,0x0431),present,5,rename(limits),before,old,ok
+limits_record::save,(1,0x0431),present,5,rename(limits),after,new,ok
+limits_record::save,(1,0x0431),present,5,rename(limits),after+lost-rename,old,ok
+limits_record::save,(1,0x0431),present,6,open(work),before,new,ok
+limits_record::save,(1,0x0431),present,6,open(work),before+lost-rename,old,ok
+limits_record::save,(1,0x0431),present,6,open(work),after,new,ok
+limits_record::save,(1,0x0431),present,6,open(work),after+lost-rename,old,ok
+limits_record::save,(1,0x0431),present,7,fsync(work),before,new,ok
+limits_record::save,(1,0x0431),present,7,fsync(work),before+lost-rename,old,ok
+limits_record::save,(1,0x0431),present,7,fsync(work),after,new,ok
+limits_record::save,(1,0x0431),present,8,close(work),before,new,ok
+limits_record::save,(1,0x0431),present,8,close(work),after,new,ok
+limits_record::save,(1,0x0431),absent,1,open(limits.tmp),before,old (no record),ok
+limits_record::save,(1,0x0431),absent,1,open(limits.tmp),after,old (no record),ok
+limits_record::save,(1,0x0431),absent,2,write(limits.tmp),before,old (no record),ok
+limits_record::save,(1,0x0431),absent,2,write(limits.tmp),after,old (no record),ok
+limits_record::save,(1,0x0431),absent,2,write(limits.tmp),half,old (no record),ok
+limits_record::save,(1,0x0431),absent,3,fsync(limits.tmp),before,old (no record),ok
+limits_record::save,(1,0x0431),absent,3,fsync(limits.tmp),after,old (no record),ok
+limits_record::save,(1,0x0431),absent,4,close(limits.tmp),before,old (no record),ok
+limits_record::save,(1,0x0431),absent,4,close(limits.tmp),after,old (no record),ok
+limits_record::save,(1,0x0431),absent,5,rename(limits),before,old (no record),ok
+limits_record::save,(1,0x0431),absent,5,rename(limits),after,new,ok
+limits_record::save,(1,0x0431),absent,5,rename(limits),after+lost-rename,old (no record),ok
+limits_record::save,(1,0x0431),absent,6,open(work),before,new,ok
+limits_record::save,(1,0x0431),absent,6,open(work),before+lost-rename,old (no record),ok
+limits_record::save,(1,0x0431),absent,6,open(work),after,new,ok
+limits_record::save,(1,0x0431),absent,6,open(work),after+lost-rename,old (no record),ok
+limits_record::save,(1,0x0431),absent,7,fsync(work),before,new,ok
+limits_record::save,(1,0x0431),absent,7,fsync(work),before+lost-rename,old (no record),ok
+limits_record::save,(1,0x0431),absent,7,fsync(work),after,new,ok
+limits_record::save,(1,0x0431),absent,8,close(work),before,new,ok
+limits_record::save,(1,0x0431),absent,8,close(work),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,1,open(limits.tmp),before,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,1,open(limits.tmp),after,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,2,write(limits.tmp),before,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,2,write(limits.tmp),after,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,2,write(limits.tmp),half,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,3,fsync(limits.tmp),before,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,3,fsync(limits.tmp),after,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,4,close(limits.tmp),before,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,4,close(limits.tmp),after,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,5,rename(limits),before,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,5,rename(limits),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,5,rename(limits),after+lost-rename,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,6,open(work),before,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,6,open(work),before+lost-rename,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,6,open(work),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,6,open(work),after+lost-rename,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,7,fsync(work),before,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,7,fsync(work),before+lost-rename,old,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,7,fsync(work),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,8,close(work),before,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),present,8,close(work),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,1,open(limits.tmp),before,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,1,open(limits.tmp),after,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,2,write(limits.tmp),before,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,2,write(limits.tmp),after,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,2,write(limits.tmp),half,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,3,fsync(limits.tmp),before,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,3,fsync(limits.tmp),after,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,4,close(limits.tmp),before,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,4,close(limits.tmp),after,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,5,rename(limits),before,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,5,rename(limits),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,5,rename(limits),after+lost-rename,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,6,open(work),before,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,6,open(work),before+lost-rename,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,6,open(work),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,6,open(work),after+lost-rename,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,7,fsync(work),before,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,7,fsync(work),before+lost-rename,old (no record),ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,7,fsync(work),after,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,8,close(work),before,new,ok
+limits_record::save,(0xFFFFFFFF,0xFFFF),absent,8,close(work),after,new,ok
+limits_record::save,(0,0),present,1,open(limits.tmp),before,old,ok
+limits_record::save,(0,0),present,1,open(limits.tmp),after,old,ok
+limits_record::save,(0,0),present,2,write(limits.tmp),before,old,ok
+limits_record::save,(0,0),present,2,write(limits.tmp),after,old,ok
+limits_record::save,(0,0),present,2,write(limits.tmp),half,old,ok
+limits_record::save,(0,0),present,3,fsync(limits.tmp),before,old,ok
+limits_record::save,(0,0),present,3,fsync(limits.tmp),after,old,ok
+limits_record::save,(0,0),present,4,close(limits.tmp),before,old,ok
+limits_record::save,(0,0),present,4,close(limits.tmp),after,old,ok
+limits_record::save,(0,0),present,5,rename(limits),before,old,ok
+limits_record::save,(0,0),present,5,rename(limits),after,new,ok
+limits_record::save,(0,0),present,5,rename(limits),after+lost-rename,old,ok
+limits_record::save,(0,0),present,6,open(work),before,new,ok
+limits_record::save,(0,0),present,6,open(work),before+lost-rename,old,ok
+limits_record::save,(0,0),present,6,open(work),after,new,ok
+limits_record::save,(0,0),present,6,open(work),after+lost-rename,old,ok
+limits_record::save,(0,0),present,7,fsync(work),before,new,ok
+limits_record::save,(0,0),present,7,fsync(work),before+lost-rename,old,ok
+limits_record::save,(0,0),present,7,fsync(work),after,new,ok
+limits_record::save,(0,0),present,8,close(work),before,new,ok
+limits_record::save,(0,0),present,8,close(work),after,new,ok
+limits_record::save,(0,0),absent,1,open(limits.tmp),before,old (no record),ok
+limits_record::save,(0,0),absent,1,open(limits.tmp),after,old (no record),ok
+limits_record::save,(0,0),absent,2,write(limits.tmp),before,old (no record),ok
+limits_record::save,(0,0),absent,2,write(limits.tmp),after,old (no record),ok
+limits_record::save,(0,0),absent,2,write(limits.tmp),half,old (no record),ok
+limits_record::save,(0,0),absent,3,fsync(limits.tmp),before,old (no record),ok
+limits_record::save,(0,0),absent,3,fsync(limits.tmp),after,old (no record),ok
+limits_record::save,(0,0),absent,4,close(limits.tmp),before,old (no record),ok
+limits_record::save,(0,0),absent,4,close(limits.tmp),after,old (no record),ok
+limits_record::save,(0,0),absent,5,rename(limits),before,old (no record),ok
+limits_record::save,(0,0),absent,5,rename(limits),after,new,ok
+limits_record::save,(0,0),absent,5,rename(limits),after+lost-rename,old (no record),ok
+limits_record::save,(0,0),absent,6,open(work),before,new,ok
+limits_record::save,(0,0),absent,6,open(work),before+lost-rename,old (no record),ok
+limits_record::save,(0,0),absent,6,open(work),after,new,ok
+limits_record::save,(0,0),absent,6,open(work),after+lost-rename,old (no record),ok
+limits_record::save,(0,0),absent,7,fsync(work),before,new,ok
+limits_record::save,(0,0),absent,7,fsync(work),before+lost-rename,old (no record),ok
+limits_record::save,(0,0),absent,7,fsync(work),after,new,ok
+limits_record::save,(0,0),absent,8,close(work),before,new,ok
+limits_record::save,(0,0),absent,8,close(work),after,new,ok

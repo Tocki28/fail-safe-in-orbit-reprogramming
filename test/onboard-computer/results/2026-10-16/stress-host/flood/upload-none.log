@@ -1,0 +1,92 @@
+2026-10-16 11:18:14 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario upload --flood none --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag upload-none
+load averages at start (30.36083984375, 22.021484375, 16.32373046875), at end (20.96240234375, 21.0498046875, 16.4140625)
+{
+ "tag": "upload-none",
+ "scenario": "upload",
+ "flood": {
+  "kind": "none",
+  "source": "same",
+  "seed": 1,
+  "cmd": null,
+  "answers_to_flood": {},
+  "valid_done_latency_ms": {
+   "n": 0
+  },
+  "udp_delta_system_wide": {
+   "received": 498620,
+   "dropped_full_buffer": 0
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:18:14 EEST",
+ "loadavg_start": [
+  30.36083984375,
+  22.021484375,
+  16.32373046875
+ ],
+ "image_bytes": 20776,
+ "upload": {
+  "cycles": 864,
+  "completed_identical": 864,
+  "failed": 0,
+  "cut_by_end_of_scenario": 0,
+  "failures": [],
+  "seconds": {
+   "n": 864,
+   "min": 0.06153598288074136,
+   "p50": 0.07156851002946496,
+   "p95": 0.09033378888852894,
+   "p99": 0.1424630859401077,
+   "max": 0.20252739801071584,
+   "mean": 0.07466089788498788,
+   "std": 0.013142653634125586
+  },
+  "resends": 0,
+  "commands": 72576,
+  "window_s": 65.01858059805818
+ },
+ "updater": {
+  "samples": 66,
+  "rss_kb": {
+   "first": 4256,
+   "last": 4596,
+   "max": 4596
+  },
+  "cpu_pct": {
+   "n": 65,
+   "min": 24.6202914124914,
+   "p50": 46.09138109237009,
+   "p95": 48.07867526714712,
+   "p99": 48.98784264185418,
+   "max": 48.98784264185418,
+   "mean": 45.20976028556985,
+   "std": 3.7424394970837183
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 72576,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 6936445,
+   "lines": 74314
+  }
+ },
+ "probe": null,
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  20.96240234375,
+  21.0498046875,
+  16.4140625
+ ]
+}

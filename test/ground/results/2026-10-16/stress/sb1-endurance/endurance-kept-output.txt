@@ -1,0 +1,1521 @@
+--- cycle 1 (PASS, 7.76 s):
+update  reading a HEALTH report
+report  HEALTH  #5209 onboard t=1792140755 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.98 s
+report  HEALTH  #5210 onboard t=1792140756 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5211 onboard t=1792140758 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5212 onboard t=1792140759 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.22 s
+switch  sent, answered DONE
+report  EVENT   #5213 onboard t=1792140760 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #5214 onboard t=1792140761 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #5215 onboard t=1792140761 0x000a trial tests passed
+report  HEALTH  #5216 onboard t=1792140762 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #5217 onboard t=1792140762 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #5218 onboard t=1792140763 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (7.6 s)
+
+--- cycle 33 (PASS, 15.06 s):
+update  reading a HEALTH report
+report  HEALTH  #5547 onboard t=1792141036 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+no answer to UPLOAD CHUNK offset 8192 (seq 1791902018) within 3 s, sending again
+waiting: seq 1791902018 UPLOAD CHUNK offset 8192, sent 3.0 s ago, RECEIVED yes
+upload  8448/20776 bytes (40 %)   
+report  EVENT   #5548 onboard t=1792141043 0x0101 data link lost
+report  EVENT   #5549 onboard t=1792141043 0x0102 data link working again
+report  HEALTH  #5550 onboard t=1792141043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5551 onboard t=1792141043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5552 onboard t=1792141043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5553 onboard t=1792141043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5554 onboard t=1792141043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5555 onboard t=1792141043 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+report  EVENT   #5556 onboard t=1792141043 0x0106 controller restarted by the onboard computer: controller silent
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 7.51 s
+report  HEALTH  #5557 onboard t=1792141045 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5558 onboard t=1792141046 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #5559 onboard t=1792141047 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #5560 onboard t=1792141047 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #5561 onboard t=1792141048 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #5562 onboard t=1792141048 0x000a trial tests passed
+report  HEALTH  #5563 onboard t=1792141049 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #5564 onboard t=1792141049 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #5565 onboard t=1792141050 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (14.5 s)
+
+--- cycle 101 (PASS, 9.21 s):
+update  reading a HEALTH report
+report  HEALTH  #6266 onboard t=1792141637 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+report  HEALTH  #6267 onboard t=1792141639 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 1.59 s
+report  HEALTH  #6268 onboard t=1792141639 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6269 onboard t=1792141640 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6270 onboard t=1792141641 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #6271 onboard t=1792141642 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #6272 onboard t=1792141643 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #6273 onboard t=1792141643 0x000a trial tests passed
+report  HEALTH  #6274 onboard t=1792141644 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #6275 onboard t=1792141644 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #6276 onboard t=1792141645 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (9.0 s)
+
+--- cycle 171 (FAIL, 6.82 s):
+update  reading a HEALTH report
+report  HEALTH  #6978 onboard t=1792142231 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.78 s
+report  HEALTH  #6979 onboard t=1792142232 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+FAILED: DELIVER (seq 1791914627) REFUSED 0xff: bench: the controller did not answer within its timeout
+
+--- status after failed cycle 171 (exit 0):
+report  HEALTH  #6984 onboard t=1792142237 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6985 onboard t=1792142238 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6986 onboard t=1792142239 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6987 onboard t=1792142240 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6988 onboard t=1792142241 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6989 onboard t=1792142242 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6990 onboard t=1792142243 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6991 onboard t=1792142244 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6992 onboard t=1792142245 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #6993 onboard t=1792142246 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+
+--- cycle 201 (PASS, 8.52 s):
+update  reading a HEALTH report
+report  HEALTH  #7293 onboard t=1792142499 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot B version 1; free slot A, image src/controller/build/images/firmware-A.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.86 s
+report  HEALTH  #7294 onboard t=1792142500 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #7295 onboard t=1792142501 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #7296 onboard t=1792142502 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.33 s
+switch  sent, answered DONE
+report  EVENT   #7297 onboard t=1792142503 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #7298 onboard t=1792142504 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #7299 onboard t=1792142504 0x000a trial tests passed
+report  HEALTH  #7300 onboard t=1792142505 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       A
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #7301 onboard t=1792142505 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #7302 onboard t=1792142506 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot A version 1  (8.3 s)
+
+--- cycle 301 (PASS, 8.22 s):
+update  reading a HEALTH report
+report  HEALTH  #8326 onboard t=1792143360 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot B version 1; free slot A, image src/controller/build/images/firmware-A.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.74 s
+report  HEALTH  #8327 onboard t=1792143361 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8328 onboard t=1792143362 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8329 onboard t=1792143363 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #8330 onboard t=1792143364 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #8331 onboard t=1792143365 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #8332 onboard t=1792143365 0x000a trial tests passed
+report  HEALTH  #8333 onboard t=1792143366 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       A
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #8334 onboard t=1792143366 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #8335 onboard t=1792143367 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot A version 1  (8.1 s)
+
+--- cycle 329 (FAIL, 7.44 s):
+update  reading a HEALTH report
+report  HEALTH  #8608 onboard t=1792143593 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot B version 1; free slot A, image src/controller/build/images/firmware-A.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.77 s
+report  HEALTH  #8609 onboard t=1792143594 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8610 onboard t=1792143595 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+FAILED: DELIVER (seq 1791929001) REFUSED 0xff: bench: the controller did not answer within its timeout
+
+--- status after failed cycle 329 (exit 0):
+report  HEALTH  #8615 onboard t=1792143600 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8616 onboard t=1792143601 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8617 onboard t=1792143602 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8618 onboard t=1792143603 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8619 onboard t=1792143604 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8620 onboard t=1792143605 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8621 onboard t=1792143606 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8622 onboard t=1792143607 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8623 onboard t=1792143608 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #8624 onboard t=1792143609 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+
+--- cycle 401 (PASS, 8.24 s):
+update  reading a HEALTH report
+report  HEALTH  #9352 onboard t=1792144218 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.76 s
+report  HEALTH  #9353 onboard t=1792144220 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #9354 onboard t=1792144221 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #9355 onboard t=1792144222 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #9356 onboard t=1792144223 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #9357 onboard t=1792144224 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #9358 onboard t=1792144224 0x000a trial tests passed
+report  HEALTH  #9359 onboard t=1792144225 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #9360 onboard t=1792144225 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #9361 onboard t=1792144226 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (8.1 s)
+
+--- cycle 501 (PASS, 8.68 s):
+update  reading a HEALTH report
+report  HEALTH  #10387 onboard t=1792145080 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.84 s
+report  HEALTH  #10388 onboard t=1792145081 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10389 onboard t=1792145082 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #10390 onboard t=1792145083 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.48 s
+switch  sent, answered DONE
+report  EVENT   #10391 onboard t=1792145084 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #10392 onboard t=1792145085 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #10393 onboard t=1792145085 0x000a trial tests passed
+report  HEALTH  #10394 onboard t=1792145086 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #10395 onboard t=1792145086 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #10396 onboard t=1792145087 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (8.6 s)
+
+--- cycle 601 (PASS, 8.63 s):
+update  reading a HEALTH report
+report  HEALTH  #11410 onboard t=1792145932 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+report  HEALTH  #11411 onboard t=1792145933 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 1.13 s
+report  HEALTH  #11412 onboard t=1792145934 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #11413 onboard t=1792145935 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #11414 onboard t=1792145936 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #11415 onboard t=1792145937 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #11416 onboard t=1792145937 0x000a trial tests passed
+report  HEALTH  #11417 onboard t=1792145938 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #11418 onboard t=1792145938 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #11419 onboard t=1792145939 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (8.4 s)
+
+--- cycle 701 (PASS, 8.37 s):
+update  reading a HEALTH report
+report  HEALTH  #12430 onboard t=1792146784 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot A version 1; free slot B, image src/controller/build/images/firmware-B.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.87 s
+report  HEALTH  #12431 onboard t=1792146785 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12432 onboard t=1792146786 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12433 onboard t=1792146787 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #12434 onboard t=1792146788 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #12435 onboard t=1792146789 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #12436 onboard t=1792146789 0x000a trial tests passed
+report  HEALTH  #12437 onboard t=1792146790 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #12438 onboard t=1792146790 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #12439 onboard t=1792146791 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot B version 1  (8.2 s)
+
+--- cycle 704 (FAIL, 7.46 s):
+update  reading a HEALTH report
+report  HEALTH  #12460 onboard t=1792146809 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot B version 1; free slot A, image src/controller/build/images/firmware-A.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+report  HEALTH  #12461 onboard t=1792146810 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 2.43 s
+report  HEALTH  #12462 onboard t=1792146811 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12463 onboard t=1792146812 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12464 onboard t=1792146813 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+FAILED: DELIVER (seq 1791963122) REFUSED 0xff: bench: the controller did not answer within its timeout
+
+--- status after failed cycle 704 (exit 0):
+report  HEALTH  #12467 onboard t=1792146816 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12468 onboard t=1792146817 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12469 onboard t=1792146818 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12470 onboard t=1792146819 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12471 onboard t=1792146820 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12472 onboard t=1792146821 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12473 onboard t=1792146822 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12474 onboard t=1792146823 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12475 onboard t=1792146824 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #12476 onboard t=1792146825 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+
+--- cycle 801 (PASS, 8.29 s):
+update  reading a HEALTH report
+report  HEALTH  #13462 onboard t=1792147648 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot B version 1; free slot A, image src/controller/build/images/firmware-A.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 0.80 s
+report  HEALTH  #13463 onboard t=1792147650 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #13464 onboard t=1792147651 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #13465 onboard t=1792147652 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #13466 onboard t=1792147653 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #13467 onboard t=1792147654 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #13468 onboard t=1792147654 0x000a trial tests passed
+report  HEALTH  #13469 onboard t=1792147655 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       A
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #13470 onboard t=1792147655 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #13471 onboard t=1792147656 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot A version 1  (8.2 s)
+
+--- cycle 901 (PASS, 8.58 s):
+update  reading a HEALTH report
+report  HEALTH  #14493 onboard t=1792148506 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+update  running slot B version 1; free slot A, image src/controller/build/images/firmware-A.img
+upload  256/20776 bytes (1 %)   
+upload  512/20776 bytes (2 %)   
+upload  768/20776 bytes (3 %)   
+upload  1024/20776 bytes (4 %)   
+upload  1280/20776 bytes (6 %)   
+upload  1536/20776 bytes (7 %)   
+upload  1792/20776 bytes (8 %)   
+upload  2048/20776 bytes (9 %)   
+upload  2304/20776 bytes (11 %)   
+upload  2560/20776 bytes (12 %)   
+upload  2816/20776 bytes (13 %)   
+upload  3072/20776 bytes (14 %)   
+upload  3328/20776 bytes (16 %)   
+upload  3584/20776 bytes (17 %)   
+upload  3840/20776 bytes (18 %)   
+upload  4096/20776 bytes (19 %)   
+upload  4352/20776 bytes (20 %)   
+upload  4608/20776 bytes (22 %)   
+upload  4864/20776 bytes (23 %)   
+upload  5120/20776 bytes (24 %)   
+upload  5376/20776 bytes (25 %)   
+upload  5632/20776 bytes (27 %)   
+upload  5888/20776 bytes (28 %)   
+upload  6144/20776 bytes (29 %)   
+upload  6400/20776 bytes (30 %)   
+upload  6656/20776 bytes (32 %)   
+upload  6912/20776 bytes (33 %)   
+upload  7168/20776 bytes (34 %)   
+upload  7424/20776 bytes (35 %)   
+upload  7680/20776 bytes (36 %)   
+upload  7936/20776 bytes (38 %)   
+upload  8192/20776 bytes (39 %)   
+upload  8448/20776 bytes (40 %)   
+upload  8704/20776 bytes (41 %)   
+upload  8960/20776 bytes (43 %)   
+upload  9216/20776 bytes (44 %)   
+upload  9472/20776 bytes (45 %)   
+upload  9728/20776 bytes (46 %)   
+upload  9984/20776 bytes (48 %)   
+upload  10240/20776 bytes (49 %)   
+upload  10496/20776 bytes (50 %)   
+upload  10752/20776 bytes (51 %)   
+upload  11008/20776 bytes (52 %)   
+upload  11264/20776 bytes (54 %)   
+upload  11520/20776 bytes (55 %)   
+upload  11776/20776 bytes (56 %)   
+upload  12032/20776 bytes (57 %)   
+upload  12288/20776 bytes (59 %)   
+upload  12544/20776 bytes (60 %)   
+upload  12800/20776 bytes (61 %)   
+upload  13056/20776 bytes (62 %)   
+upload  13312/20776 bytes (64 %)   
+upload  13568/20776 bytes (65 %)   
+upload  13824/20776 bytes (66 %)   
+upload  14080/20776 bytes (67 %)   
+upload  14336/20776 bytes (69 %)   
+upload  14592/20776 bytes (70 %)   
+upload  14848/20776 bytes (71 %)   
+upload  15104/20776 bytes (72 %)   
+upload  15360/20776 bytes (73 %)   
+upload  15616/20776 bytes (75 %)   
+upload  15872/20776 bytes (76 %)   
+upload  16128/20776 bytes (77 %)   
+upload  16384/20776 bytes (78 %)   
+upload  16640/20776 bytes (80 %)   
+upload  16896/20776 bytes (81 %)   
+upload  17152/20776 bytes (82 %)   
+upload  17408/20776 bytes (83 %)   
+upload  17664/20776 bytes (85 %)   
+upload  17920/20776 bytes (86 %)   
+upload  18176/20776 bytes (87 %)   
+upload  18432/20776 bytes (88 %)   
+upload  18688/20776 bytes (89 %)   
+upload  18944/20776 bytes (91 %)   
+upload  19200/20776 bytes (92 %)   
+upload  19456/20776 bytes (93 %)   
+upload  19712/20776 bytes (94 %)   
+upload  19968/20776 bytes (96 %)   
+upload  20224/20776 bytes (97 %)   
+report  HEALTH  #14494 onboard t=1792148507 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+upload  20480/20776 bytes (98 %)   
+upload  20736/20776 bytes (99 %)   
+upload  20776/20776 bytes (100 %)   
+upload  complete, 20776 bytes in 1.10 s
+report  HEALTH  #14495 onboard t=1792148508 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #14496 onboard t=1792148509 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+deliver complete in 3.16 s
+switch  sent, answered DONE
+report  EVENT   #14497 onboard t=1792148510 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #14498 onboard t=1792148511 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #14499 onboard t=1792148511 0x000a trial tests passed
+report  HEALTH  #14500 onboard t=1792148512 mode TRIAL, firmware kind 2 version 1, slot A, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       A
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+Confirm? [y/N] y (--yes)
+report  EVENT   #14501 onboard t=1792148512 0x0007 firmware confirmed
+confirm  sent, answered DONE
+report  HEALTH  #14502 onboard t=1792148513 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+UPDATE CONFIRMED: slot A version 1  (8.4 s)
+

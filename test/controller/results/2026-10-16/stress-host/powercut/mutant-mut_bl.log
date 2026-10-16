@@ -1,0 +1,13 @@
+2026-10-16 11:03:18 EEST commit a504b0d command: make -C test/controller/stress/powercut mutants (mut_bl)
+FAILSEQ 0 write 3 writer 1 step 2 cut 1 outcome X
+FAILSEQ 1 write 0 writer 1 step 2 cut 0 outcome n
+FAILSEQ 2 write 0 writer 1 step 2 cut 0 outcome n
+FAILSEQ 3 write 0 writer 1 step 2 cut 0 outcome n
+FAILSEQ 4 write 0 writer 1 step 1 cut 0 outcome n
+FAILSEQ 5 write 5 writer 1 step 2 cut 9 outcome L
+FAILSEQ 6 write 1 writer 1 step 0 cut 0 outcome n
+FAILSEQ 7 write 3 writer 1 step 2 cut 9 outcome X
+FAILSEQ 8 write 2 writer 1 step 0 cut 10 outcome L
+FAILSEQ 9 write 1 writer 1 step 1 cut 0 outcome n
+FAILSEQ 10 write 0 writer 1 step 1 cut 2 outcome L
+FAILSEQ 11 write 5 writer 1 step 1 cut 6 outcome X

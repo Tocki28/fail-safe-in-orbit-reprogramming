@@ -1,0 +1,27 @@
+Mac time (EEST) 2026-10-16 11:48:35 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz run N=1000000 SEED=20261016
+target fz_backup; command: build/fz_backup --seed 20261016 --n 1000000 --log <checkout of a504b0d>/test/controller/results/2026-10-16/stress-host/fuzz --dir build/images/src --dir build/images/test
+seed 20261016; mutation-based fuzzer without coverage feedback (no libFuzzer runtime on this Mac); UBSan on, -fno-sanitize-recover=undefined
+load averages at the start (1, 5, 15 min): 21.37 19.26 18.12
+part A function runs: count_restart 248068, confirmed_skipped 247098, apply_give_up_request 247949, backup_leave_fault_location 246885; part B (whole bootloader_main) runs: 10000 (started 8661, parked 1339)
+matching pairs with a value that cannot exist (backup_layout.h), per pair: seen / matching pairs seen / reached the fault reaction:
+  RESTARTS        273634 / 593547 / 0
+  LAST_START      274316 / 594040 / 0
+  GIVE_UP         273833 / 594102 / 0
+  FAULT           274063 / 593477 / 0
+  FALLBACK        250761 / 593652 / 0
+  FAULT_LOCATION  273986 / 594230 / 0
+  FAULT_LATER     240296 / 594521 / 0
+inputs run: 1000000 in 31.5 s (31697 inputs/s); load averages at the end 21.38 19.37 18.20
+slowest 10 inputs (index: time):
+  890199: 129.781 ms
+  969099: 88.117 ms
+  890099: 55.205 ms
+  566899: 48.566 ms
+  566699: 37.864 ms
+  926800: 36.096 ms
+  468499: 27.978 ms
+  940999: 26.629 ms
+  894699: 25.943 ms
+  439699: 20.458 ms
+failures: 0
+result: no failure

@@ -1,0 +1,209 @@
+# SB8 full data directory; mac 2026-10-16 14:57:15 EEST; sb8_disk.sh (sha256 6d5acafa42c873b7) setup
+data directory uses 896 KB; file system of 1152 KB plus ext4 overhead
+
+Filesystem too small for a journal
+Filesystem     1K-blocks  Used Available Use% Mounted on
+/dev/loop0          1380   854       498  64% /var/lib/fsir/images
+Oct 16 11:57:13.888240 stm32mp2unknownunknown fsir-updater[2235]: [     0.172] reports: store /var/lib/fsir/images/reports: 3041 EVENT and 14284 HEALTH reports stored (492416 of 1048576 bytes), next r
+Oct 16 11:57:13.889534 stm32mp2unknownunknown fsir-updater[2235]: [     0.173] limits: stored record, minimum version 1, controller identity 0x0431
+Oct 16 11:57:13.889534 stm32mp2unknownunknown fsir-updater[2235]: [     0.173] clock: stored offset 2 s; onboard ground time is the system clock plus that
+Oct 16 11:57:13.889534 stm32mp2unknownunknown fsir-updater[2235]: [     0.173] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; key
+Oct 16 11:57:13.890046 stm32mp2unknownunknown fsir-updater[2235]: [     0.174] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:57:13.944124 stm32mp2unknownunknown fsir-updater[2235]: [     0.228] controller heard
+Oct 16 11:57:14.867782 stm32mp2unknownunknown fsir-updater[2235]: [     1.152] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 11:57:14.882932 stm32mp2unknownunknown fsir-updater[2235]: [     1.167] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and not sent live until one does
+# SB8 uploads until the file system is full; mac 14:57:28
+upload 900: exit 0; upload  complete, 20776 bytes in 1.19 s
+upload 901: exit 0; upload  complete, 20776 bytes in 5.35 s
+upload 902: exit 0; upload  complete, 20776 bytes in 1.14 s
+upload 903: exit 0; upload  complete, 20776 bytes in 1.12 s
+upload 904: exit 0; upload  complete, 20776 bytes in 1.34 s
+upload 905: exit 0; upload  complete, 20776 bytes in 1.38 s
+upload 906: exit 0; upload  complete, 20776 bytes in 1.09 s
+upload 907: exit 0; upload  complete, 20776 bytes in 1.10 s
+upload 908: exit 0; upload  complete, 20776 bytes in 1.25 s
+upload 909: exit 0; upload  complete, 20776 bytes in 1.12 s
+upload 910: exit 0; upload  complete, 20776 bytes in 1.16 s
+upload 911: exit 0; upload  complete, 20776 bytes in 1.22 s
+upload 912: exit 0; upload  complete, 20776 bytes in 1.12 s
+upload 913: exit 0; upload  complete, 20776 bytes in 3.27 s
+upload 914: exit 0; upload  complete, 20776 bytes in 1.19 s
+upload 915: exit 0; upload  complete, 20776 bytes in 1.05 s
+upload 916: exit 0; upload  complete, 20776 bytes in 1.14 s
+upload 917: exit 0; upload  complete, 20776 bytes in 1.49 s
+upload 918: exit 0; upload  complete, 20776 bytes in 1.10 s
+upload 919: exit 0; upload  complete, 20776 bytes in 1.10 s
+upload 920: exit 0; upload  complete, 20776 bytes in 1.98 s
+upload 921: exit 0; upload  complete, 20776 bytes in 1.14 s
+upload 922: exit 1; upload  4096/20776 bytes (19 %)   upload  4352/20776 bytes (20 %)   upload  4608/20776 bytes (22 %)   upload  4864/20776 bytes (23 %)   upload  5120/20776 bytes (24 %)   upload  5376/20776 bytes 
+upload 923: exit 1; upload  256/20776 bytes (1 %)   upload  512/20776 bytes (2 %)   upload  768/20776 bytes (3 %)   upload  1024/20776 bytes (4 %)   upload  1280/20776 bytes (6 %)   upload  1536/20776 bytes (7 %)   
+upload 924: exit 1; FAILED: UPLOAD BEGIN (seq 1792001163) REFUSED 0xfe: bench: the onboard computer's own storage failed; nothing is stored; run `upload IMAGE --number 924` again from the start (no --offset)
+# mac 14:58:07: full disk held 60 s while reports arrive
+# console status on the full disk:
+report  HEALTH  #17438 onboard t=1792151948 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #17439 onboard t=1792151949 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+# a whole update on the full disk:
+FAILED: UPLOAD BEGIN (seq 1792001166) REFUSED 0xfe: bench: the onboard computer's own storage failed; nothing is stored; run `upload IMAGE --number 950` again from the start (no --offset)
+# board report:
+Filesystem     1K-blocks  Used Available Use% Mounted on
+/dev/loop0          1380  1352         0 100% /var/lib/fsir/images
+total 1355
+drwxr-xr-x 3 root root   3072 Oct 16 11:59 .
+drwxr-xr-x 3 root root   4096 Jan  1  2000 ..
+-rw------- 1 root root     12 Oct 16 07:25 clock-offset
+-rw-r--r-- 1 root root  15436 Jan  1  2000 image-00004.img
+-rw-r--r-- 1 root root  20424 Oct 15 20:12 image-00010.img
+-rw-r--r-- 1 root root   2368 Oct 15 20:13 image-00011.img
+-rw-r--r-- 1 root root  20424 Oct 15 20:46 image-00030.img
+-rw-r--r-- 1 root root  20424 Oct 15 21:04 image-00041.img
+-rw-r--r-- 1 root root  20424 Oct 15 21:06 image-00042.img
+-rw-r--r-- 1 root root  20424 Oct 15 21:31 image-00044.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:47 image-00800.img
+-rw-r--r-- 1 root root    296 Oct 16 11:47 image-00801.part
+-rw-r--r-- 1 root root  20776 Oct 16 11:49 image-00811.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:49 image-00812.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:50 image-00813.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:51 image-00814.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:52 image-00815.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:52 image-00816.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:53 image-00817.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:54 image-00818.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:55 image-00819.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00900.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00901.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00902.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00903.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00904.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00905.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00906.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00907.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00908.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00909.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00910.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00911.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00912.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00913.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00914.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00915.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00916.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00917.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00918.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:57 image-00919.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:58 image-00920.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:58 image-00921.img
+-rw-r--r-- 1 root root  20816 Oct 16 11:58 image-00922.part
+-rw-r--r-- 1 root root   6952 Oct 16 11:58 image-00923.part
+-rw-r--r-- 1 root root     40 Oct 16 11:58 image-00924.part
+-rw-r--r-- 1 root root     40 Oct 16 11:59 image-00950.part
+-rw-r--r-- 1 root root   2368 Oct 16 06:03 image-03002.img
+-rw-r--r-- 1 root root  20776 Oct 16 06:06 image-03004.img
+-rw-r--r-- 1 root root   2368 Oct 16 06:57 image-04001.img
+-rw------- 1 root root     10 Oct 16 05:34 limits
+drwx------ 2 root root  12288 Oct 16 11:57 lost+found
+-rw------- 1 root root 494576 Oct 16 11:59 reports
+--- journal since 2026-10-16 11:57:13 UTC (space, write, store and refusal lines):
+Oct 16 11:57:53.343106 stm32mp2unknownunknown fsir-updater[2235]: [    39.627] UPLOAD END image 915: checks passed (kind 0x02, version 1); stored
+Oct 16 11:57:54.616173 stm32mp2unknownunknown fsir-updater[2235]: [    40.900] UPLOAD END image 916: checks passed (kind 0x02, version 1); stored
+Oct 16 11:57:56.334321 stm32mp2unknownunknown fsir-updater[2235]: [    42.618] UPLOAD END image 917: checks passed (kind 0x02, version 1); stored
+Oct 16 11:57:57.581956 stm32mp2unknownunknown fsir-updater[2235]: [    43.866] UPLOAD END image 918: checks passed (kind 0x02, version 1); stored
+Oct 16 11:57:58.892651 stm32mp2unknownunknown fsir-updater[2235]: [    45.177] UPLOAD END image 919: checks passed (kind 0x02, version 1); stored
+Oct 16 11:58:01.145068 stm32mp2unknownunknown fsir-updater[2235]: [    47.429] UPLOAD END image 920: checks passed (kind 0x02, version 1); stored
+Oct 16 11:58:02.422520 stm32mp2unknownunknown fsir-updater[2235]: [    48.707] UPLOAD END image 921: checks passed (kind 0x02, version 1); stored
+Oct 16 11:58:03.605677 stm32mp2unknownunknown fsir-updater[2235]: [    49.890] store: cannot write /var/lib/fsir/images/image-00922.img: No space left on device
+Oct 16 11:58:03.606039 stm32mp2unknownunknown fsir-updater[2235]: [    49.890] UPLOAD END image 922: refused 0xfe (storage)
+Oct 16 11:58:04.103468 stm32mp2unknownunknown fsir-updater[2235]: [    50.387] store: cannot write image 923 at 6912: No space left on device
+Oct 16 11:58:04.103468 stm32mp2unknownunknown fsir-updater[2235]: [    50.387] UPLOAD CHUNK image 923 at 6912 (256 bytes): refused 0xfe; 6912 bytes stored
+Oct 16 11:58:04.333534 stm32mp2unknownunknown fsir-updater[2235]: [    50.617] store: cannot prepare /var/lib/fsir/images/image-00924.part: No space left on device
+Oct 16 11:58:04.333534 stm32mp2unknownunknown fsir-updater[2235]: [    50.617] UPLOAD BEGIN image 924, 20776 bytes: refused 0xfe
+Oct 16 11:58:24.696352 stm32mp2unknownunknown fsir-updater[2235]: [    70.980] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:25.693851 stm32mp2unknownunknown fsir-updater[2235]: [    71.978] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:26.691219 stm32mp2unknownunknown fsir-updater[2235]: [    72.975] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:27.688772 stm32mp2unknownunknown fsir-updater[2235]: [    73.973] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:28.686340 stm32mp2unknownunknown fsir-updater[2235]: [    74.970] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:29.683969 stm32mp2unknownunknown fsir-updater[2235]: [    75.968] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:30.681336 stm32mp2unknownunknown fsir-updater[2235]: [    76.965] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:31.678593 stm32mp2unknownunknown fsir-updater[2235]: [    77.963] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:32.675968 stm32mp2unknownunknown fsir-updater[2235]: [    78.960] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:33.673489 stm32mp2unknownunknown fsir-updater[2235]: [    79.958] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:34.670968 stm32mp2unknownunknown fsir-updater[2235]: [    80.955] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:35.668335 stm32mp2unknownunknown fsir-updater[2235]: [    81.952] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:36.665856 stm32mp2unknownunknown fsir-updater[2235]: [    82.950] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:37.663248 stm32mp2unknownunknown fsir-updater[2235]: [    83.947] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:38.660624 stm32mp2unknownunknown fsir-updater[2235]: [    84.945] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:39.657842 stm32mp2unknownunknown fsir-updater[2235]: [    85.942] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:40.655227 stm32mp2unknownunknown fsir-updater[2235]: [    86.939] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:41.652725 stm32mp2unknownunknown fsir-updater[2235]: [    87.937] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:42.650213 stm32mp2unknownunknown fsir-updater[2235]: [    88.934] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:43.647841 stm32mp2unknownunknown fsir-updater[2235]: [    89.932] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:44.645353 stm32mp2unknownunknown fsir-updater[2235]: [    90.929] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:45.642970 stm32mp2unknownunknown fsir-updater[2235]: [    91.927] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:46.640513 stm32mp2unknownunknown fsir-updater[2235]: [    92.925] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:47.637843 stm32mp2unknownunknown fsir-updater[2235]: [    93.922] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:48.635093 stm32mp2unknownunknown fsir-updater[2235]: [    94.919] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:49.632500 stm32mp2unknownunknown fsir-updater[2235]: [    95.917] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:50.629980 stm32mp2unknownunknown fsir-updater[2235]: [    96.914] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:51.627356 stm32mp2unknownunknown fsir-updater[2235]: [    97.911] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:52.624898 stm32mp2unknownunknown fsir-updater[2235]: [    98.909] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:53.622209 stm32mp2unknownunknown fsir-updater[2235]: [    99.906] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:54.619719 stm32mp2unknownunknown fsir-updater[2235]: [   100.904] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:55.617212 stm32mp2unknownunknown fsir-updater[2235]: [   101.901] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:56.614719 stm32mp2unknownunknown fsir-updater[2235]: [   102.899] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:57.611973 stm32mp2unknownunknown fsir-updater[2235]: [   103.896] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:58.609324 stm32mp2unknownunknown fsir-updater[2235]: [   104.893] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:58:59.606814 stm32mp2unknownunknown fsir-updater[2235]: [   105.891] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:00.604091 stm32mp2unknownunknown fsir-updater[2235]: [   106.888] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:01.601833 stm32mp2unknownunknown fsir-updater[2235]: [   107.886] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:02.599195 stm32mp2unknownunknown fsir-updater[2235]: [   108.883] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:03.596961 stm32mp2unknownunknown fsir-updater[2235]: [   109.881] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:04.594072 stm32mp2unknownunknown fsir-updater[2235]: [   110.878] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:05.591451 stm32mp2unknownunknown fsir-updater[2235]: [   111.876] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:06.588810 stm32mp2unknownunknown fsir-updater[2235]: [   112.873] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:07.586074 stm32mp2unknownunknown fsir-updater[2235]: [   113.870] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:08.583332 stm32mp2unknownunknown fsir-updater[2235]: [   114.867] reports: a record of 30 bytes could not be stored at offset 494576 of /var/lib/fsir/images/reports: No space left on device
+Oct 16 11:59:08.616118 stm32mp2unknownunknown fsir-updater[2235]: [   114.900] store: cannot prepare /var/lib/fsir/images/image-00950.part: No space left on device
+Oct 16 11:59:08.616118 stm32mp2unknownunknown fsir-updater[2235]: [   114.900] UPLOAD BEGIN image 950, 20776 bytes: refused 0xfe
+updater: active, restarts 0
+# SB8 teardown; mac 14:59:34
+Filesystem     1K-blocks  Used Available Use% Mounted on
+/dev/loop0          1380  1352         0 100% /var/lib/fsir/images
+total 900
+drwxr-xr-x 2 root root   4096 Oct 16 11:55 .
+drwxr-xr-x 3 root root   4096 Jan  1  2000 ..
+-rw------- 1 root root     12 Oct 16 07:25 clock-offset
+-rw-r--r-- 1 root root  15436 Jan  1  2000 image-00004.img
+-rw-r--r-- 1 root root  20424 Oct 15 20:12 image-00010.img
+-rw-r--r-- 1 root root   2368 Oct 15 20:13 image-00011.img
+-rw-r--r-- 1 root root  20424 Oct 15 20:46 image-00030.img
+-rw-r--r-- 1 root root  20424 Oct 15 21:04 image-00041.img
+-rw-r--r-- 1 root root  20424 Oct 15 21:06 image-00042.img
+-rw-r--r-- 1 root root  20424 Oct 15 21:31 image-00044.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:47 image-00800.img
+-rw-r--r-- 1 root root    296 Oct 16 11:47 image-00801.part
+-rw-r--r-- 1 root root  20776 Oct 16 11:49 image-00811.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:49 image-00812.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:50 image-00813.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:51 image-00814.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:52 image-00815.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:52 image-00816.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:53 image-00817.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:54 image-00818.img
+-rw-r--r-- 1 root root  20776 Oct 16 11:55 image-00819.img
+-rw-r--r-- 1 root root   2368 Oct 16 06:03 image-03002.img
+-rw-r--r-- 1 root root  20776 Oct 16 06:06 image-03004.img
+-rw-r--r-- 1 root root   2368 Oct 16 06:57 image-04001.img
+-rw------- 1 root root     10 Oct 16 05:34 limits
+-rw------- 1 root root 492566 Oct 16 11:59 reports
+Oct 16 11:59:31.715064 stm32mp2unknownunknown fsir-updater[2369]: [     0.177] reports: store /var/lib/fsir/images/reports: 3041 EVENT and 14284 HEALTH reports stored (492416 of 1048576 bytes), next r
+Oct 16 11:59:31.716351 stm32mp2unknownunknown fsir-updater[2369]: [     0.177] limits: stored record, minimum version 1, controller identity 0x0431
+Oct 16 11:59:31.716351 stm32mp2unknownunknown fsir-updater[2369]: [     0.177] clock: stored offset 2 s; onboard ground time is the system clock plus that
+Oct 16 11:59:31.716351 stm32mp2unknownunknown fsir-updater[2369]: [     0.177] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; key
+Oct 16 11:59:31.716351 stm32mp2unknownunknown fsir-updater[2369]: [     0.178] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:59:31.720231 stm32mp2unknownunknown fsir-updater[2369]: [     0.182] controller heard
+Oct 16 11:59:32.522545 stm32mp2unknownunknown fsir-updater[2369]: [     0.985] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+Oct 16 11:59:32.531815 stm32mp2unknownunknown fsir-updater[2369]: [     0.994] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and not sent live until one does
+/var/lib/fsir/images is not a mountpoint
+/dev/disk/by-partuuid/e91c4e10-16e6-4c0e-bd0e-77becf4a3582   3928224 778888   2958836  21% /
+# console status after teardown:
+report  HEALTH  #17331 onboard t=1792151979 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+# one update on the original directory:
+UPDATE CONFIRMED: slot B version 1  (8.0 s)

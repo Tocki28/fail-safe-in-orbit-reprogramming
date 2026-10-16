@@ -1,0 +1,62 @@
+2026-10-16 12:24:34 EEST, commit a504b0d, build/fuzz updater --seed 20261016 --n 1000000 --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/fuzz --work build/work/updater --ctrl-images <checkout of a504b0d>/src/controller/build/images --test-images <checkout of a504b0d>/test/controller/build/images
+uptime at start: 12:24  up 16 days, 21:41, 2 users, load averages: 8.41 8.38 10.53
+mutation-based fuzzer without coverage feedback (no libFuzzer, AFL or honggfuzz here); seed 20261016; 1000000 inputs; UBSan on, no recovery
+updater: 500 sessions of about 2000 injected frames, UDP port 47990, 13 image seeds
+session 0: injected so far 2210, resident 5.2 MB
+session 10: injected so far 24529, resident 6.4 MB
+session 20: injected so far 46906, resident 6.7 MB
+session 30: injected so far 69276, resident 7.0 MB
+session 40: injected so far 91683, resident 7.1 MB
+session 50: injected so far 114090, resident 7.3 MB
+session 60: injected so far 136512, resident 7.3 MB
+session 70: injected so far 158923, resident 7.3 MB
+session 80: injected so far 181133, resident 7.3 MB
+session 90: injected so far 203470, resident 7.5 MB
+session 100: injected so far 225904, resident 7.5 MB
+session 110: injected so far 248369, resident 7.6 MB
+session 120: injected so far 270627, resident 7.8 MB
+session 130: injected so far 292958, resident 7.9 MB
+session 140: injected so far 315359, resident 8.1 MB
+session 150: injected so far 337771, resident 8.1 MB
+session 160: injected so far 360270, resident 8.5 MB
+session 170: injected so far 382616, resident 8.5 MB
+session 180: injected so far 404985, resident 8.5 MB
+session 190: injected so far 427356, resident 8.6 MB
+session 200: injected so far 449786, resident 5.9 MB
+session 210: injected so far 472175, resident 6.0 MB
+session 220: injected so far 494425, resident 6.0 MB
+session 230: injected so far 516872, resident 6.1 MB
+session 240: injected so far 539226, resident 6.1 MB
+session 250: injected so far 561640, resident 6.1 MB
+session 260: injected so far 583999, resident 6.1 MB
+session 270: injected so far 606260, resident 6.1 MB
+session 280: injected so far 628715, resident 6.1 MB
+session 290: injected so far 651169, resident 6.1 MB
+session 300: injected so far 673614, resident 6.2 MB
+session 310: injected so far 696044, resident 6.2 MB
+session 320: injected so far 718255, resident 6.2 MB
+session 330: injected so far 740649, resident 6.2 MB
+session 340: injected so far 763305, resident 6.2 MB
+session 350: injected so far 785709, resident 6.2 MB
+session 360: injected so far 808103, resident 6.2 MB
+session 370: injected so far 830304, resident 6.2 MB
+session 380: injected so far 852639, resident 6.2 MB
+session 390: injected so far 875074, resident 6.2 MB
+session 400: injected so far 897605, resident 6.2 MB
+session 410: injected so far 919996, resident 6.2 MB
+session 420: injected so far 942277, resident 6.2 MB
+session 430: injected so far 964620, resident 6.2 MB
+session 440: injected so far 987024, resident 6.2 MB
+session 450: injected so far 1009453, resident 6.2 MB
+session 460: injected so far 1031872, resident 6.2 MB
+session 470: injected so far 1054396, resident 6.2 MB
+session 480: injected so far 1076800, resident 6.2 MB
+session 490: injected so far 1099169, resident 6.2 MB
+session 499: injected so far 1119449, resident 6.2 MB
+updater totals: 688002 ground datagrams (of which 31324 raw or mutated), 314825 controller frames, 1030933 answers and 364943 reports seen at the ground, 9934 dangerous commands sent to the controller, 56636 ARMs answered DONE
+answers by kind<<8|code: 0100=407445 0200=276099 0300=5 0301=50973 0302=4148 0303=19229 0304=4642 0305=8624 0306=227198 0307=690 0308=882 0309=344 030a=453 030b=11927 030c=96 030d=111 030e=144 030f=135 0310=117 0311=156 0312=120 0313=128 0314=1 0315=2 0316=3 0317=2 0318=9 0319=8 031a=7 031b=1 031c=4 031d=4 031e=4 031f=2 0320=1 0321=6 0322=3 0323=1 0324=3 0325=5 0326=2 0327=1 0328=9 0329=2 032a=5 032b=3 032c=1 032d=3 032e=10 032f=2 0330=3 0331=6 0332=4 0333=7 0334=6 0335=4 0336=3 0337=2 0338=2 0339=1 033a=4 033b=7 033c=6 033d=7 033e=9 033f=3 0340=7 0341=3 0342=6 0343=4 0344=10 0345=2 0346=6 0347=4 0348=6 0349=5 034a=4 034b=4 034c=3 034d=4 034e=8 034f=3 0350=6 0351=1 0352=7 0353=2 0354=5 0355=1 0357=2 0358=2 0359=5 035a=2 035b=4 035c=5 035d=4 035e=3 035f=4 0360=5 0361=7 0362=4 0363=10 0364=2 0365=5 0366=2 0367=5 0368=2 0369=1 036a=4 036b=5 036c=4 036d=5 036e=1 036f=4 0370=4 0371=11 0372=5 0373=1 0374=4 0375=2 0376=2 0377=2 0379=6 037a=1 037b=2 037c=4 037d=2 037e=4 037f=8 0380=3 0381=9 0382=8 0383=4 0385=6 0386=4 0387=3 0388=3 0389=4 038a=4 038b=7 038c=5 038d=7 038e=6 038f=6 0390=1 0391=4 0392=4 0393=5 0394=6 0395=3 0396=11 0397=5 0398=5 0399=6 039a=3 039b=3 039c=1 039d=2 039e=2 039f=4 03a0=5 03a1=3 03a2=8 03a3=7 03a4=2 03a5=6 03a6=3 03a7=1 03a8=5 03a9=2 03aa=2 03ab=4 03ac=2 03ad=7 03ae=7 03af=4 03b0=6 03b1=4 03b2=2 03b3=3 03b4=1 03b5=2 03b6=2 03b7=5 03b8=4 03b9=1 03ba=4 03bb=1 03bc=3 03bd=1 03be=4 03bf=3 03c0=6 03c1=2 03c2=2 03c3=2 03c4=1 03c5=1 03c6=2 03c7=5 03c8=4 03ca=2 03cb=3 03cc=6 03cd=4 03ce=6 03cf=1 03d0=3 03d1=2 03d2=5 03d3=4 03d4=5 03d5=6 03d6=1 03d7=1 03d8=6 03d9=2 03da=2 03db=9 03dc=9 03dd=4 03de=1 03df=3 03e0=7 03e1=5 03e2=5 03e3=4 03e4=8 03e5=2 03e6=4 03e7=5 03e8=6 03e9=9 03eb=7 03ec=5 03ed=6 03ee=2 03ef=3 03f0=7 03f1=3 03f2=4 03f3=3 03f4=5 03f5=2 03f6=5 03f7=1 03f8=5 03f9=4 03fa=1 03fb=2 03fc=8 03fd=5 03fe=3 03ff=1886 0400=14443
+DONE answers by command identifier: 00=9 01=21764 02=164068 03=1209 04=3472 05=19 06=3431 07=3 08=8 09=3382 0a=5 0b=4172 0c=6 0d=56620 0e=11 12=1 20=1568 21=1647 22=1523 23=3007 24=1373 25=7204 26=1570 27=6 2c=1 37=1 40=6 65=2 7a=1 7b=1 a0=2 a2=1 b2=1 b8=1 eb=1 fb=2 ff=1
+largest data directory 28.9 KB; resident size first session 5.2 MB, last 6.2 MB
+SUMMARY target updater: 1119449 inputs, 0 findings, 0 notes, 258.8 s in the code under test
+slowest inputs (ms, index): 134.000@192 102.949@226 111.657@278 112.378@181 145.971@115 157.417@177 207.703@155 135.769@155 101.491@81 135.234@161
+exit status 0; wall time 313 s; uptime at end: 12:29  up 16 days, 21:47, 2 users, load averages: 7.48 9.50 10.53

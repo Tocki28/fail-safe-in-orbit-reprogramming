@@ -1,0 +1,4 @@
+Mac time (EEST) 2026-10-16 11:41:13 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz run N=1000000 SEED=20261016
+uptime: 11:41  up 16 days, 20:58, 2 users, load averages: 11.62 13.23 16.23
+cc: Apple clang version 17.0.0 (clang-1700.6.3.2)
+wall time of the run: 474 s; uptime at the end: 11:49  up 16 days, 21:06, 2 users, load averages: 21.38 19.37 18.20

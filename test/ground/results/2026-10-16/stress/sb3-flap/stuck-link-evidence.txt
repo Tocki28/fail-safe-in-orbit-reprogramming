@@ -1,0 +1,50 @@
+# stuck data link A after SB3: board 11:37:43 UTC; fsir-updater PID 859
+lrwx------ 1 root root 64 Oct 16 07:27 4 -> /dev/ttyACM0
+/dev/ttyACM0 inode 4236 rdev a6:0 changed 2026-10-16 11:35:44.156000000 +0000
+--- last 12 data-link lines other than failed sends, from 11:34:30:
+Oct 16 11:35:25.906660 stm32mp2unknownunknown fsir-updater[859]: [ 14901.060] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:35:28.963339 stm32mp2unknownunknown fsir-updater[859]: [ 14904.123] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+Oct 16 11:35:29.998505 stm32mp2unknownunknown fsir-updater[859]: [ 14905.159] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+Oct 16 11:35:32.030686 stm32mp2unknownunknown fsir-updater[859]: [ 14907.191] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:35:35.050936 stm32mp2unknownunknown fsir-updater[859]: [ 14910.211] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+Oct 16 11:35:36.054963 stm32mp2unknownunknown fsir-updater[859]: [ 14911.215] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+Oct 16 11:35:38.107168 stm32mp2unknownunknown fsir-updater[859]: [ 14913.267] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:35:41.132959 stm32mp2unknownunknown fsir-updater[859]: [ 14916.293] data link A: /dev/ttyACM0 lost; trying to open it every 1000 ms
+Oct 16 11:35:42.139151 stm32mp2unknownunknown fsir-updater[859]: [ 14917.298] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+Oct 16 11:35:44.151201 stm32mp2unknownunknown fsir-updater[859]: [ 14919.310] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:36:40.883374 stm32mp2unknownunknown fsir-updater[859]: [ 14976.044] ground command 0x25 sequence 1791998115 not passed on: data link A cannot send; refused 0xfd
+Oct 16 11:37:01.072343 stm32mp2unknownunknown fsir-updater[859]: [ 14996.232] ground command 0x25 sequence 1791998116 not passed on: data link A cannot send; refused 0xfd
+--- failed sends: 11:25:42-11:35:44 1245; 11:35:44-now 22
+--- lost/open/silent counts 11:25:42-now: lost 99, open 99, silent 1, heard again 1
+board 11:41:27 UTC: silence/frame/open/lost lines since 11:35:45: 0; failed sends since 11:35:44: 77
+# recovery: mac 14:41:40 EEST; systemctl restart fsir-updater (owner's bench go; recorded as an intervention)
+board 11:41:38.024 UTC: restart ordered; old PID 859
+new PID 19721, active
+Oct 16 11:42:11.908285 stm32mp2unknownunknown fsir-updater[19721]: [     0.174] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; imag
+Oct 16 11:42:11.908285 stm32mp2unknownunknown fsir-updater[19721]: [     0.174] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:42:12.567479 stm32mp2unknownunknown fsir-updater[19721]: [     0.834] controller heard
+Oct 16 11:42:12.567479 stm32mp2unknownunknown fsir-updater[19721]: [     0.834] controller: HEALTH mode OPERATE, slot B, firmware kind 0x02 v1, failed starts 0, trial tim
+Oct 16 11:42:12.578970 stm32mp2unknownunknown fsir-updater[19721]: [     0.845] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and n
+Oct 16 11:42:13.975600 stm32mp2unknownunknown fsir-updater[19721]: [     2.242] controller: no answer to GET STATUS sequence 1 (beat) in time
+# console status after the restart:
+waiting: seq 1791998117 GET STATUS, sent 18.0 s ago, RECEIVED yes
+FAILED: GET STATUS (seq 1791998117): no answer after 6 tries
+# later update 1, mac 14:42:36:
+FAILED: GET STATUS (seq 1791998118): no answer after 6 tries
+# later update 2, mac 14:42:54:
+FAILED: GET STATUS (seq 1791998119) REFUSED 0xfd: bench: the onboard computer could not send on data link A
+# recovery 2: mac 14:43:16 EEST; hub power cycle of the Nucleo (uhubctl -l 1-1 -p 1, 3 s off) to reset the ST-LINK
+board off 11:43:14.397 UTC
+board on 11:43:18.103 UTC
+Oct 16 11:43:15.593968 stm32mp2unknownunknown fsir-updater[19721]: [    63.860] data link A: cannot open /dev/ttyACM0: No such file or directory; trying every 1000 ms
+Oct 16 11:43:16.699256 stm32mp2unknownunknown fsir-updater[19721]: [    64.965] data link A: sending sequence 26 failed
+Oct 16 11:43:18.712340 stm32mp2unknownunknown fsir-updater[19721]: [    66.978] data link A: sending sequence 27 failed
+Oct 16 11:43:19.629475 stm32mp2unknownunknown fsir-updater[19721]: [    67.896] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+Oct 16 11:43:20.717053 stm32mp2unknownunknown fsir-updater[19721]: [    68.983] controller heard again after 6 s of silence
+# console status:
+report  HEALTH  #16806 onboard t=1792151007 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+report  HEALTH  #16807 onboard t=1792151008 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left 0 s, self-test PASSED
+# later update 1, mac 14:43:29:
+UPDATE CONFIRMED: slot A version 1  (7.7 s)
+# later update 2, mac 14:43:37:
+UPDATE CONFIRMED: slot B version 1  (8.7 s)

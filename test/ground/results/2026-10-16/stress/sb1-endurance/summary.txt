@@ -1,0 +1,5 @@
+cycles run: 1000; passing (exit 0 and UPDATE CONFIRMED): 997; not passing: 3
+wall time per cycle incl. console start: fastest 7.59 s, median 8.37 s, slowest 15.06 s
+update time printed by the console: fastest 7.4 s, median 8.2 s, slowest 14.5 s
+slots of passing cycles alternate every time: True
+mac end 2026-10-16 14:16:40 EEST

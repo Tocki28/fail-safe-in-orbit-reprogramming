@@ -1,0 +1,20 @@
+Mac time (EEST) 2026-10-16 11:41:13 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz run N=1000000 SEED=20261016
+target fz_frame; command: build/fz_frame --seed 20261016 --n 1000000 --log <checkout of a504b0d>/test/controller/results/2026-10-16/stress-host/fuzz --dir build/images/src --dir build/images/test
+seed 20261016; mutation-based fuzzer without coverage feedback (no libFuzzer runtime on this Mac); UBSan on, -fno-sanitize-recover=undefined
+load averages at the start (1, 5, 15 min): 11.62 13.23 16.23
+frames accepted by the controller: 176730; bytes fed: 728954412
+whole-frame checks: 374350; recovery checks: 1000000; accepted by the onboard parser only, Flags bits 1 to 7 set (by design, not a finding): 4596
+inputs run: 1000000 in 176.6 s (5664 inputs/s); load averages at the end 19.60 16.60 17.10
+slowest 10 inputs (index: time):
+  771298: 86.153 ms
+  767902: 56.054 ms
+  820381: 46.793 ms
+  767665: 36.710 ms
+  40559: 35.031 ms
+  40746: 30.947 ms
+  771494: 29.563 ms
+  764829: 25.496 ms
+  422332: 22.836 ms
+  436824: 20.852 ms
+failures: 0
+result: no failure

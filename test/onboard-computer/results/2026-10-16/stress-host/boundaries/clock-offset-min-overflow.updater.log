@@ -1,0 +1,9 @@
+[1457458.032] limits: no record, starting with minimum version 1, controller identity 0x0431
+[1457458.032] clock: stored offset -9223372036854775808 s; onboard ground time is the system clock plus that
+[1457458.034] reports: no store file; build/scratch/clock-offset-min-overflow/reports made, empty, next report number 1
+[1457458.034] ground link: answers and reports now go to 127.0.0.1:64063
+[1457458.034] ground: command 0x0d sequence 31 for the onboard computer (6 payload bytes)
+[1457458.034] ground: ARM sequence 31 held for command 0x09, ground sequence 32 (valid 30000 ms)
+[1457458.054] ground: command 0x09 sequence 32 for the onboard computer (5 payload bytes)
+<checkout of a504b0d>/src/onboard-computer/updater/updater.cpp:957:42: runtime error: signed integer overflow: -9223372035154775808 - 4294967295 cannot be represented in type 'int64_t' (aka 'long long')
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior <checkout of a504b0d>/src/onboard-computer/updater/updater.cpp:957:42 

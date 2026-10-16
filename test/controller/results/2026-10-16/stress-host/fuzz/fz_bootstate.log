@@ -1,0 +1,26 @@
+Mac time (EEST) 2026-10-16 11:48:15 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz run N=1000000 SEED=20261016
+target fz_bootstate; command: build/fz_bootstate --seed 20261016 --n 1000000 --log <checkout of a504b0d>/test/controller/results/2026-10-16/stress-host/fuzz --dir build/images/src --dir build/images/test
+seed 20261016; mutation-based fuzzer without coverage feedback (no libFuzzer runtime on this Mac); UBSan on, -fno-sanitize-recover=undefined
+load averages at the start (1, 5, 15 min): 17.03 18.30 17.77
+outcome of boot_state_load (both implementations agree on every input counted here):
+  no valid copy   , no such copy              : VALID 0, BLANK 16553, DAMAGED 401136
+  no valid copy   , a CRC-valid copy with impossible fields present: VALID 0, BLANK 0, DAMAGED 119383
+  one valid copy  , no such copy              : VALID 313033, BLANK 0, DAMAGED 0
+  one valid copy  , a CRC-valid copy with impossible fields present: VALID 48487, BLANK 0, DAMAGED 0
+  two valid copies, no such copy              : VALID 101408, BLANK 0, DAMAGED 0
+  two valid copies, a CRC-valid copy with impossible fields present: VALID 0, BLANK 0, DAMAGED 0
+inputs with a CRC-valid copy whose fields cannot exist: 167870; fault reactions reached by stored values: 0; inputs with a flash ECC error on a copy: 99705; writes compared: 124436
+inputs run: 1000000 in 20.0 s (50017 inputs/s); load averages at the end 21.37 19.26 18.12
+slowest 10 inputs (index: time):
+  969752: 140.546 ms
+  183420: 140.463 ms
+  183952: 39.520 ms
+  984264: 23.405 ms
+  188183: 20.198 ms
+  186517: 16.859 ms
+  984544: 15.135 ms
+  29644: 13.907 ms
+  344159: 13.444 ms
+  29629: 12.920 ms
+failures: 0
+result: no failure

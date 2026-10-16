@@ -1,0 +1,151 @@
+2026-10-16 11:08:03 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario silence --flood none --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag silence-none
+load averages at start (12.052734375, 13.78759765625, 10.6474609375), at end (18.5517578125, 15.90283203125, 12.201171875)
+{
+ "tag": "silence-none",
+ "scenario": "silence",
+ "flood": {
+  "kind": "none",
+  "source": "same",
+  "seed": 1,
+  "cmd": null,
+  "answers_to_flood": {},
+  "valid_done_latency_ms": {
+   "n": 0
+  },
+  "udp_delta_system_wide": {
+   "received": 109848,
+   "dropped_full_buffer": 0
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:08:03 EEST",
+ "loadavg_start": [
+  12.052734375,
+  13.78759765625,
+  10.6474609375
+ ],
+ "image_bytes": 20776,
+ "silence": {
+  "last_frame_wall": 1792138085.523051,
+  "expected_s_after_last_frame": [
+   5.0,
+   65.0,
+   125.0,
+   185.0
+  ],
+  "restore_calls": 3,
+  "script_error_s": [
+   0.7131490707397461,
+   0.119049072265625,
+   0.1302490234375
+  ],
+  "log_error_s": [
+   0.01234889030456543,
+   0.05934882164001465,
+   0.06234884262084961
+  ],
+  "silent_line_error_s": [
+   0.009348869323730469
+  ],
+  "spawn_delay_s": [
+   0.7008001804351807,
+   0.05970025062561035,
+   0.06790018081665039
+  ],
+  "log_lines": [
+   [
+    5.009,
+    "controller silent: no frame from the controller for 5 s (REQ"
+   ],
+   [
+    5.012,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    65.059,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    125.062,
+    "controller silent: <workspace>/failsafe-remot"
+   ],
+   [
+    185.063,
+    "controller still silent after 3 resets; restore not run (dec"
+   ]
+  ],
+  "events_0106": [
+   [
+    2,
+    5.763
+   ],
+   [
+    2,
+    65.16
+   ],
+   [
+    2,
+    125.16
+   ]
+  ],
+  "window_s": 207.4130100319162
+ },
+ "updater": {
+  "samples": 208,
+  "rss_kb": {
+   "first": 4264,
+   "last": 4308,
+   "max": 4308
+  },
+  "cpu_pct": {
+   "n": 207,
+   "min": 0.0,
+   "p50": 0.0,
+   "p95": 1.0029039626428062,
+   "p99": 1.005034652606777,
+   "max": 1.0120523575010902,
+   "mean": 0.2656119298849132,
+   "std": 0.44157484089206667
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 2075,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 545723,
+   "lines": 4175
+  }
+ },
+ "probe": {
+  "sent": 2058,
+  "answered": 2058,
+  "share": 1.0,
+  "latency_ms": {
+   "n": 2058,
+   "min": 0.24132989346981049,
+   "p50": 0.3799549303948879,
+   "p95": 0.6297349464148283,
+   "p99": 10.165788931772113,
+   "max": 86.96618909016252,
+   "mean": 0.7865563392742339,
+   "std": 4.451631628680221
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  18.5517578125,
+  15.90283203125,
+  12.201171875
+ ]
+}

@@ -1,0 +1,105 @@
+2026-10-16 11:18:14 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario beat --flood none --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag beat-none
+load averages at start (30.36083984375, 22.021484375, 16.32373046875), at end (20.96240234375, 21.0498046875, 16.4140625)
+{
+ "tag": "beat-none",
+ "scenario": "beat",
+ "flood": {
+  "kind": "none",
+  "source": "same",
+  "seed": 1,
+  "cmd": null,
+  "answers_to_flood": {},
+  "valid_done_latency_ms": {
+   "n": 0
+  },
+  "udp_delta_system_wide": {
+   "received": 491901,
+   "dropped_full_buffer": 0
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:18:14 EEST",
+ "loadavg_start": [
+  30.36083984375,
+  22.021484375,
+  16.32373046875
+ ],
+ "image_bytes": 20776,
+ "beat": {
+  "why_beat_s": "1 s is the smallest non-zero --beat-s [options.cpp:parseOptions, parseNumber min 0 and whole seconds]: 60 intervals in 65 s, and the 50 ms loop pass (kPollMs, config.hpp:222) is 5 percent of it, measurable",
+  "beat_s": 1,
+  "beats": 62,
+  "interval_ms": {
+   "n": 61,
+   "min": 999.366233125329,
+   "p50": 1001.5089029911906,
+   "p95": 1049.5814650785178,
+   "p99": 1049.7959980275482,
+   "max": 1049.7959980275482,
+   "mean": 1017.1087385903372,
+   "std": 22.314378043936216
+  },
+  "error_ms_mean": 17.108738590337225,
+  "error_ms_max": 49.795998027548194,
+  "jitter_std_ms": 22.314378043936216,
+  "window_s": 63.008211731910706
+ },
+ "updater": {
+  "samples": 66,
+  "rss_kb": {
+   "first": 4320,
+   "last": 4332,
+   "max": 4332
+  },
+  "cpu_pct": {
+   "n": 65,
+   "min": 0.0,
+   "p50": 0.0,
+   "p95": 1.005122884266389,
+   "p99": 1.0104583468150639,
+   "max": 1.0104583468150639,
+   "mean": 0.3994936641270214,
+   "std": 0.48931315069250175
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 651,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 172258,
+   "lines": 1311
+  }
+ },
+ "probe": {
+  "sent": 634,
+  "answered": 634,
+  "share": 1.0,
+  "latency_ms": {
+   "n": 634,
+   "min": 0.2926378510892391,
+   "p50": 0.4654789809137583,
+   "p95": 0.893991906195879,
+   "p99": 5.322474986314774,
+   "max": 55.25490781292319,
+   "mean": 0.7096377468729621,
+   "std": 2.4653964574040965
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  20.96240234375,
+  21.0498046875,
+  16.4140625
+ ]
+}

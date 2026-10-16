@@ -1,0 +1,404 @@
+2026-10-16 11:29:30 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario delivery --flood repeat --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag delivery-repeat
+updater log: 105449445 bytes, 920987 lines; first 200 and last 200 lines
+---- first lines ----
+[     0.005] reports: no store file; <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/delivery-repeat/images/reports made, empty, next report number 1
+[     0.005] limits: no record, starting with minimum version 1, controller identity 0x0431
+[     0.005] clock: no offset record, starting with offset 0 s
+[     0.005] fsir-updater: ground on UDP port 54541 (all interfaces); data link A on /dev/ttys006; images in <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/delivery-repeat/images; keys built in; beat off; restart script <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/delivery-repeat/restore.py
+[     0.006] data link A: /dev/ttys006 open, 115200 8N1 raw
+[     0.491] controller heard
+[     0.492] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[     0.492] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and not sent live until one does
+[     0.562] ground link: answers and reports now go to 127.0.0.1:60766
+[     0.562] ground: command 0x01 sequence 1 for the onboard computer (7 payload bytes)
+[     0.563] UPLOAD BEGIN image 1, 20776 bytes: starting at byte 0
+[     0.563] ground: command 0x02 sequence 2 for the onboard computer (263 payload bytes)
+[     0.565] ground: command 0x02 sequence 3 for the onboard computer (263 payload bytes)
+[     0.565] ground: command 0x02 sequence 4 for the onboard computer (263 payload bytes)
+[     0.566] ground: command 0x02 sequence 5 for the onboard computer (263 payload bytes)
+[     0.566] ground: command 0x02 sequence 6 for the onboard computer (263 payload bytes)
+[     0.567] ground: command 0x02 sequence 7 for the onboard computer (263 payload bytes)
+[     0.567] ground: command 0x02 sequence 8 for the onboard computer (263 payload bytes)
+[     0.568] ground: command 0x02 sequence 9 for the onboard computer (263 payload bytes)
+[     0.568] ground: command 0x02 sequence 10 for the onboard computer (263 payload bytes)
+[     0.569] ground: command 0x02 sequence 11 for the onboard computer (263 payload bytes)
+[     0.570] ground: command 0x02 sequence 12 for the onboard computer (263 payload bytes)
+[     0.570] ground: command 0x02 sequence 13 for the onboard computer (263 payload bytes)
+[     0.571] ground: command 0x02 sequence 14 for the onboard computer (263 payload bytes)
+[     0.571] ground: command 0x02 sequence 15 for the onboard computer (263 payload bytes)
+[     0.572] ground: command 0x02 sequence 16 for the onboard computer (263 payload bytes)
+[     0.572] ground: command 0x02 sequence 17 for the onboard computer (263 payload bytes)
+[     0.573] ground: command 0x02 sequence 18 for the onboard computer (263 payload bytes)
+[     0.573] ground: command 0x02 sequence 19 for the onboard computer (263 payload bytes)
+[     0.574] ground: command 0x02 sequence 20 for the onboard computer (263 payload bytes)
+[     0.574] ground: command 0x02 sequence 21 for the onboard computer (263 payload bytes)
+[     0.575] ground: command 0x02 sequence 22 for the onboard computer (263 payload bytes)
+[     0.575] ground: command 0x02 sequence 23 for the onboard computer (263 payload bytes)
+[     0.576] ground: command 0x02 sequence 24 for the onboard computer (263 payload bytes)
+[     0.576] ground: command 0x02 sequence 25 for the onboard computer (263 payload bytes)
+[     0.579] ground: command 0x02 sequence 26 for the onboard computer (263 payload bytes)
+[     0.579] ground: command 0x02 sequence 27 for the onboard computer (263 payload bytes)
+[     0.580] ground: command 0x02 sequence 28 for the onboard computer (263 payload bytes)
+[     0.581] ground: command 0x02 sequence 29 for the onboard computer (263 payload bytes)
+[     0.581] ground: command 0x02 sequence 30 for the onboard computer (263 payload bytes)
+[     0.582] ground: command 0x02 sequence 31 for the onboard computer (263 payload bytes)
+[     0.582] ground: command 0x02 sequence 32 for the onboard computer (263 payload bytes)
+[     0.583] ground: command 0x02 sequence 33 for the onboard computer (263 payload bytes)
+[     0.583] ground: command 0x02 sequence 34 for the onboard computer (263 payload bytes)
+[     0.584] ground: command 0x02 sequence 35 for the onboard computer (263 payload bytes)
+[     0.584] ground: command 0x02 sequence 36 for the onboard computer (263 payload bytes)
+[     0.585] ground: command 0x02 sequence 37 for the onboard computer (263 payload bytes)
+[     0.585] ground: command 0x02 sequence 38 for the onboard computer (263 payload bytes)
+[     0.586] ground: command 0x02 sequence 39 for the onboard computer (263 payload bytes)
+[     0.586] ground: command 0x02 sequence 40 for the onboard computer (263 payload bytes)
+[     0.587] ground: command 0x02 sequence 41 for the onboard computer (263 payload bytes)
+[     0.587] ground: command 0x02 sequence 42 for the onboard computer (263 payload bytes)
+[     0.588] ground: command 0x02 sequence 43 for the onboard computer (263 payload bytes)
+[     0.588] ground: command 0x02 sequence 44 for the onboard computer (263 payload bytes)
+[     0.589] ground: command 0x02 sequence 45 for the onboard computer (263 payload bytes)
+[     0.589] ground: command 0x02 sequence 46 for the onboard computer (263 payload bytes)
+[     0.590] ground: command 0x02 sequence 47 for the onboard computer (263 payload bytes)
+[     0.590] ground: command 0x02 sequence 48 for the onboard computer (263 payload bytes)
+[     0.591] ground: command 0x02 sequence 49 for the onboard computer (263 payload bytes)
+[     0.591] ground: command 0x02 sequence 50 for the onboard computer (263 payload bytes)
+[     0.592] ground: command 0x02 sequence 51 for the onboard computer (263 payload bytes)
+[     0.592] ground: command 0x02 sequence 52 for the onboard computer (263 payload bytes)
+[     0.593] ground: command 0x02 sequence 53 for the onboard computer (263 payload bytes)
+[     0.593] ground: command 0x02 sequence 54 for the onboard computer (263 payload bytes)
+[     0.594] ground: command 0x02 sequence 55 for the onboard computer (263 payload bytes)
+[     0.594] ground: command 0x02 sequence 56 for the onboard computer (263 payload bytes)
+[     0.595] ground: command 0x02 sequence 57 for the onboard computer (263 payload bytes)
+[     0.595] ground: command 0x02 sequence 58 for the onboard computer (263 payload bytes)
+[     0.596] ground: command 0x02 sequence 59 for the onboard computer (263 payload bytes)
+[     0.596] ground: command 0x02 sequence 60 for the onboard computer (263 payload bytes)
+[     0.597] ground: command 0x02 sequence 61 for the onboard computer (263 payload bytes)
+[     0.597] ground: command 0x02 sequence 62 for the onboard computer (263 payload bytes)
+[     0.598] ground: command 0x02 sequence 63 for the onboard computer (263 payload bytes)
+[     0.598] ground: command 0x02 sequence 64 for the onboard computer (263 payload bytes)
+[     0.599] ground: command 0x02 sequence 65 for the onboard computer (263 payload bytes)
+[     0.599] ground: command 0x02 sequence 66 for the onboard computer (263 payload bytes)
+[     0.600] ground: command 0x02 sequence 67 for the onboard computer (263 payload bytes)
+[     0.600] ground: command 0x02 sequence 68 for the onboard computer (263 payload bytes)
+[     0.601] ground: command 0x02 sequence 69 for the onboard computer (263 payload bytes)
+[     0.601] ground: command 0x02 sequence 70 for the onboard computer (263 payload bytes)
+[     0.602] ground: command 0x02 sequence 71 for the onboard computer (263 payload bytes)
+[     0.602] ground: command 0x02 sequence 72 for the onboard computer (263 payload bytes)
+[     0.603] ground: command 0x02 sequence 73 for the onboard computer (263 payload bytes)
+[     0.603] ground: command 0x02 sequence 74 for the onboard computer (263 payload bytes)
+[     0.604] ground: command 0x02 sequence 75 for the onboard computer (263 payload bytes)
+[     0.604] ground: command 0x02 sequence 76 for the onboard computer (263 payload bytes)
+[     0.605] ground: command 0x02 sequence 77 for the onboard computer (263 payload bytes)
+[     0.606] ground: command 0x02 sequence 78 for the onboard computer (263 payload bytes)
+[     0.606] ground: command 0x02 sequence 79 for the onboard computer (263 payload bytes)
+[     0.606] ground: command 0x02 sequence 80 for the onboard computer (263 payload bytes)
+[     0.607] ground: command 0x02 sequence 81 for the onboard computer (263 payload bytes)
+[     0.607] ground: command 0x02 sequence 82 for the onboard computer (263 payload bytes)
+[     0.608] ground: command 0x02 sequence 83 for the onboard computer (47 payload bytes)
+[     0.608] ground: command 0x03 sequence 84 for the onboard computer (3 payload bytes)
+[     0.611] UPLOAD END image 1: checks passed (kind 0x02, version 1); stored
+[     0.627] ground: command 0x05 sequence 85 for the onboard computer (3 payload bytes)
+[     0.628] DELIVER image 1: 20776 bytes, version 1, to the controller
+[     0.858] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.858] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.858] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.858] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.858] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.858] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.858] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[     0.858] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.858] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[     0.858] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.859] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[     0.859] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.859] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[     0.859] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.859] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[     0.859] status: upload none (0 bytes stored); delivery running; controller heard, last HEALTH mode OPERATE; data link A frames sent 3, received 6; last report number 1
+[     0.859] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.859] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.859] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.859] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.859] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.859] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.859] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[     0.859] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[     0.860] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.860] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.861] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.861] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.861] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.861] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.861] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.861] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[     0.861] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.861] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[     0.861] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.861] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[     0.861] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.861] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[     0.862] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.862] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.863] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[     0.863] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.864] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[     0.864] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.864] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[     0.864] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.864] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[     0.864] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[     0.864] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+---- last lines ----
+[    67.106] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.106] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.106] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.107] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.107] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.108] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.108] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.109] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.109] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.110] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.110] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.111] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.111] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.112] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.112] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.113] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.113] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.114] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.114] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.114] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.114] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.115] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.115] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.115] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.115] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.115] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.115] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.115] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.115] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.115] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.115] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.116] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.116] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.116] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.116] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.116] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.116] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.116] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.116] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.116] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.116] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.116] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.116] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.117] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.117] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.117] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.117] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.117] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.117] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.117] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.117] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.117] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.117] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.117] ground: command 0x25 sequence 1342177282 for the onboard computer (1 payload bytes)
+[    67.117] ground: sequence 1342177282 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.118] ground: command 0x25 sequence 1342177283 for the onboard computer (1 payload bytes)
+[    67.118] ground: sequence 1342177283 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.118] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.118] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.118] ground: command 0x25 sequence 1342177285 for the onboard computer (1 payload bytes)
+[    67.118] ground: sequence 1342177285 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.118] ground: command 0x25 sequence 1342177287 for the onboard computer (1 payload bytes)
+[    67.118] ground: sequence 1342177287 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.118] ground: command 0x25 sequence 1342177286 for the onboard computer (1 payload bytes)
+[    67.118] ground: sequence 1342177286 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.118] ground: command 0x25 sequence 1342177281 for the onboard computer (1 payload bytes)
+[    67.118] ground: sequence 1342177281 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.120] ground: command 0x25 sequence 1342177284 for the onboard computer (1 payload bytes)
+[    67.120] ground: sequence 1342177284 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    67.120] ground: command 0x25 sequence 1342177280 for the onboard computer (1 payload bytes)
+[    67.120] ground: sequence 1342177280 sent again with the same bytes after it finished; answered ALREADY DONE, nothing else done
+[    68.646] fsir-updater: stopped

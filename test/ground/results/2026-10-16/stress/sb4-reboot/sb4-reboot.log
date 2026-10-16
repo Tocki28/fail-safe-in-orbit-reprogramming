@@ -1,0 +1,56 @@
+run 1: mac 14:44:11, OPERATE slot B; image 800
+  board not back within the bound
+  reboot ordered mac 14:44:16; updater active again after None s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 256 (seq 1791998306): no answer after 6 tries; bytes before offset 256 were accepted; the chunk at 256 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 800 --offset 256`; if that is refused 0x06, run `upload IMAGE --number 800` from the start (no --offset)']
+  resume: exit 0; []; ['upload  complete, 20776 bytes in 0.89 s']
+  report store at start: [     0.319] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 13832 HEALTH reports stored (478526 of 1048576 bytes), next report number 16859, 0 dropped HEALTH reports not yet reported
+** WARNING: connection is not using a post-quantum key exchange algorithm.
+** This session may be vulnerable to "store now, decrypt later" attacks.
+** The server may need to be upgraded. See https://openssh.com/pq.html
+run 2: mac 14:47:42, OPERATE slot B; image 801
+# driver stopped by the coordinator at mac 14:48:06 (PID 60274) during run 2, to fix the board-back check (ssh banner after stdout); runs continue from run 2 with image 811+
+run 2: mac 14:48:34, OPERATE slot B; image 811
+  reboot ordered mac 14:48:39; updater active again after 34.3 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 256 (seq 1791998398): no answer after 6 tries; bytes before offset 256 were accepted; the chunk at 256 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 811 --offset 256`; if that is refused 0x06, run `upload IMAGE --number 811` from the start (no --offset)']
+  resume: exit 0; ['[     9.156] UPLOAD BEGIN image 811, 20776 bytes: resuming at byte 256']; ['upload  complete, 20776 bytes in 0.80 s']
+  report store at start: [     0.324] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14044 HEALTH reports stored (484886 of 1048576 bytes), next report number 17071, 0 dropped HEALTH reports not yet reported
+run 3: mac 14:49:17, OPERATE slot B; image 812
+  reboot ordered mac 14:49:22; updater active again after 34.3 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 768 (seq 1791998488): no answer after 6 tries; bytes before offset 768 were accepted; the chunk at 768 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 812 --offset 768`; if that is refused 0x06, run `upload IMAGE --number 812` from the start (no --offset)']
+  resume: exit 0; ['[     8.608] UPLOAD BEGIN image 812, 20776 bytes: resuming at byte 768']; ['upload  complete, 20776 bytes in 1.57 s']
+  report store at start: [     0.305] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14063 HEALTH reports stored (485456 of 1048576 bytes), next report number 17090, 0 dropped HEALTH reports not yet reported
+run 4: mac 14:50:02, OPERATE slot B; image 813
+  reboot ordered mac 14:50:07; updater active again after 28.4 s
+  first upload's last line: ['FAILED: UPLOAD BEGIN (seq 1791998574): no answer after 6 tries; nothing is stored; run `upload IMAGE --number 813` again from the start (no --offset)']
+  resume: exit 0; ['[     3.242] UPLOAD BEGIN image 813, 20776 bytes: starting at byte 0']; ['upload  complete, 20776 bytes in 1.80 s']
+  report store at start: [     0.341] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14082 HEALTH reports stored (486026 of 1048576 bytes), next report number 17109, 0 dropped HEALTH reports not yet reported
+run 5: mac 14:50:41, OPERATE slot B; image 814
+  reboot ordered mac 14:50:46; updater active again after 34.3 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 2304 (seq 1791998670): no answer after 6 tries; bytes before offset 2304 were accepted; the chunk at 2304 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 814 --offset 2304`; if that is refused 0x06, run `upload IMAGE --number 814` from the start (no --offset)']
+  resume: exit 0; ['[     7.882] UPLOAD BEGIN image 814, 20776 bytes: resuming at byte 2304']; ['upload  complete, 20776 bytes in 1.08 s']
+  report store at start: [     0.295] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14097 HEALTH reports stored (486476 of 1048576 bytes), next report number 17124, 0 dropped HEALTH reports not yet reported
+run 6: mac 14:51:26, OPERATE slot B; image 815
+  reboot ordered mac 14:51:31; updater active again after 34.3 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 512 (seq 1791998759): no answer after 6 tries; bytes before offset 512 were accepted; the chunk at 512 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 815 --offset 512`; if that is refused 0x06, run `upload IMAGE --number 815` from the start (no --offset)']
+  resume: exit 0; ['[    10.168] UPLOAD BEGIN image 815, 20776 bytes: resuming at byte 512']; ['upload  complete, 20776 bytes in 0.92 s']
+  report store at start: [     0.321] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14115 HEALTH reports stored (487016 of 1048576 bytes), next report number 17142, 0 dropped HEALTH reports not yet reported
+run 7: mac 14:52:10, OPERATE slot B; image 816
+  reboot ordered mac 14:52:15; updater active again after 34.4 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 256 (seq 1791998847): no answer after 6 tries; bytes before offset 256 were accepted; the chunk at 256 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 816 --offset 256`; if that is refused 0x06, run `upload IMAGE --number 816` from the start (no --offset)']
+  resume: exit 0; ['[     7.261] UPLOAD BEGIN image 816, 20776 bytes: resuming at byte 256']; ['upload  complete, 20776 bytes in 0.99 s']
+  report store at start: [     0.302] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14135 HEALTH reports stored (487616 of 1048576 bytes), next report number 17162, 0 dropped HEALTH reports not yet reported
+run 8: mac 14:52:54, OPERATE slot B; image 817
+  reboot ordered mac 14:52:59; updater active again after 34.4 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 0 (seq 1791998934): no answer after 6 tries; bytes before offset 0 were accepted; the chunk at 0 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 817 --offset 0`; if that is refused 0x06, run `upload IMAGE --number 817` from the start (no --offset)']
+  resume: exit 0; ['[     5.486] UPLOAD BEGIN image 817, 20776 bytes: starting at byte 0']; ['upload  complete, 20776 bytes in 1.20 s']
+  report store at start: [     0.362] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14152 HEALTH reports stored (488126 of 1048576 bytes), next report number 17179, 0 dropped HEALTH reports not yet reported
+run 9: mac 14:53:39, OPERATE slot B; image 818
+  reboot ordered mac 14:53:44; updater active again after 40.3 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 512 (seq 1791999023): no answer after 6 tries; bytes before offset 512 were accepted; the chunk at 512 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 818 --offset 512`; if that is refused 0x06, run `upload IMAGE --number 818` from the start (no --offset)']
+  resume: exit 0; ['[    11.108] UPLOAD BEGIN image 818, 20776 bytes: resuming at byte 512']; ['upload  complete, 20776 bytes in 0.82 s']
+  report store at start: [     0.350] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14168 HEALTH reports stored (488606 of 1048576 bytes), next report number 17195, 0 dropped HEALTH reports not yet reported
+run 10: mac 14:54:29, OPERATE slot B; image 819
+  reboot ordered mac 14:54:34; updater active again after 34.3 s
+  first upload's last line: ['FAILED: UPLOAD CHUNK offset 1280 (seq 1791999115): no answer after 6 tries; bytes before offset 1280 were accepted; the chunk at 1280 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 819 --offset 1280`; if that is refused 0x06, run `upload IMAGE --number 819` from the start (no --offset)']
+  resume: exit 0; ['[     8.860] UPLOAD BEGIN image 819, 20776 bytes: resuming at byte 1280']; ['upload  complete, 20776 bytes in 0.86 s']
+  report store at start: [     0.333] reports: store /var/lib/fsir/images/reports: 3026 EVENT and 14189 HEALTH reports stored (489236 of 1048576 bytes), next report number 17216, 0 dropped HEALTH reports not yet reported

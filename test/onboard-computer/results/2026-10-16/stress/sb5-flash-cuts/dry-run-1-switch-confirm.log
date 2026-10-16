@@ -1,0 +1,24 @@
+# SB5 dry run 1: mac 2026-10-16 15:00:17 EEST; sb5.tcl 007169e264ea1d0a, sb5_board.sh fe9dcd41fd959452; images a504b0d; no cut
+# state: report  HEALTH  #17371 onboard t=1792152017 mode OPERATE, firmware kind 2 version 1, slot B, failed starts 0, trial left
+upload  complete, 20776 bytes in 4.81 s
+deliver complete in 3.16 s
+# armed after ~2 s; mac 15:00:28: switch
+switch  sent, answered DONE
+# mac 15:00:37: confirm
+confirm  sent, answered DONE
+CONFIRMED: EVENT 0x0007 seen; slot A version 1 in OPERATE
+# board side:
+openocd pid 2429 started 12:00:24.591 UTC, mode dry, stop at hit 0
+SB5 armed mode dry stop_at 0 ms 1150662293
+SB5 hit 1 ms 1150663598 pc 0x08012320 r0 0x0801e000 r5 0x00000000
+SB5 hit 2 ms 1150663653 pc 0x080123ec r0 0x00000001 r5 0x0801e000
+SB5 hit 3 ms 1150663686 pc 0x080123ec r0 0x00000001 r5 0x0801e008
+SB5 hit 4 ms 1150663771 pc 0x0800163c r0 0x0801f000 r5 0x20007ef0
+SB5 hit 5 ms 1150663825 pc 0x0800177a r0 0x0801f000 r5 0x17fe8f04
+SB5 hit 6 ms 1150663859 pc 0x0800177a r0 0x0801f008 r5 0x17fe8f04
+SB5 hit 7 ms 1150671874 pc 0x08008320 r0 0x0801e000 r5 0x00000000
+SB5 hit 8 ms 1150671928 pc 0x080083ec r0 0x00000001 r5 0x0801e000
+SB5 hit 9 ms 1150671961 pc 0x080083ec r0 0x00000001 r5 0x0801e008
+Error: timed out while waiting for target halted
+SB5 no further hit within 25000 ms after hit 9
+# state after: report  HEALTH  #17418 onboard t=1792152063 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left

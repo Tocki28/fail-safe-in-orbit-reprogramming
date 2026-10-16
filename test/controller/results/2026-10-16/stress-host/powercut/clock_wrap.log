@@ -1,0 +1,27 @@
+2026-10-16 11:04:19 EEST commit a504b0d command: make -C test/controller/stress/powercut run (clock_wrap)
+load: load averages: 21.35 15.97 10.29
+  counter wraps     0 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E83)
+  counter wraps     1 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E82)
+  counter wraps     2 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E81)
+  counter wraps     3 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E80)
+  counter wraps     4 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E7F)
+  counter wraps     5 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E7E)
+  counter wraps    10 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E79)
+  counter wraps   100 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003E1F)
+  counter wraps   150 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003DED)
+  counter wraps   171 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003DD8)
+  counter wraps   172 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003DD7)
+  counter wraps   500 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00003C8F)
+  counter wraps  8000 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00001F43)
+  counter wraps 15999 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00000004)
+  counter wraps 16000 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00000003)
+  counter wraps 16001 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00000002)
+  counter wraps 16002 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0x00000001)
+  counter wraps 20000 reads after the jump: PLL locks -> 170 MHz; PLL never locks -> gave up, HSI16 (16005 counter reads, counter ends at 0xFFFFF063)
+PASS  CoreClock::start(): the bounded waits end right when the cycle counter wraps inside them (PLL locks: 170 MHz)
+PASS  CoreClock::start(): a wait that must time out ends within its bound when the counter wraps inside it (PLL never locks: HSI16)
+  most counter reads in one start() with a wait that times out: 16005 (bound used: 49000)
+  tickMs after 2^32 - 1 ticks: 0xFFFFFFFF, after one more: 0, after one more: 1; elapsed since the 0xFFFFFFFF reading (unsigned subtraction): 2 ms
+PASS  CoreClock: the millisecond count reads 0xFFFFFFFF, then wraps to 0, then 1, and elapsed time across the wrap is right
+PASS  3 checks, 0 failed
+wall 11 s

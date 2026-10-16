@@ -1,0 +1,27 @@
+2026-10-16 12:19:24 EEST, commit a504b0d, build/fuzz image --seed 20261016 --n 1000000 --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/fuzz --work build/work/image --ctrl-images <checkout of a504b0d>/src/controller/build/images --test-images <checkout of a504b0d>/test/controller/build/images
+uptime at start: 12:19  up 16 days, 21:36, 2 users, load averages: 5.17 5.75 10.71
+mutation-based fuzzer without coverage feedback (no libFuzzer, AFL or honggfuzz here); seed 20261016; 1000000 inputs; UBSan on, no recovery
+seeds: 13 images, 8 valid with the default limits
+exhaustive <checkout of a504b0d>/src/controller/build/images/bootloader.img: 21652 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/src/controller/build/images/firmware-A.img: 20776 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/src/controller/build/images/firmware-B.img: 20776 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/test/controller/build/images/slotA-v1.img: 3032 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/test/controller/build/images/slotB-v2-trial-forever.img: 2372 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/test/controller/build/images/last-resort-v1.img: 1736 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/test/controller/build/images/slotB-v2-hang.img: 1792 bytes, bytes where a bit flip stays accepted: 0
+exhaustive <checkout of a504b0d>/test/controller/build/images/slotB-v2.img: 3032 bytes, bytes where a bit flip stays accepted: 0
+exhaustive pass: 676528 inputs; header (0-63) and body are covered by both signatures, so no byte range lies outside both; the signatures cover each other's bytes only through their own verification
+progress: 100000 inputs, 0 findings, 141.4 s under test
+progress: 200000 inputs, 0 findings, 150.4 s under test
+progress: 300000 inputs, 0 findings, 159.3 s under test
+progress: 400000 inputs, 0 findings, 168.5 s under test
+progress: 500000 inputs, 0 findings, 178.1 s under test
+progress: 600000 inputs, 0 findings, 188.3 s under test
+progress: 700000 inputs, 0 findings, 199.6 s under test
+progress: 800000 inputs, 0 findings, 210.6 s under test
+progress: 900000 inputs, 0 findings, 221.1 s under test
+progress: 1000000 inputs, 0 findings, 232.6 s under test
+mutated inputs accepted: 4361 (each equal to a valid seed or a finding above)
+SUMMARY target image: 1676512 inputs, 0 findings, 0 notes, 232.6 s in the code under test
+slowest inputs (ms, index): 75.268@156719 117.175@156401 136.442@545330 95.105@403728 74.424@413205 77.566@218086 164.681@305992 73.547@438068 73.752@159293 81.233@167024
+exit status 0; wall time 310 s; uptime at end: 12:24  up 16 days, 21:41, 2 users, load averages: 8.41 8.38 10.53

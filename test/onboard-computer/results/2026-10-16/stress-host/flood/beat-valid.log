@@ -1,0 +1,154 @@
+2026-10-16 11:22:55 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario beat --flood valid --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag beat-valid
+load averages at start (11.87109375, 16.21533203125, 15.32373046875), at end (59.67724609375, 34.39208984375, 22.6083984375)
+{
+ "tag": "beat-valid",
+ "scenario": "beat",
+ "flood": {
+  "kind": "valid",
+  "source": "same",
+  "seed": 1,
+  "cmd": [
+   "/usr/local/opt/python@3.14/bin/python3.14",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/flood_sender.py",
+   "--port",
+   "65319",
+   "--kind",
+   "valid",
+   "--rate",
+   "10000",
+   "--seconds",
+   "75.0",
+   "--seed",
+   "1",
+   "--stats",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/beat-valid/flood-stats.json",
+   "--fd",
+   "6",
+   "--times",
+   "<checkout of a504b0d>/test/onboard-computer/stress/flood/build/work/beat-valid/flood-times.bin"
+  ],
+  "rate_target": 10000,
+  "seconds_target": 75.0,
+  "elapsed_s": 64.58116738405079,
+  "attempted": 645749,
+  "sent": 645749,
+  "send_errors": 0,
+  "rate_reached": 9999.029533793728,
+  "foreign_answers": 0,
+  "valid_frames": 645749,
+  "per_second_stats": {
+   "n": 64,
+   "min": 9910,
+   "p50": 10000,
+   "p95": 10051,
+   "p99": 10090,
+   "max": 10090,
+   "mean": 9999.484375,
+   "std": 33.56104148949158
+  },
+  "answers_to_flood": {
+   "RECEIVED": 261080,
+   "DONE": 261080
+  },
+  "valid_done_share": 0.40430569772465774,
+  "valid_done_latency_ms": {
+   "n": 261080,
+   "min": 0.5103661678731441,
+   "p50": 1008.0024669878185,
+   "p95": 1155.3075718693435,
+   "p99": 1267.6389929838479,
+   "max": 1332.6861809473485,
+   "mean": 1015.1391340903432,
+   "std": 123.50803149605618
+  },
+  "udp_delta_system_wide": {
+   "received": 3499634,
+   "dropped_full_buffer": 1162955
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:22:55 EEST",
+ "loadavg_start": [
+  11.87109375,
+  16.21533203125,
+  15.32373046875
+ ],
+ "image_bytes": 20776,
+ "beat": {
+  "why_beat_s": "1 s is the smallest non-zero --beat-s [options.cpp:parseOptions, parseNumber min 0 and whole seconds]: 60 intervals in 65 s, and the 50 ms loop pass (kPollMs, config.hpp:222) is 5 percent of it, measurable",
+  "beat_s": 1,
+  "beats": 63,
+  "interval_ms": {
+   "n": 62,
+   "min": 999.5404079090804,
+   "p50": 999.9812650494277,
+   "p95": 1000.3229591529816,
+   "p99": 1003.0208588577807,
+   "max": 1003.0208588577807,
+   "mean": 1000.0176343713857,
+   "std": 0.42926928542914206
+  },
+  "error_ms_mean": 0.01763437138572499,
+  "error_ms_max": 3.020858857780695,
+  "jitter_std_ms": 0.42926928542914206,
+  "window_s": 63.00160399498418
+ },
+ "updater": {
+  "samples": 68,
+  "rss_kb": {
+   "first": 4196,
+   "last": 4208,
+   "max": 4208
+  },
+  "cpu_pct": {
+   "n": 67,
+   "min": 10.024794734182922,
+   "p50": 86.96578418051388,
+   "p95": 93.12897544110376,
+   "p99": 94.3078975607543,
+   "max": 94.3078975607543,
+   "mean": 85.24702308531872,
+   "std": 11.17677005805067
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 261507,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 70651665,
+   "lines": 523023
+  }
+ },
+ "probe": {
+  "sent": 651,
+  "answered": 427,
+  "share": 0.6559139784946236,
+  "latency_ms": {
+   "n": 427,
+   "min": 0.4297969862818718,
+   "p50": 1019.1261898726225,
+   "p95": 1162.6029850449413,
+   "p99": 1290.3959399554878,
+   "max": 1325.4873640835285,
+   "mean": 1012.2227266526822,
+   "std": 155.27863043684883
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  59.67724609375,
+  34.39208984375,
+  22.6083984375
+ ]
+}

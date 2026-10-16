@@ -1,0 +1,31 @@
+# SB5 cuts; mac start 2026-10-16 15:02:08 EEST; plan [(3, 'cut')]
+hit 3 cut: PASS; stopped at hit 3: True; after OPERATE slot A failed starts 0
+# mac end 2026-10-16 15:02:55 EEST
+# SB5 cuts; mac start 2026-10-16 15:03:05 EEST; plan [(1, 'cut'), (2, 'cut'), (4, 'cut'), (5, 'cut'), (6, 'cut'), (7, 'cut'), (8, 'cut'), (9, 'cut'), (1, 'reset'), (2, 'reset'), (3, 'reset'), (4, 'reset'), (5, 'reset'), (6, 'reset'), (7, 'reset'), (8, 'reset'), (9, 'reset')]
+hit 1 cut: PASS; stopped at hit 1: True; after OPERATE slot A failed starts 0
+hit 2 cut: PASS; stopped at hit 2: True; after OPERATE slot A failed starts 0
+hit 4 cut: PASS; stopped at hit 4: True; after TRIAL slot B failed starts 2
+hit 5 cut: PASS; stopped at hit 5: True; after TRIAL slot B failed starts 2
+hit 6 cut: PASS; stopped at hit 6: True; after TRIAL slot B failed starts 2
+hit 7 cut: PASS; stopped at hit 7: True; after TRIAL slot B failed starts 3
+hit 8 cut: PASS; stopped at hit 8: True; after TRIAL slot B failed starts 3
+hit 9 cut: PASS; stopped at hit 9: True; after TRIAL slot B failed starts 3
+hit 1 reset: PASS; stopped at hit 1: True; after OPERATE slot A failed starts 0
+hit 2 reset: PASS; stopped at hit 2: True; after TRIAL slot B failed starts 1
+hit 3 reset: PASS; stopped at hit 3: True; after TRIAL slot B failed starts 1
+hit 4 reset: PASS; stopped at hit 4: True; after TRIAL slot B failed starts 1
+hit 5 reset: PASS; stopped at hit 5: True; after TRIAL slot B failed starts 2
+hit 6 reset: PASS; stopped at hit 6: True; after TRIAL slot B failed starts 2
+hit 7 reset: PASS; stopped at hit 7: True; after TRIAL slot B failed starts 2
+hit 8 reset: PASS; stopped at hit 8: True; after OPERATE slot B failed starts 0
+hit 9 reset: PASS; stopped at hit 9: True; after OPERATE slot B failed starts 0
+# mac end 2026-10-16 15:16:05 EEST
+# CORRECTION (coordinator, 16 Oct 2026 15:16 EEST), appended; the lines above are left as the driver wrote them.
+# The "reset" verdicts above are NOT valid. The driver judged PASS from "a report arrived" and "OpenOCD
+# printed RESET at hit k"; it did not check that the reset stopped the write. Evidence that it did not:
+# hit 2 reset (cuts.log, === hit 2 reset): the SWITCH record at 0x0801F000 is complete (sequence 2, valid
+# check value) and the updater's journal shows SWITCH passed on once at 12:10:25.589 UTC and EVENT 0x0006
+# (trial started) at 12:10:25.947 UTC; hits 8 and 9 reset ended confirmed (OPERATE slot B). So OpenOCD's
+# "reset run" at a breakpoint (no reset_config) let the write finish. Rows B4.2 and B7.2 stay NOT RUN.
+# The "cut" verdicts stand: the hub power was cut 0.2 s after the halt line, with the core held halted
+# (sb5.tcl hold 8000 ms), and the controller reported from slot A or B afterwards in every cut run.

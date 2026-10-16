@@ -1,0 +1,22 @@
+Mac time (EEST) 2026-10-16 11:44:10 EEST; commit a504b0d; command: make -C test/controller/stress/fuzz run N=1000000 SEED=20261016
+target fz_command; command: build/fz_command --seed 20261016 --n 1000000 --log <checkout of a504b0d>/test/controller/results/2026-10-16/stress-host/fuzz --dir build/images/src --dir build/images/test
+seed 20261016; mutation-based fuzzer without coverage feedback (no libFuzzer runtime on this Mac); UBSan on, -fno-sanitize-recover=undefined
+load averages at the start (1, 5, 15 min): 19.60 16.60 17.10
+image seeds: 13
+observation: ARM+SWITCH with sequence number 4242 sent twice in a row (no restart in between): last answer of the first SWITCH kind 0x02 code 0x00, of the second kind 0x03 code 0x05 (kind 0x02 DONE, 0x03 REFUSED, 0x04 ALREADY DONE; the controller as built has no repeated-sequence check, main.cpp comment on step 2b)
+cases: 76611; command payloads routed: 1000386
+dangerous commands answered RECEIVED: 4996; SWITCH/START FAILED DONE: 469; UPLOAD END DONE: 240; test image END passed: 689
+inputs run: 1000386 in 61.6 s (16243 inputs/s); load averages at the end 16.42 16.28 16.95
+slowest 10 inputs (index: time):
+  15049: 52.163 ms
+  9414: 38.154 ms
+  9412: 22.496 ms
+  9479: 15.610 ms
+  75814: 14.192 ms
+  38208: 11.218 ms
+  75956: 10.978 ms
+  30053: 10.955 ms
+  61214: 8.999 ms
+  75916: 8.806 ms
+failures: 0
+result: no failure

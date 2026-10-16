@@ -1,0 +1,8 @@
+CAUGHT arm-check-off (updater): FINDING 1: a dangerous onboard command ended DONE without an ARM that named it (seed 5, index 3, 26 bytes): answer seq 2 history: [dest 1 id 6 len 7]
+CAUGHT any-length-send-reports (updater): FINDING 1: a command that must be refused was answered RECEIVED, DONE or ALREADY DONE (seed 5, index 0, 26 bytes): answer kind 1 to seq 124, sent as: [dest 1 id 11 len 6 refuse]
+CAUGHT expiry-off (updater): FINDING 1: a command that must be refused was answered RECEIVED, DONE or ALREADY DONE (seed 5, index 0, 26 bytes): answer kind 1 to seq 17, sent as: [dest 1 id 11 len 5 refuse]
+CAUGHT decode-crc-off (frame): FINDING 1: decode, spec decoder and C reference disagree on accept/refuse (seed 5, index 0, 1044 bytes): updater accepts
+CAUGHT parser-gap-off (parser): FINDING 1: Parser and C reference disagree on a frame completing (seed 5, index 0, 628 bytes): updater completes a frame the reference does not
+CAUGHT signature-b-off (image): FINDING 1: image accepted with signature bytes that differ from the valid ones (seed 5, index 0, 3032 bytes): same signed bytes as a valid seed, other signature bytes (malleable)
+CAUGHT record-crc-off (records): FINDING 1: DurableRecord::read status differs from the layout rule (seed 5, index 6, 10 bytes): got 0 want 2
+CAUGHT store-crc-off (reports): FINDING 1: load() left another file than the good records (seed 5, index 3, 1041 bytes): file size after 210, reference good end 180

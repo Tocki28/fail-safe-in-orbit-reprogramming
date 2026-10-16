@@ -1,0 +1,17 @@
+2026-10-16 12:19:59 EEST, commit a504b0d, build/fuzz imagefile --seed 20261016 --n 1000000 --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/fuzz --work build/work/imagefile --ctrl-images <checkout of a504b0d>/src/controller/build/images --test-images <checkout of a504b0d>/test/controller/build/images
+uptime at start: 12:19  up 16 days, 21:37, 2 users, load averages: 7.23 6.17 10.66
+mutation-based fuzzer without coverage feedback (no libFuzzer, AFL or honggfuzz here); seed 20261016; 1000000 inputs; UBSan on, no recovery
+progress: 100000 inputs, 0 findings, 32.0 s under test
+progress: 200000 inputs, 0 findings, 49.3 s under test
+progress: 300000 inputs, 0 findings, 66.6 s under test
+progress: 400000 inputs, 0 findings, 86.7 s under test
+progress: 500000 inputs, 0 findings, 106.3 s under test
+progress: 600000 inputs, 0 findings, 128.5 s under test
+progress: 700000 inputs, 0 findings, 164.5 s under test
+progress: 800000 inputs, 0 findings, 183.0 s under test
+progress: 900000 inputs, 0 findings, 200.1 s under test
+progress: 1000000 inputs, 0 findings, 216.9 s under test
+imagefile: 1211 files passed the file check
+SUMMARY target imagefile: 1000000 inputs, 0 findings, 0 notes, 216.9 s in the code under test
+slowest inputs (ms, index): 163.927@33974 78.624@627231 78.497@662956 95.990@666092 73.527@70052 202.917@627235 100.630@668514 136.579@309593 123.223@584306 84.521@61865
+exit status 0; wall time 601 s; uptime at end: 12:30  up 16 days, 21:47, 2 users, load averages: 7.00 9.29 10.44

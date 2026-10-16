@@ -1,0 +1,18 @@
+# Bench stress session, 16 Oct 2026. Mac 2026-10-16 11:51:02 EEST; board 2026-10-16 08:50:59 UTC; repo HEAD a504b0d
+# Declaration (written before the work, owner's go "yes yes run those tests please, the bench tests", received before 11:49 EEST):
+#   I am stressing the update chain on the bench (MP257 updater, Nucleo controller, SWD restore path) with
+#   1,000 updates, radio loss 0.5-0.7, data link A flapping, onboard reboots, power cuts at the flash
+#   writes, restore overlap and a full data directory; the result goes to the owner as the stress section
+#   of test/README.md and new rows in test/fault-matrix.md, pushed to GitHub, by Sat 17 Oct 2026; and it
+#   closes rows B2.5, B2.6, B2.10, B2.11, B3.1, B4.1, B4.2, B7.1, B7.2 and new rows SB1-SB8.
+# Owner, before 11:49 EEST: A8.4 (REQ-026) accepted on the 7.58 h run ("that req-026 has been tested already
+#   for 7.5 hours"); no 12 h run.
+# Build under test:
+#   controller images built at a504b0d (src/controller identical to d3bb74a; only the build id string and
+#   the signatures differ), copied to the board as /root/bench-images-a504b0d/ (sha256 bootloader
+#   f3f13530d876a95a, firmware-A 6b86e129c5481106, firmware-B 5364b83ae5d96758, last-resort a8da8f053b52c9ab)
+#   updater on the board: sha256 5f0c5f493b6d24db (bc34e8d; src/onboard-computer unchanged to a504b0d)
+#   restore.sh on the board: sha256 b8b1e5a87142129f (ae40af0); console src/ground at a504b0d (= 615a83f)
+# Pre-flight (read-only, board 08:49 UTC): fsir-updater active, PID 859, beat 2 s; no cat/openocd/screen
+#   process; data dir /var/lib/fsir/images 12 files, reports 150653 bytes; root fs 3.8G, 18 % used;
+#   loop devices, ext4, losetup, mkfs.ext4, uhubctl present.

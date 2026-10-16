@@ -1,0 +1,8 @@
+# SB2 floods during a delivery; mac start 2026-10-16 14:21:58 EEST; streams start 0.5 s after DELIVER; flood frames Expiry now + 120 s
+run 1 image 700 to slot A: deliver exit 0; read-back all IDENTICAL; switch 0 confirm 0; end OPERATE slot A
+run 2 image 701 to slot B: deliver exit 0; read-back all IDENTICAL; switch 0 confirm 0; end OPERATE slot B
+run 3 image 702 to slot A: deliver exit 0; read-back all IDENTICAL; switch 0 confirm 0; end OPERATE slot A
+# mac end 2026-10-16 14:24:05 EEST
+# SB2 floods during a delivery; mac start 2026-10-16 14:24:41 EEST; streams start 0.5 s after DELIVER; flood frames Expiry now + 120 s
+run 4 image 703 to slot B: deliver exit 0; read-back all IDENTICAL; switch 0 confirm 0; end OPERATE slot B
+# mac end 2026-10-16 14:25:27 EEST

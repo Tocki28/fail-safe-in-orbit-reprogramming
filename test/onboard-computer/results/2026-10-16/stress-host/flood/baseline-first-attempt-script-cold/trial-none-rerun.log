@@ -1,0 +1,100 @@
+2026-10-16 11:11:31 EEST | commit a504b0d | <checkout of a504b0d>/test/onboard-computer/stress/flood/rig.py --scenario trial --flood none --source same --updater <checkout of a504b0d>/test/onboard-computer/stress/flood/build/fsir-updater --image <checkout of a504b0d>/src/controller/build/images/firmware-B.img --work <checkout of a504b0d>/test/onboard-computer/stress/flood/build/work --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/flood --commit a504b0d --tag trial-none-rerun
+load averages at start (18.5517578125, 15.90283203125, 12.201171875), at end (25.28564453125, 18.12353515625, 13.630859375)
+{
+ "tag": "trial-none-rerun",
+ "scenario": "trial",
+ "flood": {
+  "kind": "none",
+  "source": "same",
+  "seed": 1,
+  "cmd": null,
+  "answers_to_flood": {},
+  "valid_done_latency_ms": {
+   "n": 0
+  },
+  "udp_delta_system_wide": {
+   "received": 448286,
+   "dropped_full_buffer": 0
+  }
+ },
+ "source": "same",
+ "started_text": "2026-10-16 11:11:31 EEST",
+ "loadavg_start": [
+  18.5517578125,
+  15.90283203125,
+  12.201171875
+ ],
+ "image_bytes": 20776,
+ "trial": {
+  "expected_s_after_first_trial_health": 150.0,
+  "restore_calls": 1,
+  "script_error_s": 1.2819881439208984,
+  "log_line_error_s": 0.004261016845703125,
+  "spawn_delay_s": 1.2777271270751953,
+  "events_0106": [
+   [
+    1,
+    1077864.849466798
+   ]
+  ],
+  "window_s": 158.34727427409962
+ },
+ "updater": {
+  "samples": 159,
+  "rss_kb": {
+   "first": 4172,
+   "last": 4212,
+   "max": 4212
+  },
+  "cpu_pct": {
+   "n": 158,
+   "min": 0.0,
+   "p50": 0.0,
+   "p95": 1.0040237003836272,
+   "p99": 1.0158246340431207,
+   "max": 1.0428513565888402,
+   "mean": 0.35407818510864514,
+   "std": 0.4779236481862829
+  },
+  "died_at_sample": null,
+  "alive_at_stop": true,
+  "exit_code": 0,
+  "log_counts": {
+   "ground: command": 1584,
+   "not a good frame": 0,
+   "more datagrams dropped": 0,
+   "runtime error": 0,
+   "ground link: answers and reports now go to": 1,
+   "no last answer": 0,
+   "no answer to": 0
+  },
+  "log": {
+   "bytes": 415784,
+   "lines": 3186
+  }
+ },
+ "probe": {
+  "sent": 1568,
+  "answered": 1568,
+  "share": 1.0,
+  "latency_ms": {
+   "n": 1568,
+   "min": 0.29908004216849804,
+   "p50": 0.44376892037689686,
+   "p95": 0.9152910206466913,
+   "p99": 10.509810177609324,
+   "max": 101.37205407954752,
+   "mean": 0.9145350505809338,
+   "std": 4.944157272125146
+  }
+ },
+ "fake_controller": {
+  "violations": [],
+  "errors": []
+ },
+ "loadavg_end": [
+  25.28564453125,
+  18.12353515625,
+  13.630859375
+ ]
+}

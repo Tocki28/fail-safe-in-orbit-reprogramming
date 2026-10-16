@@ -1,0 +1,17 @@
+2026-10-16 12:19:18 EEST, commit a504b0d, build/fuzz parser --seed 20261016 --n 1000000 --out <checkout of a504b0d>/test/onboard-computer/results/2026-10-16/stress-host/fuzz --work build/work/parser --ctrl-images <checkout of a504b0d>/src/controller/build/images --test-images <checkout of a504b0d>/test/controller/build/images
+uptime at start: 12:19  up 16 days, 21:36, 2 users, load averages: 4.75 5.69 10.75
+mutation-based fuzzer without coverage feedback (no libFuzzer, AFL or honggfuzz here); seed 20261016; 1000000 inputs; UBSan on, no recovery
+progress: 100000 inputs, 0 findings, 1.1 s under test
+progress: 200000 inputs, 0 findings, 2.1 s under test
+progress: 300000 inputs, 0 findings, 3.3 s under test
+progress: 400000 inputs, 0 findings, 4.7 s under test
+progress: 500000 inputs, 0 findings, 6.1 s under test
+progress: 600000 inputs, 0 findings, 7.5 s under test
+progress: 700000 inputs, 0 findings, 9.0 s under test
+progress: 800000 inputs, 0 findings, 10.7 s under test
+progress: 900000 inputs, 0 findings, 12.7 s under test
+progress: 1000000 inputs, 0 findings, 15.4 s under test
+parser: 546232261 bytes fed to each parser, 300615 frames completed
+SUMMARY target parser: 1000000 inputs, 0 findings, 0 notes, 15.4 s in the code under test
+slowest inputs (ms, index): 5.295@948175 77.717@948909 4.531@941371 4.266@910552 10.200@910310 8.659@919700 5.752@910517 4.136@910123 6.416@910376 33.110@910872
+exit status 0; wall time 41 s; uptime at end: 12:19  up 16 days, 21:37, 2 users, load averages: 7.23 6.17 10.66

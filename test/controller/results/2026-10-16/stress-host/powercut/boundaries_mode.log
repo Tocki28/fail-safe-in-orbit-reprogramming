@@ -1,0 +1,54 @@
+2026-10-16 11:04:19 EEST commit a504b0d command: make -C test/controller/stress/powercut run (boundaries_mode)
+load: load averages: 21.35 15.97 10.29
+ARM expiry (kArmExpiryMs = 30000 ms); columns: distance in ms : answer (0x00 allowed, 0x02 expired)
+  ARM at       1000 ms (0x000003E8): +0:0x00 +1:0x00 +20000:0x00 +29999:0x00 +30000:0x02 +30001:0x02 +40000:0x02
+PASS  ArmState: valid up to 29 999 ms after the ARM, expired (0x02) from 30 000 ms, with and without expireWhenDue, for this ARM time
+  ARM at 4294957295 ms (0xFFFFD8EF): +0:0x00 +1:0x00 +20000:0x00 +29999:0x00 +30000:0x02 +30001:0x02 +40000:0x02
+PASS  ArmState: valid up to 29 999 ms after the ARM, expired (0x02) from 30 000 ms, with and without expireWhenDue, for this ARM time
+  ARM at 4294967295 ms (0xFFFFFFFF): +0:0x00 +1:0x00 +20000:0x00 +29999:0x00 +30000:0x02 +30001:0x02 +40000:0x02
+PASS  ArmState: valid up to 29 999 ms after the ARM, expired (0x02) from 30 000 ms, with and without expireWhenDue, for this ARM time
+  ARM at          0 ms (0x00000000): +0:0x00 +1:0x00 +20000:0x00 +29999:0x00 +30000:0x02 +30001:0x02 +40000:0x02
+PASS  ArmState: valid up to 29 999 ms after the ARM, expired (0x02) from 30 000 ms, with and without expireWhenDue, for this ARM time
+  ARM at 4294937295 ms (0xFFFF8ACF): +0:0x00 +1:0x00 +20000:0x00 +29999:0x00 +30000:0x02 +30001:0x02 +40000:0x02
+PASS  ArmState: valid up to 29 999 ms after the ARM, expired (0x02) from 30 000 ms, with and without expireWhenDue, for this ARM time
+  ARM at 4294937296 ms (0xFFFF8AD0): +0:0x00 +1:0x00 +20000:0x00 +29999:0x00 +30000:0x02 +30001:0x02 +40000:0x02
+PASS  ArmState: valid up to 29 999 ms after the ARM, expired (0x02) from 30 000 ms, with and without expireWhenDue, for this ARM time
+  ARM at 0xFFFFD8EF; +20 000 ms is now = 9999 (wrapped), +40 000 ms is now = 29999
+PASS  ArmState: ARM at 0xFFFFFFFF - 10 000 ms, command 20 000 ms later (across the wrap): allowed
+PASS  ArmState: the same ARM, command 40 000 ms later: expired 0x02
+  ARM at 4000 ms, command at the same count one full wrap later (+5 ms mod 2^32): marked by expireWhenDue -> 0x02, never marked -> 0x00
+PASS  ArmState: an ARM marked expired stays expired after a full wrap of the count
+OBSERVATION  an ARM that expireWhenDue() never saw is allowed again one full wrap later; the main loop calls it every pass (main.cpp), so this needs the loop to stop for 30 s without a restart
+PASS  ArmState: an ARM naming sequence 0xFFFFFFFF, 0, 1 or 0xFFFFFFFE allows that number and no other; another command identifier is 0x01; used up is 0x01
+PASS  ArmState: a disarmed state (fields 0, 0) is not armed for command 0 sequence 0; an ARM naming 0, 0 is armed; after use it is not
+PASS  acceptDangerous (RETURN TO PREVIOUS in TRIAL): ARM at 50 ms and at 0xFFFFFFFF - 10 000 ms, sequence 0, 0xFFFFFFFF and 4321: accepted at +29 999 ms, 0x02 at +30 000 and +30 001 ms
+Trial length (kTrialMs = 120000 ms); CONFIRM answers (0x00 accepted, 0x05 refused)
+  trial starts at          0 ms (0x00000000), ends at 0x0001D4C0: CONFIRM at +119999 -> 0x00, +120000 -> 0x05, +120001 -> 0x05
+PASS  CONFIRM: accepted at 119 999 ms after the trial start, refused 0x05 at 120 000 and 120 001 ms (ARM kept, boot state untouched), for this start time
+  trial starts at       1000 ms (0x000003E8), ends at 0x0001D8A8: CONFIRM at +119999 -> 0x00, +120000 -> 0x05, +120001 -> 0x05
+PASS  CONFIRM: accepted at 119 999 ms after the trial start, refused 0x05 at 120 000 and 120 001 ms (ARM kept, boot state untouched), for this start time
+  trial starts at 4294847296 ms (0xFFFE2B40), ends at 0x00000000: CONFIRM at +119999 -> 0x00, +120000 -> 0x05, +120001 -> 0x05
+PASS  CONFIRM: accepted at 119 999 ms after the trial start, refused 0x05 at 120 000 and 120 001 ms (ARM kept, boot state untouched), for this start time
+  trial starts at 4294907295 ms (0xFFFF159F), ends at 0x0000EA5F: CONFIRM at +119999 -> 0x00, +120000 -> 0x05, +120001 -> 0x05
+PASS  CONFIRM: accepted at 119 999 ms after the trial start, refused 0x05 at 120 000 and 120 001 ms (ARM kept, boot state untouched), for this start time
+  trial starts at 4294967295 ms (0xFFFFFFFF), ends at 0x0001D4BF: CONFIRM at +119999 -> 0x00, +120000 -> 0x05, +120001 -> 0x05
+PASS  CONFIRM: accepted at 119 999 ms after the trial start, refused 0x05 at 120 000 and 120 001 ms (ARM kept, boot state untouched), for this start time
+  trial starts at 4294847295 ms (0xFFFE2B3F), ends at 0xFFFFFFFF: CONFIRM at +119999 -> 0x00, +120000 -> 0x05, +120001 -> 0x05
+PASS  CONFIRM: accepted at 119 999 ms after the trial start, refused 0x05 at 120 000 and 120 001 ms (ARM kept, boot state untouched), for this start time
+Trial end seen by poll()
+  trial starts at 0x00000000: poll at +119 999 ms quiet 1, at +120 000 ms gave up 1; trialSecondsLeft 1 then 0
+PASS  trial end: poll() does nothing at 119 999 ms and gives the trial up at 120 000 ms (boot state confirmed A, FALLBACK, one restart); seconds left 1 then 0
+  trial starts at 0x000003E8: poll at +119 999 ms quiet 1, at +120 000 ms gave up 1; trialSecondsLeft 1 then 0
+PASS  trial end: poll() does nothing at 119 999 ms and gives the trial up at 120 000 ms (boot state confirmed A, FALLBACK, one restart); seconds left 1 then 0
+  trial starts at 0xFFFE2B40: poll at +119 999 ms quiet 1, at +120 000 ms gave up 1; trialSecondsLeft 1 then 0
+PASS  trial end: poll() does nothing at 119 999 ms and gives the trial up at 120 000 ms (boot state confirmed A, FALLBACK, one restart); seconds left 1 then 0
+  trial starts at 0xFFFF159F: poll at +119 999 ms quiet 1, at +120 000 ms gave up 1; trialSecondsLeft 1 then 0
+PASS  trial end: poll() does nothing at 119 999 ms and gives the trial up at 120 000 ms (boot state confirmed A, FALLBACK, one restart); seconds left 1 then 0
+  trial starts at 0xFFFFFFFF: poll at +119 999 ms quiet 1, at +120 000 ms gave up 1; trialSecondsLeft 1 then 0
+PASS  trial end: poll() does nothing at 119 999 ms and gives the trial up at 120 000 ms (boot state confirmed A, FALLBACK, one restart); seconds left 1 then 0
+  trial starts at 0xFFFE2B3F: poll at +119 999 ms quiet 1, at +120 000 ms gave up 1; trialSecondsLeft 1 then 0
+PASS  trial end: poll() does nothing at 119 999 ms and gives the trial up at 120 000 ms (boot state confirmed A, FALLBACK, one restart); seconds left 1 then 0
+QUESTION ARM-EDGE  at exactly kArmExpiryMs (30 000 ms) after the ARM the code answers 0x02 (>=). REQ-030 says "expire when the dangerous command does not follow within TBD-arm" and Interfaces Sec. 5.2 (Arming) says "expires after TBD-arm"; neither says whether the edge itself is inside. Expected behaviour not specified. Code comment: arm_state.cpp, ArmState::check.
+QUESTION TRIAL-EDGE  at exactly kTrialMs (120 000 ms) after the start CONFIRM is refused 0x05 and poll() gives the trial up (>=). REQ-013 says "not judged good within the trial time"; REQ-011 says "a trial of set length TBD-trial"; neither says whether the edge itself is inside. Expected behaviour not specified. Code comment: mode_manager.cpp, acceptDangerous.
+PASS  24 checks, 0 failed
+wall 0 s

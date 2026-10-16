@@ -1,0 +1,51 @@
+loss 0.5 seed 1 image 600, mac 15:16:34
+  state before attempt: OPERATE slot A
+  attempt 1 (seed 101): exit 1, 205 s in, upload reached 13312 bytes; FAILED: UPLOAD CHUNK offset 13312 (seq 1792003020): no answer after 6 tries; bytes before offset 13312 were accepted; the chunk at 13312 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 600 --offset 13312`; if that is refused 0x06, run `upload IMAGE --number 600` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 2 (seed 102): exit 1, 313 s in, upload reached 13312 bytes; FAILED: UPLOAD CHUNK offset 11520 (seq 1792003069): no answer after 6 tries; bytes before offset 11520 were accepted; the chunk at 11520 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 600 --offset 11520`; if that is refused 0x06, run `upload IMAGE --number 600` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 3 (seed 103): exit 1, 397 s in, upload reached 13312 bytes; FAILED: UPLOAD CHUNK offset 4864 (seq 1792003092): no answer after 6 tries; bytes before offset 4864 were accepted; the chunk at 4864 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 600 --offset 4864`; if that is refused 0x06, run `upload IMAGE --number 600` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 4 (seed 104): exit 1, 526 s in, upload reached 13312 bytes; FAILED: UPLOAD CHUNK offset 13312 (seq 1792003148): no answer after 6 tries; bytes before offset 13312 were accepted; the chunk at 13312 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 600 --offset 13312`; if that is refused 0x06, run `upload IMAGE --number 600` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 5 (seed 105): exit 1, 591 s in, upload reached 13312 bytes; FAILED: UPLOAD CHUNK offset 7936 (seq 1792003183): no answer after 6 tries; bytes before offset 7936 were accepted; the chunk at 7936 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 600 --offset 7936`; if that is refused 0x06, run `upload IMAGE --number 600` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 6 (seed 106): exit 1, 627 s in, upload reached 13312 bytes; FAILED: UPLOAD CHUNK offset 2048 (seq 1792003195): no answer after 6 tries; bytes before offset 2048 were accepted; the chunk at 2048 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 600 --offset 2048`; if that is refused 0x06, run `upload IMAGE --number 600` from the start (no --offset)
+loss 0.5 seed 2 image 601, mac 15:27:02
+  state before attempt: OPERATE slot A
+  attempt 1 (seed 201): exit 1, 217 s in, upload reached 17920 bytes; FAILED: UPLOAD CHUNK offset 17920 (seq 1792003269): no answer after 6 tries; bytes before offset 17920 were accepted; the chunk at 17920 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 601 --offset 17920`; if that is refused 0x06, run `upload IMAGE --number 601` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 2 (seed 202): exit None, 519 s in, upload reached 20776 bytes; no result line
+  state before attempt: OPERATE slot A
+  attempt 3 (seed 203): exit 0, 806 s in, upload reached 20776 bytes; UPDATE CONFIRMED: slot B version 1  (284.4 s)
+loss 0.5 seed 3 image 602, mac 15:40:27
+  state before attempt: OPERATE slot B
+  attempt 1 (seed 301): exit 1, 69 s in, upload reached 4864 bytes; FAILED: UPLOAD CHUNK offset 4864 (seq 1792003471): no answer after 6 tries; bytes before offset 4864 were accepted; the chunk at 4864 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 602 --offset 4864`; if that is refused 0x06, run `upload IMAGE --number 602` from the start (no --offset)
+  state before attempt: OPERATE slot B
+  attempt 2 (seed 302): exit 0, 315 s in, upload reached 20776 bytes; UPDATE CONFIRMED: slot A version 1  (243.6 s)
+loss 0.6 seed 1 image 603, mac 15:45:43
+  state before attempt: OPERATE slot A
+  attempt 1 (seed 101): exit 1, 102 s in, upload reached 2816 bytes; FAILED: UPLOAD CHUNK offset 2816 (seq 1792003578): no answer after 6 tries; bytes before offset 2816 were accepted; the chunk at 2816 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 2816`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 2 (seed 102): exit 1, 240 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 8960 (seq 1792003617): no answer after 6 tries; bytes before offset 8960 were accepted; the chunk at 8960 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 8960`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 3 (seed 103): exit 1, 285 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 1280 (seq 1792003626): no answer after 6 tries; bytes before offset 1280 were accepted; the chunk at 1280 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 1280`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 4 (seed 104): exit 1, 336 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 2304 (seq 1792003639): no answer after 6 tries; bytes before offset 2304 were accepted; the chunk at 2304 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 2304`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 5 (seed 105): exit 1, 416 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 6656 (seq 1792003669): no answer after 6 tries; bytes before offset 6656 were accepted; the chunk at 6656 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 6656`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 6 (seed 106): exit 1, 452 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 2048 (seq 1792003681): no answer after 6 tries; bytes before offset 2048 were accepted; the chunk at 2048 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 2048`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 7 (seed 107): exit 1, 506 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 1536 (seq 1792003691): no answer after 6 tries; bytes before offset 1536 were accepted; the chunk at 1536 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 1536`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 8 (seed 108): exit 1, 530 s in, upload reached 8960 bytes; FAILED: UPLOAD CHUNK offset 0 (seq 1792003695): no answer after 6 tries; bytes before offset 0 were accepted; the chunk at 0 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 0`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+  state before attempt: OPERATE slot A
+  attempt 9 (seed 109): exit 1, 755 s in, upload reached 16128 bytes; FAILED: UPLOAD CHUNK offset 16128 (seq 1792003762): no answer after 6 tries; bytes before offset 16128 were accepted; the chunk at 16128 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 603 --offset 16128`; if that is refused 0x06, run `upload IMAGE --number 603` from the start (no --offset)
+loss 0.6 seed 2 image 604, mac 15:58:18
+  state before attempt: OPERATE slot A
+  attempt 1 (seed 201): exit 1, 84 s in, upload reached 2560 bytes; FAILED: UPLOAD CHUNK offset 2560 (seq 1792003776): no answer after 6 tries; bytes before offset 2560 were accepted; the chunk at 2560 is not confirmed (an unanswered chunk may be stored): `upload IMAGE --number 604 --offset 2560`; if that is refused 0x06, run `upload IMAGE --number 604` from the start (no --offset)
+  state before attempt: ?
+  attempt 2 (seed 202): exit 1, 287 s in, upload reached 2560 bytes; FAILED: GET STATUS (seq 1792003785): no answer after 6 tries
+  state before attempt: ?
+  attempt 3 (seed 203): exit 1, 490 s in, upload reached 2560 bytes; FAILED: GET STATUS (seq 1792003794): no answer after 6 tries

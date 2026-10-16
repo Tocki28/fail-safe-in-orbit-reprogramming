@@ -1,0 +1,110 @@
+run 1: mac 14:22:00, OPERATE slot B; image 700 (firmware-A.img) to slot A
+  upload exit 0
+  deliver exit 0 after 30.12 s:
+    no answer to DELIVER (seq 1791990145) within 30 s, sending again
+    waiting: seq 1791990145 DELIVER, sent 30.0 s ago, RECEIVED yes
+    deliver complete in 30.00 s
+  stream deliver-again: exit 0; 102 answer lines; first and last:
+    recv 14:22:02.148 answer seq=3000000000 RECEIVED code=0x00
+    recv 14:22:02.148 answer seq=3000000000 REFUSED code=0x05
+    recv 14:22:02.160 answer seq=3000000000 REFUSED code=0x05
+    recv 14:22:02.171 answer seq=3000000000 REFUSED code=0x05
+    recv 14:22:03.264 answer seq=3000000000 REFUSED code=0x05
+    recv 14:22:04.807 answer seq=1791990145 DONE code=0x00
+  stream arm-switch: exit 0; 3 answer lines; first and last:
+    recv 14:22:02.149 answer seq=3000001000 RECEIVED code=0x00
+    recv 14:22:02.149 answer seq=3000001000 DONE code=0x00
+    recv 14:22:02.150 answer seq=3000001001 REFUSED code=0x05
+    recv 14:22:02.149 answer seq=3000001000 DONE code=0x00
+    recv 14:22:02.150 answer seq=3000001001 REFUSED code=0x05
+  stream status-burst: exit 2; 0 answer lines; first and last:
+  SWD read-back (ssh exit 0):
+openocd exit 0
+region A 0x08006000 20776 bytes: IDENTICAL to firmware-A.img
+region B 0x08010000 20776 bytes: IDENTICAL to firmware-B.img
+region LR 0x0801A000 1736 bytes: IDENTICAL to last-resort-v1.img
+  switch exit 0; confirm exit 0; then OPERATE slot A
+run 2: mac 14:22:42, OPERATE slot A; image 701 (firmware-B.img) to slot B
+  upload exit 0
+  deliver exit 0 after 30.15 s:
+    no answer to DELIVER (seq 1791990236) within 30 s, sending again
+    waiting: seq 1791990236 DELIVER, sent 30.0 s ago, RECEIVED yes
+    deliver complete in 30.00 s
+  stream deliver-again: exit 0; 102 answer lines; first and last:
+    recv 14:22:43.614 answer seq=3000010000 RECEIVED code=0x00
+    recv 14:22:43.614 answer seq=3000010000 REFUSED code=0x05
+    recv 14:22:43.626 answer seq=3000010000 REFUSED code=0x05
+    recv 14:22:43.638 answer seq=3000010000 REFUSED code=0x05
+    recv 14:22:44.746 answer seq=3000010000 REFUSED code=0x05
+    recv 14:22:46.282 answer seq=1791990236 DONE code=0x00
+  stream arm-switch: exit 0; 3 answer lines; first and last:
+    recv 14:22:43.615 answer seq=3000011000 RECEIVED code=0x00
+    recv 14:22:43.615 answer seq=3000011000 DONE code=0x00
+    recv 14:22:43.616 answer seq=3000011001 REFUSED code=0x05
+    recv 14:22:43.615 answer seq=3000011000 DONE code=0x00
+    recv 14:22:43.616 answer seq=3000011001 REFUSED code=0x05
+  stream status-burst: exit 2; 0 answer lines; first and last:
+  SWD read-back (ssh exit 0):
+openocd exit 0
+region A 0x08006000 20776 bytes: IDENTICAL to firmware-A.img
+region B 0x08010000 20776 bytes: IDENTICAL to firmware-B.img
+region LR 0x0801A000 1736 bytes: IDENTICAL to last-resort-v1.img
+  switch exit 0; confirm exit 0; then OPERATE slot B
+run 3: mac 14:23:24, OPERATE slot B; image 702 (firmware-A.img) to slot A
+  upload exit 0
+  deliver exit 0 after 30.23 s:
+    no answer to DELIVER (seq 1791990327) within 30 s, sending again
+    waiting: seq 1791990327 DELIVER, sent 30.0 s ago, RECEIVED yes
+    deliver complete in 30.00 s
+  stream deliver-again: exit 0; 102 answer lines; first and last:
+    recv 14:23:26.662 answer seq=3000020000 RECEIVED code=0x00
+    recv 14:23:26.662 answer seq=3000020000 REFUSED code=0x05
+    recv 14:23:26.674 answer seq=3000020000 REFUSED code=0x05
+    recv 14:23:26.684 answer seq=3000020000 REFUSED code=0x05
+    recv 14:23:27.778 answer seq=3000020000 REFUSED code=0x05
+    recv 14:23:29.329 answer seq=1791990327 DONE code=0x00
+  stream arm-switch: exit 0; 3 answer lines; first and last:
+    recv 14:23:26.666 answer seq=3000021000 RECEIVED code=0x00
+    recv 14:23:26.666 answer seq=3000021000 DONE code=0x00
+    recv 14:23:26.667 answer seq=3000021001 REFUSED code=0x05
+    recv 14:23:26.666 answer seq=3000021000 DONE code=0x00
+    recv 14:23:26.667 answer seq=3000021001 REFUSED code=0x05
+  stream status-burst: exit 2; 0 answer lines; first and last:
+  SWD read-back (ssh exit 0):
+openocd exit 0
+region A 0x08006000 20776 bytes: IDENTICAL to firmware-A.img
+region B 0x08010000 20776 bytes: IDENTICAL to firmware-B.img
+region LR 0x0801A000 1736 bytes: IDENTICAL to last-resort-v1.img
+  switch exit 0; confirm exit 0; then OPERATE slot A
+run 4: mac 14:24:43, OPERATE slot A; image 703 (firmware-B.img) to slot B
+  upload exit 0
+  deliver exit 0 after 30.12 s:
+    no answer to DELIVER (seq 1791990418) within 30 s, sending again
+    waiting: seq 1791990418 DELIVER, sent 30.0 s ago, RECEIVED yes
+    deliver complete in 30.00 s
+  stream deliver-again: exit 0; 104 answer lines; first and last:
+    recv 14:24:49.670 answer seq=3000030000 RECEIVED code=0x00
+    recv 14:24:49.670 answer seq=3000030000 REFUSED code=0x05
+    recv 14:24:49.680 answer seq=3000030000 REFUSED code=0x05
+    recv 14:24:49.691 answer seq=3000030000 REFUSED code=0x05
+    recv 14:24:52.346 answer seq=3000032000 RECEIVED code=0x00
+    recv 14:24:52.348 answer seq=3000032000 DONE code=0x00
+  stream arm-switch: exit 0; 3 answer lines; first and last:
+    recv 14:24:49.673 answer seq=3000031000 RECEIVED code=0x00
+    recv 14:24:49.673 answer seq=3000031000 DONE code=0x00
+    recv 14:24:49.674 answer seq=3000031001 REFUSED code=0x05
+    recv 14:24:49.673 answer seq=3000031000 DONE code=0x00
+    recv 14:24:49.674 answer seq=3000031001 REFUSED code=0x05
+  stream status-burst: exit 0; 99 answer lines; first and last:
+    recv 14:24:49.673 answer seq=3000032000 RECEIVED code=0x00
+    recv 14:24:49.674 answer seq=3000032000 RECEIVED code=0x00
+    recv 14:24:49.674 answer seq=3000032000 RECEIVED code=0x00
+    recv 14:24:49.675 answer seq=3000032000 RECEIVED code=0x00
+    recv 14:24:49.714 answer seq=3000032000 RECEIVED code=0x00
+    recv 14:24:49.714 answer seq=3000032000 RECEIVED code=0x00
+  SWD read-back (ssh exit 0):
+openocd exit 0
+region A 0x08006000 20776 bytes: IDENTICAL to firmware-A.img
+region B 0x08010000 20776 bytes: IDENTICAL to firmware-B.img
+region LR 0x0801A000 1736 bytes: IDENTICAL to last-resort-v1.img
+  switch exit 0; confirm exit 0; then OPERATE slot B

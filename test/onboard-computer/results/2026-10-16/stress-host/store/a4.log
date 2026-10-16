@@ -1,0 +1,69 @@
+2026-10-16 11:48:54 EEST | a504b0d | make -C test/onboard-computer/stress/store run
+uptime load averages at start: 18.84 18.82 17.99
+
+== W0 nothing fetched: file seeded with next=FFFFFFF0 deleted_below=00000000; capacity 1048576 bytes
+load() of the seeded file gave nextNumber()=FFFFFFF0
+accept() gave numbers: FFFFFFF0..FFFFFFFF,00000001..00000008
+  of which EVENT: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006
+  lastNumber()=00000008 nextNumber()=00000009 after the last report
+file on disk: FFFFFFF0..FFFFFFFF,00000001..00000008; last state record: next=FFFFFFF0 deleted_below=00000000 through=00000000 dropped=0
+reload: load()=1 nextNumber()=00000001 (the last number given was 00000008)
+-- SEND REPORTS without a restart (end = in-RAM next number)
+first=FFFFFFF0 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFF0)
+first=FFFFFFF8 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF8..FFFFFFFF (deleted_below=FFFFFFF8)
+first=FFFFFFFF end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFFF (deleted_below=FFFFFFFF)
+first=00000001 end=00000009: sent EVENT 00000003,00000006 | HEALTH 00000001..00000002,00000004..00000005,00000007..00000008 | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF,00000001..00000008 (deleted_below=00000001)
+first=00000003 end=00000009: sent EVENT 00000003,00000006 | HEALTH 00000004..00000005,00000007..00000008 | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF,00000003..00000008 (deleted_below=00000003)
+first=00000000 end=00000009: sent EVENT 00000003,00000006 | HEALTH 00000001..00000002,00000004..00000005,00000007..00000008 | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF,00000001..00000008 (deleted_below=00000000)
+-- SEND REPORTS after a restart (fresh load() of the file above)
+first=FFFFFFF0 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFF0)
+first=FFFFFFF8 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF8..FFFFFFFF (deleted_below=FFFFFFF8)
+first=FFFFFFFF end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFFF (deleted_below=FFFFFFFF)
+first=00000001 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF,00000001..00000008 (deleted_below=00000001)
+first=00000003 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF,00000003..00000008 (deleted_below=00000003)
+first=00000000 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF,00000001..00000008 (deleted_below=00000000)
+
+== W1 fetched below FFFFFFE0: file seeded with next=FFFFFFF0 deleted_below=FFFFFFE0; capacity 1048576 bytes
+load() of the seeded file gave nextNumber()=FFFFFFF0
+accept() gave numbers: FFFFFFF0..FFFFFFFF,00000001..00000008
+  of which EVENT: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006
+  lastNumber()=00000008 nextNumber()=00000009 after the last report
+file on disk: FFFFFFF0..FFFFFFFF,00000001..00000008; last state record: next=FFFFFFF0 deleted_below=FFFFFFE0 through=00000000 dropped=0
+reload: load()=1 nextNumber()=00000001 (the last number given was 00000008)
+-- SEND REPORTS without a restart (end = in-RAM next number)
+first=FFFFFFF0 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFF0)
+first=FFFFFFF8 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF8..FFFFFFFF (deleted_below=FFFFFFF8)
+first=FFFFFFFF end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFFF (deleted_below=FFFFFFFF)
+first=00000001 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFE0)
+first=00000003 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFE0)
+first=00000000 end=00000009: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFE0)
+-- SEND REPORTS after a restart (fresh load() of the file above)
+first=FFFFFFF0 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFF0)
+first=FFFFFFF8 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF8..FFFFFFFF (deleted_below=FFFFFFF8)
+first=FFFFFFFF end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFFF (deleted_below=FFFFFFFF)
+first=00000001 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFE0)
+first=00000003 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFE0)
+first=00000000 end=00000001: sent EVENT - | HEALTH - | dropped count 0; file afterwards: FFFFFFF0..FFFFFFFF (deleted_below=FFFFFFE0)
+
+== W2 small store overflows: file seeded with next=FFFFFFF0 deleted_below=00000000; capacity 400 bytes
+load() of the seeded file gave nextNumber()=FFFFFFF0
+accept() gave numbers: FFFFFFF0..FFFFFFFF,00000001..00000018
+  of which EVENT: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018
+  lastNumber()=00000018 nextNumber()=00000019 after the last report
+file on disk: FFFFFFF0..FFFFFFFF,00000001..0000000A,0000000C,0000000F,00000012,00000015,00000018; last state record: next=00000018 deleted_below=00000000 through=FFFFFFFE dropped=19
+reload: load()=1 nextNumber()=00000001 (the last number given was 00000018)
+-- SEND REPORTS without a restart (end = in-RAM next number)
+first=FFFFFFF0 end=00000019: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF (deleted_below=FFFFFFF0)
+first=FFFFFFF8 end=00000019: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF9,FFFFFFFC,FFFFFFFF (deleted_below=FFFFFFF8)
+first=FFFFFFFF end=00000019: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFFF (deleted_below=FFFFFFFF)
+first=00000001 end=00000019: sent EVENT 00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 (deleted_below=00000001)
+first=00000003 end=00000019: sent EVENT 00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 (deleted_below=00000003)
+first=00000000 end=00000019: sent EVENT 00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 (deleted_below=00000000)
+-- SEND REPORTS after a restart (fresh load() of the file above)
+first=FFFFFFF0 end=00000001: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF (deleted_below=FFFFFFF0)
+first=FFFFFFF8 end=00000001: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF9,FFFFFFFC,FFFFFFFF (deleted_below=FFFFFFF8)
+first=FFFFFFFF end=00000001: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFFF (deleted_below=FFFFFFFF)
+first=00000001 end=00000001: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 (deleted_below=00000001)
+first=00000003 end=00000001: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 (deleted_below=00000003)
+first=00000000 end=00000001: sent EVENT - | HEALTH - | dropped count 19; file afterwards: FFFFFFF0,FFFFFFF3,FFFFFFF6,FFFFFFF9,FFFFFFFC,FFFFFFFF,00000003,00000006,00000009,0000000C,0000000F,00000012,00000015,00000018 (deleted_below=00000000)
+uptime load averages at end: 18.84 18.82 17.99

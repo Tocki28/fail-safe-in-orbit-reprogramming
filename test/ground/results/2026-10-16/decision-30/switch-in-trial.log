@@ -1,0 +1,25 @@
+# SWITCH in TRIAL (A1.6, A9.1, B3.11), 16 Oct 2026; controller d3bb74a, updater bc34e8d, console bc34e8d; mac 2026-10-16 10:27:41 EEST
+
+### update to slot B (firmware-B.img d3bb74a, image 5001) answered n: trial running
+report  EVENT   #111 onboard t=1792135667 0x0006 trial started
+update  trial started, waiting for the trial tests
+report  HEALTH  #112 onboard t=1792135668 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 119 s, self-test PASSED
+report  EVENT   #113 onboard t=1792135668 0x000a trial tests passed
+report  HEALTH  #114 onboard t=1792135669 mode TRIAL, firmware kind 2 version 1, slot B, failed starts 1, trial left 118 s, self-test PASSED
+TRIAL REPORT
+  mode               TRIAL
+  running slot       B
+  firmware version   1
+  self-test          PASSED
+  trial time left    118 s
+UPDATE NOT CONFIRMED (no answer): nothing sent. The controller returns to the previous copy when its trial time ends.
+
+### ARM + SWITCH during the trial: REFUSED 0x05 expected
+FAILED: SWITCH (seq 1791899066) REFUSED 0x05: Not allowed in the current mode
+
+### RETURN TO PREVIOUS (end the trial), then LEAVE FALLBACK
+report  EVENT   #115 onboard t=1792135669 0x0008 firmware given up
+return to previous  sent, answered DONE
+leave fallback  sent, answered DONE
+report  HEALTH  #125 onboard t=1792135680 mode OPERATE, firmware kind 2 version 1, slot A, failed starts 0, trial left 0 s, self-test PASSED
+# mac end 2026-10-16 10:28:00 EEST

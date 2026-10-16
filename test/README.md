@@ -9,6 +9,25 @@ controller, joined by one USB serial link (data link A). It is not flight hardwa
 
 ## Build under test
 
+Final state at the end of the campaign, 16 Oct 2026:
+
+| Unit | Commit |
+|---|---|
+| Controller (bootloader, firmware A and B) | d3bb74a |
+| `restore.sh` (fix of F-3) | ae40af0 |
+| Onboard computer updater on the board, sha256 `5f0c5f49…` | bc34e8d |
+| Console | bc34e8d, with the name of reason 0x02 from 615a83f (O-8) |
+
+Host suites at 615a83f: controller `make check` exit 0 (mode manager 147, bootloader 37, flow 60,
+separation 22, others as their lines say); onboard computer exit 0 (unit 610 of 610, restore test
+468 PASS 0 FAIL); ground exit 0 (46 + 41 + 8 + 23 tests OK). The host suites are not counted in
+the rows below.
+
+Bench state at the end: OPERATE, slot A. Slot B holds the d3bb74a firmware B marked as given up
+(decision 30), so the next update to that same image needs START FAILED.
+
+Builds used during the campaign, in order:
+
 | Unit | Commit | Since |
 |---|---|---|
 | Controller bootloader, firmware A and B, console, command sender, images | 49314cc | 15 Oct 20:10 UTC, full restore (`test/ground/results/2026-10-15/README.md`) |
@@ -18,7 +37,7 @@ controller, joined by one USB serial link (data link A). It is not flight hardwa
 | Controller and console with decision 30 (FALLBACK, START FAILED, LEAVE FALLBACK, SWITCH refuses a given-up image) | d3bb74a | 16 Oct, board start 06:01:56 UTC, full restore (`test/ground/results/2026-10-16/decision-30/decision-30-hardware.log`) |
 | `restore.sh`, sha256 `b8b1e5a87142129f…` | ae40af0 | 16 Oct about 06:16 UTC (`test/onboard-computer/results/2026-10-16/f3-restore-clears-backup.log`) |
 | Onboard computer updater, sha256 `2b799dc2…` | d12db66 | 16 Oct about 06:55 UTC (`test/onboard-computer/results/2026-10-16/updater-d12db66-on-board.log`) |
-| Report storage (decision 29) | — | host-tested, being merged; not on the bench |
+| Onboard computer updater, sha256 `5f0c5f49…` (decision 29 added) | bc34e8d | 16 Oct 07:25 UTC (`test/onboard-computer/results/2026-10-16/updater-bc34e8d-on-board.log`) |
 
 Every run of 16 Oct up to 08:39 EEST ran on 4d6f5e8; the decision 30 runs (09:01 to 09:09 EEST) ran on d3bb74a; the later runs ran with `restore.sh` ae40af0 and the updater d12db66 on the d3bb74a controller images. Rows whose evidence is from an earlier commit are NOT RUN
 with the reason EARLIER BUILD.
@@ -29,9 +48,9 @@ Source: `test/fault-matrix.md`, section "Counts" (250 rows: Part A 133, Part B 1
 
 | Status | Rows |
 |---|---|
-| PASS | 77 |
+| PASS | 80 |
 | FAIL | 0 |
-| NOT RUN | 134 |
+| NOT RUN | 131 |
 | NOT ON BENCH | 7 |
 | N/A | 32 |
 
@@ -66,12 +85,12 @@ Counts are rows with Status NOT RUN, by the Reason column of `test/fault-matrix.
 
 | Reason | Rows | What unblocks it |
 |---|---|---|
-| PLANNED-2 | 57 | Scripted runs (console, ssh, systemctl, sysfs) not yet done |
+| PLANNED-2 | 55 | Scripted runs (console, ssh, systemctl, sysfs) not yet done |
 | PLANNED-3 | 1 | The owner's hands on a cable or button |
 | PLANNED-4 | 24 | Fault injection over SWD; the injection design is shown to the owner first |
 | EARLIER BUILD | 15 | A re-run on 4d6f5e8 or later; each row names the earlier commit |
 | NOT BUILT-ACCEPTED | 3 | Nothing: the owner accepted that the function is not built |
-| NOT BUILT-OPEN | 16 | A decision or the function; the rows cite `src/` of the source before d3bb74a and are not re-checked against it |
+| NOT BUILT-OPEN | 15 | A decision or the function; the rows cite `src/` of the source before d3bb74a and are not re-checked against it |
 | NEEDS TOOL | 4 | The link tool of Verification Plan Sec. 3.0; a kill of a process id read in advance; a test firmware with a broken update receiver |
 | NEEDS DECISION | 1 | A8.4: the owner accepts the 7.58 h run or orders the 12 h run |
 | DESK | 13 | Inspections and analyses, no bench run |
@@ -114,14 +133,27 @@ lines 5 and 16), so REQ-024 cannot be shown here.
 | Reset over SWD during a link cut | RESTORE DONE: reset; controller clock 28169 s to 16 s | same |
 | Onboard computer restart | back in 33.1 s | `test/ground/results/2026-10-16/onboard-restart/onboard-restart.log` |
 | Onboard computer restart during an upload | updater active again 31.4 s after the order; the 296 bytes kept; the upload resumed at byte 256 and its UPLOAD END checks passed | `test/ground/results/2026-10-16/onboard-restart/onboard-restart-during-upload.log` |
+| Stored reports (decision 29) | SEND REPORTS from 1: 53 reports, 2 events first; after a restart of the onboard computer 2 EVENT and 68 HEALTH reports stored, 86 sent, events first; the 1 MB overflow is host-tested only | `test/onboard-computer/results/2026-10-16/updater-bc34e8d-on-board.log`, Parts 3 and 6 |
+| SWITCH during a trial | REFUSED 0x05 | `test/ground/results/2026-10-16/decision-30/switch-in-trial.log` |
 | Command checks | refusals 0x01, 0x02, 0x04, 0x05, 0x06, 0x0A, 0x0B, 0x12 each measured; a repeated command answered ALREADY DONE | `test/ground/results/2026-10-16/command-checks/command-checks.log` |
 
 ## Where the evidence is
 
 | What | Path |
 |---|---|
-| Rows, findings, observations O-1 to O-10, decisions | `test/fault-matrix.md` |
+| Rows, findings, observations O-1 to O-11, decisions | `test/fault-matrix.md` |
 | Ground-side runs, 15 Oct | `test/ground/results/2026-10-15/README.md` |
 | Ground-side runs, 16 Oct | `test/ground/results/2026-10-16/README.md` |
 | Onboard computer runs | `test/onboard-computer/results/2026-10-15/README.md`, `test/onboard-computer/results/2026-10-16/README.md` |
 | Controller runs of 12 and 13 Oct (earlier builds) | `test/controller/results/` |
+
+## Open items for the owner
+
+| Item | What is needed |
+|---|---|
+| A8.4 | Accept the 7.58 h run without commands, or order the 12 h run (decision 4) |
+| O-10 | Decide on a lock shared by every SWD user and on the updater pausing its silence resets during an ordered restore (proposal marked TBR) |
+| O-11 | Decide whether to fix the -6 s case of `testClockDifferenceEvent` |
+| TBR proposals | Accept or change each proposal still marked TBR |
+| Decision 20 | The method of the restore after 3 silent resets |
+| Decision 28 | The real-time clock design |

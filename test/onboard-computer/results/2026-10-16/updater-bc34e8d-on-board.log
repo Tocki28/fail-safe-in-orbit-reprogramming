@@ -1,0 +1,152 @@
+# updater at bc34e8d on the board, 16 Oct 2026; controller d3bb74a; board start 2026-10-16 07:25:32 UTC; mac 2026-10-16 10:25:34 EEST
+
+### 1. install
+kept as fsir-updater.2b799dc2
+fsir-updater
+fsir-updater.2b799dc2
+fsir-updater.6b0888f8
+fsir-updater.e49e7d32
+fsir-updater.e5f46cc6
+5f0c5f493b6d24db
+11923
+[     0.021] reports: no store file; /var/lib/fsir/images/reports made, empty, next report number 1
+[     0.021] limits: stored record, minimum version 1, controller identity 0x0431
+[     0.021] clock: stored offset 2 s; onboard ground time is the system clock plus that
+[     0.021] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+[     0.022] data link A: /dev/ttyACM0 open, 115200 8N1 raw
+[     0.077] controller heard
+[     0.357] controller: HEALTH mode OPERATE, slot A, firmware kind 0x02 v1, failed starts 0, trial time left 0 s, self-test 0x00
+[     0.372] reports: no ground has spoken yet; reports are stored for SEND REPORTS (decision 29) and not sent live until one does
+#9 onboard 1792135543 controller 603 OPERATE slot A failed 0
+damaged frames: 0
+
+### 2. decision 25: expiry and SET ONBOARD TIME
+-- GET STATUS with Expiry 0: REFUSED 0x03 expected
+recv 10:25:43.971 answer seq=1791898963 REFUSED code=0x03
+-- GET STATUS with Expiry 1000: REFUSED 0x03 expected
+recv 10:25:47.107 answer seq=1791898964 REFUSED code=0x03
+-- GET STATUS with Expiry now + 60 s: DONE expected
+recv 10:25:50.237 answer seq=1791898965 RECEIVED code=0x00
+recv 10:25:50.239 answer seq=1791898965 DONE code=0x00
+-- ARM + SET LIMITS with Expiry 0 (not exempt): REFUSED 0x03 expected
+recv 10:25:53.350 answer seq=1791898966 REFUSED code=0x03
+recv 10:25:53.351 answer seq=1791898967 REFUSED code=0x03
+-- ARM + SET ONBOARD TIME = Mac time + 100 s, Expiry 0 (exempt): DONE, EVENT 0x0105 with -100 expected
+recv 10:25:56.480 answer seq=1791898968 RECEIVED code=0x00
+recv 10:25:56.480 answer seq=1791898968 DONE code=0x00
+recv 10:25:56.497 report 19 bytes, EVENT
+recv 10:25:56.515 answer seq=1791898969 DONE code=0x00
+recv 10:25:56.780 report 24 bytes, HEALTH
+recv 10:25:57.780 report 24 bytes, HEALTH
+-- ARM + SET ONBOARD TIME = Mac time, Expiry 0: DONE, EVENT 0x0105 with about +100 expected
+recv 10:26:00.605 answer seq=1791898970 RECEIVED code=0x00
+recv 10:26:00.605 answer seq=1791898970 DONE code=0x00
+recv 10:26:00.614 report 19 bytes, EVENT
+recv 10:26:00.629 answer seq=1791898971 DONE code=0x00
+recv 10:26:00.769 report 24 bytes, HEALTH
+recv 10:26:01.766 report 24 bytes, HEALTH
+[     0.021] clock: stored offset 2 s; onboard ground time is the system clock plus that
+[     8.501] ground: command 0x25 sequence 1791898963 has expiry 0 s, onboard ground time is 1792135543 s; refused 0x03
+[    11.637] ground: command 0x25 sequence 1791898964 has expiry 1000 s, onboard ground time is 1792135547 s; refused 0x03
+[    17.879] ground: command 0x0d sequence 1791898966 has expiry 0 s, onboard ground time is 1792135553 s; refused 0x03
+[    17.880] ground: command 0x06 sequence 1791898967 has expiry 0 s, onboard ground time is 1792135553 s; refused 0x03
+[    21.011] SET ONBOARD TIME: onboard ground time 1792135556 s, ground time 1792135656 s: difference -100 s is above 5 s; EVENT 0x0105
+[    21.011] controller: EVENT 0x0105 (onboard computer clock differs from ground time)
+[    21.045] SET ONBOARD TIME: ground time 1792135656 s; offset 102 s written and in force (before: 2 s, difference -100 s)
+[    25.136] SET ONBOARD TIME: onboard ground time 1792135660 s, ground time 1792135560 s: difference 100 s is above 5 s; EVENT 0x0105
+[    25.136] controller: EVENT 0x0105 (onboard computer clock differs from ground time)
+[    25.158] SET ONBOARD TIME: ground time 1792135560 s; offset 2 s written and in force (before: 102 s, difference 100 s)
+
+### 3. decision 29: SEND REPORTS
+latest report number seen: 34; SEND REPORTS from -6
+Traceback (most recent call last):
+  File "<scratch>/send_reports.py", line 23, in <module>
+    c.KINDS[con.command(c.DEST_ONBOARD, bytes([0x0B]) + struct.pack("<I", first),
+                                                        ~~~~~~~~~~~^^^^^^^^^^^^^
+struct.error: 'I' format requires 0 <= number <= 4294967295
+total 12
+drwxr-xr-x  3 root root 4096 Jan  1  2000 .
+drwxr-xr-x 16 root root 4096 Jan  1  2000 ..
+drwxr-xr-x  2 root root 4096 Oct 16 07:25 images
+
+### 4 and 5 skipped: measured on this board with the updater at d12db66 (updater-d12db66-on-board.log)
+#37 onboard 1792135569 controller 629 OPERATE slot A failed 0
+damaged frames: 0
+# mac end 2026-10-16 10:26:10 EEST
+
+### 3 (again, mac 10:26:20): decision 29, SEND REPORTS from report 1 (the first try above computed a negative first number: a fault in this bench script, not in the updater)
+mac 10:26:20 SEND REPORTS first 1: DONE
+#22 EVENT onboard computer clock differs from ground time
+#27 EVENT onboard computer clock differs from ground time
+#1 HEALTH OPERATE
+#2 HEALTH OPERATE
+#3 HEALTH OPERATE
+#4 HEALTH OPERATE
+#5 HEALTH OPERATE
+#6 HEALTH OPERATE
+#7 HEALTH OPERATE
+#8 HEALTH OPERATE
+#9 HEALTH OPERATE
+#10 HEALTH OPERATE
+#11 HEALTH OPERATE
+#12 HEALTH OPERATE
+#13 HEALTH OPERATE
+#14 HEALTH OPERATE
+#15 HEALTH OPERATE
+#16 HEALTH OPERATE
+#17 HEALTH OPERATE
+#18 HEALTH OPERATE
+#19 HEALTH OPERATE
+#20 HEALTH OPERATE
+#21 HEALTH OPERATE
+#23 HEALTH OPERATE
+#24 HEALTH OPERATE
+#25 HEALTH OPERATE
+#26 HEALTH OPERATE
+#28 HEALTH OPERATE
+#29 HEALTH OPERATE
+#30 HEALTH OPERATE
+#31 HEALTH OPERATE
+#32 HEALTH OPERATE
+#33 HEALTH OPERATE
+#34 HEALTH OPERATE
+#35 HEALTH OPERATE
+#36 HEALTH OPERATE
+#37 HEALTH OPERATE
+#38 HEALTH OPERATE
+#39 HEALTH OPERATE
+#40 HEALTH OPERATE
+#41 HEALTH OPERATE
+#42 HEALTH OPERATE
+#43 HEALTH OPERATE
+#44 HEALTH OPERATE
+#45 HEALTH OPERATE
+#46 HEALTH OPERATE
+#47 HEALTH OPERATE
+#48 HEALTH OPERATE
+#49 HEALTH OPERATE
+#50 HEALTH OPERATE
+#51 HEALTH OPERATE
+#52 HEALTH OPERATE
+#53 HEALTH OPERATE
+reports 53: events 2, HEALTH 51; every event before every HEALTH: True
+-rw------- 1 root root 1670 Oct 16 07:26 /var/lib/fsir/images/reports
+[    45.157] reports: SEND REPORTS from number 1: sending the stored reports numbered below 48, EVENT reports first (1400 bytes stored)
+# mac end 2026-10-16 10:26:26 EEST
+
+### 6. REQ-077: stored reports across a restart of the whole onboard computer (mac 10:26:42)
+-rw------- 1 root root 2150 Oct 16 07:26 /var/lib/fsir/images/reports
+reboot ordered 07:26:40
+ 07:27:14 up 0 min,  1 user,  load average: 0.88, 0.20, 0.06
+-rw------- 1 root root 2450 Oct 16 07:27 /var/lib/fsir/images/reports
+[     0.081] reports: store /var/lib/fsir/images/reports: 2 EVENT and 68 HEALTH reports stored (2090 of 1048576 bytes), next report number 71, 0 dropped HEALTH reports not yet reported
+[     0.086] limits: stored record, minimum version 1, controller identity 0x0431
+[     0.087] clock: stored offset 2 s; onboard ground time is the system clock plus that
+[     0.087] fsir-updater: ground on UDP port 47001 (all interfaces); data link A on /dev/ttyACM0; images in /var/lib/fsir/images; keys built in; beat on; restart script /usr/local/bin/restore.sh
+SEND REPORTS from 1 after the restart:
+mac 10:27:17 SEND REPORTS first 1: DONE
+#22 EVENT onboard computer clock differs from ground time
+#27 EVENT onboard computer clock differs from ground time
+#1 HEALTH OPERATE
+reports 86: events 2, HEALTH 84; every event before every HEALTH: True
+# mac end 2026-10-16 10:27:23 EEST

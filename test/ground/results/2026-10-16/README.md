@@ -48,10 +48,11 @@ only, and NOT ON BENCH marks a run the bench cannot show.
 | START FAILED copy B | PASS | DONE; EVENT 0x0006 at 06:02:45.66 UTC and EVENT 0x000a at 06:02:46.79 UTC; trial of slot B, failed starts 1; RETURN TO PREVIOUS: EVENT 0x0008, FALLBACK, slot A | `decision-30/decision-30-hardware.log` step E, journal |
 | Bootloader give-up: trial-forever image 3002, 3 power cuts | PASS | SWITCH DONE (a different image from the given-up one); cuts at 06:03:30, :41 and :53 with 3 to 4 s off; HEALTH TRIAL slot B failed starts 1, 2, 3, then FALLBACK slot A at 06:03:58.93 UTC; SWITCH: REFUSED 0x13 at 06:04:14.61 UTC; no EVENT of the give-up reached the journal (observation O-7) | `decision-30/decision-30-hardware.log` step F, journal |
 | Update from FALLBACK with `update --yes` | PASS | image 3003: trial started, tests passed, confirmed in 7.5 s; OPERATE, slot B at the end | `decision-30/decision-30-hardware.log` step G, journal |
+| ARM and SWITCH during a trial (d3bb74a controller, bc34e8d updater and console) | PASS | trial running (EVENT 0x0006, HEALTH TRIAL slot B): REFUSED 0x05 "Not allowed in the current mode"; then RETURN TO PREVIOUS (EVENT 0x0008), LEAVE FALLBACK, OPERATE slot A | `decision-30/switch-in-trial.log` |
 | Given-up image across a restart and a power cut (A5.4) | PASS | after RETURN TO PREVIOUS: FALLBACK, slot B; `restore.sh reset` (RESTORE DONE: reset): still FALLBACK, SWITCH REFUSED 0x13; hub power cut 06:08:27 to 06:08:30 UTC: still FALLBACK, SWITCH REFUSED 0x13; LEAVE FALLBACK, then OPERATE | `decision-30/a5.4-given-up-across-restart.log` |
 | Onboard computer restarted during an upload (d3bb74a) | PASS | upload slowed by `--radio-loss 0.3 --seed 1`; `systemctl reboot` ordered at 06:05:23 UTC with `image-03004.part` at 296 bytes; the console stopped after 6 tries at offset 256; the updater was active again 31.4 s after the order; a plain `upload` resumed at byte 256 ("UPLOAD CHUNK image 3004 at 0: already stored"); UPLOAD END checks passed | `onboard-restart/onboard-restart-during-upload.log` |
 
-Observations O-1 to O-10 (not failures) are listed under the findings of `test/fault-matrix.md`.
+Observations O-1 to O-11 (not failures) are listed under the findings of `test/fault-matrix.md`.
 
 Note: the endurance run's own summary used a wrong pattern for the confirm line and logged every
 cycle in full; `endurance/summary.txt` is recomputed from the per-cycle records, which are as

@@ -2,8 +2,8 @@
  * main.cpp — the controller's main firmware, step 2d: it starts, keeps the watchdog reloaded,
  * runs data link A, answers GET STATUS, receives firmware updates into the slot that is not
  * confirmed, runs the trial of new firmware with its trial tests, takes ARM, SWITCH,
- * RETURN TO PREVIOUS and CONFIRM, and sends a HEALTH report every second and EVENT reports as
- * events happen.
+ * RETURN TO PREVIOUS, START FAILED, CONFIRM and LEAVE FALLBACK, and sends a HEALTH report every
+ * second and EVENT reports as events happen.
  *
  * This file is the wiring only: one object per component, the routing of each command to its
  * component, and the answers. The decisions are in the components.
@@ -16,10 +16,12 @@
  *     the work, then DONE 0x00 or REFUSED with the reason (Interfaces Sec. 4.2, REQ-033,
  *     REQ-034).
  *   ARM (0x0D): in every mode, RECEIVED then DONE 0x00 (command-checker/arm_state.hpp).
- *   SWITCH (0x20), RETURN TO PREVIOUS (0x21), CONFIRM (0x26): dangerous; checks on arrival and the
- *     work in the mode manager (mode-manager/mode_manager.hpp).
+ *   SWITCH (0x20), RETURN TO PREVIOUS (0x21), START FAILED (0x22), CONFIRM (0x26): dangerous;
+ *     checks on arrival and the work in the mode manager (mode-manager/mode_manager.hpp).
+ *   LEAVE FALLBACK (0x23): not dangerous; checks on arrival and the work in the mode manager.
+ *     START FAILED and LEAVE FALLBACK joined with owner's decision 30, 15 Oct 2026.
  *   Anything else: REFUSED 0x06 only (Interfaces Sec. 4.2). Not in this step, so also refused
- *     0x06 as unknown: START FAILED (0x22), LEAVE FALLBACK (0x23), SET CONTROLLER TIME (0x24).
+ *     0x06 as unknown: SET CONTROLLER TIME (0x24).
  * A frame not addressed to the controller, or not a command, is ignored.
  *
  * Linked for slot A or B (Makefile: SLOT=A or B).
@@ -180,11 +182,11 @@ void handleArm(const Frame &frame)
 }
 
 /**
- * @brief SWITCH, RETURN TO PREVIOUS or CONFIRM: REFUSED on arrival (mode, arming, trial tests),
- * or RECEIVED, the boot-state write, then DONE or REFUSED.
+ * @brief SWITCH, RETURN TO PREVIOUS, START FAILED or CONFIRM: REFUSED on arrival (size and
+ * values, mode, arming, trial tests), or RECEIVED, the boot-state write, then DONE or REFUSED.
  *
- * After a SWITCH or RETURN TO PREVIOUS answered DONE, the mode manager restarts the chip on this
- * same pass (ModeManager::poll), so the DONE leaves first.
+ * After a SWITCH, START FAILED or RETURN TO PREVIOUS answered DONE, the mode manager restarts the
+ * chip on this same pass (ModeManager::poll), so the DONE leaves first.
  *
  * @param[in]     frame  the command frame
  */
@@ -199,6 +201,29 @@ void handleDangerous(const Frame &frame)
     }
     sender.sendAnswer(frame.sequence, AnswerKind::kReceived, kReceivedCode);
     result = mode_manager.runDangerous(frame.payload[0], core_clock.tickMs());
+    sender.sendAnswer(frame.sequence,
+                      (result == AnswerCode::kSuccess) ? AnswerKind::kDone : AnswerKind::kRefused,
+                      result);
+}
+
+/**
+ * @brief LEAVE FALLBACK: REFUSED on arrival (size 0x06, mode 0x05), or RECEIVED, the boot-state
+ * write, then DONE or REFUSED 0x11 (owner's decision 30, 15 Oct 2026; REQ-117).
+ *
+ * The mode is OPERATE from the DONE on; nothing restarts (ModeManager::runLeaveFallback).
+ *
+ * @param[in]     frame  the command frame
+ */
+void handleLeaveFallback(const Frame &frame)
+{
+    AnswerCode result = mode_manager.acceptLeaveFallback(frame.payload, frame.length);
+
+    if (result != AnswerCode::kSuccess) {
+        sender.sendAnswer(frame.sequence, AnswerKind::kRefused, result);
+        return;
+    }
+    sender.sendAnswer(frame.sequence, AnswerKind::kReceived, kReceivedCode);
+    result = mode_manager.runLeaveFallback();
     sender.sendAnswer(frame.sequence,
                       (result == AnswerCode::kSuccess) ? AnswerKind::kDone : AnswerKind::kRefused,
                       result);
@@ -221,8 +246,9 @@ bool isGetStatus(const Frame &command)
  * Step 2b puts the command checker (firmware/command-checker) in front of this, with the
  * checks on arrival that come before RECEIVED for every command: sequence numbers (REQ-065;
  * ALREADY DONE, REQ-031), expiry (REQ-066, REQ-133), modes (REQ-027), Flags and scheduled
- * commands (REQ-134). Today the mode and arming checks run for SWITCH, RETURN TO PREVIOUS and
- * CONFIRM only (ModeManager::acceptDangerous), and the command itself is checked (REQ-028).
+ * commands (REQ-134). Today the mode and arming checks run for SWITCH, RETURN TO PREVIOUS, START
+ * FAILED and CONFIRM only (ModeManager::acceptDangerous), the mode check also for LEAVE FALLBACK
+ * (ModeManager::acceptLeaveFallback), and the command itself is checked (REQ-028).
  *
  * @param[in]     frame  a frame that passed the frame checks (FrameParser)
  */
@@ -241,6 +267,10 @@ void handle(const Frame &frame)
     }
     if (ModeManager::isDangerous(frame.payload, frame.length)) {
         handleDangerous(frame);
+        return;
+    }
+    if (ModeManager::isLeaveFallback(frame.payload, frame.length)) {
+        handleLeaveFallback(frame);
         return;
     }
     if (!isGetStatus(frame)) {

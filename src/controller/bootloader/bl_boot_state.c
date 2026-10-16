@@ -35,8 +35,8 @@
 #define AT_CONFIRMED       4U
 #define AT_TRIAL           5U
 #define AT_FAILED_STARTS   6U
-#define AT_UNUSED          7U
-#define AT_RESERVED        8U
+#define AT_FLAGS           7U
+#define AT_GIVEN_UP_CHECK  8U
 #define AT_CHECK           12U
 #define RECORD_BYTES       16U
 /* The record is programmed as two 64-bit flash words of two 32-bit words each
@@ -59,8 +59,9 @@ _Static_assert(offsetof(boot_state_t, sequence) == AT_SEQUENCE, "sequence at byt
 _Static_assert(offsetof(boot_state_t, confirmed) == AT_CONFIRMED, "confirmed at byte 4");
 _Static_assert(offsetof(boot_state_t, trial) == AT_TRIAL, "trial at byte 5");
 _Static_assert(offsetof(boot_state_t, failed_starts) == AT_FAILED_STARTS, "starts at byte 6");
-_Static_assert(offsetof(boot_state_t, unused) == AT_UNUSED, "unused at byte 7");
-_Static_assert(offsetof(boot_state_t, reserved) == AT_RESERVED, "reserved at byte 8");
+_Static_assert(offsetof(boot_state_t, flags) == AT_FLAGS, "flags at byte 7");
+_Static_assert(offsetof(boot_state_t, given_up_check) == AT_GIVEN_UP_CHECK,
+               "given_up_check at byte 8");
 _Static_assert(offsetof(boot_state_t, check) == AT_CHECK, "check at byte 12");
 _Static_assert(sizeof(boot_state_t) == RECORD_BYTES, "boot state is two 64-bit flash words");
 
@@ -112,8 +113,8 @@ static void encode(const boot_state_t *state, uint8_t record[RECORD_BYTES])
     record[AT_CONFIRMED] = state->confirmed;
     record[AT_TRIAL] = state->trial;
     record[AT_FAILED_STARTS] = state->failed_starts;
-    record[AT_UNUSED] = state->unused;
-    put_u32(&record[AT_RESERVED], state->reserved);
+    record[AT_FLAGS] = state->flags;
+    put_u32(&record[AT_GIVEN_UP_CHECK], state->given_up_check);
     put_u32(&record[AT_CHECK], state->check);
 }
 
@@ -131,8 +132,8 @@ static void decode(const uint8_t record[RECORD_BYTES], boot_state_t *state)
     state->confirmed = record[AT_CONFIRMED];
     state->trial = record[AT_TRIAL];
     state->failed_starts = record[AT_FAILED_STARTS];
-    state->unused = record[AT_UNUSED];
-    state->reserved = get_u32(&record[AT_RESERVED]);
+    state->flags = record[AT_FLAGS];
+    state->given_up_check = get_u32(&record[AT_GIVEN_UP_CHECK]);
     state->check = get_u32(&record[AT_CHECK]);
 }
 
@@ -152,18 +153,22 @@ static uint32_t check_value(const boot_state_t *state)
 }
 
 /**
- * @brief Returns true if the slot fields and the start count of a record have allowed values.
+ * @brief Returns true if the slot fields, the start count and the flags of a record have allowed
+ * values.
  *
  * Confirmed must be slot A or slot B; trial must be none or the slot that is not confirmed; the
  * start count cannot be above BOOT_STATE_MAX_STARTS, because main.c gives the trial up before it
- * would store a higher count (count_trial_start), so a higher stored count is damage. A record
- * can come from flash: a value that fails here is damage, judged by decision D, never the fault
- * reaction (owner's fault decision of 13 Oct 2026, point 4). So confirmed is tested against A
- * and B first, and only a confirmed slot known to be A or B is given to
+ * would store a higher count (count_trial_start), so a higher stored count is damage. The flags
+ * may hold no bit but BOOT_STATE_FLAG_FALLBACK, the only one any writer sets (owner's decision 30,
+ * 15 Oct 2026): another bit is damage. Tested here as a mask, where common/boot_state.c compares
+ * with the two allowed values. Every given_up_check value is allowed (a CRC-32; 0 means none).
+ * A record can come from flash: a value that fails here is damage, judged by decision D, never
+ * the fault reaction (owner's fault decision of 13 Oct 2026, point 4). So confirmed is tested
+ * against A and B first, and only a confirmed slot known to be A or B is given to
  * bl_boot_state_other_slot, which treats any other code as a fault.
  *
  * @param[in]     state  the record
- * @return true if the slots and the count are allowed, false otherwise
+ * @return true if the slots, the count and the flags are allowed, false otherwise
  */
 static bool fields_allowed(const boot_state_t *state)
 {
@@ -171,6 +176,9 @@ static bool fields_allowed(const boot_state_t *state)
         return false;
     }
     if (state->failed_starts > BOOT_STATE_MAX_STARTS) {
+        return false;
+    }
+    if (((uint32_t)state->flags & ~(uint32_t)BOOT_STATE_FLAG_FALLBACK) != 0U) {
         return false;
     }
     return (state->trial == BOOT_SLOT_NONE) ||
@@ -200,7 +208,7 @@ static bool erased(const boot_state_t *state)
 {
     return (state->sequence == ERASED_WORD) && (state->confirmed == ERASED_BYTE) &&
            (state->trial == ERASED_BYTE) && (state->failed_starts == ERASED_BYTE) &&
-           (state->unused == ERASED_BYTE) && (state->reserved == ERASED_WORD) &&
+           (state->flags == ERASED_BYTE) && (state->given_up_check == ERASED_WORD) &&
            (state->check == ERASED_WORD);
 }
 
@@ -353,14 +361,16 @@ static bool read_back_matches(uint32_t address, const uint8_t record[RECORD_BYTE
  * nothing and *state is left as it is. Then: the newest good copy is found; the write goes to the
  * other copy, so the current one survives a power cut (REQ-017, code rule B7); with no good copy
  * it goes to copy 0, as common/boot_state.c does. The sequence number is one above the newest
- * (1 with none); unused and reserved are written as 0; the check value is computed last over the
- * encoded bytes (data, then check value). The page is erased and the two flash words programmed
- * through bl_flash.c, whose barrier is checked before each operation. The record sits at the
- * start of its copy, so erasing the copy's first page is enough.
+ * (1 with none); flags and given_up_check are written as the caller set them (main.c copies
+ * them from the record it loaded, or sets them for a give-up; until owner's decision 30, 15 Oct
+ * 2026, they were "unused" and "reserved" and this function wrote them as 0); the check value is
+ * computed last over the encoded bytes (data, then check value). The page is erased and the two
+ * flash words programmed through bl_flash.c, whose barrier is checked before each operation. The
+ * record sits at the start of its copy, so erasing the copy's first page is enough.
  *
- * @param[in,out] state  boot state to write; sequence, unused, reserved and check are set
+ * @param[in,out] state  boot state to write; sequence and check are set
  * @return true if the state was written and read back equal; false if the state is not allowed
- *         (slots or start count), or the erase, the programming or the read-back failed
+ *         (slots, start count or flags), or the erase, the programming or the read-back failed
  */
 bool bl_boot_state_write(boot_state_t *state)
 {
@@ -384,8 +394,6 @@ bool bl_boot_state_write(boot_state_t *state)
         target = OTHER_COPY_ADDRESS[newest];
         state->sequence = copies[newest].sequence + 1U;
     }
-    state->unused = 0U;
-    state->reserved = 0U;
     state->check = check_value(state);
     encode(state, record);
     for (uint32_t w = 0U; w < RECORD_WORDS; w++) {

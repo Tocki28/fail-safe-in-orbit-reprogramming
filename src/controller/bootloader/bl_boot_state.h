@@ -33,9 +33,10 @@ boot_state_load_t bl_boot_state_load(boot_state_t *state);
 boot_state_load_t bl_boot_state_classify(const boot_state_t copies[2], const bool readable[2],
                                          boot_state_t *state);
 
-/* Store confirmed, trial and failed_starts from *state. Sets state->sequence, unused, reserved
- * and check to the values written. False if the fields are not allowed, the flash reported an
- * error, or the read-back did not match. */
+/* Store confirmed, trial, failed_starts, flags and given_up_check from *state (owner's decision
+ * 30, 15 Oct 2026: flags and given_up_check are no longer written as 0). Sets state->sequence and
+ * check to the values written. False if the fields are not allowed, the flash reported an error,
+ * or the read-back did not match. */
 bool bl_boot_state_write(boot_state_t *state);
 
 /* The other slot of the pair: A for B, B for A. Any other code is a corrupted value: the fault

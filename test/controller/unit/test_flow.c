@@ -878,6 +878,231 @@ static void test_not_started_records(void)
            "B 0x10, last-resort 0x09, none started");
 }
 
+/* ---- Owner decision 30: the give-up mark and the FALLBACK flag -------------------------- */
+
+/* A given-up mark that matches no header of these tests. No technical reason for the value. */
+#define STALE_MARK     0x5A5A1234U
+/* The flag byte's FALLBACK bit, written here from the specification of decision 30 (boot-state
+ * byte 7, bit 0), not taken from boot_state.h, so a wrong value there shows. */
+#define FLAG_FALLBACK  0x01U
+
+/**
+ * @brief Puts an image header into the RAM flash at a slot: optionally the magic "FSIR", and the
+ * body check value at IMAGE_OFFSET_BODY_CHECK, little-endian (common/image_format.h).
+ *
+ * @param[in]     slot_start  chip address of the slot
+ * @param[in]     with_magic  true: write the four magic bytes
+ * @param[in]     check       the body check value to store
+ */
+static void put_header(uint32_t slot_start, bool with_magic, uint32_t check)
+{
+    uint32_t at = slot_start - (uint32_t)FLASH_START;
+
+    if (with_magic) {
+        stub_flash[at + IMAGE_OFFSET_MAGIC] = IMAGE_MAGIC_0;
+        stub_flash[at + IMAGE_OFFSET_MAGIC + 1U] = IMAGE_MAGIC_1;
+        stub_flash[at + IMAGE_OFFSET_MAGIC + 2U] = IMAGE_MAGIC_2;
+        stub_flash[at + IMAGE_OFFSET_MAGIC + 3U] = IMAGE_MAGIC_3;
+    }
+    for (uint32_t i = 0U; i < 4U; i++) {
+        stub_flash[at + IMAGE_OFFSET_BODY_CHECK + i] = (uint8_t)(check >> (8U * i));
+    }
+}
+
+/**
+ * @brief Returns true if record number `index` written is a give-up with the FALLBACK flag and
+ * this mark: confirmed A, trial none, 0 starts.
+ *
+ * @param[in]     index  which write, from 0 (a refused trial image is written after the count of
+ *                       its start, so its give-up is write 1)
+ * @param[in]     mark   the given_up_check expected
+ * @return true if write_count is above index and written[index] is that record
+ */
+static bool write_is_give_up(uint32_t index, uint32_t mark)
+{
+    return (write_count > index) && (written[index].confirmed == BOOT_SLOT_A) &&
+           (written[index].trial == BOOT_SLOT_NONE) && (written[index].failed_starts == 0U) &&
+           (written[index].flags == FLAG_FALLBACK) && (written[index].given_up_check == mark);
+}
+
+/**
+ * @brief Every give-up of the bootloader writes the FALLBACK flag and the given-up slot's header
+ * body check value (0 if its magic is invalid).
+ *
+ * Four ways in: the start count used up (count_trial_start, 255 and at the limit), the firmware's
+ * give-up request (decision G), a trial image refused (start_first_passing). The trial slot B's
+ * header is in the RAM flash. Cases with no magic, and a stale mark in the stored state, show the
+ * mark is replaced and not kept.
+ * Defects caught: a give-up written with zeroed flags and mark (the old code, F-1: the next SWITCH
+ * could restart the given-up firmware); the mark taken from slot A (the confirmed one); a stale
+ * mark kept when the given-up image has none; FALLBACK set on one give-up path only.
+ */
+static void test_give_up_marks(void)
+{
+    boot_state_t state;
+    uint32_t records = 0U;
+
+    reset_rig();
+    put_header(SLOT_B_START, true, 0x0BADCAFEU);
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_A;
+    state.trial = BOOT_SLOT_B;
+    state.failed_starts = 255U;
+    state.given_up_check = STALE_MARK;
+    count_trial_start(&state, &records);
+    report(write_is_give_up(0U, 0x0BADCAFEU) && (write_count == 1U),
+           "decision 30: start count 255 -> given up: FALLBACK, mark = B's header check (the "
+           "stale mark replaced)");
+
+    reset_rig();
+    put_header(SLOT_B_START, true, 0x0BADCAFEU);
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_A;
+    state.trial = BOOT_SLOT_B;
+    state.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
+    records = 0U;
+    count_trial_start(&state, &records);
+    report(write_is_give_up(0U, 0x0BADCAFEU),
+           "decision 30: start count at the limit (3) -> given up: FALLBACK, mark = B's header "
+           "check");
+
+    reset_rig();
+    put_header(SLOT_A_START, true, 0x11112222U);
+    put_header(SLOT_B_START, true, 0x0BADCAFEU);
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_B;
+    state.trial = BOOT_SLOT_A;
+    state.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
+    records = 0U;
+    count_trial_start(&state, &records);
+    report((write_count == 1U) && (written[0].confirmed == BOOT_SLOT_B) &&
+               (written[0].trial == BOOT_SLOT_NONE) && (written[0].flags == FLAG_FALLBACK) &&
+               (written[0].given_up_check == 0x11112222U),
+           "decision 30: trial A given up (confirmed B) -> mark = A's header check, not B's");
+
+    reset_rig();
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_A;
+    state.trial = BOOT_SLOT_B;
+    state.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
+    state.given_up_check = STALE_MARK;
+    records = 0U;
+    count_trial_start(&state, &records);
+    report(write_is_give_up(0U, 0U),
+           "decision 30: given-up slot B has no valid header magic (erased) -> FALLBACK, mark 0 "
+           "(a stale mark is not kept)");
+
+    reset_rig();
+    put_header(SLOT_B_START, false, 0x0BADCAFEU);
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_A;
+    state.trial = BOOT_SLOT_B;
+    state.failed_starts = (uint8_t)BOOT_STATE_MAX_STARTS;
+    records = 0U;
+    count_trial_start(&state, &records);
+    report(write_is_give_up(0U, 0U),
+           "decision 30: slot B's body-check bytes present but no magic -> mark 0");
+
+    reset_rig();
+    put_header(SLOT_B_START, true, 0x0BADCAFEU);
+    stored.trial = BOOT_SLOT_B;
+    stored.failed_starts = 1U;
+    stub_backup_set(BACKUP_PAIR_GIVE_UP, BOOT_SLOT_B);
+    int ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
+               write_is_give_up(0U, 0x0BADCAFEU),
+           "decision 30: the firmware's give-up request for B (decision G) -> FALLBACK, mark = "
+           "B's header check, A started");
+
+    reset_rig();
+    put_header(SLOT_B_START, true, 0x0BADCAFEU);
+    stored.trial = BOOT_SLOT_B;
+    region_result[AT_B] = IMAGE_BAD_BODY_CHECK;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) &&
+               write_is_give_up(1U, 0x0BADCAFEU) && (write_count == 2U),
+           "decision 30: trial B's image refused (body check) -> given up: FALLBACK, mark = the "
+           "header's check value as stored");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    region_result[AT_B] = IMAGE_EMPTY;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) && write_is_give_up(1U, 0U),
+           "decision 30: trial B's slot is empty -> given up: FALLBACK, mark 0");
+
+    reset_rig();
+    put_header(SLOT_B_START, true, 0x0BADCAFEU);
+    stored.trial = BOOT_SLOT_B;
+    region_result[AT_B] = IMAGE_BAD_BODY_CHECK;
+    write_results[1] = false;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (write_count == 3U) &&
+               (written[1].flags == FLAG_FALLBACK) && (written[1].given_up_check == 0x0BADCAFEU) &&
+               (written[2].flags == FLAG_FALLBACK) && (written[2].given_up_check == 0x0BADCAFEU),
+           "decision 30: the give-up's save is retried (decision I): the second write carries "
+           "FALLBACK and the mark too");
+}
+
+/**
+ * @brief The bootloader keeps the flags byte and the given-up mark when it writes the start
+ * count, and an old-format record (flags 0, mark 0) still boots.
+ *
+ * Defects caught: count_trial_start building a fresh record or the write zeroing byte 7 and
+ * bytes 8-11 (the mark lost when the next trial starts, so the given-up image could be switched
+ * to again); a changed start of a plain boot (a write where none was); an old-format record
+ * refused or "upgraded" by a write; the default state written with a leftover flag or mark.
+ */
+static void test_fields_kept(void)
+{
+    boot_state_t state;
+    uint32_t records = 0U;
+
+    reset_rig();
+    memset(&state, 0, sizeof state);
+    state.confirmed = BOOT_SLOT_A;
+    state.trial = BOOT_SLOT_B;
+    state.failed_starts = 0U;
+    state.flags = FLAG_FALLBACK;
+    state.given_up_check = STALE_MARK;
+    count_trial_start(&state, &records);
+    report((write_count == 1U) && (written[0].failed_starts == 1U) &&
+               (written[0].trial == BOOT_SLOT_B) && (written[0].flags == FLAG_FALLBACK) &&
+               (written[0].given_up_check == STALE_MARK),
+           "decision 30: count_trial_start writes the start count and keeps flags and mark");
+
+    reset_rig();
+    stored.trial = BOOT_SLOT_B;
+    stored.given_up_check = STALE_MARK;
+    int ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_B) && (write_count == 1U) &&
+               (written[0].failed_starts == 1U) && (written[0].flags == 0U) &&
+               (written[0].given_up_check == STALE_MARK),
+           "decision 30: a whole boot of trial B with a mark in the state: B started, the count "
+           "write keeps the mark");
+
+    reset_rig();
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) && (write_count == 0U),
+           "decision 30: old-format record (flags 0, mark 0), confirmed A -> A started, nothing "
+           "written");
+
+    reset_rig();
+    stored.flags = FLAG_FALLBACK;
+    stored.given_up_check = STALE_MARK;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (started_vector == VECTOR_A) && (write_count == 0U),
+           "decision 30: record with FALLBACK and a mark, confirmed A, no trial -> A started, "
+           "nothing written (the flag changes no choice)");
+
+    reset_rig();
+    stored_load = (int)BOOT_STATE_BLANK;
+    ended = run_boot();
+    report((ended == RUN_STARTED) && (write_count == 1U) && (written[0].flags == 0U) &&
+               (written[0].given_up_check == 0U),
+           "decision 30: blank boot state -> the default state is written with flags 0 and mark 0");
+}
+
 /**
  * @brief Runs the tests and prints the totals.
  *
@@ -898,6 +1123,8 @@ int main(void)
     test_fallback_record();
     test_skip_records();
     test_not_started_records();
+    test_give_up_marks();
+    test_fields_kept();
     if (failures == 0U) {
         printf("bootloader flow tests: all %u passed\n", tests);
         return 0;

@@ -32,6 +32,10 @@
  *         the two slots passed over when the boot state is damaged (0x0E, 0x0F, 0x10);
  *   faults: a value in memory that cannot exist calls fault_impossible_value (common/fault.h)
  *         with the fault-location code of its function (decision 3, common/fault_codes.h).
+ * And the owner's decision 30, 15 Oct 2026 (finding F-1: a SWITCH restarted a firmware that had
+ * been given up; REQ-019): every give-up of a trial here also sets the FALLBACK flag and stores
+ * the given-up image's body check value in the boot state (give_up_trial), so the firmware that
+ * starts next runs in FALLBACK and refuses a SWITCH to that image.
  *
  * Switches over an enum have no default label. No default: the compiler checks every case
  * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch. This deviates on
@@ -206,7 +210,11 @@ static const char *reset_cause_text(reset_cause_t cause)
 }
 
 /**
- * @brief Writes the boot state to the log: confirmed slot, trial slot and failed starts.
+ * @brief Writes the boot state to the log: confirmed slot, trial slot, failed starts, flags and
+ * the given-up image's body check value.
+ *
+ * The flags and the given-up check (owner's decision 30, 15 Oct 2026) are logged as numbers, so a
+ * bench run shows the FALLBACK flag and the mark that a SWITCH is refused on.
  *
  * @param[in]     state  boot state to log
  */
@@ -218,6 +226,10 @@ static void log_state(const boot_state_t *state)
     uart_put(slot_letter(state->trial));
     uart_put(", failed starts ");
     uart_put_decimal(state->failed_starts);
+    uart_put(", flags ");
+    uart_put_decimal(state->flags);
+    uart_put(", given up ");
+    uart_put_hex32(state->given_up_check);
     uart_put("\r\n");
 }
 
@@ -361,11 +373,12 @@ static bool save_state_retry(boot_state_t *state)
  * @brief Reads the boot state and decides from it (decision D); logs what it found.
  *
  * VALID: the stored state is used. BLANK (both copies erased, as on a fresh chip or after a
- * restore): confirmed A, no trial, 0 failed starts, as before; it is saved, tried twice
- * (decision I). DAMAGED (no valid copy, and a copy that is not erased): false, so main() starts
- * only the last-resort firmware. Why: the stored state is lost, and the default could start a
- * slot the operator had given up (REQ-019); the last-resort firmware is the one copy that needs
- * no boot state (Architecture Sec. 5.1).
+ * restore): confirmed A, no trial, 0 failed starts, as before, no FALLBACK flag and no given-up
+ * image (flags 0, given_up_check 0: owner's decision 30, 15 Oct 2026; nothing was ever given up
+ * on an erased state); it is saved, tried twice (decision I). DAMAGED (no valid copy, and a copy
+ * that is not erased): false, so main() starts only the last-resort firmware. Why: the stored
+ * state is lost, and the default could start a slot the operator had given up (REQ-019); the
+ * last-resort firmware is the one copy that needs no boot state (Architecture Sec. 5.1).
  *
  * Every boot_state_load_t value has its own case (the pattern is in the file comment).
  *
@@ -384,6 +397,8 @@ static bool load_state(boot_state_t *state)
         state->confirmed = BOOT_SLOT_A;
         state->trial = BOOT_SLOT_NONE;
         state->failed_starts = 0U;
+        state->flags = 0U;
+        state->given_up_check = 0U;
         /* The result is logged by save_state_retry. The default is used for this start either
          * way; if it was not stored, the next start finds the copies blank and sets it again. */
         (void)save_state_retry(state);
@@ -398,10 +413,50 @@ static bool load_state(boot_state_t *state)
 }
 
 /**
- * @brief Ends the trial: logs the reason, clears the trial slot and the failed starts, saves the
- * state, tried twice (decision I).
+ * @brief Returns the body check value in the header of the image in a region, or 0 when the
+ * header's proprietary string is not there or its read saw a flash read error.
  *
- * @param[in,out] state  boot state; trial and failed_starts are cleared
+ * The value that marks a given-up image in the boot state (given_up_check; owner's decision 30,
+ * 15 Oct 2026). Only the header is read, at its fixed offsets (common/image_format.h; Interfaces
+ * Sec. 5.5, Figure 6): the image itself may be the one just refused, so nothing else of it is
+ * trusted, and no length is read. 0 for a header without the proprietary string, as the decision
+ * says: such a region holds no image that could be started. A value read with a two-bit flash
+ * error is not the header's value, so it is 0 too: Proposal (TBR), awaiting the owner's
+ * acceptance (a region read with that error is refused by the image checks before any start).
+ *
+ * @param[in]     region  region of the image (slot A or slot B)
+ * @return the header's body check value, or 0
+ */
+static uint32_t given_up_check_of(const region_t *region)
+{
+    const uint8_t *image = bl_flash_at(region->start);
+
+    bl_flash_ecc_clear();
+    bool magic = (image[IMAGE_OFFSET_MAGIC] == IMAGE_MAGIC_0) &&
+                 (image[IMAGE_OFFSET_MAGIC + 1U] == IMAGE_MAGIC_1) &&
+                 (image[IMAGE_OFFSET_MAGIC + 2U] == IMAGE_MAGIC_2) &&
+                 (image[IMAGE_OFFSET_MAGIC + 3U] == IMAGE_MAGIC_3);
+    uint32_t check = bl_image_read_u32(&image[IMAGE_OFFSET_BODY_CHECK]);
+    if (!magic || bl_flash_ecc_error_seen()) {
+        return 0U;
+    }
+    return check;
+}
+
+/**
+ * @brief Ends the trial: logs the reason, clears the trial slot and the failed starts, sets the
+ * FALLBACK flag and the given-up image's mark, saves the state, tried twice (decision I).
+ *
+ * The confirmed slot stays as it is: it is the previous slot, which starts in the trial's place.
+ * The FALLBACK flag and the mark (owner's decision 30, 15 Oct 2026; finding F-1, REQ-019): the
+ * firmware that starts next reads the flag and runs in FALLBACK, and it refuses a SWITCH to an
+ * image whose body check value equals the mark (firmware/mode-manager/mode_manager.cpp). The mark
+ * is read from the trial slot's header before the trial field is cleared (given_up_check_of).
+ * Every give-up of this file comes here: the start count used up (count_trial_start), the trial
+ * image refused (start_first_passing), and the firmware's give-up request (apply_give_up_request).
+ *
+ * @param[in,out] state  boot state; trial and failed_starts are cleared, flags and given_up_check
+ *                       are set
  * @param[in]     why    reason, for the log
  * @return true if the state was saved, false if both writes failed (the trial is then given up
  *         in RAM only, for this start)
@@ -413,6 +468,8 @@ static bool give_up_trial(boot_state_t *state, const char *why)
     uart_put(" given up: ");
     uart_put(why);
     uart_put("\r\n");
+    state->given_up_check = given_up_check_of(slot_region(state->trial));
+    state->flags = BOOT_STATE_FLAG_FALLBACK;
     state->trial = BOOT_SLOT_NONE;
     state->failed_starts = 0U;
     return save_state_retry(state);

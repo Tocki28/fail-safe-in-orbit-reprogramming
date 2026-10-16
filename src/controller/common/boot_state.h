@@ -1,6 +1,7 @@
 /*
  * boot_state.h — the data kept over restarts: which slot is confirmed, which one is on trial,
- * and how often the trial has been started.
+ * how often the trial has been started, whether the controller is in FALLBACK, and which image
+ * was given up last (owner's decision 30, 15 Oct 2026).
  *
  * Stored twice (layout.h, BOOT_STATE_COPY_0 and _1), each copy with a CRC-32 that is checked
  * before use (REQ-136). A read takes the valid copy with the higher sequence number. A write
@@ -30,15 +31,25 @@ extern "C" {
  * damaged count cannot be read as valid. */
 #define BOOT_STATE_MAX_STARTS 3U
 
+/* Bit 0 of the flags field: the controller is in FALLBACK (owner's decision 30, 15 Oct 2026;
+ * ConOps mode table, FALLBACK; REQ-117). Set by every give-up of a trial, cleared by CONFIRM,
+ * SWITCH, START FAILED and LEAVE FALLBACK. No other bit is defined: a stored record with any other
+ * bit set fails its checks (damage, decision D), never a fault and never a guessed value. */
+#define BOOT_STATE_FLAG_FALLBACK 0x01U
+
 /* 16 bytes: two 64-bit flash words, the unit the chip programs [RM0440 Rev 9, Sec. 5.3.7,
- * p. 196]. Field order fixes the byte layout (no padding: 4 + 4 x 1 + 4 + 4). */
+ * p. 196]. Field order fixes the byte layout (no padding: 4 + 4 x 1 + 4 + 4).
+ * Bytes 7 and 8-11 were "unused" and "reserved", written as 0, until owner's decision 30: a record
+ * written before it (flags 0, given_up_check 0) stays valid and means no FALLBACK and no given-up
+ * image. */
 typedef struct {
     uint32_t sequence;      /* one higher on every write; the higher valid copy is current */
     uint8_t confirmed;      /* BOOT_SLOT_A or BOOT_SLOT_B */
     uint8_t trial;          /* BOOT_SLOT_NONE, or the slot that is not confirmed */
     uint8_t failed_starts;  /* trial starts so far, 0 to BOOT_STATE_MAX_STARTS; reset to 0 when the trial ends */
-    uint8_t unused;         /* written as 0 */
-    uint32_t reserved;      /* written as 0; fills the second flash word */
+    uint8_t flags;          /* 0 or BOOT_STATE_FLAG_FALLBACK (decision 30) */
+    uint32_t given_up_check;   /* body check value (image header, common/image_format.h) of the
+                                * image most recently given up; 0 = none (decision 30, REQ-019) */
     uint32_t check;         /* CRC-32 of the 12 bytes above (REQ-136) */
 } boot_state_t;
 
@@ -62,9 +73,9 @@ boot_state_load_t boot_state_load(boot_state_t *state);
 boot_state_load_t boot_state_classify(const boot_state_t copies[2], const bool readable[2],
                                       boot_state_t *state);
 
-/* Store confirmed, trial and failed_starts from *state. Sets state->sequence and
- * state->check to the values written. False if the flash reported an error or the
- * read-back did not match. */
+/* Store confirmed, trial, failed_starts, flags and given_up_check from *state. Sets
+ * state->sequence and state->check to the values written. False if the fields are not allowed,
+ * the flash reported an error or the read-back did not match. */
 bool boot_state_write(boot_state_t *state);
 
 /* The other slot of the pair: A for B, B for A. Any other code is a corrupted value: the fault

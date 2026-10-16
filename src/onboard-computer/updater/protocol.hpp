@@ -102,6 +102,11 @@ constexpr uint8_t kBootStateNotStored = 0x11; // "Boot state could not be stored
 // image stopped (REQ-051). Owner decision 21, 15 Oct 2026; Interfaces Sec. 4.2 row to be added
 // (the table ends at 0x11 today, so 0x12 is the next free code).
 constexpr uint8_t kCancelled = 0x12;
+// "The image was given up; START FAILED starts it again": the controller's refusal of a command
+// for an image it gave up after a failed trial or check (FALLBACK). Owner decision 30, 15 Oct
+// 2026; Interfaces Sec. 4.2 row to be added (TBR). The controller sends it; the onboard computer
+// only passes it to the ground and names it. 0x13 is the next free code after 0x12.
+constexpr uint8_t kImageGivenUp = 0x13;
 
 // BENCH ONLY, not in the Interfaces table. Sec. 4.2 has no reason for "the onboard computer
 // could not do it", yet a delivery must end with DONE or REFUSED (REQ-033) and the ground

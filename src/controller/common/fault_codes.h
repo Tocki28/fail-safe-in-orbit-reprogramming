@@ -134,11 +134,13 @@ _Static_assert(FAULT_RANGE_FIRMWARE_LAST < FAULT_FOUND_BY_BOOTLOADER,
 #define FAULT_AT_TEST_IMAGE_RUN                 0x2CU
 /* firmware/mode-manager/mode_manager.cpp, copyCode: a value outside Slot. */
 #define FAULT_AT_COPY_CODE                      0x2DU
-/* firmware/mode-manager/mode_manager.cpp, ModeManager::poll: the mode FALLBACK, which this
- * build never sets, or a value outside HealthMode. */
+/* firmware/mode-manager/mode_manager.cpp, ModeManager::poll: a value outside HealthMode. Until
+ * owner's decision 30 (15 Oct 2026) also the mode FALLBACK, which no build set then; FALLBACK now
+ * runs OPERATE's work, and this function has one fault site. */
 #define FAULT_AT_MODE_MANAGER_POLL              0x2EU
 /* firmware/mode-manager/mode_manager.cpp, ModeManager::runDangerous: a command identifier that
- * is neither SWITCH nor CONFIRM. */
+ * is none of SWITCH, RETURN TO PREVIOUS, START FAILED and CONFIRM (START FAILED since owner's
+ * decision 30, 15 Oct 2026). */
 #define FAULT_AT_MODE_MANAGER_RUN_DANGEROUS     0x2FU
 
 #endif /* FAULT_CODES_H */

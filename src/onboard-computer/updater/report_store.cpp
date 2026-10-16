@@ -86,6 +86,8 @@ const char * refusalName(uint8_t code)
     case answer::kBootStateNotStored: return "boot state could not be stored";
     // REQ-051; owner decision 21, 15 Oct 2026; Interfaces Sec. 4.2 row pending (TBD)
     case answer::kCancelled:          return "delivery cancelled by the operator";
+    // owner decision 30, 15 Oct 2026; Interfaces Sec. 4.2 row pending (TBR)
+    case answer::kImageGivenUp:       return "the image was given up; START FAILED starts it again";
     case answer::kNoAnswerBench:      return "controller did not answer (bench code)";
     case answer::kStorageBench:       return "onboard storage failed (bench code)";
     case answer::kCannotSendBench:    return "data link A cannot send (bench code)";

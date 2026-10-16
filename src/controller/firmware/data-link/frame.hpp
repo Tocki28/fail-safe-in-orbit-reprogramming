@@ -105,6 +105,9 @@ enum class [[nodiscard]] AnswerCode : uint8_t {
     kTestsNotPassed = 0x0FU,    /* trial tests not passed (REQ-012) */
     kWrongKind = 0x10U,         /* image of the wrong kind for its place (REQ-005, REQ-008) */
     kStateNotStored = 0x11U,    /* boot state could not be stored (REQ-012, REQ-021) */
+    /* the image was given up; START FAILED starts it again (REQ-019). Owner decision 30, 15 Oct
+     * 2026; Interfaces Sec. 4.2 row to be added (TBR). */
+    kImageGivenUp = 0x13U,
 };
 
 /* One frame's fields. payload points at length bytes. */

@@ -1720,8 +1720,9 @@ void testSwitchWriteFails()
  *
  * REQ-113 and Interfaces line 359 (0x21, dangerous = YES): a command marked dangerous goes
  * through the checks on arrival. The size is checked later by acceptDangerous(), so a 2-byte
- * payload still counts as dangerous here, as for SWITCH and CONFIRM. 0x22 (START FAILED) is not
- * in this step and stays not dangerous; an empty payload is not dangerous.
+ * payload still counts as dangerous here, as for SWITCH and CONFIRM. 0x22 (START FAILED) is
+ * dangerous since owner decision 30 (it was not, before); 0x23 (LEAVE FALLBACK) is not; an empty
+ * payload is not dangerous.
  * Defects caught: kCmdReturnToPrevious not 0x21 or missing; isDangerous() without the 0x21
  * branch, so the command would skip the arming and mode checks; a branch that matches 0x22 or
  * the wrong byte; a branch that drops SWITCH or CONFIRM.
@@ -1737,10 +1738,15 @@ void testReturnIsDangerous()
            "RETURN TO PREVIOUS: kCmdReturnToPrevious is 0x21 (Interfaces line 359)");
     report(ModeManager::isDangerous(two.data(), 1U) && ModeManager::isDangerous(two.data(), 2U),
            "RETURN TO PREVIOUS: isDangerous() true for 0x21, of 1 byte and of 2 bytes");
-    report(!ModeManager::isDangerous(start_failed.data(), 1U) &&
+    /* Changed by owner decision 30: START FAILED (0x22) is dangerous (Interfaces line 360,
+     * REQ-019); it was "not in this step" and not dangerous before. 0x23 LEAVE FALLBACK stays
+     * not dangerous (line 361). */
+    const std::array<uint8_t, 1> leave_fallback = {0x23U};
+    report(ModeManager::isDangerous(start_failed.data(), 1U) &&
+               !ModeManager::isDangerous(leave_fallback.data(), 1U) &&
                !ModeManager::isDangerous(two.data(), 0U),
-           "RETURN TO PREVIOUS: isDangerous() false for 0x22 (not in this step) and for an empty "
-           "payload");
+           "RETURN TO PREVIOUS: isDangerous() true for 0x22 (START FAILED, decision 30), false for "
+           "0x23 (LEAVE FALLBACK) and for an empty payload");
     report(ModeManager::isDangerous(sw.data(), 1U) && ModeManager::isDangerous(cf.data(), 1U),
            "RETURN TO PREVIOUS: isDangerous() still true for SWITCH and CONFIRM");
 }
@@ -2320,7 +2326,7 @@ void corrupt(ModeManager &mm, size_t offset, uint8_t value)
 
 /**
  * @brief The mode manager's fault paths: runDangerous with an identifier acceptDangerous never
- * passes; poll with a corrupted mode, and with FALLBACK, which this build never sets; a corrupted
+ * passes; poll with a corrupted mode (FALLBACK is valid since decision 30); a corrupted
  * running slot reaching stateCode and copyCode.
  *
  * Fails on the old code: runDangerous answered 0x06; poll treated any mode but TRIAL as OPERATE;
@@ -2348,7 +2354,10 @@ void testModeFaults()
     size_t mode_at = onlyDifference(trial, bytesOf(rig.mm));
     bool found = (mode_at < sizeof(ModeManager));
     bool all = found;
-    for (uint8_t value : {uint8_t{0x07U}, static_cast<uint8_t>(HealthMode::kFallback)}) {
+    /* Changed by owner decision 30: FALLBACK is a mode this build sets and polls like
+     * OPERATE, so it is no longer an impossible value; only 0x07 is (FALLBACK's poll is tested
+     * in testFallbackPoll). */
+    for (uint8_t value : {uint8_t{0x07U}}) {
         bool faulted = false;
         startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
         if (found) {
@@ -2360,9 +2369,8 @@ void testModeFaults()
               (fault_last_location == FAULT_AT_MODE_MANAGER_POLL) &&
               (fake_link.sent_bytes == 0U) && (fake.restarts == 0U);
     }
-    report(all, "poll with the mode byte set to 7, and to FALLBACK (never set by this build): "
-                "fault reaction, fault location 0x2E (one code for both sites), nothing sent "
-                "(was: run as OPERATE)");
+    report(all, "poll with the mode byte set to 7: fault reaction, fault location 0x2E, nothing "
+                "sent (was: run as OPERATE; FALLBACK was in this test until decision 30)");
 
     startRig(rig, Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
     MmBytes run_a = bytesOf(rig.mm);
@@ -2390,6 +2398,764 @@ void testModeFaults()
                (fault_last_location == FAULT_AT_COPY_CODE) && (fake_link.sent_bytes == 0U),
            "running slot byte set to 7: the restart-count clear faults in stateCode (0x22), the "
            "fall-back record in copyCode (0x2D); nothing sent");
+}
+
+/* ---- Owner decision 30: FALLBACK, START FAILED, LEAVE FALLBACK, the given-up mark -------- */
+
+/* The fields and commands of decision 30 are written here from the specification given with the
+ * decision (boot-state byte 7 flags, bytes 8-11 given_up_check; START FAILED 0x22 + copy;
+ * LEAVE FALLBACK 0x23; REFUSED 0x13), not read from mode_manager.hpp, so a wrong value there
+ * shows. Fixes finding F-1: a SWITCH restarted a given-up firmware (ConOps Scenario-310,
+ * REQ-019). */
+constexpr uint8_t kStartFailed = 0x22U;
+constexpr uint8_t kLeaveFallback = 0x23U;
+constexpr uint8_t kCopyA = 0x01U;
+constexpr uint8_t kCopyB = 0x02U;
+constexpr uint8_t kFlagFallback = 0x01U;
+/* REFUSED 0x13: the other slot holds the image that was given up (decision 30). */
+constexpr AnswerCode kRefusedGivenUp = static_cast<AnswerCode>(0x13U);
+/* A given-up mark that matches no image of these tests. No technical reason for the value. */
+constexpr uint32_t kStaleMark = 0x5A5A1234U;
+/* HEALTH's mode byte for FALLBACK (Interfaces Sec. 5.4, HEALTH row: 0x03). */
+constexpr uint8_t kHealthFallback = 0x03U;
+
+/**
+ * @brief Reads a little-endian 32-bit value (Interfaces Sec. 4.0).
+ *
+ * Written here so that the expected marks do not come from the code under test.
+ *
+ * @param[in]     p  first of the 4 bytes
+ * @return the value
+ */
+uint32_t readU32(const uint8_t *p)
+{
+    return static_cast<uint32_t>(p[0]) | (static_cast<uint32_t>(p[1]) << 8U) |
+           (static_cast<uint32_t>(p[2]) << 16U) | (static_cast<uint32_t>(p[3]) << 24U);
+}
+
+/**
+ * @brief Returns the body check value in a slot's header as it stands in the fake flash.
+ *
+ * @param[in]     slot  Slot::kA or Slot::kB
+ * @return the 4 bytes at IMAGE_OFFSET_BODY_CHECK, little-endian
+ */
+uint32_t headerCheckOf(Slot slot)
+{
+    return readU32(&slotBytes(slot)[IMAGE_OFFSET_BODY_CHECK]);
+}
+
+/**
+ * @brief Returns the body check value in the header of the build's signed image of slot B (or A),
+ * read from the image file, not from the fake flash.
+ *
+ * @param[in]     slot  Slot::kA or Slot::kB
+ * @return the check value
+ */
+uint32_t signedCheckOf(Slot slot)
+{
+    const SlotImage &image = (slot == Slot::kA) ? g_image_a : g_image_b;
+
+    return readU32(&image[IMAGE_OFFSET_BODY_CHECK]);
+}
+
+/**
+ * @brief Gives the synthetic header of a slot the magic "FSIR" (common/image_format.h).
+ *
+ * putImage() leaves the header zero, so its magic is invalid and a give-up of that image records
+ * mark 0; the tests that need a non-zero mark call this.
+ *
+ * @param[in]     slot  Slot::kA or Slot::kB
+ */
+void putMagic(Slot slot)
+{
+    uint8_t *image = slotBytes(slot);
+
+    image[IMAGE_OFFSET_MAGIC] = IMAGE_MAGIC_0;
+    image[IMAGE_OFFSET_MAGIC + 1U] = IMAGE_MAGIC_1;
+    image[IMAGE_OFFSET_MAGIC + 2U] = IMAGE_MAGIC_2;
+    image[IMAGE_OFFSET_MAGIC + 3U] = IMAGE_MAGIC_3;
+}
+
+/**
+ * @brief Returns true if the boot state in the fake is exactly this one, flags and mark included.
+ *
+ * @param[in]     confirmed      confirmed slot code
+ * @param[in]     trial          trial slot code
+ * @param[in]     failed_starts  failed starts
+ * @param[in]     flags          flags byte (byte 7)
+ * @param[in]     mark           given_up_check (bytes 8-11)
+ * @return true if fake.state holds these values
+ */
+bool fullStateIs(uint8_t confirmed, uint8_t trial, uint8_t failed_starts, uint8_t flags,
+                 uint32_t mark)
+{
+    return stateIs(confirmed, trial, failed_starts) && (fake.state.flags == flags) &&
+           (fake.state.given_up_check == mark);
+}
+
+/**
+ * @brief Returns true if the command was refused with this code, on arrival or after RECEIVED.
+ *
+ * Decision 30 does not say whether 0x13 and the START FAILED 0x06 come on arrival or after
+ * RECEIVED; the tests that depend on it use this and say so.
+ *
+ * @param[in]     a     the answer
+ * @param[in]     code  the code expected
+ * @return true if the code matches
+ */
+bool refusedWith(Answer a, AnswerCode code)
+{
+    return a.code == code;
+}
+
+/**
+ * @brief Starts a rig as after a restart: running `running`, the boot state "confirmed", no
+ * trial, with the given flags byte and given-up mark.
+ *
+ * @param[in,out] rig        the controller
+ * @param[in]     running    the slot the firmware runs from
+ * @param[in]     confirmed  confirmed slot code
+ * @param[in]     flags      boot-state flags byte
+ * @param[in]     mark       boot-state given_up_check
+ */
+void startWithFlags(Rig &rig, Slot running, uint8_t confirmed, uint8_t flags, uint32_t mark)
+{
+    prepare(running, confirmed, BOOT_SLOT_NONE);
+    fake.state.flags = flags;
+    fake.state.given_up_check = mark;
+    rig.updater.init(running);
+    rig.mm.start(running, 0U, false);
+}
+
+/**
+ * @brief Starts a rig in TRIAL on `running` with a stale mark in the boot state; the running
+ * image's header carries the magic or not.
+ *
+ * @param[in,out] rig         the controller
+ * @param[in]     running     the slot the firmware runs from (the trial slot)
+ * @param[in]     confirmed   confirmed slot code (the other slot)
+ * @param[in]     mark        given_up_check already in the boot state
+ * @param[in]     with_magic  true: the running image's header has the magic "FSIR"
+ */
+void startTrialMarked(Rig &rig, Slot running, uint8_t confirmed, uint32_t mark, bool with_magic)
+{
+    prepare(running, confirmed, (running == Slot::kA) ? uint8_t{BOOT_SLOT_A} : uint8_t{BOOT_SLOT_B});
+    if (with_magic) {
+        putMagic(running);
+    }
+    fake.state.given_up_check = mark;
+    rig.updater.init(running);
+    rig.mm.start(running, 0U, false);
+}
+
+/**
+ * @brief ARM, then START FAILED (0x22) naming `copy`, as the operator sends them.
+ *
+ * ADAPT ON LANDING: written before the code. The payload is the specification's (0x22, copy);
+ * acceptDangerous() takes it whole, runDangerous() is called with the identifier as for SWITCH.
+ * If the code passes the copy to runDangerous() another way, only this function changes.
+ *
+ * @param[in,out] rig   the controller
+ * @param[in]     copy  the copy byte of the payload
+ * @param[in]     now   milliseconds since start
+ * @return the answers given
+ */
+Answer startFailedCmd(Rig &rig, uint8_t copy, uint32_t now)
+{
+    sendArm(rig, kStartFailed, rig.seq + 1U, now);
+    uint32_t seq = rig.seq++;
+    const std::array<uint8_t, 2> p = {kStartFailed, copy};
+    AnswerCode code = rig.mm.acceptDangerous(p.data(), 2U, seq, now, rig.arm);
+
+    if (code != AnswerCode::kSuccess) {
+        rig.sender.sendAnswer(seq, AnswerKind::kRefused, code);
+        return Answer{false, code};
+    }
+    rig.sender.sendAnswer(seq, AnswerKind::kReceived, kReceivedCode);
+    code = rig.mm.runDangerous(kStartFailed, now);
+    rig.sender.sendAnswer(seq, (code == AnswerCode::kSuccess) ? AnswerKind::kDone
+                                                              : AnswerKind::kRefused,
+                          code);
+    return Answer{true, code};
+}
+
+/**
+ * @brief LEAVE FALLBACK (0x23, no fields, not dangerous): checks on arrival, RECEIVED, the work,
+ * DONE or REFUSED.
+ *
+ * acceptLeaveFallback() and runLeaveFallback() are the names in mode_manager.hpp (read when the
+ * header landed); the command is not dangerous, so no ARM. runLeaveFallback() takes no time.
+ *
+ * @param[in,out] rig  the controller
+ * @param[in]     now  not used: kept so that the calls read like the other command helpers
+ * @return the answers given
+ */
+Answer leaveFallbackCmd(Rig &rig, uint32_t now)
+{
+    const std::array<uint8_t, 1> p = {kLeaveFallback};
+    uint32_t seq = rig.seq++;
+    AnswerCode code = rig.mm.acceptLeaveFallback(p.data(), 1U);
+
+    (void)now;   /* runLeaveFallback() takes no time; see above */
+
+    if (code != AnswerCode::kSuccess) {
+        rig.sender.sendAnswer(seq, AnswerKind::kRefused, code);
+        return Answer{false, code};
+    }
+    rig.sender.sendAnswer(seq, AnswerKind::kReceived, kReceivedCode);
+    code = rig.mm.runLeaveFallback();
+    rig.sender.sendAnswer(seq, (code == AnswerCode::kSuccess) ? AnswerKind::kDone
+                                                              : AnswerKind::kRefused,
+                          code);
+    return Answer{true, code};
+}
+
+/**
+ * @brief F-1 regression: a trial given up, the chip restarted, then SWITCH with the same image
+ * in the other slot is REFUSED 0x13 and writes nothing.
+ *
+ * The whole path of ConOps Scenario-310: slot B on trial with the build's signed image, RETURN
+ * TO PREVIOUS gives it up (boot state confirmed A, FALLBACK, mark = B's header body check), the
+ * chip restarts into A (new rig on the same flash and boot state), the mode is FALLBACK, and the
+ * operator's ARM + SWITCH names the same image in B. The expected mark is read from the image
+ * file, not from the code. Whether 0x13 comes before or after RECEIVED is not decided here.
+ * Defects caught: F-1 itself (SWITCH wrote confirmed A, trial B and restarted the given-up
+ * firmware, REQ-019); the give-up not recording the mark; the mark compared against the wrong
+ * slot or against the running slot; the boot state written before the refusal.
+ */
+void testF1Regression()
+{
+    Rig first;
+    prepare(Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B);
+    putSigned(Slot::kB);
+    first.updater.init(Slot::kB);
+    first.mm.start(Slot::kB, 0U, false);
+    first.mm.poll(0U);
+    Answer returned = armedCommand(first, kReturn, kReturnNow);
+    first.mm.poll(kReturnNow + 1U);
+    const uint32_t mark = signedCheckOf(Slot::kB);
+
+    report(done(returned) && (mark != 0U) &&
+               fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, mark),
+           "F-1 step 1: trial B (signed image) given up by RETURN TO PREVIOUS: boot state "
+           "confirmed A, trial none, FALLBACK, mark = B's header body check");
+
+    /* The restart: the same flash and boot state, a new controller running A. */
+    fakeLinkReset();
+    putImage(Slot::kA, kBodyBytes);   /* the running image of A: its self-test must pass */
+    Rig second;
+    second.updater.init(Slot::kA);
+    second.mm.start(Slot::kA, 0U, false);
+    const uint32_t writes = fake.state_writes;
+    const uint32_t restarts = fake.restarts;
+    Answer a = armedCommand(second, kSwitch, 10U);
+    second.mm.poll(11U);
+
+    report(static_cast<uint8_t>(second.mm.mode()) == kHealthFallback,
+           "F-1 step 2: after the restart, running A = confirmed, FALLBACK set -> mode FALLBACK");
+    report(refusedWith(a, kRefusedGivenUp) && (fake.state_writes == writes) &&
+               (fake.restarts == restarts) &&
+               fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, mark),
+           "F-1 step 3: FALLBACK, slot B holds the given-up image, ARM + SWITCH: REFUSED 0x13, "
+           "nothing written, no restart, boot state as before");
+}
+
+/**
+ * @brief Every give-up writes confirmed = previous slot, trial none, 0 starts, FALLBACK, and the
+ * given-up slot's header body check (0 if its magic is invalid).
+ *
+ * Three ways into giveUp(): RETURN TO PREVIOUS, the trial time-out, a failed periodic self-test.
+ * The body of the self-test case is damaged after start, so the mark must be the header's value,
+ * not a recomputed CRC. The last case starts with a stale mark in the boot state and a running
+ * image with no magic: the mark becomes 0, the old one is not kept.
+ * Defects caught: a give-up written with zeroed flags and mark (the old code); the mark taken from
+ * the wrong slot (the confirmed one); the mark recomputed from a damaged body; a stale mark kept
+ * when the new image has none; FALLBACK set on one give-up path only.
+ */
+void testGiveUpWritesFallbackAndMark()
+{
+    {
+        Rig rig;
+        startTrialMarked(rig, Slot::kB, BOOT_SLOT_A, kStaleMark, true);
+        const uint32_t expected = headerCheckOf(Slot::kB);
+        rig.mm.poll(0U);
+        Answer a = armedCommand(rig, kReturn, kReturnNow);
+        report(done(a) && (expected != 0U) && (expected != kStaleMark) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, expected),
+               "give-up by RETURN TO PREVIOUS (B on trial, stale mark in the state): confirmed A, "
+               "trial none, 0 starts, FALLBACK, mark = B's header check (the stale mark replaced)");
+    }
+    {
+        Rig rig;
+        startTrialMarked(rig, Slot::kA, BOOT_SLOT_B, 0U, true);
+        const uint32_t expected = headerCheckOf(Slot::kA);
+        rig.mm.poll(0U);
+        rig.mm.poll(kTrialMs);
+        report((fake.restarts == 1U) && (fake.drains_at_restart >= 1U) &&
+                   fullStateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U, kFlagFallback, expected),
+               "give-up by the trial time-out at 120 s (A on trial, confirmed B): confirmed B, "
+               "trial none, FALLBACK, mark = A's header check, one restart");
+    }
+    {
+        Rig rig;
+        startTrialMarked(rig, Slot::kB, BOOT_SLOT_A, 0U, true);
+        const uint32_t expected = headerCheckOf(Slot::kB);
+        rig.mm.poll(0U);
+        toggleBodyBit(Slot::kB);
+        rig.mm.poll(kSelfTestPeriodMs);
+        report(!rig.mm.selfTestPassed() && (headerCheckOf(Slot::kB) == expected) &&
+                   (fake.restarts == 1U) && (fake.drains_at_restart >= 1U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, expected),
+               "give-up by a failed periodic self-test (body bit flipped): confirmed A, FALLBACK, "
+               "mark = the header's check value as stored (not recomputed from the damaged body)");
+    }
+    {
+        Rig rig;
+        startTrialMarked(rig, Slot::kB, BOOT_SLOT_A, kStaleMark, false);
+        rig.mm.poll(0U);
+        Answer a = armedCommand(rig, kReturn, kReturnNow);
+        report(done(a) && (readU32(slotBytes(Slot::kB)) == 0U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, 0U),
+               "give-up of an image whose header magic is invalid: FALLBACK, mark 0 (a stale mark "
+               "in the state is replaced by 0, not kept)");
+    }
+}
+
+/**
+ * @brief CONFIRM clears FALLBACK and keeps the given-up mark.
+ *
+ * The trial passes its tests; the boot state is then given a FALLBACK flag and a mark, as if an
+ * earlier give-up left them. Defects caught: CONFIRM writing a zeroed record (mark lost, so the
+ * given-up image could be switched to again); CONFIRM leaving FALLBACK set.
+ */
+void testConfirmKeepsMark()
+{
+    Rig rig;
+    bool passed = passedTrial(rig);
+
+    fake.state.flags = kFlagFallback;
+    fake.state.given_up_check = kStaleMark;
+    Answer a = armedCommand(rig, kConfirm, 50U);
+    report(passed && done(a) &&
+               fullStateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U, 0U, kStaleMark),
+           "CONFIRM with FALLBACK and a mark in the boot state: confirmed B, trial none, flags 0, "
+           "mark kept");
+}
+
+/**
+ * @brief SWITCH against the given-up mark: refused when the other slot's header body check equals
+ * a non-zero mark, in OPERATE and in FALLBACK; allowed otherwise, clearing FALLBACK and keeping
+ * the mark.
+ *
+ * The other slot holds the build's signed image so the image check passes. "Different image" is
+ * the same mark with its lowest bit inverted. Mark 0 means none. Slot A and slot B are both
+ * tried as the other slot.
+ * Defects caught: the mark compared only in FALLBACK (the OPERATE case after a LEAVE FALLBACK);
+ * a mark of 0 treated as a match (every SWITCH refused); a different image refused; SWITCH
+ * leaving FALLBACK set or dropping the mark; the comparison done against the running slot;
+ * the refusal written after a boot-state write.
+ */
+void testSwitchGivenUpMark()
+{
+    const uint32_t check_b = signedCheckOf(Slot::kB);
+    const uint32_t check_a = signedCheckOf(Slot::kA);
+
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, 0U, check_b ^ 1U);
+        putSigned(Slot::kB);
+        Answer a = armedCommand(rig, kSwitch, 10U);
+        rig.mm.poll(11U);
+        report(done(a) && (fake.restarts == 1U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_B, 0U, 0U, check_b ^ 1U),
+               "OPERATE, mark differs from B's image: SWITCH allowed, trial B, flags 0, mark kept");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, check_b ^ 1U);
+        putSigned(Slot::kB);
+        Answer a = armedCommand(rig, kSwitch, 10U);
+        rig.mm.poll(11U);
+        report(done(a) && (fake.restarts == 1U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_B, 0U, 0U, check_b ^ 1U),
+               "FALLBACK, mark differs from B's image: SWITCH allowed, trial B, FALLBACK cleared "
+               "(flags 0), mark kept");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, 0U);
+        putSigned(Slot::kB);
+        Answer a = armedCommand(rig, kSwitch, 10U);
+        report(done(a) && fullStateIs(BOOT_SLOT_A, BOOT_SLOT_B, 0U, 0U, 0U),
+               "FALLBACK, mark 0 (none): SWITCH allowed, flags 0, mark stays 0");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, 0U, check_b);
+        putSigned(Slot::kB);
+        const uint32_t writes = fake.state_writes;
+        Answer a = armedCommand(rig, kSwitch, 10U);
+        rig.mm.poll(11U);
+        report(refusedWith(a, kRefusedGivenUp) && (fake.state_writes == writes) &&
+                   (fake.restarts == 0U) && fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, 0U, check_b),
+               "OPERATE (flags 0), mark = B's image: SWITCH REFUSED 0x13, nothing written, no "
+               "restart (the mark outlives FALLBACK)");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kB, BOOT_SLOT_B, kFlagFallback, check_a);
+        putSigned(Slot::kA);
+        const uint32_t writes = fake.state_writes;
+        Answer a = armedCommand(rig, kSwitch, 10U);
+        rig.mm.poll(11U);
+        report(refusedWith(a, kRefusedGivenUp) && (fake.state_writes == writes) &&
+                   (fake.restarts == 0U) &&
+                   fullStateIs(BOOT_SLOT_B, BOOT_SLOT_NONE, 0U, kFlagFallback, check_a),
+               "FALLBACK running B, mark = A's image: SWITCH REFUSED 0x13, nothing written (the "
+               "other slot is A: not fixed to B)");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, check_a);
+        putSigned(Slot::kB);
+        Answer a = armedCommand(rig, kSwitch, 10U);
+        report(done(a) && fullStateIs(BOOT_SLOT_A, BOOT_SLOT_B, 0U, 0U, check_a),
+               "FALLBACK running A, mark = A's own image check: SWITCH to B allowed (the mark is "
+               "compared with the OTHER slot, not the running one)");
+    }
+}
+
+/**
+ * @brief START FAILED (0x22 + copy) from OPERATE and FALLBACK: trial = copy, 0 starts, flags 0,
+ * mark 0, DONE, and the restart only on a later pass after DONE.
+ *
+ * Both copies are tried, the running one being the other. The mark is cleared (the operator
+ * orders the image on purpose), so the mark is set before to see it go. Also: START FAILED is
+ * dangerous (isDangerous), so the checks on arrival apply.
+ * Defects caught: the trial slot fixed to B; flags left FALLBACK; mark kept (the ordered image
+ * would then be refused 0x13 at the next SWITCH); a restart inside the command, before DONE; no
+ * restart on the next pass; START FAILED not routed through the dangerous-command checks.
+ */
+void testStartFailedRuns()
+{
+    const std::array<uint8_t, 2> sf = {kStartFailed, kCopyB};
+
+    report(ModeManager::isDangerous(sf.data(), 2U),
+           "START FAILED: isDangerous() is true for 0x22 (Interfaces line 360: dangerous YES)");
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        putSigned(Slot::kB);
+        uint32_t mark = fake_link.sent_bytes;
+        Answer a = startFailedCmd(rig, kCopyB, 10U);
+        bool before = (fake.restarts == 0U) && sentIs(mark, {kRecv, kDone, kRecv, kDone}) &&
+                      fullStateIs(BOOT_SLOT_A, BOOT_SLOT_B, 0U, 0U, 0U);
+        uint32_t after_done = fake_link.sent_bytes;
+        rig.mm.poll(11U);
+        report(done(a) && before && (fake.restarts == 1U) && (fake.drains_at_restart >= 1U) &&
+                   (fake.sent_at_restart == after_done),
+               "FALLBACK running A, ARM + START FAILED copy B: RECEIVED, DONE; confirmed A, trial "
+               "B, 0 starts, flags 0, mark 0; no restart yet; the next pass drains and restarts");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, 0U, kStaleMark);
+        putSigned(Slot::kB);
+        Answer a = startFailedCmd(rig, kCopyB, 10U);
+        report(done(a) && fullStateIs(BOOT_SLOT_A, BOOT_SLOT_B, 0U, 0U, 0U),
+               "OPERATE running A, ARM + START FAILED copy B: trial B, flags 0, mark cleared "
+               "(0x22 is accepted in OPERATE too)");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kB, BOOT_SLOT_B, kFlagFallback, kStaleMark);
+        putSigned(Slot::kA);
+        Answer a = startFailedCmd(rig, kCopyA, 10U);
+        rig.mm.poll(11U);
+        report(done(a) && (fake.restarts == 1U) &&
+                   fullStateIs(BOOT_SLOT_B, BOOT_SLOT_A, 0U, 0U, 0U),
+               "FALLBACK running B, ARM + START FAILED copy A: confirmed B, trial A (the trial slot "
+               "is the copy named, not fixed)");
+    }
+}
+
+/**
+ * @brief START FAILED refusals: copy equal to the running slot or another value 0x06; the copy's
+ * image failing the slot check, its code; wrong mode 0x05; no ARM 0x01; wrong size 0x06. Nothing
+ * written in any of them.
+ *
+ * The expected codes of the image check are the ones SWITCH gives (0x08 empty or damaged, 0x0E
+ * the other slot's image). Whether the 0x06 of a bad copy comes on arrival or after RECEIVED is
+ * not decided here (refusedWith). The wrong-size case assumes the rule of the other dangerous
+ * commands (a payload of the wrong size is 0x06): decision 30 states the payload, not that rule.
+ * Defects caught: copy == running accepted (trial = the running slot: an invalid boot state); copy
+ * 0x03 or 0x00 treated as A or B (rule A6); no image check, so a trial that the bootloader would
+ * refuse; the boot state written before a refusal; START FAILED accepted in TRIAL.
+ */
+void testStartFailedRefusals()
+{
+    struct Bad {
+        uint8_t copy;
+        const char *name;
+    };
+    const Bad bad[] = {
+        {kCopyA, "START FAILED copy A while running A: REFUSED 0x06, nothing written"},
+        {0x03U, "START FAILED copy 0x03: REFUSED 0x06, nothing written"},
+        {0x00U, "START FAILED copy 0x00: REFUSED 0x06, nothing written"},
+        {0xFFU, "START FAILED copy 0xFF: REFUSED 0x06, nothing written"},
+    };
+
+    for (const Bad &b : bad) {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        putSigned(Slot::kB);
+        const uint32_t writes = fake.state_writes;
+        Answer a = startFailedCmd(rig, b.copy, 10U);
+        rig.mm.poll(11U);
+        report(refusedWith(a, AnswerCode::kImpossible) && (fake.state_writes == writes) &&
+                   (fake.restarts == 0U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, kStaleMark),
+               b.name);
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kB, BOOT_SLOT_B, kFlagFallback, kStaleMark);
+        putSigned(Slot::kA);
+        Answer a = startFailedCmd(rig, kCopyB, 10U);
+        report(refusedWith(a, AnswerCode::kImpossible) && (fake.state_writes == 0U),
+               "START FAILED copy B while running B: REFUSED 0x06 (the running slot is not fixed)");
+    }
+    struct ImageCase {
+        const char *name;
+        AnswerCode code;
+    };
+    const ImageCase images[] = {
+        {"START FAILED copy B, slot B holds no image: REFUSED 0x08, nothing written",
+         AnswerCode::kDamaged},
+        {"START FAILED copy B, slot B damaged (byte 0x600 inverted): REFUSED 0x08, nothing "
+         "written",
+         AnswerCode::kDamaged},
+        {"START FAILED copy B, firmware-A.img (linked for slot A) in slot B: REFUSED 0x0E, "
+         "nothing written",
+         AnswerCode::kOtherSlot},
+    };
+    for (uint32_t i = 0U; i < 3U; i++) {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        if (i == 1U) {
+            putSigned(Slot::kB);
+            slotBytes(Slot::kB)[kFlipOffset] =
+                static_cast<uint8_t>(slotBytes(Slot::kB)[kFlipOffset] ^ 0xFFU);
+        } else if (i == 2U) {
+            std::memcpy(slotBytes(Slot::kB), g_image_a.data(), g_size_a);
+        }
+        Answer a = startFailedCmd(rig, kCopyB, 10U);
+        rig.mm.poll(11U);
+        report(refusedWith(a, images[i].code) && (fake.state_writes == 0U) &&
+                   (fake.restarts == 0U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, kStaleMark),
+               images[i].name);
+    }
+    {
+        Rig rig;
+        startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+        rig.mm.poll(0U);
+        putSigned(Slot::kA);
+        Answer a = startFailedCmd(rig, kCopyA, 10U);
+        report(refusedOnly(a, AnswerCode::kMode) && (fake.state_writes == 0U),
+               "TRIAL, ARM + START FAILED: REFUSED 0x05 only, nothing written");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        putSigned(Slot::kB);
+        const std::array<uint8_t, 2> p = {kStartFailed, kCopyB};
+        AnswerCode no_arm = rig.mm.acceptDangerous(p.data(), 2U, rig.seq++, 10U, rig.arm);
+        const std::array<uint8_t, 1> one = {kStartFailed};
+        const std::array<uint8_t, 3> three = {kStartFailed, kCopyB, 0x00U};
+        sendArm(rig, kStartFailed, rig.seq + 1U, 10U);
+        AnswerCode short_code = rig.mm.acceptDangerous(one.data(), 1U, rig.seq, 10U, rig.arm);
+        AnswerCode long_code = rig.mm.acceptDangerous(three.data(), 3U, rig.seq, 10U, rig.arm);
+        report((no_arm == AnswerCode::kNotArmed) && (short_code == AnswerCode::kImpossible) &&
+                   (long_code == AnswerCode::kImpossible) && (fake.state_writes == 0U),
+               "START FAILED without ARM: 0x01; with ARM, payload of 1 byte or of 3 bytes: 0x06; "
+               "nothing written");
+    }
+}
+
+/**
+ * @brief LEAVE FALLBACK (0x23): FALLBACK only; writes flags 0, keeps the mark; DONE; mode OPERATE,
+ * no restart. Refused 0x05 in OPERATE and TRIAL; a failed write REFUSED 0x11, mode stays FALLBACK.
+ *
+ * After leaving, the mark still protects: the same F-1 SWITCH is refused 0x13 in OPERATE. A second
+ * LEAVE FALLBACK is then refused 0x05 (the mode is OPERATE).
+ * Defects caught: flags not cleared; the mark erased with the flag (F-1 reopens one command
+ * later); a restart after DONE; the mode left FALLBACK after a failed write; the command accepted
+ * outside FALLBACK; the confirmed slot, trial or start count changed by the write.
+ */
+void testLeaveFallback()
+{
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, signedCheckOf(Slot::kB));
+        putSigned(Slot::kB);
+        uint32_t mark = fake_link.sent_bytes;
+        Answer a = leaveFallbackCmd(rig, 10U);
+        bool sent = sentIs(mark, {kRecv, kDone});
+        rig.mm.poll(11U);
+        rig.mm.poll(kNormalRunMs);
+        report(done(a) && sent && (rig.mm.mode() == HealthMode::kOperate) &&
+                   (fake.restarts == 0U) && (fake.state_writes == 1U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, 0U, signedCheckOf(Slot::kB)),
+               "FALLBACK, LEAVE FALLBACK: RECEIVED, DONE; flags 0, mark kept, confirmed A, no "
+               "trial; mode OPERATE; no restart on later passes");
+        Answer again = leaveFallbackCmd(rig, 12U);
+        report(refusedOnly(again, AnswerCode::kMode) && (fake.state_writes == 1U),
+               "after LEAVE FALLBACK (mode OPERATE): a second LEAVE FALLBACK REFUSED 0x05 only, "
+               "nothing written");
+        Answer sw = armedCommand(rig, kSwitch, 20U);
+        rig.mm.poll(21U);
+        report(refusedWith(sw, kRefusedGivenUp) && (fake.restarts == 0U) &&
+                   (fake.state_writes == 1U),
+               "after LEAVE FALLBACK: SWITCH with the given-up image still REFUSED 0x13 (the mark "
+               "is kept)");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, 0U, 0U);
+        Answer a = leaveFallbackCmd(rig, 10U);
+        report(refusedOnly(a, AnswerCode::kMode) && (fake.state_writes == 0U),
+               "OPERATE, LEAVE FALLBACK: REFUSED 0x05 only, nothing written");
+    }
+    {
+        Rig rig;
+        startRig(rig, Slot::kB, BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+        rig.mm.poll(0U);
+        Answer a = leaveFallbackCmd(rig, 10U);
+        report(refusedOnly(a, AnswerCode::kMode) && (fake.state_writes == 0U),
+               "TRIAL, LEAVE FALLBACK: REFUSED 0x05 only, nothing written");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        fake.fail_state_write = true;
+        Answer a = leaveFallbackCmd(rig, 10U);
+        rig.mm.poll(11U);
+        report(receivedThenRefused(a, AnswerCode::kStateNotStored) &&
+                   (static_cast<uint8_t>(rig.mm.mode()) == kHealthFallback) &&
+                   (fake.restarts == 0U) &&
+                   fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, kStaleMark),
+               "FALLBACK, LEAVE FALLBACK whose boot-state write fails: RECEIVED, REFUSED 0x11; "
+               "still FALLBACK; boot state unchanged; no restart");
+    }
+}
+
+/**
+ * @brief The mode at start: FALLBACK when the valid boot state has the flag and the running slot
+ * is the confirmed one; OPERATE without the flag or without a valid boot state.
+ *
+ * HEALTH reports FALLBACK as 0x03 (Interfaces Sec. 5.4). No trial events are sent and no trial
+ * time runs in FALLBACK. Defects caught: the flag ignored at start (F-1 hidden: the operator
+ * could not tell FALLBACK from OPERATE); FALLBACK set without the flag; the mode FALLBACK decided
+ * from an unreadable boot state; trial events or a trial clock in FALLBACK.
+ */
+void testStartInFallback()
+{
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        rig.mm.poll(0U);
+        report((rig.mm.mode() == HealthMode::kFallback) &&
+                   (static_cast<uint8_t>(rig.mm.mode()) == kHealthFallback) &&
+                   (rig.mm.trialSecondsLeft(0U) == 0U) && rig.mm.selfTestPassed() &&
+                   (fake_link.sent_bytes == 0U),
+               "start: running A, confirmed A, FALLBACK set -> mode FALLBACK (HEALTH 0x03), no "
+               "trial time, no events sent");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kB, BOOT_SLOT_B, kFlagFallback, 0U);
+        report(rig.mm.mode() == HealthMode::kFallback,
+               "start: running B, confirmed B, FALLBACK set, mark 0 -> mode FALLBACK");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, 0U, kStaleMark);
+        report(rig.mm.mode() == HealthMode::kOperate,
+               "start: running A, confirmed A, flags 0 (a mark is set) -> OPERATE");
+    }
+    {
+        Rig rig;
+        prepare(Slot::kA, BOOT_SLOT_A, BOOT_SLOT_NONE);
+        fake.state.flags = kFlagFallback;
+        fake.state_valid = false;
+        rig.mm.start(Slot::kA, 0U, false);
+        report(rig.mm.mode() == HealthMode::kOperate,
+               "start: no valid boot state (the record says FALLBACK) -> OPERATE: the flag is not "
+               "known");
+    }
+}
+
+/**
+ * @brief FALLBACK does the OPERATE work in poll(): the periodic self-test, and a failed one
+ * restarts the chip counted, as in OPERATE.
+ *
+ * Defects caught: poll() in FALLBACK still the fault reaction (the old code), or doing nothing, so
+ * a damaged image would run for ever; the self-test of FALLBACK reaching the trial's give-up
+ * (a boot-state write and EVENT 0x0008); a pass sending anything.
+ */
+void testFallbackPoll()
+{
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        toggleBodyBit(Slot::kA);
+        rig.mm.poll(kSelfTestPeriodMs);
+        uint32_t reason = 0U;
+        report(!rig.mm.selfTestPassed() && sentIs(0U, {ev(EventCode::kSelfTestFailed)}) &&
+                   (fake.state_writes == 0U) && (fake.restarts == 0U) &&
+                   (fake.counted_restarts == 1U) && (fake.fault_reason == BACKUP_FAULT_SELF_TEST) &&
+                   fakeBackupGet(BACKUP_PAIR_FAULT, reason) && (reason == BACKUP_FAULT_SELF_TEST),
+               "FALLBACK, periodic self-test fails at 60 000 ms: EVENT 0x0004, counted restart "
+               "with the fault mark, no boot-state write (as OPERATE)");
+    }
+    {
+        Rig rig;
+        startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+        rig.mm.poll(0U);
+        rig.mm.poll(kSelfTestPeriodMs);
+        rig.mm.poll(2U * kSelfTestPeriodMs);
+        report(rig.mm.selfTestPassed() && quietSince(0U) &&
+                   (rig.mm.mode() == HealthMode::kFallback),
+               "FALLBACK, good image, periodic self-tests at 60 s and 120 s: nothing sent, no "
+               "restart, no write, mode stays FALLBACK");
+    }
+}
+
+/**
+ * @brief Commands in FALLBACK: CONFIRM and RETURN TO PREVIOUS refused 0x05 only; uploads accepted.
+ *
+ * SWITCH, START FAILED and LEAVE FALLBACK are accepted (their own tests above). GET STATUS is
+ * routed in main.cpp, outside the mode manager: not covered here (host test of main.cpp: none).
+ * Defects caught: CONFIRM or RETURN TO PREVIOUS accepted in FALLBACK (a boot-state write with no
+ * trial); an upload refused in FALLBACK.
+ */
+void testFallbackCommands()
+{
+    Rig rig;
+    startWithFlags(rig, Slot::kA, BOOT_SLOT_A, kFlagFallback, kStaleMark);
+    putSigned(Slot::kB);
+    Answer confirm = armedCommand(rig, kConfirm, 10U);
+    Answer ret = armedCommand(rig, kReturn, 10U);
+    report(refusedOnly(confirm, AnswerCode::kMode) && refusedOnly(ret, AnswerCode::kMode) &&
+               (fake.state_writes == 0U) &&
+               fullStateIs(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U, kFlagFallback, kStaleMark),
+           "FALLBACK, ARM + CONFIRM and ARM + RETURN TO PREVIOUS: each REFUSED 0x05 only, nothing "
+           "written");
+    Answer b = begin(rig, 1U, g_size_b);
+    Answer c = shortCommand(rig, UploadId::kCancel, 1U);
+    report(done(b) && done(c),
+           "FALLBACK, UPLOAD BEGIN then UPLOAD CANCEL: accepted (DONE 0x00)");
 }
 
 }  // namespace
@@ -2447,6 +3213,16 @@ int main(int argc, char **argv)
     testBootloaderFault();
     testRestartCountClear();
     testModeFaults();
+    testF1Regression();
+    testGiveUpWritesFallbackAndMark();
+    testConfirmKeepsMark();
+    testSwitchGivenUpMark();
+    testStartFailedRuns();
+    testStartFailedRefusals();
+    testLeaveFallback();
+    testStartInFallback();
+    testFallbackPoll();
+    testFallbackCommands();
     if (failures == 0U) {
         std::printf("mode manager unit tests: all %u passed\n", tests);
         return 0;

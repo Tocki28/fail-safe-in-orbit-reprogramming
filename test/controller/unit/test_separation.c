@@ -803,7 +803,7 @@ static boot_state_t catalogue[CATALOGUE_SIZE];
  * @param[in]     confirmed  confirmed slot code
  * @param[in]     trial      trial slot code
  * @param[in]     starts     trial starts so far
- * @return the record; unused and reserved are 0
+ * @return the record; flags and given_up_check are 0
  */
 static boot_state_t make_record(uint32_t sequence, uint8_t confirmed, uint8_t trial,
                                 uint8_t starts)
@@ -825,8 +825,9 @@ static boot_state_t make_record(uint32_t sequence, uint8_t confirmed, uint8_t tr
  * Indexes: 0 valid seq 1; 1 valid seq 2; 2 valid on trial, 3 starts; 3 valid, sequence
  * 0xFFFFFFFF; 4 valid, sequence 0; 5 and 6 valid, same sequence 5, different content; 7 bad
  * check value; 8 all 0xFF; 9 all 0x00; 10-12 confirmed 0, 3, 0xFF with good check; 13 trial equal
- * to confirmed; 14 trial 3; 15-16 starts 4 and 255; 17 unused and reserved not 0 with a check
- * value that covers them; 18 first double word written, second erased; 19 first erased, second
+ * to confirmed; 14 trial 3; 15-16 starts 4 and 255; 17 flags 0x5A (unknown bits, since owner
+ * decision 30: DAMAGED; it was "unused not 0", a valid record) and given_up_check not 0, with a
+ * check value that covers them; 18 first double word written, second erased; 19 first erased, second
  * written.
  */
 static void build_catalogue(void)
@@ -850,8 +851,8 @@ static void build_catalogue(void)
     catalogue[15] = make_record(7U, BOOT_SLOT_A, BOOT_SLOT_NONE, BOOT_STATE_MAX_STARTS + 1U);
     catalogue[16] = make_record(7U, BOOT_SLOT_A, BOOT_SLOT_NONE, 255U);
     catalogue[17] = make_record(8U, BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
-    catalogue[17].unused = 0x5AU;
-    catalogue[17].reserved = 0x12345678U;
+    catalogue[17].flags = 0x5AU;
+    catalogue[17].given_up_check = 0x12345678U;
     catalogue[17].check =
         crc32_compute((const uint8_t *)&catalogue[17], (uint32_t)offsetof(boot_state_t, check));
     catalogue[18] = catalogue[1];
@@ -963,8 +964,10 @@ static void test_load_and_read_catalogue(void)
 /**
  * @brief Returns a record to write, with the fields the module sets filled with junk.
  *
- * The module must overwrite sequence, unused, reserved and check, so junk there shows whether
- * it does.
+ * The module must overwrite sequence and check, so junk there shows whether it does. Changed by
+ * owner decision 30: flags and given_up_check are data now, written as given, so they are 0
+ * here (the junk 0xA5 in flags would be an unknown flag bit: a record no reader accepts, and a
+ * write whose read-back fails). The two fields are tested with values in test_fields_roundtrip.
  *
  * @param[in]     confirmed  confirmed slot code
  * @param[in]     trial      trial slot code
@@ -979,6 +982,8 @@ static boot_state_t to_write(uint8_t confirmed, uint8_t trial, uint8_t starts)
     r.confirmed = confirmed;
     r.trial = trial;
     r.failed_starts = starts;
+    r.flags = 0U;
+    r.given_up_check = 0U;
     return r;
 }
 
@@ -993,7 +998,7 @@ static boot_state_t to_write(uint8_t confirmed, uint8_t trial, uint8_t starts)
  * lost on a power cut, REQ-017), numbers the sequence differently (a first write is 1, then one
  * above the newest valid copy), writes bytes in a different layout (the firmware would read a
  * different state than the bootloader wrote), skips the erase (the stand-in refuses to program
- * over written bytes), leaves junk in unused or reserved, returns true when the read-back failed.
+ * over written bytes), leaves junk in sequence or check, returns true when the read-back failed.
  */
 static void test_write_from_every_state(void)
 {
@@ -1232,6 +1237,247 @@ static void test_flipped_byte_in_stored_record(void)
     }
     report(all, "boot state: one flipped bit in each byte of each copy, written by either module: "
                 "load and read equal");
+}
+
+/* ---- Owner decision 30: the flags byte and the given-up mark ----------------------------- */
+
+/* The flags byte's FALLBACK bit, written here from the specification of decision 30 (byte 7,
+ * bit 0), not taken from boot_state.h, so a wrong value there shows. */
+#define FLAG_FALLBACK  0x01U
+/* Marks that match no image. No technical reason for the values. */
+#define MARK_ONE       0xA1B2C3D4U
+#define MARK_TWO       0x0F1E2D3CU
+
+/**
+ * @brief Makes a record with a correct check value, with the flags byte and the mark set, built
+ * from raw bytes (byte 7 = flags, bytes 8-11 = mark, little-endian), not from the struct's fields,
+ * so the positions are tested as well.
+ *
+ * @param[in]     sequence  sequence number
+ * @param[in]     flags     byte 7
+ * @param[in]     mark      bytes 8-11
+ * @return the record: confirmed A, no trial, 0 starts
+ */
+static boot_state_t make_flag_record(uint32_t sequence, uint8_t flags, uint32_t mark)
+{
+    uint8_t raw[16];
+    boot_state_t r;
+
+    memset(raw, 0, sizeof raw);
+    for (uint32_t i = 0U; i < WORD_BYTES; i++) {
+        raw[i] = (uint8_t)(sequence >> (BITS_PER_BYTE * i));
+        raw[8U + i] = (uint8_t)(mark >> (BITS_PER_BYTE * i));
+    }
+    raw[4] = BOOT_SLOT_A;
+    raw[5] = BOOT_SLOT_NONE;
+    raw[7] = flags;
+    uint32_t check = crc32_compute(raw, 12U);
+    for (uint32_t i = 0U; i < WORD_BYTES; i++) {
+        raw[12U + i] = (uint8_t)(check >> (BITS_PER_BYTE * i));
+    }
+    memcpy(&r, raw, sizeof r);
+    return r;
+}
+
+/**
+ * @brief The layout and the readers: byte 7 and bytes 8-11 come back from both modules; an
+ * old-format record stays valid; every flags byte with a bit other than bit 0 is DAMAGED in both,
+ * on every path (classify, load, read), never a fault.
+ *
+ * The expectations are absolute, not only "the two modules agree": a copy with an unknown bit
+ * and an older valid copy gives the older one, a copy with an unknown bit and an erased copy gives
+ * DAMAGED.
+ * Catches: a reader that drops or zeroes the fields; fields at other offsets; an unknown flag bit
+ * accepted by one module (the bootloader would boot on a record the firmware calls damaged, or the
+ * reverse); the fault reaction instead of DAMAGED; a damaged newer copy hiding the older one.
+ */
+static void test_fields_read(void)
+{
+    static const uint8_t unknown[] = {0x02U, 0x04U, 0x08U, 0x10U, 0x20U, 0x40U, 0x80U, 0x03U,
+                                      0xFEU, 0xFFU};
+    outcome_t common;
+    outcome_t boot;
+    bool all = true;
+    bool absolute = true;
+    const boot_state_t good_fields = make_flag_record(4U, FLAG_FALLBACK, MARK_ONE);
+    const boot_state_t old_format = make_flag_record(3U, 0U, 0U);
+    boot_state_t erased;
+
+    memset(&erased, (int)ERASED, sizeof erased);
+    report((sizeof(boot_state_t) == RECORD_BYTES) && (RECORD_BYTES == 16U) &&
+               (offsetof(boot_state_t, flags) == 7U) &&
+               (offsetof(boot_state_t, given_up_check) == 8U) &&
+               (BOOT_STATE_FLAG_FALLBACK == FLAG_FALLBACK),
+           "decision 30: the record is 16 bytes, flags at byte 7, given_up_check at bytes 8-11, "
+           "BOOT_STATE_FLAG_FALLBACK is 0x01");
+
+    for (uint32_t use_bl = 0U; use_bl < 2U; use_bl++) {
+        const boot_state_t copies[2] = {good_fields, old_format};
+        const bool readable[2] = {true, true};
+
+        run_classify(use_bl != 0U, copies, readable, &common);
+        absolute = absolute && !common.faulted && (common.load == BOOT_STATE_VALID) &&
+                   (common.state.sequence == 4U) && (common.state.flags == FLAG_FALLBACK) &&
+                   (common.state.given_up_check == MARK_ONE);
+        const boot_state_t old_only[2] = {old_format, erased};
+        run_classify(use_bl != 0U, old_only, readable, &common);
+        absolute = absolute && !common.faulted && (common.load == BOOT_STATE_VALID) &&
+                   (common.state.flags == 0U) && (common.state.given_up_check == 0U);
+    }
+    report(absolute, "decision 30: classify (both modules) returns flags and mark from the bytes; "
+                     "an old-format record (flags 0, mark 0) is VALID with both 0");
+
+    absolute = true;
+    for (uint32_t u = 0U; u < (uint32_t)sizeof unknown; u++) {
+        const boot_state_t bad = make_flag_record(9U, unknown[u], MARK_TWO);
+        const boot_state_t alone[2] = {bad, erased};
+        const boot_state_t with_older[2] = {old_format, bad};
+        const bool readable[2] = {true, true};
+
+        for (uint32_t use_bl = 0U; use_bl < 2U; use_bl++) {
+            run_classify(use_bl != 0U, alone, readable, &common);
+            absolute = absolute && !common.faulted && (common.load == BOOT_STATE_DAMAGED);
+            run_classify(use_bl != 0U, with_older, readable, &common);
+            absolute = absolute && !common.faulted && (common.load == BOOT_STATE_VALID) &&
+                       (common.state.sequence == 3U);
+        }
+        ram_reset();
+        ram_put(0U, &bad);
+        run_load(false, &common);
+        run_load(true, &boot);
+        all = compare_outcomes("unknown flag load", u, &common, &boot) && all;
+        absolute = absolute && !common.faulted && (common.load == BOOT_STATE_DAMAGED);
+        run_read(false, &common);
+        run_read(true, &boot);
+        all = compare_outcomes("unknown flag read", u, &common, &boot) && all;
+        absolute = absolute && !common.faulted && !common.flag;
+    }
+    report(all && absolute,
+           "decision 30: flags byte with any bit but bit 0 (10 values) and a right check value: "
+           "DAMAGED in both modules, by classify, load and read, no fault; an older valid copy is "
+           "used instead");
+}
+
+/**
+ * @brief A write of the two fields by each module: they reach the flash bytes at 7 and 8-11 as
+ * given, read back equal by both modules, and the two modules leave the same flash bytes.
+ *
+ * Several writes in a row, by either module: FALLBACK + mark; CONFIRM-like (flags 0, mark kept);
+ * a new mark; both zero. A writer that is given the fields keeps nothing of its own.
+ * Catches: a write that zeroes byte 7 or bytes 8-11 (the old code; F-1: the mark is lost, so the
+ * given-up image can be switched to); a CRC that does not cover them; one module writing them at
+ * other offsets; a read-back check that fails on a non-zero flags byte (the write returns false).
+ */
+static void test_fields_roundtrip(void)
+{
+    static uint8_t reference[4][STATE_AREA_BYTES];
+    static uint8_t now[STATE_AREA_BYTES];
+    const struct {
+        uint8_t flags;
+        uint32_t mark;
+    } steps[4] = {
+        {FLAG_FALLBACK, MARK_ONE}, {0U, MARK_ONE}, {FLAG_FALLBACK, MARK_TWO}, {0U, 0U},
+    };
+    outcome_t out;
+    outcome_t read_common;
+    outcome_t read_boot;
+    bool all = true;
+
+    ram_reset();
+    for (uint32_t k = 0U; k < 4U; k++) {
+        boot_state_t in = to_write(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+
+        in.flags = steps[k].flags;
+        in.given_up_check = steps[k].mark;
+        run_write(false, &in, &out);
+        ram_snapshot(reference[k]);
+        all = all && !out.faulted && out.flag && (out.state.flags == steps[k].flags) &&
+              (out.state.given_up_check == steps[k].mark);
+    }
+    for (uint32_t pattern = 0U; pattern < 16U; pattern++) {
+        ram_reset();
+        for (uint32_t k = 0U; k < 4U; k++) {
+            boot_state_t in = to_write(BOOT_SLOT_A, BOOT_SLOT_NONE, 0U);
+            bool by_boot = ((pattern >> k) & 1U) != 0U;
+
+            in.flags = steps[k].flags;
+            in.given_up_check = steps[k].mark;
+            run_write(by_boot, &in, &out);
+            ram_snapshot(now);
+            run_read(false, &read_common);
+            run_read(true, &read_boot);
+            bool same = out.flag && !out.faulted && (memcmp(now, reference[k], STATE_AREA_BYTES) == 0) &&
+                        read_common.flag && read_boot.flag &&
+                        (read_common.state.flags == steps[k].flags) &&
+                        (read_boot.state.flags == steps[k].flags) &&
+                        (read_common.state.given_up_check == steps[k].mark) &&
+                        (read_boot.state.given_up_check == steps[k].mark);
+            /* The flash bytes themselves: byte 7 and bytes 8-11 of the newest copy. */
+            uint32_t at = ram_index(copy_address(k % COPIES));
+            same = same && (ram[at + 7U] == steps[k].flags) &&
+                   (ram[at + 8U] == (uint8_t)(steps[k].mark)) &&
+                   (ram[at + 11U] == (uint8_t)(steps[k].mark >> TOP_BYTE_SHIFT));
+            if (!same) {
+                all = false;
+                note_difference("fields writers pattern / step", (pattern * 10U) + k, pattern, k);
+            }
+        }
+    }
+    report(all, "decision 30: 4 writes of flags and mark by any mix of the two modules (16 orders): "
+                "same flash bytes, fields at bytes 7 and 8-11, read back equal by both");
+}
+
+/**
+ * @brief A power cut at every step of a write of a record that carries the two fields: the old
+ * record, with its flags and mark, stays readable and unchanged; both readers agree.
+ *
+ * The old record is FALLBACK with a mark; the write is a SWITCH-like one (flags 0, mark kept).
+ * After a cut the answer is the old record, fields included; after no cut it is the new one.
+ * Catches: a cut point that leaves a half-new record read as valid with the old flags and the new
+ * mark (or the reverse): the check value is programmed last and covers all 12 bytes; a write that
+ * erases the current copy.
+ */
+static void test_fields_power_cut(void)
+{
+    const uint32_t cuts = 6U;
+    const boot_state_t old_record = make_flag_record(3U, FLAG_FALLBACK, MARK_ONE);
+    boot_state_t input = to_write(BOOT_SLOT_A, BOOT_SLOT_B, 0U);
+    outcome_t out;
+    outcome_t read_common;
+    outcome_t read_boot;
+    bool all = true;
+    uint32_t case_no = 0U;
+
+    input.flags = 0U;
+    input.given_up_check = MARK_ONE;
+    for (uint32_t writer = 0U; writer < 2U; writer++) {
+        for (uint32_t cut = 0U; cut < cuts; cut++) {
+            ram_reset();
+            ram_put(0U, &old_record);
+            cut_erase = (cut == 0U);
+            cut_after_words = (cut >= 1U) && (cut < (cuts - 1U)) ? (cut - 1U) : RAM_CUT_NEVER;
+            run_write(writer != 0U, &input, &out);
+            run_load(false, &read_common);
+            run_load(true, &read_boot);
+            bool cut_happened = (cut < (cuts - 1U));
+            all = compare_outcomes("fields after a cut", case_no, &read_common, &read_boot) && all;
+            all = all && !out.faulted && (out.flag == !cut_happened) &&
+                  (read_common.load == BOOT_STATE_VALID);
+            if (cut_happened) {
+                all = all && (memcmp(&read_common.state, &old_record, sizeof old_record) == 0) &&
+                      (read_common.state.flags == FLAG_FALLBACK);
+            } else {
+                all = all && (read_common.state.flags == 0U) &&
+                      (read_common.state.given_up_check == MARK_ONE) &&
+                      (read_common.state.trial == BOOT_SLOT_B) &&
+                      (read_common.state.sequence == 4U);
+            }
+            case_no++;
+        }
+    }
+    report(all, "decision 30: power cut at the erase and after 0..3 programmed words, record with "
+                "FALLBACK and a mark: the old record (fields included) stays readable, both readers "
+                "agree; with no cut the new flags and the kept mark are read");
 }
 
 /* ---- Image check -------------------------------------------------------------------------- */
@@ -1646,6 +1892,9 @@ int main(int argc, char **argv)
     test_write_refused_fields();
     test_write_power_cut();
     test_flipped_byte_in_stored_record();
+    test_fields_read();
+    test_fields_roundtrip();
+    test_fields_power_cut();
     test_result_text();
     test_read_u32();
     test_image_sweep(argv[1], argv[2]);

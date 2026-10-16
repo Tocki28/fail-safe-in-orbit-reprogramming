@@ -13,7 +13,7 @@ with the same sequence number, so the onboard computer answers ALREADY DONE and 
 them twice (Sec. 4.2, REQ-031).
 
 Subcommands:  status | upload IMAGE --number N | deliver --number N | switch | update [--yes] | confirm
-              | return
+              | return | start-failed --copy A|B | leave-fallback
 
 Sequence numbers are kept across runs in a state file (default ~/.fsir/console-seq, option
 --seq-file), because the onboard computer refuses an ARM or a dangerous command whose ground
@@ -65,6 +65,10 @@ REFUSAL_TEXT = {                        # Sec. 4.2: table of REFUSED codes
     0x0F: "Trial tests not passed",
     0x10: "Image of the wrong kind for its place",
     0x11: "Boot state could not be stored",
+    # Owner decision 21, 15 Oct 2026 (Sec. 4.2 row pending, TBR): protocol.hpp kCancelled.
+    0x12: "Delivery cancelled by the operator",
+    # Owner decision 30, 15 Oct 2026 (Sec. 4.2 row pending, TBR): protocol.hpp kImageGivenUp.
+    0x13: "The image was given up; START FAILED starts it again",
     # BENCH ONLY, not in the Sec. 4.2 table: the onboard computer's own reasons, protocol.hpp
     # kNoAnswerBench, kStorageBench, kCannotSendBench (open item: add them to Sec. 4.2).
     0xFD: "bench: the onboard computer could not send on data link A",
@@ -80,6 +84,9 @@ RETURN_TO_PREVIOUS = 0x21               # Sec. 5.1, table line 359: RETURN TO PR
 SET_LIMITS, RESTORE, REPROGRAM, SET_ONBOARD_TIME = 0x06, 0x07, 0x08, 0x09   # Sec. 5.1: table
 SCHEDULE, SEND_REPORTS, REPLACE_KEY = 0x0A, 0x0B, 0x0C                      # Sec. 5.1: table
 START_FAILED, LEAVE_FALLBACK, SET_CONTROLLER_TIME = 0x22, 0x23, 0x24        # Sec. 5.1: table
+# START FAILED's copy byte (Sec. 5.1, table line 360; owner decision 30, 15 Oct 2026): the same
+# codes as the slot codes of the HEALTH report (SLOTS, Sec. 5.4).
+START_FAILED_COPY = {"A": 0x01, "B": 0x02}
 IMAGE_NUMBER_MAX = 0xFFFE               # Sec. 5.1: 0xFFFF is the test image; ground uses 0-65534
 TEST_IMAGE_NUMBER = 0xFFFF              # Sec. 5.1: the controller's trial-test image number
 
@@ -997,7 +1004,7 @@ def deliver(con, number):
     con.say(f"deliver complete in {time.monotonic() - t0:.2f} s")
 
 
-def arm_and_send(con, command_id, name):
+def arm_and_send(con, command_id, name, fields=b""):
     """Send ARM naming a dangerous controller command and its sequence number, then that command.
 
     A dangerous command needs an arming command first, and the ARM names the sequence number the
@@ -1006,8 +1013,10 @@ def arm_and_send(con, command_id, name):
 
     Args:
         con: the Console.
-        command_id: identifier of the dangerous command (SWITCH or CONFIRM).
+        command_id: identifier of the dangerous command (SWITCH, CONFIRM, START FAILED, ...).
         name: the command's name, for messages.
+        fields: the command's bytes after its identifier (START FAILED: the copy); empty for a
+            command with none. The ARM names the identifier and the sequence number only.
 
     Returns:
         DONE or ALREADY_DONE, the answer kind of the dangerous command.
@@ -1017,7 +1026,7 @@ def arm_and_send(con, command_id, name):
     """
     command_seq = con.seq + 2           # ARM takes the next number, the command the one after
     con.command(DEST_CONTROLLER, struct.pack("<BBI", ARM, command_id, command_seq), what="ARM")
-    kind = con.command(DEST_CONTROLLER, bytes([command_id]), what=name)
+    kind = con.command(DEST_CONTROLLER, bytes([command_id]) + fields, what=name)
     con.say(f"{name.lower()}  sent, answered {KINDS[kind]}")
     return kind
 
@@ -1363,6 +1372,49 @@ def cmd_return(con, args):
     return 0
 
 
+def cmd_start_failed(con, args):
+    """Send ARM and START FAILED for one copy to the controller (Sec. 5.1, REQ-019).
+
+    START FAILED starts again an image the controller gave up (refusal 0x13, owner decision 30,
+    15 Oct 2026). It is dangerous (Sec. 5.1, table line 360), so it needs its ARM, sent the way
+    `return` sends ARM and RETURN TO PREVIOUS (arm_and_send()); the payload is 0x22 and the copy
+    byte, 0x01 slot A or 0x02 slot B. Nothing else is waited for.
+
+    Args:
+        con: the Console.
+        args: parsed options; args.copy is "A" or "B".
+
+    Returns:
+        Exit code 0.
+
+    Raises:
+        Refused: ARM or START FAILED was refused or never answered.
+    """
+    arm_and_send(con, START_FAILED, "START FAILED", bytes([START_FAILED_COPY[args.copy]]))
+    return 0
+
+
+def cmd_leave_fallback(con, args):
+    """Send LEAVE FALLBACK to the controller and print DONE (Sec. 5.1, REQ-117).
+
+    LEAVE FALLBACK is not dangerous (Sec. 5.1, table line 361; owner decision 30, 15 Oct 2026),
+    so it is a plain controller command with no ARM. A refusal is raised by Console.command().
+
+    Args:
+        con: the Console.
+        args: parsed options (none used).
+
+    Returns:
+        Exit code 0.
+
+    Raises:
+        Refused: LEAVE FALLBACK was refused or never answered.
+    """
+    kind = con.command(DEST_CONTROLLER, bytes([LEAVE_FALLBACK]), what="LEAVE FALLBACK")
+    con.say(f"leave fallback  sent, answered {KINDS[kind]}")
+    return 0
+
+
 def cmd_status(con, args):
     """Send GET STATUS and print the reports that arrive for a while (Sec. 5.1, 5.4).
 
@@ -1434,6 +1486,12 @@ def main(argv=None):
     sub.add_parser("confirm", help="ARM, then CONFIRM, both to the controller (new firmware in its trial)")
     sub.add_parser("return", help="ARM, then RETURN TO PREVIOUS, both to the controller "
                                   "(new firmware in its trial)")
+    s = sub.add_parser("start-failed",
+                       help="ARM, then START FAILED for one copy, both to the controller "
+                            "(starts again an image it gave up, refusal 0x13)")
+    s.add_argument("--copy", required=True, type=str.upper, choices=sorted(START_FAILED_COPY),
+                   help="which copy to start again: A (slot A, 0x01) or B (slot B, 0x02)")
+    sub.add_parser("leave-fallback", help="LEAVE FALLBACK to the controller (no ARM)")
     a = p.parse_args(argv)
     if not 0.0 <= a.radio_loss <= 1.0:
         p.error("--radio-loss must be between 0 and 1")
@@ -1470,6 +1528,10 @@ def main(argv=None):
             code = cmd_confirm(con, a)
         elif a.cmd == "return":
             code = cmd_return(con, a)
+        elif a.cmd == "start-failed":
+            code = cmd_start_failed(con, a)
+        elif a.cmd == "leave-fallback":
+            code = cmd_leave_fallback(con, a)
         else:
             code = cmd_update(con, a)
     except Refused as e:

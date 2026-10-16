@@ -4508,6 +4508,175 @@ void testArmNoAnswer(const std::string & scratch)
   report(!rig.tick(f) && rig.groundAnswers().empty(), "arm no answer: a late answer to the ARM sends nothing more");
 }
 
+// ---- Owner decision 30 (15 Oct 2026): START FAILED, LEAVE FALLBACK, refusal 0x13 ---------------
+// Drafted from the contract before the code (rule E4). The identifiers are the Interfaces command
+// table values; the refusal 0x13 is written as a number here because its constant is not yet known.
+
+constexpr uint8_t kGivenUpRefusal = 0x13;       // Interfaces Sec. 4.2 table: image given up (decision 30)
+constexpr uint8_t kCopyA = 0x01;                // START FAILED copy byte: A (Interfaces Sec. 5.1)
+constexpr uint8_t kCopyB = 0x02;                // START FAILED copy byte: B (Interfaces Sec. 5.1)
+constexpr uint32_t kStartFailedSeq = 80;        // any ground sequence numbers, one per case
+constexpr uint32_t kLeaveFallbackSeq = 90;      // any ground sequence number
+
+/**
+ * @brief Decision 30: the name of refusal 0x13.
+ *
+ * Passes if refusalName(0x13) is exactly "the image was given up; START FAILED starts it again"
+ * (lower case like the other updater names; the contract gives the words, not the case).
+ * Fails if: the code has no name ("unknown"), the name is a copy of another code's, or the words
+ * differ, so the operator's log does not tell what to do next.
+ *
+ * @return nothing
+ */
+void testGivenUpRefusalName()
+{
+  report(std::strcmp(refusalName(kGivenUpRefusal),
+                     "the image was given up; START FAILED starts it again") == 0,
+    "decision 30: refusal 0x13 is named 'the image was given up; START FAILED starts it again'");
+}
+
+/**
+ * @brief Decision 30: START FAILED (0x22) is dangerous and goes to the controller as ARM + command.
+ *
+ * Passes if: without an ARM it is REFUSED 0x01 and nothing is sent; with an ARM naming 0x22 and its
+ * sequence number it goes out as the pair (ARM first, consecutive link sequence numbers) with the
+ * copy byte unchanged, for copy A and for copy B; a payload of the wrong length is REFUSED 0x06.
+ * Fails if: START FAILED is treated as a plain command (sent without an ARM, defect: dangerous
+ * list lacks 0x22), it is refused 0x06 as unknown, the copy byte is dropped or forced to one
+ * value, the ARM is not sent first or its named number is not the command's, or a payload of 1
+ * or 3 bytes is accepted.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testStartFailedPairing(const std::string & scratch)
+{
+  std::string dir = scratch + "/start-failed";
+  removeTree(dir);
+  UpdaterRig rig(dir, 1000);
+  if (!rig.open()) {
+    report(false, "start failed: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  const uint32_t kDest = frame::kDestController;
+  SentFrame f{};
+  bool ok = rig.tick(f) && isCommand(f, {command::kGetStatus});   // the idle beat, answered
+  rig.answer(f.sequence, answer::kDone, 0);
+  (void)rig.groundAnswers();
+  report(ok, "start failed: setup: the idle beat GET STATUS is answered");
+
+  auto armPayload = [](uint8_t id, uint32_t sequence) {
+    std::vector<uint8_t> p = {command::kArm, id, 0, 0, 0, 0};
+    bytes::writeU32(&p[2], sequence);
+    return p;
+  };
+
+  // 1. No ARM: REFUSED 0x01, nothing sent.
+  ok = rig.fromGround(kDest, 70, {command::kStartFailed, kCopyA});
+  report(ok && hasAnswer(rig.groundAnswers(), 70, answer::kRefused, answer::kNotArmed) && quiet(rig),
+    "start failed: START FAILED A without an ARM: REFUSED 0x01, nothing sent");
+
+  // 2. Wrong length with an ARM held: REFUSED 0x06, nothing sent.
+  ok = rig.fromGround(kDest, 71, armPayload(command::kStartFailed, kStartFailedSeq));
+  (void)rig.groundAnswers();
+  ok = ok && rig.fromGround(kDest, kStartFailedSeq, {command::kStartFailed}) &&
+       rig.fromGround(kDest, kStartFailedSeq + 1, {command::kStartFailed, kCopyA, 0x00});
+  std::vector<GroundAnswer> g = rig.groundAnswers();
+  report(ok && g.size() == 2 && hasAnswer(g, kStartFailedSeq, answer::kRefused, answer::kImpossible) &&
+         hasAnswer(g, kStartFailedSeq + 1, answer::kRefused, answer::kImpossible) && quiet(rig),
+    "start failed: payload of 1 or 3 bytes: REFUSED 0x06, nothing sent");
+
+  // 3. The pair, for each copy. A new ARM replaces the held one.
+  const uint8_t copies[] = {kCopyA, kCopyB};
+  uint32_t seq = kStartFailedSeq + 10;
+  for (uint8_t copy : copies) {
+    ok = rig.fromGround(kDest, seq, armPayload(command::kStartFailed, seq + 1));
+    (void)rig.groundAnswers();
+    ok = ok && rig.fromGround(kDest, seq + 1, {command::kStartFailed, copy});
+    SentFrame arm{};
+    ok = ok && rig.tick(arm) && arm.destination == frame::kDestController &&
+         arm.type == frame::kTypeCommand && arm.payload.size() == 6 &&
+         arm.payload[0] == command::kArm && arm.payload[1] == command::kStartFailed;
+    uint32_t named = (arm.payload.size() == 6) ? bytes::readU32(&arm.payload[2]) : 0;
+    report(ok && named == arm.sequence + 1,
+      std::string("start failed: copy ") + (copy == kCopyA ? "A" : "B") +
+      ": the first frame is the ARM naming 0x22 and the next link sequence number");
+    rig.answer(arm.sequence, answer::kDone, 0);
+    SentFrame cmd{};
+    ok = rig.tick(cmd) && isCommand(cmd, {command::kStartFailed, copy}) && cmd.sequence == named;
+    report(ok, std::string("start failed: copy ") + (copy == kCopyA ? "A" : "B") +
+      ": then 0x22 with the same copy byte and exactly the sequence number the ARM named");
+    rig.answer(cmd.sequence, answer::kDone, 0);
+    g = rig.groundAnswers();
+    report(hasAnswer(g, seq + 1, answer::kDone, 0),
+      "start failed: the controller's DONE reaches the ground with the ground's sequence number");
+    seq += 10;
+  }
+}
+
+/**
+ * @brief Decision 30: LEAVE FALLBACK (0x23) is passed on as a plain command, no ARM needed.
+ *
+ * Passes if payload {0x23} from the ground, with no ARM held, is sent to the controller as one
+ * frame with that payload and no ARM before it, and its DONE reaches the ground.
+ * Fails if: the command is refused 0x01 (made dangerous by mistake), 0x06 (not in the allowed
+ * list), an ARM is sent in front of it, or it is not sent at all.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testLeaveFallbackPlain(const std::string & scratch)
+{
+  std::string dir = scratch + "/leave-fallback";
+  removeTree(dir);
+  UpdaterRig rig(dir, 1000);
+  if (!rig.open()) {
+    report(false, "leave fallback: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  SentFrame f{};
+  bool ok = rig.tick(f) && isCommand(f, {command::kGetStatus});
+  rig.answer(f.sequence, answer::kDone, 0);
+  (void)rig.groundAnswers();
+  report(ok, "leave fallback: setup: the idle beat GET STATUS is answered");
+  ok = rig.fromGround(frame::kDestController, kLeaveFallbackSeq, {command::kLeaveFallback});
+  SentFrame cmd{};
+  ok = ok && rig.tick(cmd) && isCommand(cmd, {command::kLeaveFallback});
+  report(ok, "leave fallback: 0x23 without an ARM is the first frame sent, payload {0x23}");
+  rig.answer(cmd.sequence, answer::kDone, 0);
+  std::vector<GroundAnswer> g = rig.groundAnswers();
+  report(hasAnswer(g, kLeaveFallbackSeq, answer::kDone, 0) &&
+         !hasAnswer(g, kLeaveFallbackSeq, answer::kRefused, answer::kNotArmed) && quiet(rig),
+    "leave fallback: DONE reaches the ground, no refusal, nothing more sent");
+}
+
+/**
+ * @brief Decision 30: a HEALTH report with mode 0x03 reads FALLBACK in the updater's log line.
+ *
+ * Passes if the line "controller: HEALTH mode FALLBACK" is logged for mode 0x03.
+ * Fails if: mode 0x03 is logged as "unknown" (modeName lacks the case), or as another mode.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testHealthFallbackLogLine(const std::string & scratch)
+{
+  std::string dir = scratch + "/health-fallback";
+  removeTree(dir);
+  UpdaterRig rig(dir, 1000);
+  if (!rig.open()) {
+    report(false, "health fallback: updater rig could not open (UDP port 47931 in use?)");
+    return;
+  }
+  LogCapture capture(scratch);
+  bool capturing = capture.start();
+  rig.health(report::kModeFallback);
+  std::string text = capture.stop();
+  report(capturing && report::kModeFallback == 0x03 &&
+         contains(text, "controller: HEALTH mode FALLBACK,") && !contains(text, "mode unknown"),
+    "decision 30: HEALTH mode 0x03 is logged as FALLBACK");
+}
+
 /**
  * @brief Decision S names and the decoded detail: refusals 0x10 and 0x11, event 0x0106, check results, events 0x0002 and 0x0003.
  *
@@ -5268,6 +5437,10 @@ int main(int argc, char ** argv)
   testTrialOverrunRestart(argv[4]);
   testArmNoAnswer(argv[4]);
   testNamesAndFallbackDetail();
+  testGivenUpRefusalName();
+  testStartFailedPairing(argv[4]);
+  testLeaveFallbackPlain(argv[4]);
+  testHealthFallbackLogLine(argv[4]);
   testFaultCodes();
   testCheckResultCodes();
   testMemoryChangeDetail();

@@ -23,6 +23,11 @@
  *   23 the self-test runs every kSelfTestPeriodMs (60 s, bench value for TBD-selftest) while the
  *      firmware runs, in OPERATE and in TRIAL (runSelfTestWhenDue; REQ-039). Its failure uses the
  *      reactions that exist (pollOperate, pollTrial); the numbers are at kSelfTestPeriodMs.
+ * And the owner's decision 30, 15 Oct 2026 (finding F-1: a SWITCH restarted a firmware that had
+ * been given up; ConOps Scenario-310; REQ-019, REQ-117):
+ *   30 FALLBACK: a give-up writes the FALLBACK flag and the given-up image's mark (giveUpState);
+ *      start() sets FALLBACK from the flag; FALLBACK runs OPERATE's work (poll); SWITCH refuses
+ *      0x13 on the mark; START FAILED and LEAVE FALLBACK are built; CONFIRM clears the flag.
  *
  * Switches over an enum have no default label. No default: the compiler checks every case
  * (-Wswitch, -Werror); only a corrupted value reaches the line after the switch, which calls the
@@ -93,16 +98,103 @@ uint8_t copyCode(Slot slot)
     faultImpossibleValue(FAULT_AT_COPY_CODE, "copyCode");
 }
 
+/**
+ * @brief Returns the body check value in the header of the image in a slot, or 0 when the header's
+ * proprietary string is not there or its read saw a flash read error.
+ *
+ * The mark of a given-up image in the boot state (given_up_check; owner's decision 30, 15 Oct
+ * 2026), and the value SWITCH compares with it. Only the header is read, at its fixed offsets
+ * (common/image_format.h; Interfaces Sec. 5.5, Figure 6); no length is read, so no byte outside
+ * the header is touched. 0 for a header without the proprietary string, as the decision says:
+ * such a slot holds no image that could be started. A value read with a two-bit flash error is
+ * not the header's value, so it is 0 too: Proposal (TBR), awaiting the owner's acceptance. The
+ * bootloader reads the same field with its own code (bootloader/main.c, given_up_check_of;
+ * REQ-119).
+ *
+ * @param[in]     slot  Slot::kA or Slot::kB; Slot::kNone gives 0 (no slot, so no image)
+ * @return the header's body check value, or 0
+ */
+uint32_t headerBodyCheck(Slot slot)
+{
+    uint32_t start = UpdateReceiver::slotStart(slot);
+
+    if (start == 0U) {
+        return 0U;
+    }
+    const uint8_t *header = ModePort::flash(start);
+    ModePort::eccClear();
+    bool magic = (header[IMAGE_OFFSET_MAGIC] == IMAGE_MAGIC_0) &&
+                 (header[IMAGE_OFFSET_MAGIC + 1U] == IMAGE_MAGIC_1) &&
+                 (header[IMAGE_OFFSET_MAGIC + 2U] == IMAGE_MAGIC_2) &&
+                 (header[IMAGE_OFFSET_MAGIC + 3U] == IMAGE_MAGIC_3);
+    uint32_t check = image_read_u32(&header[IMAGE_OFFSET_BODY_CHECK]);
+    if (!magic || ModePort::eccErrorSeen()) {
+        return 0U;
+    }
+    return check;
+}
+
+/**
+ * @brief Returns the boot state that a give-up of the trial running in `running` writes
+ * (REQ-013, REQ-113, REQ-140; owner's decision 30, 15 Oct 2026).
+ *
+ * confirmed = the other slot, which is the previous one; trial = none; failed starts = 0; the
+ * FALLBACK flag; and the mark, the running image's header body check value (headerBodyCheck), so
+ * a later SWITCH to that image is refused 0x13 (REQ-019). One function for giveUp and
+ * runReturnToPrevious, so the two give-ups write the same record. The bootloader writes the same
+ * fields with its own code (bootloader/main.c, give_up_trial).
+ *
+ * @param[in]     running  the slot of the trial given up: Slot::kA or Slot::kB
+ * @return the record to write; the write sets its sequence number and check value
+ * @note Does not return for Slot::kNone (otherSlot's fault reaction).
+ */
+boot_state_t giveUpState(Slot running)
+{
+    boot_state_t state{};
+
+    state.confirmed = stateCode(otherSlot(running));
+    state.trial = BOOT_SLOT_NONE;
+    state.failed_starts = 0U;
+    state.flags = BOOT_STATE_FLAG_FALLBACK;
+    state.given_up_check = headerBodyCheck(running);
+    return state;
+}
+
+/**
+ * @brief Returns true if START FAILED's "which copy" byte names the slot that is not running.
+ *
+ * The byte is input from the link (code rule A5), read only after the size check. Its codes are
+ * the HEALTH report's running-slot codes (Interfaces Sec. 5.4; common/backup_layout.h): 0x01 slot
+ * A, 0x02 slot B, 0x03 the last-resort firmware. Owner's decision 30, 15 Oct 2026: the running
+ * slot, the last-resort firmware and every other value are refused 0x06. So the only copy that
+ * passes is the other slot, and the work acts on otherSlot(running_), not on the byte
+ * (ModeManager::runSwitch).
+ *
+ * @param[in]     copy     the byte as received
+ * @param[in]     running  the slot this firmware runs from
+ * @return true for slot A or slot B when it is not the running slot, false otherwise
+ */
+bool startFailedCopyOk(uint8_t copy, Slot running)
+{
+    bool a_or_b = (copy == BACKUP_COPY_A) || (copy == BACKUP_COPY_B);
+    return a_or_b && (copy != copyCode(running));
+}
+
 }  // namespace
 
 /**
  * @brief Decides the mode from the boot state and runs the self-test; called once, at start,
  * after the link is up.
  *
- * TRIAL if the running slot is the boot state's trial slot, otherwise OPERATE (decided design,
- * step 2d). A boot state that cannot be read gives OPERATE: no trial is known. FALLBACK is a
- * later step. The trial time starts now: the firmware's start, not the bootloader's. The events of
- * the start (clock fault, fall-back) go out on the first poll().
+ * TRIAL if the running slot is the boot state's trial slot (decided design, step 2d). Otherwise
+ * FALLBACK if the boot state has the FALLBACK flag and names the running slot as confirmed
+ * (owner's decision 30, 15 Oct 2026): a give-up wrote the flag, and the bootloader started the
+ * previous slot. Otherwise OPERATE. A boot state that cannot be read gives OPERATE: no trial and
+ * no FALLBACK is known. The flag with a running slot that is not the confirmed one (the
+ * last-resort firmware never runs this code; a slot started with no boot state) gives OPERATE:
+ * the firmware that fell back is not this one. The trial time starts now: the firmware's start,
+ * not the bootloader's. The events of the start (clock fault, fall-back) go out on the first
+ * poll().
  *
  * The self-test runs at every start, in every mode (REQ-039); HEALTH reports its result.
  * This run is the first of the periodic self-tests (runSelfTestWhenDue): the next is due
@@ -127,8 +219,14 @@ void ModeManager::start(Slot running, uint32_t now_ms, bool clock_fault)
     clock_fault_ = clock_fault;
     start_events_sent_ = false;
     restart_count_cleared_ = false;
-    mode_ = (valid && in_slot && (toSlot(state.trial) == running)) ? HealthMode::kTrial
-                                                                   : HealthMode::kOperate;
+    bool fallback = (state.flags & BOOT_STATE_FLAG_FALLBACK) != 0U;
+    if (valid && in_slot && (toSlot(state.trial) == running)) {
+        mode_ = HealthMode::kTrial;
+    } else if (valid && in_slot && fallback && (toSlot(state.confirmed) == running)) {
+        mode_ = HealthMode::kFallback;
+    } else {
+        mode_ = HealthMode::kOperate;
+    }
     self_test_passed_ = selfTest(running);
     last_self_test_ms_ = now_ms;
 }
@@ -457,14 +555,18 @@ void ModeManager::restartWhenSent()
 }
 
 /**
- * @brief Gives the trial up (REQ-013, REQ-140): boot state trial = none, failed starts = 0,
- * EVENT 0x0008 "firmware given up", then the restart.
+ * @brief Gives the trial up (REQ-013, REQ-140): boot state trial = none, failed starts = 0, the
+ * FALLBACK flag and the given-up image's mark (giveUpState), EVENT 0x0008 "firmware given up",
+ * then the restart.
  *
  * The confirmed slot is the other one: in TRIAL the boot state names the running slot as the
  * trial, and a valid boot state's trial slot is always the one not confirmed
  * (common/boot_state.c, fields_valid). After the restart the bootloader starts the confirmed
  * slot, and never the given-up one again unless the operator orders it (bootloader/main.c,
  * REQ-019). TRIAL needs a running slot of A or B (start()), so otherSlot() always has an answer.
+ * The flag makes the firmware that starts next run in FALLBACK; the mark makes it refuse a SWITCH
+ * back to this image (0x13) until START FAILED orders it (owner's decision 30, 15 Oct 2026;
+ * finding F-1). Before, the record had neither, and a SWITCH restarted the given-up image.
  *
  * If the write fails (decision G): the give-up request is left in the backup registers, and the
  * bootloader gives the trial up before it counts its next start (bootloader/main.c,
@@ -481,12 +583,10 @@ void ModeManager::restartWhenSent()
  */
 void ModeManager::giveUp(uint32_t now_ms)
 {
-    boot_state_t state{};
+    boot_state_t state = giveUpState(running_);
 
-    state.confirmed = stateCode(otherSlot(running_));
-    state.trial = BOOT_SLOT_NONE;
-    state.failed_starts = 0U;
-    /* The request only when the write failed: nowhere else to keep the give-up then. */
+    /* The request only when the write failed: nowhere else to keep the give-up then. The
+     * bootloader's give-up of the request writes the flag and the mark too (give_up_trial). */
     bool stored = ModePort::writeBootState(state) ||
                   ModePort::leaveGiveUpRequest(stateCode(running_));
     if (stored) {
@@ -496,7 +596,12 @@ void ModeManager::giveUp(uint32_t now_ms)
 }
 
 /**
- * @brief OPERATE's work on one pass: a failed self-test restarts the chip (decision L).
+ * @brief OPERATE's work on one pass, and FALLBACK's: a failed self-test restarts the chip
+ * (decision L).
+ *
+ * FALLBACK runs exactly this work (owner's decision 30, 15 Oct 2026; poll): the firmware it runs
+ * is the confirmed one, so a failed self-test there has OPERATE's reaction. After the restart the
+ * boot state still has the FALLBACK flag, so the firmware starts in FALLBACK again (REQ-117).
  *
  * A failed self-test means the running image's body no longer matches its check value
  * (selfTest). The restart makes the bootloader check the image again before it runs it: if the
@@ -567,12 +672,14 @@ void ModeManager::pollTrial(uint32_t now_ms)
  * events and the restart it causes: UPLOAD END of a bad test image is answered REFUSED 0x08,
  * then EVENT 0x000B and 0x0008 follow on this pass.
  *
- * Every HealthMode has its own case (see the file comment). FALLBACK is a later step: this build
- * never sets it, so a mode of FALLBACK is as impossible here as a corrupted value, and it is the
- * fault reaction until the FALLBACK step gives it its own work.
+ * Every HealthMode has its own case (see the file comment). FALLBACK runs exactly OPERATE's work
+ * (pollOperate: the periodic self-test's reaction, decision L), as owner's decision 30, 15 Oct
+ * 2026 sets it; what differs in FALLBACK is only which commands are accepted (acceptDangerous,
+ * acceptLeaveFallback). Before decision 30 no code set FALLBACK, and its case was the fault
+ * reaction, like a corrupted value.
  *
  * @param[in]     now_ms  milliseconds since start
- * @note Does not return for the mode FALLBACK or a value outside HealthMode.
+ * @note Does not return for a value outside HealthMode.
  */
 void ModeManager::poll(uint32_t now_ms)
 {
@@ -591,38 +698,48 @@ void ModeManager::poll(uint32_t now_ms)
         pollTrial(now_ms);
         return;
     case HealthMode::kFallback:
-        faultImpossibleValue(FAULT_AT_MODE_MANAGER_POLL,
-                             "ModeManager::poll: FALLBACK is not set by this build");
+        pollOperate(now_ms);   /* OPERATE's work: see above */
+        return;
     }
     /* only a corrupted value reaches here */
     faultImpossibleValue(FAULT_AT_MODE_MANAGER_POLL, "ModeManager::poll");
 }
 
 /**
- * @brief Returns true if the payload's identifier is SWITCH (0x20), RETURN TO PREVIOUS (0x21) or
- * CONFIRM (0x26).
+ * @brief Returns true if the payload's identifier is SWITCH (0x20), RETURN TO PREVIOUS (0x21),
+ * START FAILED (0x22) or CONFIRM (0x26).
  *
  * The size is checked by acceptDangerous(), so one of them of the wrong size is refused 0x06
- * there.
+ * there. START FAILED is dangerous (Interfaces Sec. 5.1, command table, row 0x22); it joined with
+ * owner's decision 30, 15 Oct 2026, and was refused 0x06 as unknown before.
  *
  * @param[in]     payload  command payload
  * @param[in]     length   payload bytes
- * @return true for SWITCH, RETURN TO PREVIOUS or CONFIRM, false otherwise or for an empty payload
+ * @return true for SWITCH, RETURN TO PREVIOUS, START FAILED or CONFIRM, false otherwise or for an
+ *         empty payload
  */
 bool ModeManager::isDangerous(const uint8_t *payload, uint16_t length)
 {
     return (length >= 1U) && ((payload[0] == kCmdSwitch) ||
                               (payload[0] == kCmdReturnToPrevious) ||
+                              (payload[0] == kCmdStartFailed) ||
                               (payload[0] == kCmdConfirm));
 }
 
 /**
- * @brief The checks on arrival of SWITCH, RETURN TO PREVIOUS or CONFIRM, in the order of the
- * decided design; each refusal is answered REFUSED only.
+ * @brief The checks on arrival of SWITCH, RETURN TO PREVIOUS, START FAILED or CONFIRM, in the
+ * order of the decided design; each refusal is answered REFUSED only.
  *
- * 0. the command itself: exactly 1 byte (0x06, REQ-028);
- * 1. mode (REQ-027): SWITCH only in OPERATE, CONFIRM only in TRIAL (Interfaces Sec. 5.1, command
- *    table; FALLBACK is a later step); else 0x05. RETURN TO PREVIOUS only in TRIAL, else 0x05.
+ * 0. the command itself (0x06, REQ-028): exactly 1 byte, START FAILED exactly 2; START FAILED's
+ *    copy must be the slot that is not running (startFailedCopyOk; owner's decision 30, 15 Oct
+ *    2026: the running slot, 0x03 the last-resort firmware and any other value are 0x06). Its
+ *    place, with the size and before the mode, is a Proposal (TBR), awaiting the owner's
+ *    acceptance: the copy is a value of the command, which REQ-028 checks with the command;
+ * 1. mode (REQ-027): SWITCH and START FAILED in OPERATE or FALLBACK, CONFIRM only in TRIAL
+ *    (Interfaces Sec. 5.1, command table; owner's decision 30 added FALLBACK to SWITCH and built
+ *    START FAILED); else 0x05. RETURN TO PREVIOUS only in TRIAL, else 0x05. A mode byte that is
+ *    no HealthMode (a corrupted value) matches no mode and is refused here; poll() gives it the
+ *    fault reaction on the same pass.
  *    Accepted by the owner's decision 14a, 15 Oct 2026: RETURN TO PREVIOUS is accepted in TRIAL
  *    only and refused 0x05 in OPERATE; the Interfaces row 0x21 (line 359 of
  *    docs/interfaces/main.tex) says TRIAL. (The row had allowed OPERATE, but what "previous"
@@ -653,12 +770,23 @@ bool ModeManager::isDangerous(const uint8_t *payload, uint16_t length)
 AnswerCode ModeManager::acceptDangerous(const uint8_t *payload, uint16_t length,
                                         uint32_t sequence, uint32_t now_ms, ArmState &arm)
 {
-    if ((length != kDangerousBytes) || !isDangerous(payload, length)) {
+    if (!isDangerous(payload, length)) {
         return AnswerCode::kImpossible;
     }
     uint8_t command = payload[0];
-    HealthMode allowed = (command == kCmdSwitch) ? HealthMode::kOperate : HealthMode::kTrial;
-    if (mode_ != allowed) {
+    uint16_t size = (command == kCmdStartFailed) ? kStartFailedBytes : kDangerousBytes;
+    if (length != size) {
+        return AnswerCode::kImpossible;
+    }
+    /* The size is checked above, so payload[1] exists here. */
+    if ((command == kCmdStartFailed) && !startFailedCopyOk(payload[1], running_)) {
+        return AnswerCode::kImpossible;
+    }
+    bool trial_command = (command == kCmdReturnToPrevious) || (command == kCmdConfirm);
+    bool allowed = trial_command ? (mode_ == HealthMode::kTrial)
+                                 : ((mode_ == HealthMode::kOperate) ||
+                                    (mode_ == HealthMode::kFallback));
+    if (!allowed) {
         return AnswerCode::kMode;
     }
     /* Unsigned subtraction stays right when the millisecond count wraps. */
@@ -677,8 +805,24 @@ AnswerCode ModeManager::acceptDangerous(const uint8_t *payload, uint16_t length,
 }
 
 /**
- * @brief SWITCH, after RECEIVED (REQ-021): boot state confirmed = running slot, trial = the
- * other slot, failed starts = 0; the restart follows on the next pass (poll), after DONE.
+ * @brief SWITCH (REQ-021) or START FAILED (REQ-019), after RECEIVED: boot state confirmed =
+ * running slot, trial = the other slot, failed starts = 0, FALLBACK flag cleared; the restart
+ * follows on the next pass (poll), after DONE.
+ *
+ * The two differ only in the given-up mark (owner's decision 30, 15 Oct 2026; finding F-1):
+ *   SWITCH: if the other slot's header body check value (headerBodyCheck) equals the mark and the
+ *      mark is not 0, REFUSED 0x13 "the image was given up; START FAILED starts it again", and
+ *      nothing is written; otherwise the mark is kept. Checked after E (it needs the boot state)
+ *      and before F(a), so a given-up image is refused without the 0.081 s of checks; an image
+ *      whose header has no proprietary string gives 0 and never matches, so F(a) answers for it.
+ *      This order is a Proposal (TBR), awaiting the owner's acceptance;
+ *   START FAILED: no mark check (it is the operator's order to start that image again), and the
+ *      mark is written as 0. Its copy byte was checked on arrival (startFailedCopyOk): it names
+ *      the other slot, so the work uses otherSlot(running_). E and F(a) apply to it as to SWITCH:
+ *      Proposal (TBR), awaiting the owner's acceptance (decision 30 names only F(a), "the slot
+ *      check"; E keeps START FAILED from replacing a trial already set, as for SWITCH).
+ * The mark stays through CONFIRM and is cleared only by START FAILED or replaced by the next
+ * give-up: Proposal (TBR), awaiting the owner's acceptance.
  *
  * Before the write, in this order:
  *   E: the boot state is read again; SWITCH proceeds only if it names the running slot as
@@ -698,11 +842,12 @@ AnswerCode ModeManager::acceptDangerous(const uint8_t *payload, uint16_t length,
  * N: a failed boot-state write answers 0x11, "boot state could not be stored" (Interfaces Sec. 4.2,
  * accepted 13 Oct 2026); before, 0x06. The chip does not restart: nothing changed.
  *
+ * @param[in]     start_failed  true for START FAILED, false for SWITCH
  * @return AnswerCode::kSuccess if the boot state was written; kImpossible (0x06) if the running
- *         slot is not A or B; kMode (0x05) per E; the image check's code per F(a);
- *         kStateNotStored (0x11) if the write failed
+ *         slot is not A or B; kMode (0x05) per E; kImageGivenUp (0x13) for SWITCH to the given-up
+ *         image; the image check's code per F(a); kStateNotStored (0x11) if the write failed
  */
-AnswerCode ModeManager::runSwitch()
+AnswerCode ModeManager::runSwitch(bool start_failed)
 {
     boot_state_t state{};
 
@@ -713,14 +858,22 @@ AnswerCode ModeManager::runSwitch()
         (toSlot(state.trial) != Slot::kNone)) {
         return AnswerCode::kMode;
     }
-    AnswerCode image = UpdateReceiver::checkSlot(otherSlot(running_));
+    Slot other = otherSlot(running_);
+    if (!start_failed && (state.given_up_check != 0U) &&
+        (headerBodyCheck(other) == state.given_up_check)) {
+        return AnswerCode::kImageGivenUp;
+    }
+    AnswerCode image = UpdateReceiver::checkSlot(other);
     if (image != kUpdateOk) {
         return image;
     }
+    uint32_t mark = start_failed ? 0U : state.given_up_check;
     state = boot_state_t{};
     state.confirmed = stateCode(running_);
-    state.trial = stateCode(otherSlot(running_));
+    state.trial = stateCode(other);
     state.failed_starts = 0U;
+    state.flags = 0U;
+    state.given_up_check = mark;
     if (!ModePort::writeBootState(state)) {
         return AnswerCode::kStateNotStored;
     }
@@ -737,6 +890,10 @@ AnswerCode ModeManager::runSwitch()
  * Sec. 4.2, accepted 13 Oct 2026); before, 0x06. The mode stays TRIAL: the trial timer runs on,
  * so the operator can ARM and CONFIRM again, and without a CONFIRM the trial ends at its time
  * limit (REQ-013).
+ * Owner's decision 30, 15 Oct 2026: the FALLBACK flag is written as 0 and the given-up mark is
+ * kept, copied from the boot state as it is now. A boot state that cannot be read has no mark to
+ * copy, and the record is written with mark 0: Proposal (TBR), awaiting the owner's acceptance.
+ * (In TRIAL, start() read a valid boot state, and only this firmware has written it since.)
  *
  * @param[in]     now_ms  milliseconds since start
  * @return AnswerCode::kSuccess if the boot state was written; AnswerCode::kStateNotStored (0x11)
@@ -744,11 +901,15 @@ AnswerCode ModeManager::runSwitch()
  */
 AnswerCode ModeManager::runConfirm(uint32_t now_ms)
 {
+    boot_state_t current{};
     boot_state_t state{};
 
+    uint32_t mark = ModePort::readBootState(current) ? current.given_up_check : 0U;
     state.confirmed = stateCode(running_);
     state.trial = BOOT_SLOT_NONE;
     state.failed_starts = 0U;
+    state.flags = 0U;
+    state.given_up_check = mark;
     if (!ModePort::writeBootState(state)) {
         return AnswerCode::kStateNotStored;
     }
@@ -761,9 +922,10 @@ AnswerCode ModeManager::runConfirm(uint32_t now_ms)
 
 /**
  * @brief RETURN TO PREVIOUS, after RECEIVED (REQ-113): gives the trial up as a failed trial test
- * does (giveUp): boot state confirmed = the other slot, trial = none, failed starts = 0, then
- * EVENT 0x0008 "firmware given up"; the restart follows on the next pass (poll), after DONE
- * (REQ-034), as for SWITCH.
+ * does (giveUp): boot state confirmed = the other slot, trial = none, failed starts = 0, the
+ * FALLBACK flag and the given-up image's mark (giveUpState; owner's decision 30, 15 Oct 2026),
+ * then EVENT 0x0008 "firmware given up"; the restart follows on the next pass (poll), after DONE
+ * (REQ-034), as for SWITCH. The previous firmware then starts in FALLBACK.
  *
  * Only TRIAL reaches here (acceptDangerous), so the confirmed slot is the other one, as in
  * giveUp(). Unlike giveUp(), a failed boot-state write answers 0x11, "boot state could not be
@@ -780,14 +942,10 @@ AnswerCode ModeManager::runConfirm(uint32_t now_ms)
  */
 AnswerCode ModeManager::runReturnToPrevious(uint32_t now_ms)
 {
-    boot_state_t state{};
-
     if ((running_ != Slot::kA) && (running_ != Slot::kB)) {
         return AnswerCode::kImpossible;
     }
-    state.confirmed = stateCode(otherSlot(running_));
-    state.trial = BOOT_SLOT_NONE;
-    state.failed_starts = 0U;
+    boot_state_t state = giveUpState(running_);
     if (!ModePort::writeBootState(state)) {
         return AnswerCode::kStateNotStored;
     }
@@ -797,13 +955,15 @@ AnswerCode ModeManager::runReturnToPrevious(uint32_t now_ms)
 }
 
 /**
- * @brief Runs SWITCH, RETURN TO PREVIOUS or CONFIRM after acceptDangerous() accepted it and
- * RECEIVED was sent.
+ * @brief Runs SWITCH, RETURN TO PREVIOUS, START FAILED or CONFIRM after acceptDangerous()
+ * accepted it and RECEIVED was sent.
  *
- * acceptDangerous() lets only these three identifiers through, so any other value here is a
+ * acceptDangerous() lets only these four identifiers through, so any other value here is a
  * corrupted variable: the fault reaction (firmware/fault.hpp). Before, it answered 0x06.
+ * START FAILED needs only its identifier here: its one valid copy is the other slot (see
+ * startFailedCopyOk), so runSwitch acts on otherSlot(running_).
  *
- * @param[in]     command  kCmdSwitch, kCmdReturnToPrevious or kCmdConfirm
+ * @param[in]     command  kCmdSwitch, kCmdReturnToPrevious, kCmdStartFailed or kCmdConfirm
  * @param[in]     now_ms   milliseconds since start
  * @return AnswerCode::kSuccess (answer DONE 0x00), or the refusal code (answer REFUSED)
  * @note Does not return for any other command.
@@ -811,7 +971,10 @@ AnswerCode ModeManager::runReturnToPrevious(uint32_t now_ms)
 AnswerCode ModeManager::runDangerous(uint8_t command, uint32_t now_ms)
 {
     if (command == kCmdSwitch) {
-        return runSwitch();
+        return runSwitch(false);
+    }
+    if (command == kCmdStartFailed) {
+        return runSwitch(true);
     }
     if (command == kCmdReturnToPrevious) {
         return runReturnToPrevious(now_ms);
@@ -821,6 +984,74 @@ AnswerCode ModeManager::runDangerous(uint8_t command, uint32_t now_ms)
     }
     /* only a corrupted value reaches here */
     faultImpossibleValue(FAULT_AT_MODE_MANAGER_RUN_DANGEROUS, "ModeManager::runDangerous");
+}
+
+/**
+ * @brief Returns true if the payload's identifier is LEAVE FALLBACK (0x23).
+ *
+ * The size is checked by acceptLeaveFallback(), so a LEAVE FALLBACK of the wrong size is refused
+ * 0x06 there, as for the dangerous commands (isDangerous).
+ *
+ * @param[in]     payload  command payload
+ * @param[in]     length   payload bytes
+ * @return true for LEAVE FALLBACK, false otherwise or for an empty payload
+ */
+bool ModeManager::isLeaveFallback(const uint8_t *payload, uint16_t length)
+{
+    return (length >= 1U) && (payload[0] == kCmdLeaveFallback);
+}
+
+/**
+ * @brief The checks on arrival of LEAVE FALLBACK (Interfaces Sec. 5.1, command table, row 0x23;
+ * REQ-117; owner's decision 30, 15 Oct 2026); each refusal is answered REFUSED only.
+ *
+ * 0. the command itself: exactly 1 byte (0x06, REQ-028);
+ * 1. mode (REQ-027): FALLBACK only, else 0x05.
+ * Not dangerous (the command table says NO), so no ARM is checked or used up.
+ *
+ * @param[in]     payload  command payload
+ * @param[in]     length   payload bytes
+ * @return AnswerCode::kSuccess if the command may run; otherwise the refusal code
+ */
+AnswerCode ModeManager::acceptLeaveFallback(const uint8_t *payload, uint16_t length) const
+{
+    if ((length != kLeaveFallbackBytes) || !isLeaveFallback(payload, length)) {
+        return AnswerCode::kImpossible;
+    }
+    if (mode_ != HealthMode::kFallback) {
+        return AnswerCode::kMode;
+    }
+    return AnswerCode::kSuccess;
+}
+
+/**
+ * @brief LEAVE FALLBACK, after RECEIVED (REQ-117; owner's decision 30, 15 Oct 2026): the boot
+ * state with the FALLBACK flag cleared, then mode OPERATE at once, with no restart.
+ *
+ * The record is the boot state as it is now with only the flag changed, so the confirmed slot,
+ * the trial, the start count and the given-up mark stay as they are (the mark is kept: a later
+ * SWITCH to the given-up image is still refused 0x13). The running firmware does not change, so
+ * nothing restarts. A failed write answers 0x11, "boot state could not be stored", and the mode
+ * stays FALLBACK. A boot state that cannot be read cannot be copied, so nothing is written and
+ * the answer is 0x11 too: Proposal (TBR), awaiting the owner's acceptance (0x05, as SWITCH's
+ * decision E answers an unreadable boot state, would say the mode is wrong, which it is not).
+ *
+ * @return AnswerCode::kSuccess if the boot state was written; kStateNotStored (0x11) if it was
+ *         not read or not written
+ */
+AnswerCode ModeManager::runLeaveFallback()
+{
+    boot_state_t state{};
+
+    if (!ModePort::readBootState(state)) {
+        return AnswerCode::kStateNotStored;   /* see above */
+    }
+    state.flags = 0U;
+    if (!ModePort::writeBootState(state)) {
+        return AnswerCode::kStateNotStored;
+    }
+    mode_ = HealthMode::kOperate;
+    return AnswerCode::kSuccess;
 }
 
 /**

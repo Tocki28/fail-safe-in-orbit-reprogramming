@@ -1,11 +1,20 @@
 /*
- * mode_manager.hpp — the controller's mode, the trial of new firmware, its trial tests, and the
- * three dangerous commands of this step, SWITCH, RETURN TO PREVIOUS and CONFIRM (Architecture:
- * mode manager; REQ-011 to REQ-021, REQ-113, REQ-139, REQ-140).
+ * mode_manager.hpp — the controller's mode, the trial of new firmware, its trial tests, the four
+ * dangerous commands SWITCH, RETURN TO PREVIOUS, START FAILED and CONFIRM, and LEAVE FALLBACK
+ * (Architecture: mode manager; REQ-011 to REQ-021, REQ-113, REQ-117, REQ-139, REQ-140).
  *
- * Mode at start (decided design, step 2d): the running slot is the boot state's trial slot ->
- * TRIAL; otherwise OPERATE. FALLBACK is a later step. The mode then changes only by CONFIRM
- * (TRIAL -> OPERATE); every other way out of a trial, RETURN TO PREVIOUS included, is a restart.
+ * Mode at start (decided design, step 2d; owner's decision 30, 15 Oct 2026): the running slot is
+ * the boot state's trial slot -> TRIAL; otherwise the boot state has the FALLBACK flag and names
+ * the running slot as confirmed -> FALLBACK; otherwise OPERATE. The mode then changes only by
+ * CONFIRM (TRIAL -> OPERATE) and LEAVE FALLBACK (FALLBACK -> OPERATE); every other way out of a
+ * trial, RETURN TO PREVIOUS included, is a restart, and so are SWITCH and START FAILED.
+ *
+ * FALLBACK (owner's decision 30; finding F-1: a SWITCH restarted a firmware that had been given
+ * up; ConOps Scenario-310; REQ-019, REQ-117): every give-up of a trial, the bootloader's and this
+ * file's, writes the FALLBACK flag and the given-up image's body check value (the "mark") into
+ * the boot state. FALLBACK runs exactly OPERATE's work. SWITCH refuses 0x13 when the other
+ * slot's image carries the mark; START FAILED is the operator's order that starts it again and
+ * clears the mark; CONFIRM clears the flag and keeps the mark; LEAVE FALLBACK clears the flag.
  *
  * The trial (TRIAL only):
  *   - EVENT 0x0006 "trial started", once, on the first pass after start;
@@ -27,25 +36,29 @@
  * and 2), and one EVENT 0x0002 per copy the bootloader refused or skipped on this start
  * (decision 4; Interfaces Sec. 5.4). After kNormalRunMs of running, the bootloader's restart
  * count of this slot is cleared (decision B).
- * In OPERATE a failed self-test sends EVENT 0x0004 and restarts the chip, counted by the
- * bootloader (decision L).
+ * In OPERATE and in FALLBACK a failed self-test sends EVENT 0x0004 and restarts the chip, counted
+ * by the bootloader (decision L).
  *
  * The self-test runs at every start and then every kSelfTestPeriodMs while the firmware runs, in
- * OPERATE and in TRIAL (REQ-039; owner's decision 23, 15 Oct 2026). A failed periodic self-test
- * has the reaction of a failed one at start in each mode: in OPERATE EVENT 0x0004 and the
+ * every mode (REQ-039; owner's decision 23, 15 Oct 2026). A failed periodic self-test has the
+ * reaction of a failed one at start in each mode: in OPERATE and FALLBACK EVENT 0x0004 and the
  * restart (decision L), in TRIAL EVENT 0x000B with detail 0x01 and the give-up (REQ-140). The
  * reasoning, the time one test takes and what it costs the watchdog and the UART are at
  * kSelfTestPeriodMs.
  *
- * SWITCH (0x20), RETURN TO PREVIOUS (0x21) and CONFIRM (0x26): checks on arrival in this order,
- * each refusal answered REFUSED only: mode (SWITCH in OPERATE, RETURN TO PREVIOUS in TRIAL,
- * CONFIRM in TRIAL and before kTrialMs have passed; else 0x05), arming (0x01, 0x02;
- * command-checker/arm_state.hpp), and for CONFIRM the trial tests (0x0F). Then RECEIVED, the work,
- * and DONE or REFUSED. SWITCH's work: the boot state read again (decision E, 0x05), the other
- * slot's image checked (decision F(a), the UPLOAD END codes), the boot-state write (0x11 if it
- * fails, decision N). CONFIRM's work: the boot-state write (0x11). RETURN TO PREVIOUS's work: the
- * give-up's boot-state write (0x11 if it fails) and EVENT 0x0008; the restart follows on the next
- * pass, after DONE (REQ-034), as for SWITCH.
+ * SWITCH (0x20), RETURN TO PREVIOUS (0x21), START FAILED (0x22) and CONFIRM (0x26): checks on
+ * arrival in this order, each refusal answered REFUSED only: the command itself (size, and START
+ * FAILED's copy; 0x06), mode (SWITCH and START FAILED in OPERATE or FALLBACK, RETURN TO PREVIOUS
+ * in TRIAL, CONFIRM in TRIAL and before kTrialMs have passed; else 0x05), arming (0x01, 0x02;
+ * command-checker/arm_state.hpp), and for CONFIRM the trial tests (0x0F). Then RECEIVED, the
+ * work, and DONE or REFUSED. SWITCH's work: the boot state read again (decision E, 0x05), the
+ * given-up mark (0x13), the other slot's image checked (decision F(a), the UPLOAD END codes), the
+ * boot-state write (0x11 if it fails, decision N). START FAILED's work: SWITCH's without the mark
+ * check, and the write clears the mark. CONFIRM's work: the boot-state write (0x11). RETURN TO
+ * PREVIOUS's work: the give-up's boot-state write (0x11 if it fails) and EVENT 0x0008; the restart
+ * follows on the next pass, after DONE (REQ-034), as for SWITCH and START FAILED.
+ * LEAVE FALLBACK (0x23, not dangerous): size (0x06), mode FALLBACK (else 0x05); then RECEIVED,
+ * the boot-state write that clears the flag (0x11 if it fails), DONE, mode OPERATE, no restart.
  *
  * Every decision is here; main.cpp only routes frames and sends the answers. The chip is reached
  * through mode_port.hpp and the link through FrameSender, so the same file runs in the host unit
@@ -81,8 +94,9 @@ constexpr uint32_t kNormalRunMs = 60000U;
  * value in its header, plus the flash read-error flag. It runs in start() and again from poll()
  * whenever at least kSelfTestPeriodMs have passed since the last run, the one in start() counting
  * as the first. At most once per poll() pass, so a long pause of the main loop gives one run, not
- * a catch-up. It runs in OPERATE and in TRIAL; it reads only the running slot's flash and changes
- * nothing but the stored result, which HEALTH reports as "last self-test" (Interfaces Sec. 5.4).
+ * a catch-up. It runs in OPERATE, in FALLBACK (owner's decision 30) and in TRIAL; it reads only
+ * the running slot's flash and changes nothing but the stored result, which HEALTH reports as
+ * "last self-test" (Interfaces Sec. 5.4).
  * A pass that finds the image intact sends nothing.
  *
  * Why it runs again: the flash can change while the firmware runs (a damaged word, REQ-041); a
@@ -91,7 +105,7 @@ constexpr uint32_t kNormalRunMs = 60000U;
  *
  * When it fails, the reaction is the one a failed self-test at start already has in that mode:
  *   OPERATE  EVENT 0x0004, a bounded wait for the UART, restart counted by the bootloader
- *            (decision L; pollOperate);
+ *            (decision L; pollOperate); FALLBACK the same (it runs OPERATE's work, decision 30);
  *   TRIAL    EVENT 0x000B with detail 0x01, then the give-up: boot state trial = none, EVENT
  *            0x0008, restart into the previous firmware (REQ-140; pollTrial, giveUp).
  * No new reaction is added. The bootloader checks the image again after the restart, so a
@@ -123,13 +137,23 @@ constexpr uint32_t kNormalRunMs = 60000U;
  * the wrap as long as the period is far below 2^32 ms. */
 constexpr uint32_t kSelfTestPeriodMs = 60000U;
 
-/* The dangerous commands of this step, each 1 byte with no fields (Interfaces Sec. 5.1).
- * START FAILED (0x22) is not in this step. RETURN TO PREVIOUS is row 0x21 of the command table
- * (docs/interfaces/main.tex, line 359; REQ-113). */
+/* The dangerous commands (Interfaces Sec. 5.1, command table): SWITCH, RETURN TO PREVIOUS and
+ * CONFIRM are 1 byte with no fields; START FAILED (0x22) carries "which copy" (1 byte), so it is
+ * 2 bytes. RETURN TO PREVIOUS is row 0x21 of the command table (docs/interfaces/main.tex, line
+ * 359; REQ-113). START FAILED is row 0x22 (line 360; REQ-019), built with owner's decision 30,
+ * 15 Oct 2026; before, it was refused 0x06 as unknown. */
 constexpr uint8_t kCmdSwitch = 0x20U;
 constexpr uint8_t kCmdReturnToPrevious = 0x21U;
+constexpr uint8_t kCmdStartFailed = 0x22U;
 constexpr uint8_t kCmdConfirm = 0x26U;
 constexpr uint16_t kDangerousBytes = 1U;
+constexpr uint16_t kStartFailedBytes = 2U;
+
+/* LEAVE FALLBACK: row 0x23 of the command table (docs/interfaces/main.tex, line 361; REQ-117),
+ * 1 byte with no fields, not dangerous, FALLBACK only. Built with owner's decision 30; before, it
+ * was refused 0x06 as unknown. */
+constexpr uint8_t kCmdLeaveFallback = 0x23U;
+constexpr uint16_t kLeaveFallbackBytes = 1U;
 
 /* The detail byte of EVENT 0x000B "trial tests failed": which test (Interfaces Sec. 5.4: 0x01
  * self-test, 0x02 data link, 0x03 test image). Accepted by the owner, 13 Oct 2026 (decision P). */
@@ -159,15 +183,25 @@ public:
     /** @brief The work of one main-loop pass: events, failed tests, time-out, restart. */
     void poll(uint32_t now_ms);
 
-    /** @brief True if the payload's identifier is SWITCH, RETURN TO PREVIOUS or CONFIRM. */
+    /** @brief True if the payload's identifier is SWITCH, RETURN TO PREVIOUS, START FAILED or
+     *  CONFIRM. */
     [[nodiscard]] static bool isDangerous(const uint8_t *payload, uint16_t length);
 
-    /** @brief Checks on arrival of SWITCH, RETURN TO PREVIOUS or CONFIRM: kSuccess or refusal. */
+    /** @brief Checks on arrival of a dangerous command (isDangerous): kSuccess or refusal. */
     AnswerCode acceptDangerous(const uint8_t *payload, uint16_t length, uint32_t sequence,
                                uint32_t now_ms, ArmState &arm);
 
-    /** @brief Run SWITCH, RETURN TO PREVIOUS or CONFIRM after RECEIVED: kSuccess or refusal. */
+    /** @brief Run a dangerous command after RECEIVED: kSuccess or refusal. */
     AnswerCode runDangerous(uint8_t command, uint32_t now_ms);
+
+    /** @brief True if the payload's identifier is LEAVE FALLBACK (0x23). */
+    [[nodiscard]] static bool isLeaveFallback(const uint8_t *payload, uint16_t length);
+
+    /** @brief Checks on arrival of LEAVE FALLBACK: kSuccess, 0x06 (size) or 0x05 (mode). */
+    AnswerCode acceptLeaveFallback(const uint8_t *payload, uint16_t length) const;
+
+    /** @brief Run LEAVE FALLBACK after RECEIVED: kSuccess (mode OPERATE) or 0x11. */
+    AnswerCode runLeaveFallback();
 
     /** @brief Checks on arrival of a test-image command (TRIAL only): kSuccess or 0x06. */
     AnswerCode acceptTestImage(const UpdateCommand &cmd) const;
@@ -218,7 +252,7 @@ private:
     void pollTrial(uint32_t now_ms);
     void giveUp(uint32_t now_ms);
     void restartWhenSent();
-    AnswerCode runSwitch();
+    AnswerCode runSwitch(bool start_failed);
     AnswerCode runConfirm(uint32_t now_ms);
     AnswerCode runReturnToPrevious(uint32_t now_ms);
 
@@ -229,7 +263,8 @@ private:
     bool self_test_passed_ = false;
     bool trial_started_sent_ = false;   /* EVENT 0x0006 sent */
     bool tests_passed_sent_ = false;    /* EVENT 0x000A sent */
-    bool restart_due_ = false;          /* SWITCH done: restart on the next pass */
+    bool restart_due_ = false;          /* SWITCH, START FAILED or RETURN TO PREVIOUS done:
+                                         * restart on the next pass */
     bool clock_fault_ = false;          /* the clock fell back to 16 MHz (decision C) */
     bool start_events_sent_ = false;    /* EVENT 0x0005 / 0x0001 / 0x0002 of this start handled */
     bool restart_count_cleared_ = false;   /* decision B's count cleared after kNormalRunMs */

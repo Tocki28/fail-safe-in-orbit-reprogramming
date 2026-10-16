@@ -391,6 +391,110 @@ static void test_load_from_flash(void)
 }
 
 /**
+ * @brief Returns a record built byte by byte in the layout of decision 30 (16 bytes: sequence 4,
+ * confirmed, trial, failed starts, flags, given_up_check 4, check 4), with the right check value.
+ *
+ * Built from raw bytes, not from the struct's fields, so the byte positions are tested too.
+ *
+ * @param[in]     sequence   sequence number
+ * @param[in]     flags      byte 7
+ * @param[in]     mark       bytes 8-11, little-endian
+ * @return the record
+ */
+static boot_state_t raw_record(uint32_t sequence, uint8_t flags, uint32_t mark)
+{
+    uint8_t raw[16];
+    boot_state_t r;
+    uint32_t check;
+
+    for (uint32_t i = 0U; i < 4U; i++) {
+        raw[i] = (uint8_t)(sequence >> (8U * i));
+        raw[8U + i] = (uint8_t)(mark >> (8U * i));
+    }
+    raw[4] = BOOT_SLOT_A;
+    raw[5] = BOOT_SLOT_NONE;
+    raw[6] = 0U;
+    raw[7] = flags;
+    check = crc32_compute(raw, 12U);
+    for (uint32_t i = 0U; i < 4U; i++) {
+        raw[12U + i] = (uint8_t)(check >> (8U * i));
+    }
+    memcpy(&r, raw, sizeof r);
+    return r;
+}
+
+/**
+ * @brief The flags byte and the given-up mark (owner decision 30): their place in the record, the
+ * old format still valid, and any unknown flag bit makes the copy DAMAGED, not a fault.
+ *
+ * Defects caught: fields at other offsets (the firmware's reader would disagree); an old-format
+ * record (flags 0, mark 0) refused; the flags byte or the mark not returned by classify; a flag
+ * bit other than bit 0 accepted (a future or damaged byte read as valid); an unknown flag bit
+ * answered with the fault reaction instead of DAMAGED (point 4 of the 13 Oct fault decision: data
+ * from flash is damage); a copy with an unknown bit hiding an older valid copy.
+ */
+static void test_flags_and_mark(void)
+{
+    boot_state_t out;
+    int ended = 0;
+
+    report((sizeof(boot_state_t) == 16U) && (offsetof(boot_state_t, flags) == 7U) &&
+               (offsetof(boot_state_t, given_up_check) == 8U) &&
+               (offsetof(boot_state_t, check) == 12U) && (BOOT_STATE_FLAG_FALLBACK == 0x01U),
+           "decision 30: the record is 16 bytes, flags at byte 7, given_up_check at bytes 8-11, "
+           "BOOT_STATE_FLAG_FALLBACK is 0x01");
+
+    memset(&out, 0xA5, sizeof out);
+    report((classify2(raw_record(4U, 0U, 0U), erased_record(), &out) == BOOT_STATE_VALID) &&
+               (out.flags == 0U) && (out.given_up_check == 0U) && (out.sequence == 4U),
+           "decision 30: old-format record (bytes 7-11 zero) -> VALID, flags 0, mark 0");
+
+    memset(&out, 0xA5, sizeof out);
+    report((classify2(raw_record(4U, 0x01U, 0xA1B2C3D4U), erased_record(), &out) ==
+            BOOT_STATE_VALID) &&
+               (out.flags == 0x01U) && (out.given_up_check == 0xA1B2C3D4U),
+           "decision 30: FALLBACK flag and mark 0xA1B2C3D4 in the bytes -> VALID, both returned");
+
+    const uint8_t unknown[] = {0x02U, 0x04U, 0x08U, 0x10U, 0x20U, 0x40U, 0x80U, 0x03U, 0xFFU};
+    bool all = true;
+    for (uint32_t i = 0U; i < (uint32_t)sizeof unknown; i++) {
+        volatile boot_state_load_t got = BOOT_STATE_VALID;
+        boot_state_t older = raw_record(3U, 0x01U, 0x01020304U);
+
+        fresh();
+        RUN_CATCH(ended, got = classify2(raw_record(5U, unknown[i], 0U), erased_record(), &out));
+        all = all && (ended == 0) && (got == BOOT_STATE_DAMAGED) && (fault_calls == 0U);
+        fresh();
+        RUN_CATCH(ended, got = classify2(raw_record(5U, unknown[i], 0U), older, &out));
+        all = all && (ended == 0) && (got == BOOT_STATE_VALID) && (out.sequence == 3U) &&
+              (out.given_up_check == 0x01020304U) && (fault_calls == 0U);
+    }
+    report(all, "decision 30: flags byte with any bit but bit 0 (0x02..0x80, 0x03, 0xFF), right "
+                "check value -> DAMAGED, no fault; with an older valid copy that one is used");
+}
+
+/**
+ * @brief Decision D through boot_state_load on the RAM flash: the two new fields are read from
+ * the bytes in flash.
+ *
+ * Defects caught: the load reading only 12 bytes or zeroing the fields after the read.
+ */
+static void test_fields_from_flash(void)
+{
+    const uint32_t copy0 = (uint32_t)BOOT_STATE_COPY_0 - (uint32_t)FLASH_START;
+    boot_state_t out;
+    boot_state_t rec = raw_record(8U, 0x01U, 0xCAFEBABEU);
+
+    stub_flash_reset();
+    memcpy(&stub_flash[copy0], &rec, sizeof rec);
+    memset(&out, 0, sizeof out);
+    report((boot_state_load(&out) == BOOT_STATE_VALID) && (out.flags == 0x01U) &&
+               (out.given_up_check == 0xCAFEBABEU),
+           "decision 30, from flash: copy 0 with FALLBACK and a mark -> VALID, flags and mark read");
+    stub_flash_reset();
+}
+
+/**
  * @brief check_result_code: the 11 image check results give the 11 codes of the Interfaces
  * "Check result" table; a value outside the enum is the fault reaction.
  *
@@ -478,6 +582,8 @@ int main(void)
     test_start_count_bound();
     test_classify();
     test_load_from_flash();
+    test_flags_and_mark();
+    test_fields_from_flash();
     test_check_result_code();
     test_texts();
     if (failures == 0U) {

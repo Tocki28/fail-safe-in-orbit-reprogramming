@@ -216,7 +216,8 @@ Updater::Updater(CommandGate & gate, DataLink & link, UploadStore & store,
 : gate_(gate), link_(link), store_(store), checker_(checker), reports_(reports), watch_(watch),
   beat_ms_(beat_ms), next_beat_ms_(0), now_ms_(0), sender_(Sender::kNone), reports_dropped_(0),
   queue_(), table_(), delivery_(), arm_{}, pair_(PairStage::kNone), test_trigger_(), trial_watch_(config::kTrialMs, config::kTrialMarginMs),
-  restart_(restart_script, restart_deadline_ms, config::kRestartKillGraceMs), used_(),
+  restart_(restart_script, restart_deadline_ms, config::kRestartKillGraceMs),
+  restart_reason_(report::kRestartReasonTrialPastTime), used_(),
   repeats_(),
   limits_file_(store.directory(), config::kLimitsRecordName, config::kLimitsRecordBytes),
   clock_file_(store.directory(), config::kClockOffsetRecordName, config::kClockOffsetRecordBytes),
@@ -1360,7 +1361,10 @@ bool Updater::onLinkReadable(uint64_t listen_ms, uint64_t now_ms)
  */
 void Updater::onControllerFrame(const frame::Frame & f)
 {
-  watch_.heard(now_ms_);
+  if (watch_.heard(now_ms_)) {
+    // Decision 27 (owner, 15 Oct 2026; REQ-082): tell the ground the link works again, once.
+    sendOwnEvent(report::kEventDataLinkWorking, report::kLinkIdDataLinkA);
+  }
   if (logging::verbose()) {
     logging::line("data link A: received type 0x%02x to 0x%02x, sequence %u, %u payload bytes",
       f.type, f.destination, f.sequence, f.length);
@@ -1825,6 +1829,7 @@ void Updater::onTrialOverrun()
       "0x0106 sent", restart_.script(), std::strerror(error));
     return;
   }
+  restart_reason_ = report::kRestartReasonTrialPastTime;
   logging::line("trial: %s reset started (deadline %llu s, then TERM, KILL after %llu s)",
     restart_.script(), static_cast<unsigned long long>(config::kRestartScriptMs / 1000),
     static_cast<unsigned long long>(config::kRestartKillGraceMs / 1000));
@@ -1850,39 +1855,111 @@ void Updater::restartWatch()
  * @brief Logs how the restart script ended and tells the ground if the controller was reset.
  *
  * EVENT 0x0106 "controller restarted by the onboard computer", detail 0x01 "trial past its time"
- * (Interfaces Sec. 5.4 table; REQ-013) goes to the ground when the reset happened: the script's
+ * or 0x02 "controller silent" (owner decision 20; Interfaces Sec. 5.4 table; REQ-013), as the
+ * reset was started (restart_reason_), goes to the ground when the reset happened: the script's
  * line was "RESTORE DONE: reset", or "RESTORE FAILED: after reset" (the reset ran, OpenOCD then
  * did not end cleanly). In every other case the reset is not shown to have happened (the script
  * failed before it, was stopped, or printed nothing) and nothing new is sent; the log names the
- * line, the exit status or signal, and whether the deadline stopped it.
+ * line, the exit status or signal, and whether the deadline stopped it. The log lines begin
+ * "trial:" for decision H's reset and "controller silent:" for decision 20's.
  *
  * @param[in]     outcome  how the child ended (RestartRunner::poll)
  * @return nothing
  */
 void Updater::onRestartFinished(const RestartRunner::Outcome & outcome)
 {
+  const bool silent_reset = (restart_reason_ == report::kRestartReasonControllerSilent);
+  const char * label = silent_reset ? "controller silent" : "trial";
+  const char * reason = silent_reset ? "controller silent" : "trial past its time";
   const char * how = outcome.abandoned ? "given up after KILL, not reaped"
                    : outcome.killed ? "killed after the deadline"
                    : outcome.deadline_hit ? "stopped with TERM after the deadline"
                    : "ended by itself";
-  logging::line("trial: restart script %s: exit status %d, signal %d; result line \"%s\"", how,
-    outcome.exit_code, outcome.term_signal, outcome.line.data());
+  logging::line("%s: restart script %s: exit status %d, signal %d; result line \"%s\"", label,
+    how, outcome.exit_code, outcome.term_signal, outcome.line.data());
   switch (outcome.result) {
     case RestartRunner::Result::kDone:
-      logging::line("trial: the controller was reset; sending EVENT 0x0106 (%s), reason 0x01 "
-        "trial past its time", eventName(report::kEventControllerRestarted));
-      sendOwnEvent(report::kEventControllerRestarted, report::kRestartReasonTrialPastTime);
+      logging::line("%s: the controller was reset; sending EVENT 0x0106 (%s), reason 0x%02x %s",
+        label, eventName(report::kEventControllerRestarted), restart_reason_, reason);
+      sendOwnEvent(report::kEventControllerRestarted, restart_reason_);
       break;
     case RestartRunner::Result::kFailedAfterReset:
-      logging::line("trial: the script failed after the reset ran (the line says so); the "
-        "controller was reset, so EVENT 0x0106 is sent, reason 0x01 trial past its time");
-      sendOwnEvent(report::kEventControllerRestarted, report::kRestartReasonTrialPastTime);
+      logging::line("%s: the script failed after the reset ran (the line says so); the "
+        "controller was reset, so EVENT 0x0106 is sent, reason 0x%02x %s", label, restart_reason_,
+        reason);
+      sendOwnEvent(report::kEventControllerRestarted, restart_reason_);
       break;
     case RestartRunner::Result::kFailed:
-      logging::line("trial: the restart script did not show that the controller was reset (no "
-        "\"RESTORE DONE: reset\" and no \"RESTORE FAILED: after reset\"); no EVENT 0x0106 sent");
+      logging::line("%s: the restart script did not show that the controller was reset (no "
+        "\"RESTORE DONE: reset\" and no \"RESTORE FAILED: after reset\"); no EVENT 0x0106 sent",
+        label);
       break;
   }
+}
+
+/**
+ * @brief Runs the reset schedule of a silent controller (owner decision 20, 15 Oct 2026).
+ *
+ * Called every tick, after the controller watch was checked. The watch says what is due
+ * (ControllerWatch::resetDue): a reset, or the give-up. After the last reset and a further gap of
+ * silence nothing is restored: the restore method awaits the owner (decision 20, TBD), so exactly
+ * one line is logged and nothing more is done until the controller is heard again.
+ *
+ * @return nothing
+ */
+void Updater::silenceWatch()
+{
+  switch (watch_.resetDue(now_ms_)) {
+    case ControllerWatch::ResetStep::kNone:
+      break;
+    case ControllerWatch::ResetStep::kReset:
+      onSilentReset();
+      break;
+    case ControllerWatch::ResetStep::kGiveUp:
+      logging::line("controller still silent after %u resets; restore not run (decision 20: "
+        "method awaits the owner, TBD)", static_cast<unsigned>(watch_.resetsDone()));
+      watch_.gaveUp();
+      break;
+  }
+}
+
+/**
+ * @brief Resets a silent controller with the restart script, if it is free (decision 20).
+ *
+ * The same runner and script as decision H (restart_runner.hpp), so a reset is never run twice at
+ * once: when the runner is busy (decision H's reset, or the previous one of this silence) nothing
+ * is done and the watch keeps the reset due, so it starts on the first tick the runner is free.
+ * The reset is counted when it is started. Proposal (TBR), awaiting the owner's acceptance: it is
+ * also counted when the script is not configured or cannot be started (logged), so the schedule
+ * goes on at the gap and cannot loop every tick. EVENT 0x0106 with reason 0x02 goes to the ground
+ * from onRestartFinished once the reset happened.
+ *
+ * @return nothing
+ */
+void Updater::onSilentReset()
+{
+  if (restart_.running()) {
+    return;
+  }
+  watch_.resetRequested(now_ms_);
+  const unsigned number = static_cast<unsigned>(watch_.resetsDone());
+  if (!restart_.configured()) {
+    logging::line("controller silent: no restart script is configured (--restore-script); reset "
+      "%u of %u not run, no EVENT 0x0106 sent (REQ-061)", number,
+      static_cast<unsigned>(config::kSilentResetsMax));
+    return;
+  }
+  int error = 0;
+  if (!restart_.start(now_ms_, error)) {
+    logging::line("controller silent: cannot start %s reset %u of %u: %s; the controller was not "
+      "restarted, no EVENT 0x0106 sent", restart_.script(), number,
+      static_cast<unsigned>(config::kSilentResetsMax), std::strerror(error));
+    return;
+  }
+  restart_reason_ = report::kRestartReasonControllerSilent;
+  logging::line("controller silent: %s reset %u of %u started (REQ-061; next one in %llu s if "
+    "still silent)", restart_.script(), number, static_cast<unsigned>(config::kSilentResetsMax),
+    static_cast<unsigned long long>(config::kSilentResetGapMs / 1000));
 }
 
 /**
@@ -1956,6 +2033,10 @@ void Updater::tick(uint64_t now_ms)
   }
   trialWatch(nullptr);   // decision H, separable: see trialWatch
   restartWatch();        // decision H: the restart script, if one runs
-  watch_.check(now_ms);
+  if (watch_.check(now_ms)) {
+    // Decision 27 (owner, 15 Oct 2026; REQ-081): tell the ground the link was lost, once.
+    sendOwnEvent(report::kEventDataLinkLost, report::kLinkIdDataLinkA);
+  }
+  silenceWatch();        // decision 20: reset a silent controller on schedule
   sendNext();
 }

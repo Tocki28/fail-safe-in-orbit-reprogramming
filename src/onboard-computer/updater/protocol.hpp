@@ -171,8 +171,9 @@ constexpr size_t kOffsetFailedStarts = 20;
 constexpr size_t kOffsetTrialLeft = 21;
 constexpr size_t kOffsetSelfTest = 23;
 // Event codes (Sec. 5.4 table), the ones the updater acts on or names in its log. The
-// controller sends the first group; the onboard computer's own events (0x0101 to 0x0104) are
-// not sent on the bench. 0x0105 is sent (below), by SET ONBOARD TIME.
+// controller sends the first group; the onboard computer's own events 0x0101 and 0x0102
+// (decision 27), 0x0105 (SET ONBOARD TIME, below; decision 25) and 0x0106 are sent; 0x0103 and
+// 0x0104 are not sent on the bench.
 // 0x0001 "fault detected" carries a 1-byte detail, the fault kind; 0x0005 "change in memory
 // detected" carries a 2-byte detail, where (1) and later faults (1) (owner's decisions 2 and 3,
 // 13 Oct 2026, and the second round of that day; the code lists are
@@ -204,6 +205,18 @@ constexpr uint16_t kEventControllerRestarted = 0x0106;
 constexpr uint16_t kEventClockDiffers = 0x0105;
 constexpr size_t kClockDifferenceDetailBytes = 4;
 constexpr uint8_t kRestartReasonTrialPastTime = 0x01;   // Sec. 5.4 table: "0x01 trial past its time"
+// Reason 0x02 "controller silent": the onboard computer reset a controller that sent no good
+// frame for the silence limit (owner decision 20, 15 Oct 2026; REQ-061). Interfaces Sec. 5.4
+// row 0x0106 gets this reason; Proposal (TBR), awaiting the owner's acceptance: 0x02 is the next
+// free code after 0x01.
+constexpr uint8_t kRestartReasonControllerSilent = 0x02;
+// 0x0101 "data link lost" and 0x0102 "data link working again" (Sec. 5.4 table, REQ-081,
+// REQ-082; owner decision 27, 15 Oct 2026): the onboard computer's own events about its link to
+// the controller. Detail: link id (1).
+constexpr uint16_t kEventDataLinkLost = 0x0101;
+constexpr uint16_t kEventDataLinkWorking = 0x0102;
+// Link id 0x01 is data link A, the link to the controller (owner decision 27, 15 Oct 2026).
+constexpr uint8_t kLinkIdDataLinkA = 0x01;
 constexpr uint16_t kEventTrialTestsPassed = 0x000A;   // REQ-139
 constexpr uint16_t kEventTrialTestsFailed = 0x000B;   // REQ-139, REQ-140; detail (1): which test
 // Events 0x0002 and 0x0003 carry a 2-byte detail: refused copy (1), check result (1) (Sec. 5.4

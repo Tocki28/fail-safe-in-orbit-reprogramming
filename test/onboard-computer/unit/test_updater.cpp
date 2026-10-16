@@ -4755,6 +4755,33 @@ bool noRestartEvent(const std::vector<std::vector<uint8_t>> & reports)
 }
 
 /**
+ * @brief Moves the rig's clock on while the fake controller keeps sending HEALTH TRIAL.
+ *
+ * A real controller on trial sends HEALTH every second, so it is never silent during a trial
+ * overrun (coordinator, 16 Oct 2026, after decision 20). The clock moves in steps of at most
+ * 4 s, below the 5 s silence limit, and a HEALTH report in mode TRIAL follows each step. The
+ * HEALTH reports the ground receives are dropped here, so a test that asks "nothing was sent"
+ * about events still asks the same thing. The total moved is exactly total_ms. A TRIAL report
+ * inside a running trial does not restart its timing (TrialWatch::onHealthMode).
+ *
+ * @param[in,out] rig       the updater under test
+ * @param[in]     total_ms  the time to move on, ms
+ * @return nothing
+ */
+void advanceTalking(UpdaterRig & rig, uint64_t total_ms)
+{
+  constexpr uint64_t kStepMs = 4000;   // below config::kSilenceMs (5 s), so no silence begins
+  uint64_t left = total_ms;
+  while (left > 0) {
+    uint64_t step = left < kStepMs ? left : kStepMs;
+    rig.advance(step);
+    left -= step;
+    rig.health(report::kModeTrial);
+    (void)rig.groundReports();
+  }
+}
+
+/**
  * @brief Decision H: the trial overruns, the Updater runs the restart script, and tells the ground.
  *
  * Mock scripts stand for "restore.sh reset"; the rig's clock is moved by the test, the script runs
@@ -4804,10 +4831,10 @@ void testTrialOverrunRestart(const std::string & scratch)
     rig.answer(f.sequence, answer::kDone, 0);
     rig.health(report::kModeTrial);
     (void)rig.groundReports();
-    rig.advance(config::kTrialMs + config::kTrialMarginMs);
+    advanceTalking(rig, config::kTrialMs + config::kTrialMarginMs);
     (void)rig.tick(f);
     result.silent_at_150s = rig.groundReports().empty() && !exists(dir + "/called");
-    rig.advance(2);
+    advanceTalking(rig, 2);
     uint64_t t0 = clocks::nowMs();
     (void)rig.tick(f);
     result.overrun_tick_ms = clocks::nowMs() - t0;
@@ -4907,11 +4934,11 @@ void testTrialOverrunRestart(const std::string & scratch)
     (void)rig.tick(f);
     rig.answer(f.sequence, answer::kDone, 0);
     rig.health(report::kModeTrial);
-    rig.advance(config::kTrialMs + config::kTrialMarginMs + 1);
+    advanceTalking(rig, config::kTrialMs + config::kTrialMarginMs + 1);
     (void)rig.tick(f);
     rig.health(report::kModeOperate);
     rig.health(report::kModeTrial);   // another trial begins at once
-    rig.advance(config::kTrialMs + config::kTrialMarginMs + 1);
+    advanceTalking(rig, config::kTrialMs + config::kTrialMarginMs + 1);
     (void)rig.tick(f);
     std::vector<std::vector<uint8_t>> reports;
     serveUntilScriptEnds(rig, dir + "/finished", reports);
@@ -4950,6 +4977,417 @@ void testTrialOverrunRestart(const std::string & scratch)
     report(alive && processGone(pid) && noRestartEvent(reports),
       "trial overrun: a script that hangs is stopped at the updater's deadline; nothing is sent");
   }
+}
+
+// ---- Decisions 27 and 20 (accepted 15 Oct 2026): the silent controller ----------------------
+// REQ-081 / REQ-082: EVENT 0x0101 "data link lost" and 0x0102 "data link working again", detail =
+// link id 0x01 (data link A, the controller link). REQ-061: reset the controller when it is silent,
+// EVENT 0x0106 with reason 0x02. The values below are the contract's, written here on purpose and
+// not taken from config.hpp / protocol.hpp: the tests are drafted apart from the code (rule E4),
+// so a wrong constant in the code is a failure here and not a copy of itself.
+constexpr uint64_t kTestSilenceMs = 5000;            // config::kSilenceMs, REQ-061 bench value
+constexpr uint64_t kTestResetGapMs = 60000;          // kSilentResetGapMs, decision 20
+constexpr size_t kTestResetsMax = 3;                 // kSilentResetsMax, decision 20
+constexpr uint16_t kTestEventLinkLost = 0x0101;      // Interfaces Sec. 5.4 table, REQ-081
+constexpr uint16_t kTestEventLinkBack = 0x0102;      // Interfaces Sec. 5.4 table, REQ-082
+constexpr uint16_t kTestEventRestarted = 0x0106;     // Interfaces Sec. 5.4 table
+constexpr uint8_t kTestLinkIdControllerLink = 0x01;  // decision 27: detail = link id
+constexpr uint8_t kTestReasonControllerSilent = 0x02;   // kRestartReasonControllerSilent
+constexpr uint8_t kTestReasonTrialPastTime = 0x01;   // Sec. 5.4 table
+const char kTestNoRestoreLine[] = "controller still silent after 3 resets; restore not run";
+// A virtual jump longer than the script deadline would stop a running mock script (decision H).
+static_assert(kTestResetGapMs > config::kRestartScriptMs,
+  "a 60 s jump passes the script deadline; the busy-runner test passes its own long deadline");
+
+/**
+ * @brief Counts the reports that are EVENTs with this code and a one-byte detail of this value.
+ *
+ * @param[in]     reports  report payloads the ground received
+ * @param[in]     code     event code
+ * @param[in]     detail   the detail byte wanted
+ * @return the count of 16-byte events with that code and detail
+ */
+size_t countEventsWithDetail(const std::vector<std::vector<uint8_t>> & reports, uint16_t code,
+  uint8_t detail)
+{
+  size_t n = 0;
+  for (const std::vector<uint8_t> & r : reports) {
+    if (r.size() == report::kEventMinBytes + 1 && r[report::kOffsetKind] == report::kEvent &&
+        bytes::readU16(&r[report::kOffsetEventCode]) == code &&
+        r[report::kEventDetailOffset] == detail) {
+      n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * @brief Counts how often a piece of text occurs in a text (not overlapping).
+ *
+ * @param[in]     text    the text searched
+ * @param[in]     needle  the text looked for; not empty
+ * @return the number of occurrences
+ */
+size_t countOccurrences(const std::string & text, const std::string & needle)
+{
+  size_t n = 0;
+  size_t at = text.find(needle);
+  while (at != std::string::npos) {
+    n++;
+    at = text.find(needle, at + needle.size());
+  }
+  return n;
+}
+
+/**
+ * @brief A rig for the silent-controller tests: an Updater with a mock restart script.
+ *
+ * The script appends its first argument to "calls" (so every run is counted and its argument
+ * seen), prints "RESTORE DONE: reset", and touches "finished" as its last act. An optional body
+ * runs first (a delay, for the busy-runner test). With no_script the runner is not configured.
+ */
+struct SilenceBed
+{
+  std::string dir;
+  std::string data;
+  std::string script;
+  UpdaterRig rig;
+  bool ready;
+
+  /**
+   * @brief Makes the directory, the mock script and the rig, opens the rig, lets a ground speak
+   *        and the controller send one HEALTH report (the last good frame, at rig time 1000 ms).
+   *
+   * @param[in]     base         directory for this test
+   * @param[in]     no_script    true: no restart script is configured
+   * @param[in]     pre_body     shell lines the script runs before it reports; may be empty
+   * @param[in]     deadline_ms  the Updater's deadline for the script, ms
+   */
+  SilenceBed(const std::string & base, bool no_script, const std::string & pre_body,
+    uint64_t deadline_ms)
+  : dir(base), data(base + "/data"), script(no_script ? "" : base + "/restore.sh"),
+    rig(data, 0, script, deadline_ms), ready(false)
+  {
+    removeTree(dir);
+    (void)::mkdir(dir.c_str(), 0755);
+    bool made = no_script || writeScript(script, "echo \"$1\" >> " + dir + "/calls\n" + pre_body +
+      "echo 'RESTORE DONE: reset'\ntouch " + dir + "/finished\n", 0755);
+    SentFrame f{};
+    ready = made && rig.open() &&
+      rig.fromGround(frame::kDestController, 1, {command::kGetStatus}) && rig.tick(f);
+    if (ready) {
+      rig.answer(f.sequence, answer::kDone, 0);
+      rig.health(report::kModeOperate);
+    }
+  }
+
+  /**
+   * @brief Moves the clock on, runs the Updater, and collects the ground's reports.
+   *
+   * With wait_script the mock script is expected to run: the step waits for its "finished" file.
+   *
+   * @param[in]     ms           virtual time to move on, ms
+   * @param[in]     wait_script  true: wait for the script to end (it is expected to start)
+   * @param[in,out] reports      the ground's reports are appended here
+   * @return nothing
+   */
+  void step(uint64_t ms, bool wait_script, std::vector<std::vector<uint8_t>> & reports)
+  {
+    (void)unlink((dir + "/finished").c_str());
+    rig.advance(ms);
+    serveUntilScriptEnds(rig, wait_script ? dir + "/finished" : "", reports);
+  }
+
+  /** @brief How often the script has run. @return the number of lines in "calls" */
+  size_t calls() const
+  {
+    return readFile(dir + "/calls").size() / std::string("reset\n").size();
+  }
+
+  /** @brief Tells whether every run got the argument "reset". @return true: calls holds only that */
+  bool allCallsAreReset() const
+  {
+    std::vector<uint8_t> raw = readFile(dir + "/calls");
+    std::string text(raw.begin(), raw.end());
+    return countOccurrences(text, "reset\n") * std::string("reset\n").size() == text.size();
+  }
+};
+
+/**
+ * @brief Decision 27 (REQ-081, REQ-082): EVENT 0x0101 once at 5 s, 0x0102 once on the next frame.
+ *
+ * Catches: no event at all (the ground never learns the link was lost); the event sent before
+ * the 5 s limit or on every tick of the silence (a flood on a low-rate downlink); the event sent
+ * with a wrong link id; 0x0102 sent without a silence before it, sent twice, or never; a second
+ * silence that does not announce itself again; the two log lines "controller silent" and
+ * "controller heard again" dropped in favour of the events. The restart script is not configured,
+ * so the events are tested apart from decision 20.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testSilenceLinkEvents(const std::string & scratch)
+{
+  std::string base = scratch + "/silence-events";
+  LogCapture capture(scratch);
+  bool capturing = capture.start();
+  SilenceBed bed(base, true, "", config::kRestartScriptMs);
+  if (!bed.ready) {
+    (void)capture.stop();
+    report(false, "silence events: rig did not open");
+    return;
+  }
+  std::vector<std::vector<uint8_t>> seen;
+  (void)bed.rig.groundReports();
+  bed.step(kTestSilenceMs - 1, false, seen);
+  report(countEvents(seen, kTestEventLinkLost) == 0 && countEvents(seen, kTestEventLinkBack) == 0,
+    "silence events: 4.999 s after the last frame: no EVENT 0x0101, and no 0x0102 for a controller that never was silent");
+  bed.step(1, false, seen);
+  report(countEventsWithDetail(seen, kTestEventLinkLost, kTestLinkIdControllerLink) == 1 &&
+         countEvents(seen, kTestEventLinkLost) == 1,
+    "silence events: at 5.000 s: exactly one EVENT 0x0101, 16 bytes, detail link id 0x01");
+  for (int i = 0; i < 600; i++) {   // ten minutes of silence, one tick a second
+    bed.rig.advance(1000);
+    SentFrame f{};
+    (void)bed.rig.tick(f);
+    for (std::vector<uint8_t> & r : bed.rig.groundReports()) {
+      seen.push_back(r);
+    }
+  }
+  report(countEvents(seen, kTestEventLinkLost) == 1 && countEvents(seen, kTestEventLinkBack) == 0,
+    "silence events: ten more minutes of silence: still one 0x0101 in all, no 0x0102");
+  bed.rig.health(report::kModeOperate);
+  SentFrame g{};
+  (void)bed.rig.tick(g);
+  for (std::vector<uint8_t> & r : bed.rig.groundReports()) {
+    seen.push_back(r);
+  }
+  report(countEventsWithDetail(seen, kTestEventLinkBack, kTestLinkIdControllerLink) == 1 &&
+         countEvents(seen, kTestEventLinkBack) == 1,
+    "silence events: the next good frame: exactly one EVENT 0x0102, detail link id 0x01");
+  for (int i = 0; i < 3; i++) {
+    bed.rig.health(report::kModeOperate);
+    (void)bed.rig.tick(g);
+  }
+  for (std::vector<uint8_t> & r : bed.rig.groundReports()) {
+    seen.push_back(r);
+  }
+  report(countEvents(seen, kTestEventLinkBack) == 1 && countEvents(seen, kTestEventLinkLost) == 1,
+    "silence events: more frames after the return: no further 0x0102, no new 0x0101");
+  bed.step(kTestSilenceMs, false, seen);
+  report(countEvents(seen, kTestEventLinkLost) == 2,
+    "silence events: a second silence announces itself again: a second 0x0101");
+  bed.rig.health(report::kModeOperate);
+  (void)bed.rig.tick(g);
+  for (std::vector<uint8_t> & r : bed.rig.groundReports()) {
+    seen.push_back(r);
+  }
+  report(countEvents(seen, kTestEventLinkBack) == 2, "silence events: and its end a second 0x0102");
+  std::string text = capturing ? capture.stop() : "";
+  report(capturing && countOccurrences(text, "controller silent: no frame") == 2 &&
+         countOccurrences(text, "controller heard again") == 2,
+    "silence events: the log lines \"controller silent\" and \"controller heard again\" stay, once per silence");
+}
+
+/**
+ * @brief Decision 20 (REQ-061): reset at the start, at +60 s, at +120 s, none after, and the log line.
+ *
+ * Catches: no reset at the start of the silence; a reset without EVENT 0x0106 or with a wrong
+ * reason (0x01 is the trial reason, 0x02 is "controller silent"); a script started with another
+ * argument than "reset"; a second reset before 60 s or later than 60 s; more than three resets
+ * (an endless reset loop on a dead controller); a fourth restore run; the line "controller still
+ * silent after 3 resets; restore not run" missing, repeated, or followed by more log lines while
+ * the silence goes on.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testSilentResetSequence(const std::string & scratch)
+{
+  std::string base = scratch + "/silence-resets";
+  LogCapture capture(scratch);
+  bool capturing = capture.start();
+  SilenceBed bed(base, false, "", config::kRestartScriptMs);
+  if (!bed.ready) {
+    (void)capture.stop();
+    report(false, "silent resets: rig did not open");
+    return;
+  }
+  std::vector<std::vector<uint8_t>> seen;
+  (void)bed.rig.groundReports();
+  bed.step(kTestSilenceMs - 1, false, seen);
+  report(bed.calls() == 0, "silent resets: 4.999 s: no reset yet");
+  bed.step(1, true, seen);
+  report(bed.calls() == 1 && bed.allCallsAreReset() &&
+         countEventsWithDetail(seen, kTestEventRestarted, kTestReasonControllerSilent) == 1,
+    "silent resets: at the start of the silence: restore.sh reset runs once, EVENT 0x0106 reason 0x02");
+  bed.step(kTestResetGapMs - 1, false, seen);
+  report(bed.calls() == 1, "silent resets: 59.999 s after the first: no second reset");
+  bed.step(1, true, seen);
+  report(bed.calls() == 2 && countEventsWithDetail(seen, kTestEventRestarted, kTestReasonControllerSilent) == 2,
+    "silent resets: 60 s after the first: the second reset, second EVENT 0x0106 reason 0x02");
+  bed.step(kTestResetGapMs - 1, false, seen);
+  report(bed.calls() == 2, "silent resets: 59.999 s after the second: no third reset");
+  bed.step(1, true, seen);
+  report(bed.calls() == kTestResetsMax && bed.allCallsAreReset() &&
+         countEventsWithDetail(seen, kTestEventRestarted, kTestReasonControllerSilent) == 3,
+    "silent resets: 120 s after the first: the third reset, third EVENT 0x0106 reason 0x02");
+  bed.step(kTestResetGapMs - 1, false, seen);
+  std::string before = capturing ? capture.stop() : "";
+  report(bed.calls() == 3 && countOccurrences(before, kTestNoRestoreLine) == 0,
+    "silent resets: 59.999 s after the third: no fourth reset, the \"restore not run\" line not yet");
+  LogCapture after_capture(scratch);
+  bool capturing_after = after_capture.start();
+  bed.step(1, false, seen);
+  std::string at_180 = capturing_after ? after_capture.stop() : "";
+  report(bed.calls() == 3 && countOccurrences(at_180, kTestNoRestoreLine) == 1,
+    "silent resets: 60 s after the third: no restore runs; the log says \"controller still silent after 3 resets; restore not run\" once");
+  LogCapture quiet_capture(scratch);
+  bool capturing_quiet = quiet_capture.start();
+  for (int i = 0; i < 60; i++) {   // ten more minutes of silence, ten seconds a step
+    bed.step(10000, false, seen);
+  }
+  std::string later = capturing_quiet ? quiet_capture.stop() : "";
+  report(capturing_quiet && bed.calls() == 3 && later.empty() &&
+         countEvents(seen, kTestEventRestarted) == 3 && countEvents(seen, kTestEventLinkLost) == 1,
+    "silent resets: ten more minutes of silence: no restore, no new event, no log line at all");
+}
+
+/**
+ * @brief Decision 20: a good frame ends the silence; the next silence counts its resets from one.
+ *
+ * Catches: a frame between resets that does not stop the sequence (a reset on a controller that
+ * is talking); the reset count not going back to 0 (the second silence would get fewer than three
+ * resets, or the "restore not run" line at once); a reset due at the instant of the frame; 0x0102
+ * missing for a silence that had resets.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testSilentResetsStopOnFrame(const std::string & scratch)
+{
+  std::string base = scratch + "/silence-frame";
+  LogCapture capture(scratch);
+  bool capturing = capture.start();
+  SilenceBed bed(base, false, "", config::kRestartScriptMs);
+  if (!bed.ready) {
+    (void)capture.stop();
+    report(false, "silent resets, frame: rig did not open");
+    return;
+  }
+  std::vector<std::vector<uint8_t>> seen;
+  (void)bed.rig.groundReports();
+  bed.step(kTestSilenceMs, true, seen);
+  bed.step(kTestResetGapMs, true, seen);
+  bool two = bed.calls() == 2;
+  bed.rig.health(report::kModeOperate);   // the controller speaks between the second and third reset
+  bed.step(0, false, seen);
+  report(two && bed.calls() == 2 && countEvents(seen, kTestEventLinkBack) == 1,
+    "silent resets, frame: a frame after two resets: no third reset, one EVENT 0x0102");
+  bed.step(kTestSilenceMs - 1, false, seen);
+  bed.step(kTestResetGapMs, false, seen);   // 60 s of a heard-again controller silent only 65 s: a new silence has begun
+  bool new_silence_began = bed.calls() == 3;
+  report(new_silence_began && countEventsWithDetail(seen, kTestEventRestarted, kTestReasonControllerSilent) == 3,
+    "silent resets, frame: the new silence starts again from 1: its first reset follows 5 s after the frame");
+  bed.step(kTestResetGapMs, true, seen);
+  bed.step(kTestResetGapMs, true, seen);
+  bed.step(kTestResetGapMs, false, seen);
+  std::string text = capturing ? capture.stop() : "";
+  report(bed.calls() == 5 && countOccurrences(text, kTestNoRestoreLine) == 1 &&
+         countEvents(seen, kTestEventLinkLost) == 2,
+    "silent resets, frame: two resets of the first silence and three of the second (five in all); the \"restore not run\" line once, after the second silence's third");
+}
+
+/**
+ * @brief Decision 20: a reset that is due while the runner is busy waits; never two at once.
+ *
+ * The mock script takes about 2 s of real time and logs "start" and "end" around it. The clock
+ * is moved 60 s while the first run still goes on, so the second reset falls due at once.
+ * Catches: a second script started over the first (two restores on one controller at the same
+ * time, e.g. two OpenOCD sessions on one probe); a due reset dropped instead of delayed.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testSilentResetWaitsForBusyRunner(const std::string & scratch)
+{
+  std::string base = scratch + "/silence-busy";
+  constexpr uint64_t kLongDeadlineMs = 310000;   // as in the second-overrun test: outlasts the 60 s jump
+  static_assert(kLongDeadlineMs > kTestResetGapMs, "the deadline must outlast the jump");
+  SilenceBed bed(base, false,
+    "echo start >> " + base + "/events\nsleep 2\necho end >> " + base + "/events\n", kLongDeadlineMs);
+  if (!bed.ready) {
+    report(false, "silent resets, busy: rig did not open");
+    return;
+  }
+  std::vector<std::vector<uint8_t>> seen;
+  (void)bed.rig.groundReports();
+  (void)unlink((base + "/finished").c_str());
+  bed.rig.advance(kTestSilenceMs);
+  SentFrame f{};
+  (void)bed.rig.tick(f);   // the first reset starts and runs in real time
+  uint64_t began = clocks::nowMs();
+  while (!exists(base + "/events") && clocks::nowMs() - began < 1500) {   // bounded wait for "start"
+    (void)bed.rig.tick(f);
+  }
+  bed.rig.advance(kTestResetGapMs);
+  began = clocks::nowMs();
+  while (clocks::nowMs() - began < 600) {   // the second reset is due; the script (2 s) still runs
+    (void)bed.rig.tick(f);
+  }
+  std::vector<uint8_t> raw = readFile(base + "/events");
+  std::string while_busy(raw.begin(), raw.end());
+  report(while_busy == "start\n" && !exists(base + "/finished"),
+    "silent resets, busy: the second reset is due while the first runs: it does not start");
+  serveUntilScriptEnds(bed.rig, base + "/finished", seen);
+  (void)unlink((base + "/finished").c_str());
+  serveUntilScriptEnds(bed.rig, base + "/finished", seen);   // the second run, started after the first ended
+  raw = readFile(base + "/events");
+  std::string all(raw.begin(), raw.end());
+  report(all == "start\nend\nstart\nend\n" && bed.calls() == 2,
+    "silent resets, busy: once the first has ended the delayed second runs, whole, after it (start end start end)");
+}
+
+/**
+ * @brief Decision H regression: a trial overrun still sends EVENT 0x0106 with reason 0x01.
+ *
+ * The controller keeps sending TRIAL HEALTH reports during the whole overrun, so it is never
+ * silent: only the trial watch can be due. Catches: the new silent reason replacing the trial
+ * reason (every restart reported as 0x02); a silence reset or a data-link event fired by the
+ * trial path; the trial restart started twice.
+ *
+ * @param[in]     scratch  scratch directory
+ * @return nothing
+ */
+void testTrialOverrunKeepsReasonOne(const std::string & scratch)
+{
+  std::string base = scratch + "/silence-regression-h";
+  SilenceBed bed(base, false, "", config::kRestartScriptMs);
+  if (!bed.ready) {
+    report(false, "trial overrun reason: rig did not open");
+    return;
+  }
+  std::vector<std::vector<uint8_t>> seen;
+  bed.rig.health(report::kModeTrial);
+  (void)bed.rig.groundReports();
+  uint64_t elapsed = 0;
+  SentFrame f{};
+  while (elapsed + 4000 <= config::kTrialMs + config::kTrialMarginMs) {   // a TRIAL report every 4 s, up to 148 s
+    bed.rig.advance(4000);
+    elapsed += 4000;
+    bed.rig.health(report::kModeTrial);
+    (void)bed.rig.tick(f);
+  }
+  for (std::vector<uint8_t> & r : bed.rig.groundReports()) {
+    seen.push_back(r);
+  }
+  bool quiet_until_now = bed.calls() == 0 && countEvents(seen, kTestEventRestarted) == 0 &&
+    countEvents(seen, kTestEventLinkLost) == 0;
+  bed.step(3000, true, seen);   // 151 s after the trial began; the last frame is 3 s old
+  report(quiet_until_now && bed.calls() == 1 &&
+         countEventsWithDetail(seen, kTestEventRestarted, kTestReasonTrialPastTime) == 1 &&
+         countEvents(seen, kTestEventRestarted) == 1 && countEvents(seen, kTestEventLinkLost) == 0,
+    "trial overrun with a talking controller: one reset, EVENT 0x0106 with reason 0x01 (not 0x02), no 0x0101");
 }
 
 /**
@@ -5924,6 +6362,11 @@ int main(int argc, char ** argv)
   testDeliveredImageFreed(argv[1], argv[4]);
   testCancelDelivery(argv[1], argv[4]);
   testTrialOverrunRestart(argv[4]);
+  testSilenceLinkEvents(argv[4]);
+  testSilentResetSequence(argv[4]);
+  testSilentResetsStopOnFrame(argv[4]);
+  testSilentResetWaitsForBusyRunner(argv[4]);
+  testTrialOverrunKeepsReasonOne(argv[4]);
   testArmNoAnswer(argv[4]);
   testNamesAndFallbackDetail();
   testGivenUpRefusalName();

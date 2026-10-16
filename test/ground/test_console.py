@@ -595,8 +595,24 @@ class ConsoleTests(unittest.TestCase):
         """
         base = "controller restarted by the onboard computer"
         self.assertEqual(self.event_text(0x0106, b"\x01"), base + ": trial past its time")
-        self.assertEqual(self.event_text(0x0106, b"\x02"), base + ": unknown code 0x02")
+        # Sample moved from 0x02 to 0x03: owner decision 20 (15 Oct 2026) named reason 0x02.
+        self.assertEqual(self.event_text(0x0106, b"\x03"), base + ": unknown code 0x03")
         self.assertEqual(self.event_text(0x0106), base + ": reason not given")
+
+    def test_restart_reason_controller_silent(self):
+        """Check the reason byte of EVENT 0x0106 for 0x02 (owner decision 20, 15 Oct 2026).
+
+        Catches the defect (E1) that the ground console prints reason 0x02 of "controller
+        restarted by the onboard computer" as "unknown code 0x02" instead of "controller silent",
+        so the operator cannot tell a silent controller from a corrupted report. Also keeps
+        reason 0x01 reading "trial past its time" (regression). Passes if 0x02 contains
+        "controller silent" and not "unknown", and 0x01 is unchanged.
+        """
+        base = "controller restarted by the onboard computer"
+        silent = self.event_text(0x0106, b"\x02")
+        self.assertIn("controller silent", silent)
+        self.assertNotIn("unknown", silent)
+        self.assertEqual(self.event_text(0x0106, b"\x01"), base + ": trial past its time")
 
     def test_unknown_event_and_unknown_test(self):
         """Check that an event code or failed-test value outside the tables prints as "unknown

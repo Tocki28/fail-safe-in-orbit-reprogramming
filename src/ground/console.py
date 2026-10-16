@@ -185,8 +185,11 @@ FAULT_LOCATION = {
     0x2F: ("MODE_MANAGER_RUN_DANGEROUS",
           "mode manager: dangerous command that is neither switch nor confirm"),
 }
-# Reason in the detail of EVENT 0x0106 (Sec. 5.4, event table).
-RESTART_REASON = {0x01: "trial past its time"}
+# Reason in the detail of EVENT 0x0106 (Sec. 5.4, event table). 0x01 is in the table. 0x02 is the
+# onboard computer's reset of a controller that went silent: owner decision 20, 15 Oct 2026;
+# protocol.hpp kRestartReasonControllerSilent; Interfaces row 0x0106, reason 0x02 TBR (Proposal,
+# awaiting the owner's acceptance).
+RESTART_REASON = {0x01: "trial past its time", 0x02: "controller silent"}
 EVENT_TRIAL_STARTED, EVENT_CONFIRMED, EVENT_GIVEN_UP = 0x0006, 0x0007, 0x0008   # Sec. 5.4: event codes
 EVENT_TESTS_PASSED, EVENT_TESTS_FAILED = 0x000A, 0x000B                         # Sec. 5.4: event codes
 # Detail byte of EVENT 0x000B, which test failed (Sec. 5.4: "detail: which test").

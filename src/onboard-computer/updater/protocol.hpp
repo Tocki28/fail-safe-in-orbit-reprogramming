@@ -30,6 +30,9 @@ constexpr uint8_t kSetLimits = 0x06;      // minimum version (4), controller ide
 constexpr uint8_t kRestore = 0x07;        // none; dangerous
 constexpr uint8_t kReprogram = 0x08;      // image number (2), region (1); dangerous
 constexpr uint8_t kSetOnboardTime = 0x09;   // ground time (4), unsigned seconds; dangerous
+// SEND REPORTS: a contact (REQ-074; Interfaces Sec. 5.1 table, row 0x0B: not dangerous, ANY
+// mode). Built by owner decision 29, 15 Oct 2026 (report_store.hpp).
+constexpr uint8_t kSendReports = 0x0B;    // first report number (4)
 constexpr uint8_t kReplaceKey = 0x0C;     // which key (1), new key (32); dangerous
 constexpr uint8_t kArm = 0x0D;            // command identifier (1), its sequence number (4)
 constexpr uint8_t kSwitch = 0x20;         // none; dangerous
@@ -68,6 +71,9 @@ constexpr size_t kSetOnboardTimeBytes = kIdBytes + 4;       // ground time (4)
 constexpr size_t kSetOnboardTimeAt = kIdBytes;              // offset of the ground time (4)
 constexpr size_t kNewKeyBytes = 32;                         // new key (32), same row
 constexpr size_t kReplaceKeyBytes = kIdBytes + 1 + kNewKeyBytes;   // which key (1), new key (32)
+// SEND REPORTS (Interfaces Sec. 5.1 table, row 0x0B): identifier, then first report number (4).
+constexpr size_t kSendReportsBytes = kIdBytes + 4;
+constexpr size_t kSendReportsFirstAt = kIdBytes;            // offset of the first report number
 
 }  // namespace command
 
@@ -171,9 +177,10 @@ constexpr size_t kOffsetFailedStarts = 20;
 constexpr size_t kOffsetTrialLeft = 21;
 constexpr size_t kOffsetSelfTest = 23;
 // Event codes (Sec. 5.4 table), the ones the updater acts on or names in its log. The
-// controller sends the first group; the onboard computer's own events 0x0101 and 0x0102
-// (decision 27), 0x0105 (SET ONBOARD TIME, below; decision 25) and 0x0106 are sent; 0x0103 and
-// 0x0104 are not sent on the bench.
+// controller sends the first group. Of the onboard computer's own events (0x0101 to 0x0106),
+// 0x0101 and 0x0102 (decision 27), 0x0104 (SEND REPORTS, below; decision 29), 0x0105 (SET
+// ONBOARD TIME, below; decision 25) and 0x0106 (decisions H and 20) are sent on the bench;
+// 0x0103 is not.
 // 0x0001 "fault detected" carries a 1-byte detail, the fault kind; 0x0005 "change in memory
 // detected" carries a 2-byte detail, where (1) and later faults (1) (owner's decisions 2 and 3,
 // 13 Oct 2026, and the second round of that day; the code lists are
@@ -217,6 +224,17 @@ constexpr uint16_t kEventDataLinkLost = 0x0101;
 constexpr uint16_t kEventDataLinkWorking = 0x0102;
 // Link id 0x01 is data link A, the link to the controller (owner decision 27, 15 Oct 2026).
 constexpr uint8_t kLinkIdDataLinkA = 0x01;
+// 0x0104 "health reports dropped" is the onboard computer's own event (Sec. 5.4 table, REQ-076;
+// owner decision 29, 15 Oct 2026). Sent at SEND REPORTS before the stored reports when HEALTH
+// reports were dropped from the full store. Detail: count (4), onboard time of the first dropped
+// (4), of the last dropped (4), little-endian. The times are the onboard time stamped on those
+// HEALTH reports, the onboard ground time (owner decision 25). The row says only "count and time
+// span": this layout is a Proposal (TBR), awaiting the owner's acceptance.
+constexpr uint16_t kEventHealthDropped = 0x0104;
+constexpr size_t kDroppedCountAt = 0;        // offsets inside the detail
+constexpr size_t kDroppedFirstTimeAt = 4;
+constexpr size_t kDroppedLastTimeAt = 8;
+constexpr size_t kHealthDroppedDetailBytes = 12;
 constexpr uint16_t kEventTrialTestsPassed = 0x000A;   // REQ-139
 constexpr uint16_t kEventTrialTestsFailed = 0x000B;   // REQ-139, REQ-140; detail (1): which test
 // Events 0x0002 and 0x0003 carry a 2-byte detail: refused copy (1), check result (1) (Sec. 5.4

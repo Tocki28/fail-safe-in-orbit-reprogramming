@@ -20,6 +20,15 @@ on one file and prints one line. The minimum version and controller identity are
 `limits` record in `--data-dir`) when it can be read, else minimum version 1 and identity 0x0431; the
 line ends with which (owner decision 24, 15 Oct 2026; TBR). Exit 0: passed; 1: refused (the line says why); 2: usage; 3: keys unusable.
 
+## Report store (owner decision 29, 15 Oct 2026)
+Every report the updater sends to the ground is also kept in the file `reports` in `--data-dir`:
+1 MB of reports, the oldest HEALTH reports dropped first when full, events never. SEND REPORTS
+(0x0B, first report number) from the ground answers DONE, then sends EVENT 0x0104 (count and
+onboard times of the dropped HEALTH reports) if any were dropped, then every stored event, then
+every stored HEALTH report, 64 per loop pass. Reports numbered below the first number are deleted.
+The file and the report numbering survive a power cut and a restart; a damaged tail is cut off at
+start and logged. Layout and open choices (TBR): `report_store.hpp`, `config.hpp`.
+
 ## Restart of the controller when a trial overruns (decision H, accepted by the owner, 13 Oct 2026)
 If no EVENT 0x0007 or 0x0008 arrives within the trial time plus margin (120 s + 30 s, bench values;
 `config.hpp`), the updater runs `restore.sh reset` (`../restore/restore.sh`) as a child process: OpenOCD

@@ -13,8 +13,10 @@
  *     0x07, 0x08, 0x09 and 0x0C are checked against an ARM as described below. SET LIMITS (0x06)
  *     has a handler (owner decision 24, 15 Oct 2026, below) and so has SET ONBOARD TIME (0x09,
  *     owner decision 25, below); 0x07, 0x08 and 0x0C have none yet: REFUSED 0x06 after the arming
- *     check. 0x0A and 0x0B are not built: REFUSED 0x06.
- *   Expiry (owner decision 25, 15 Oct 2026; REQ-066, below) is checked first, on arrival.
+ *     check. 0x0A is not built: REFUSED 0x06. SEND REPORTS (0x0B) is built (owner decision 29,
+ *     15 Oct 2026; REPORTS below).
+ *   Expiry (owner decision 25, 15 Oct 2026; REQ-066, below) is checked first, on arrival, for
+ *     SEND REPORTS as for every other command not exempt below.
  *   Repeats (owner decision 26, 15 Oct 2026; REQ-065, REQ-031): every command that passed the
  *     arrival checks is remembered by its ground sequence number and its exact bytes. The ARMs and
  *     dangerous commands are kept in UsedSequences (the last 64), all others in RepeatMemory (the
@@ -36,8 +38,23 @@
  *     While data link A is busy (a delivery), they wait in a queue of 8; when it is full,
  *     REFUSED 0x05 (bench choice: Sec. 4.2 has no reason for "busy").
  * From the controller:
- *   answers: to the command outstanding on data link A; reports: numbered, stamped and sent
- *   to the ground (report_store.hpp). Any good frame tells the controller watch it is alive.
+ *   answers: to the command outstanding on data link A; reports: numbered, stamped, stored and
+ *   sent to the ground at once when a ground is known (report_store.hpp). Any good frame tells
+ *   the controller watch it is alive.
+ *
+ * REPORTS (owner decision 29, 15 Oct 2026; REQ-074 to REQ-078): every report the onboard computer
+ *   sends to the ground (the controller's HEALTH and EVENT, its own events) is also kept in the
+ *   report store on disk (report_store.hpp: 1 MB, the oldest HEALTH dropped first, events never).
+ *   A stored report keeps the onboard time it was stamped with when taken: the onboard ground
+ *   time (owner decision 25, ONBOARD CLOCK AND EXPIRY below).
+ *   SEND REPORTS (0x0B, first report number (4); not dangerous; any mode; not exempt from the
+ *   expiry check) is a contact: RECEIVED,
+ *   DONE, then EVENT 0x0104 "health reports dropped" if any were (count, first and last onboard
+ *   time; REQ-076), then the stored reports numbered from the first number up to the last numbered
+ *   before the command arrived: all EVENT reports, then the HEALTH reports, each in number order
+ *   (REQ-078). They go config::kStoredSendBatch per loop pass (tick), since the ground socket does
+ *   not block. Reports numbered below the first number are deleted (TBR). Without a store on disk
+ *   SEND REPORTS is refused 0xFE (TBR).
  *
  * IMAGE LIMITS (owner decision 24, 15 Oct 2026; REQ-045, REQ-046, REQ-053): the minimum version
  *   and the controller identity are kept in the "limits" record of the data directory
@@ -266,8 +283,11 @@ private:
   void silenceWatch();   // decision 20: the resets of a silent controller, every tick
   void onSilentReset();  // decision 20: one reset of a silent controller
   void sendOwnEvent(uint16_t code, uint8_t detail);   // the onboard computer's own EVENT, to the ground
-  // The same with a detail of detail_length bytes (at most report::kEventMaxBytes - 15).
+  // The same with a detail of detail_length bytes (at most report::kEventMaxBytes - 15; EVENT
+  // 0x0105 has 4, decision 25; EVENT 0x0104 has 12, decision 29).
   void sendOwnEventDetail(uint16_t code, const uint8_t * detail, size_t detail_length);
+  void sendReports(const frame::Frame & c);   // decision 29: SEND REPORTS, a contact
+  void sendStoredReports();   // decision 29: the next stored reports of a contact, every tick
 
   void sendNext();
   void onTimeout();

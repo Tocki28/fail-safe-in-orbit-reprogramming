@@ -236,6 +236,8 @@ private:
   void onTrialOverrun();   // decision H
   void restartWatch();   // decision H: polls the restart script every tick
   void onRestartFinished(const RestartRunner::Outcome & outcome);   // decision H
+  void silenceWatch();   // decision 20: the resets of a silent controller, every tick
+  void onSilentReset();  // decision 20: one reset of a silent controller
   void sendOwnEvent(uint16_t code, uint8_t detail);   // the onboard computer's own EVENT, to the ground
 
   void sendNext();
@@ -264,6 +266,7 @@ private:
   TestImageTrigger test_trigger_;
   TrialWatch trial_watch_;   // decision H, separable
   RestartRunner restart_;    // decision H: restore.sh reset as a child process
+  uint8_t restart_reason_;   // EVENT 0x0106 reason of the reset now running (protocol.hpp)
   UsedSequences used_;        // ARMs and dangerous commands, the last 64
   RepeatMemory repeats_;      // every other ground command, the last 256 (decision 26)
   DurableRecord limits_file_; // the "limits" record in the data directory (decision 24)

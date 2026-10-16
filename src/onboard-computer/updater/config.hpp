@@ -91,6 +91,13 @@ constexpr uint64_t kRestartKillGraceMs = 5000;
 // REQ-061: notice a silent controller. Bench value 5 s from the build brief; the requirements
 // document has no value yet (TBD).
 constexpr uint64_t kSilenceMs = 5000;
+// Restarting a silent controller (owner decision 20, 15 Oct 2026; REQ-061, proposed REQ-142):
+// the first reset is at the start of a silence; if the controller is still silent this long after
+// a reset, it is reset again. Bench value, 60 s, standing for TBD in the requirements.
+constexpr uint64_t kSilentResetGapMs = 60000;
+// At most this many resets in one silence (owner decision 20, 15 Oct 2026; bench value, TBD for
+// flight). After the last one, 60 s of silence more ends in a log line, not a restore.
+constexpr uint32_t kSilentResetsMax = 3;
 
 // ---- Firmware images -----------------------------------------------------------------------
 constexpr const char * kDefaultDataDir = "/var/lib/fsir/images";

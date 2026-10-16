@@ -74,7 +74,7 @@ run_restore() {
     mkdir -p "$R_TMP" "$R_MOCK"
     R_OUT=$T/run$runno/out; R_ERR=$T/run$runno/err
     SHELL_UNDER_TEST=$SH RESTORE=$RESTORE R_OUT=$R_OUT R_ERR=$R_ERR R_RC_FILE=$T/run$runno/rc \
-        TMPDIR=$R_TMP MOCK_DIR=$R_MOCK OPENOCD=$T/mock/openocd OCD_SCRIPTS=$T/mock/tcl \
+        TMPDIR=$R_TMP MOCK_DIR=$R_MOCK OPENOCD=${MOCK_OPENOCD:-$T/mock/openocd} OCD_SCRIPTS=$T/mock/tcl \
         LOG=$T/run$runno/openocd.log "$PY" -I "$T/runner.py" "$@"
     R_RC=$(cat "$T/run$runno/rc" 2>/dev/null || echo -998)
     return 0
@@ -127,6 +127,64 @@ check_mock_dead() {
     sleep 0.3
     if kill -0 "$(cat "$2")" 2>/dev/null; then verdict 0 "$1: mock process $(cat "$2") still running"; kill -KILL "$(cat "$2")" 2>/dev/null || true
     else verdict 1 "$1: no mock process left behind"; fi
+    return 0
+}
+
+# @brief  Run restore.sh in mode restore or full against the second mock (tclsh, memory model).
+#
+# Why: the backup-register step (F-3, REQ-057) must be seen as commands in order and its
+# read-back must be able to fail; the first mock never interprets the Tcl. Extra mock variables
+# (MOCK_STUCK, MOCK_READ_FORCE, MOCK_FAIL_ON_BKP_WRITE, MOCK_FAIL_STEP) come from the caller.
+#
+# @param $1  mode, restore or full
+# @return 0; sets the same variables as run_restore
+bkp_run() {
+    MOCK_OPENOCD=$T/mock/openocd-bkp; export MOCK_OPENOCD
+    if [ "$1" = full ]; then
+        run_restore full --bootloader "$T/in/bl.img" --last-resort "$LR_IMG" --main "$MAIN_IMG"
+    else
+        run_restore restore --bootloader "$T/in/bl.img" --last-resort "$LR_IMG"
+    fi
+    unset MOCK_OPENOCD
+    return 0
+}
+
+# @brief  Check a good run's trace and end state: 16 registers cleared in order, DBP back to 0.
+#
+# Defects caught: no clear step (the F-3 defect: planted values survive); a register left out
+# (a loop of 15, BKP15 or BKP0 skipped); the writes before the flash verify or after the final
+# reset; DBP never set (the writes are ignored, so the planted values survive); DBP not cleared
+# afterwards; no read-back.
+#
+# @param $1  name of the case
+# @return 0
+bkp_check_cleared() {
+    res=$(awk -f "$T/mock/trace_check.awk" "$R_MOCK/trace" 2>&1)
+    [ "$res" = OK ] && verdict 1 "$1: 16 registers written 0 under DBP, read back, in order" \
+        || verdict 0 "$1: trace: $res"
+    n0=$(grep -c '^0x00000000$' "$R_MOCK/bkp.final" 2>/dev/null || true)
+    [ "$n0" = 16 ] && verdict 1 "$1: all 16 registers hold 0 at the end (planted values gone)" \
+        || verdict 0 "$1: registers at the end: $(tr '\n' ' ' < "$R_MOCK/bkp.final" 2>/dev/null)"
+    grep -qx 'DBP 0' "$R_MOCK/pwr.final" 2>/dev/null && verdict 1 "$1: DBP is 0 at the end" \
+        || verdict 0 "$1: DBP not 0 at the end"
+    return 0
+}
+
+# @brief  Check a run whose clear step failed: result line, exit 1, no chip release.
+#
+# Defects caught: a success line after a bad read-back or a failed step; another step name; an
+# exit status other than 1; the chip released ("reset run") with a stale record still in the
+# backup registers.
+#
+# @param $1  name of the case
+# @return 0
+bkp_check_failed() {
+    check_common "$1" 1
+    grep -q '^RESTORE FAILED: clear backup registers' "$R_OUT" && [ "$R_RC" -eq 1 ] \
+        && verdict 1 "$1: RESTORE FAILED: clear backup registers, exit 1" \
+        || verdict 0 "$1: rc $R_RC: $(cat "$R_OUT")"
+    ! grep -q '^RESET run' "$R_MOCK/trace" 2>/dev/null && verdict 1 "$1: the chip was not released" \
+        || verdict 0 "$1: reset run issued after the failed clear"
     return 0
 }
 
@@ -201,6 +259,125 @@ with open(env["R_OUT"], "w") as out, open(env["R_ERR"], "w") as err:
         p.wait()
         rc = -999
 open(env["R_RC_FILE"], "w").write(str(rc))
+EOT
+
+# The second mock OpenOCD (F-3, REQ-057): it RUNS the generated Tcl in tclsh against a memory
+# model, so a read-back can return a value and a register can refuse a write. Used only by the
+# backup-register cases, through MOCK_OPENOCD (unset: the first mock above, behaviour unchanged).
+# Model: TAMP_BKP0R..15R (0x40002500..0x4000253C) start planted with non-zero values (fixture
+# values, no claim about the chip); a write to them is accepted only while PWR_CR1 (0x40007000)
+# bit 8 DBP is 1 (the F-3 contract; the datasheet locator is not checked here, TBD). Every
+# access is traced in order to $MOCK_DIR/trace; final contents go to bkp.final and pwr.final.
+# Environment: MOCK_STUCK "10 3" (those registers ignore writes), MOCK_READ_FORCE "10=0x1" (the
+# read of that register returns that value), MOCK_FAIL_ON_BKP_WRITE n (a write to BKPnR raises
+# a Tcl error, as an SWD fault would).
+MOCK_PRELUDE_DIR=$T/mock; export MOCK_PRELUDE_DIR
+cat > "$T/mock/prelude-restore.tcl" <<'EOT'
+proc tr {s} { set f [open $::env(MOCK_DIR)/trace a]; puts $f $s; close $f }
+proc env_or {n d} { if {[info exists ::env($n)]} { return $::env($n) }; return $d }
+set ::B0 [expr {0x40002500}]
+set ::PWR [expr {0x40007000}]
+set ::stuck [env_or MOCK_STUCK {}]
+set ::force [env_or MOCK_READ_FORCE {}]
+set ::failw [env_or MOCK_FAIL_ON_BKP_WRITE -1]
+array set ::mem {}
+set ::mem($::PWR) 0
+for {set i 0} {$i < 16} {incr i} { set ::mem([expr {$::B0 + 4 * $i}]) [expr {0xA5A50000 + $i}] }
+proc bkp_index {a} {
+    if {$a >= $::B0 && $a <= $::B0 + 60 && ($a - $::B0) % 4 == 0} { return [expr {($a - $::B0) / 4}] }
+    return -1
+}
+proc rd {a} {
+    set a [expr {$a}]
+    set i [bkp_index $a]
+    if {$i >= 0} {
+        tr "BKPR $i"
+        foreach p $::force { lassign [split $p =] fi fv; if {$fi == $i} { return [expr {$fv}] } }
+        return $::mem($a)
+    }
+    if {$a == $::PWR} { tr "PWRR" } elseif {$a >= 0x40002400 && $a < 0x40002800} { tr "TAMPR" }
+    if {[info exists ::mem($a)]} { return $::mem($a) }
+    return 0
+}
+proc wr {a v} {
+    set a [expr {$a}]; set v [expr {$v & 0xFFFFFFFF}]
+    set i [bkp_index $a]
+    if {$i >= 0} {
+        if {$i == $::failw} { tr "BKPW $i fault"; error "mock SWD fault writing TAMP_BKP${i}R" }
+        set dbp [expr {($::mem($::PWR) >> 8) & 1}]
+        set ok [expr {$dbp && [lsearch -exact $::stuck $i] < 0}]
+        tr [format "BKPW %d 0x%08X %d %d" $i $v $dbp $ok]
+        if {$ok} { set ::mem($a) $v }
+        return
+    }
+    if {$a == $::PWR} {
+        set old [expr {($::mem($a) >> 8) & 1}]; set ::mem($a) $v; set new [expr {($v >> 8) & 1}]
+        tr [format "PWRW 0x%08X" $v]
+        if {$new != $old} { tr "DBP $new" }
+        return
+    }
+    if {$a >= 0x40002400 && $a < 0x40002800} { tr "TAMPW" }
+    set ::mem($a) $v
+}
+proc mww {a v {n 1}} { for {set k 0} {$k < $n} {incr k} { wr [expr {$a + 4 * $k}] $v } }
+proc mmw {a s c} { wr $a [expr {([rd $a] & ~$c) | $s}] }
+proc mdw {a {n 1}} { for {set k 0} {$k < $n} {incr k} { puts [format "0x%08x: %08x" [expr {$a + 4 * $k}] [rd [expr {$a + 4 * $k}]]] } }
+proc read_memory {a w n} { set l {}; for {set k 0} {$k < $n} {incr k} { lappend l [rd [expr {$a + 4 * $k}]] }; return $l }
+proc memread32 {a} { return [rd $a] }
+proc write_memory {a w l} { set k 0; foreach v $l { wr [expr {$a + 4 * $k}] $v; incr k } }
+proc mem2array {name w a n} { upvar 1 $name arr; for {set k 0} {$k < $n} {incr k} { set arr($k) [rd [expr {$a + 4 * $k}]] } }
+proc init {} { proc step {args} { puts "step \[address\]"; exit 1 } }
+proc reset {args} { tr "RESET $args" }
+proc flash {args} { tr "FLASH $args" }
+proc dump {} {
+    set f [open $::env(MOCK_DIR)/bkp.final w]
+    for {set i 0} {$i < 16} {incr i} { puts $f [format "0x%08X" $::mem([expr {$::B0 + 4 * $i}])] }
+    close $f
+    set f [open $::env(MOCK_DIR)/pwr.final w]; puts $f "DBP [expr {($::mem($::PWR) >> 8) & 1}]"; close $f
+}
+proc shutdown {args} { dump; exit [expr {[llength $args] ? 1 : 0}] }
+source [lindex $argv 0]
+dump
+EOT
+cat > "$T/mock/openocd-bkp" <<'EOT'
+#!/bin/sh
+# mock OpenOCD 2: runs the generated Tcl file in tclsh with prelude-restore.tcl.
+echo "$*" >> "$MOCK_DIR/calls"
+tcl=; prev=
+for a in "$@"; do if [ "$prev" = -f ]; then tcl=$a; fi; prev=$a; done
+cp "$tcl" "$MOCK_DIR/steps.tcl"
+exec tclsh "$MOCK_PRELUDE_DIR/prelude-restore.tcl" "$tcl"
+EOT
+chmod +x "$T/mock/openocd-bkp"
+# Reads a trace and prints OK, or the first rule it breaks: every register written 0 with DBP
+# set, all after the last FLASH command and before the last RESET, all read back after the
+# writes, DBP cleared after the last read-back and before the last RESET.
+cat > "$T/mock/trace_check.awk" <<'EOT'
+{ n++ }
+/^FLASH /  { lastflash = n }
+/^RESET /  { lastreset = n }
+/^DBP 1$/  { if (!dbp1) dbp1 = n }
+/^DBP 0$/  { lastdbp0 = n }
+/^BKPW [0-9]+ 0x/ {
+    if ($3 == "0x00000000" && $5 == 1) { w[$2] = n; if (!firstw) firstw = n; lastw = n }
+    else { bad = bad " bad-write(reg " $2 " value " $3 " dbp " $4 " accepted " $5 ")" }
+}
+/^BKPR / { r[$2] = n; lastr = n }
+END {
+    if (!lastflash) { print "no FLASH command traced"; exit }
+    if (!lastreset) { print "no RESET traced"; exit }
+    for (i = 0; i < 16; i++) {
+        if (!(i in w)) { print "register " i ": no write of 0 with DBP set" bad; exit }
+        if (!(i in r)) { print "register " i ": no read-back"; exit }
+        if (w[i] < lastflash) { print "register " i ": cleared before the last flash command"; exit }
+        if (r[i] < w[i]) { print "register " i ": read back before its write"; exit }
+    }
+    if (bad) { print "unexpected writes:" bad; exit }
+    if (!dbp1 || dbp1 > firstw) { print "DBP not set before the first register write"; exit }
+    if (!lastdbp0 || lastdbp0 < lastr) { print "DBP not cleared after the last read-back"; exit }
+    if (lastw > lastreset || lastdbp0 > lastreset) { print "clear step runs after the final reset"; exit }
+    print "OK"
+}
 EOT
 
 # Signed bootloader images from tools/make_image.py: good, signed with a wrong key A.
@@ -402,6 +579,62 @@ for SH in $SHELLS; do
             && verdict 1 "reset SIG$sig after the reset: RESTORE FAILED: after reset, exit 1" || verdict 0 "reset SIG$sig after: rc $R_RC: $(cat "$R_OUT")"
         check_mock_dead "reset SIG$sig after" "$R_MOCK/pid"
     done
+
+    # F-3 (REQ-057): modes restore and full clear TAMP_BKP0R..15R after the flash verify, before
+    # the final reset. The second mock runs the Tcl in tclsh.
+    if ! command -v tclsh > /dev/null 2>&1; then verdict 0 "F-3: tclsh not installed (the mock needs it)"; else
+    unset MOCK_STUCK MOCK_READ_FORCE MOCK_FAIL_ON_BKP_WRITE
+    for m in full restore; do
+        bkp_run "$m"
+        check_common "F-3 good $m" 1
+        grep -q "^RESTORE DONE: $m" "$R_OUT" && [ "$R_RC" -eq 0 ] \
+            && verdict 1 "F-3 good $m: RESTORE DONE, exit 0" || verdict 0 "F-3 good $m: rc $R_RC: $(cat "$R_OUT")"
+        bkp_check_cleared "F-3 good $m"
+    done
+    # A read-back that is not 0: first, middle, last register; the write itself is accepted.
+    for i in 0 10 15; do
+        MOCK_READ_FORCE="$i=0x1"; export MOCK_READ_FORCE
+        bkp_run full
+        unset MOCK_READ_FORCE
+        bkp_check_failed "F-3 read-back of BKP$i is not 0 (full)"
+    done
+    MOCK_READ_FORCE="10=0x1"; export MOCK_READ_FORCE
+    bkp_run restore
+    unset MOCK_READ_FORCE
+    bkp_check_failed "F-3 read-back of BKP10 is not 0 (restore)"
+    # A register that ignores the write (the planted value stays): the script's own read-back must see it.
+    for i in 0 15; do
+        MOCK_STUCK="$i"; export MOCK_STUCK
+        bkp_run full
+        unset MOCK_STUCK
+        bkp_check_failed "F-3 BKP$i ignores the write (full)"
+    done
+    # The step itself fails: an SWD fault during a register write, and a failure of the step by name.
+    MOCK_FAIL_ON_BKP_WRITE=7; export MOCK_FAIL_ON_BKP_WRITE
+    bkp_run restore
+    unset MOCK_FAIL_ON_BKP_WRITE
+    bkp_check_failed "F-3 write fault on BKP7 (restore)"
+    MOCK_FAIL_STEP="clear backup registers"; export MOCK_FAIL_STEP
+    run_restore full --bootloader "$T/in/bl.img" --last-resort "$LR_IMG" --main "$MAIN_IMG"
+    unset MOCK_FAIL_STEP
+    check_common "F-3 step fails (first mock)" 1
+    grep -q '^RESTORE FAILED: clear backup registers' "$R_OUT" && [ "$R_RC" -eq 1 ] \
+        && verdict 1 "F-3 step fails (first mock): RESTORE FAILED: clear backup registers, exit 1" \
+        || verdict 0 "F-3 step fails (first mock): rc $R_RC: $(cat "$R_OUT")"
+    # Mode reset writes nothing: no backup-register or PWR_CR1 access, and no such address in the Tcl.
+    MOCK_OPENOCD=$T/mock/openocd-bkp; export MOCK_OPENOCD
+    run_restore reset
+    unset MOCK_OPENOCD
+    check_common "F-3 reset" 1
+    [ "$(cat "$R_OUT")" = "RESTORE DONE: reset" ] && [ "$R_RC" -eq 0 ] \
+        && verdict 1 "F-3 reset: RESTORE DONE: reset, exit 0" || verdict 0 "F-3 reset: rc $R_RC: $(cat "$R_OUT")"
+    ! grep -Eq '^(BKP|PWR|DBP|TAMP)' "$R_MOCK/trace" && grep -q '^RESET run' "$R_MOCK/trace" \
+        && verdict 1 "F-3 reset: no write or read of 0x400025xx or 0x40007000 (reset run traced)" \
+        || verdict 0 "F-3 reset: memory access traced: $(cat "$R_MOCK/trace" 2>/dev/null)"
+    ! grep -Eiq '0x4000(25|7000)|mww|mmw|write_memory' "$R_MOCK/steps.tcl" \
+        && verdict 1 "F-3 reset: no such address or memory command in the Tcl" \
+        || verdict 0 "F-3 reset: backup-register command in the Tcl"
+    fi
 
     # brick.sh: the check after the mass erase. The mock interprets the Tcl with tclsh.
     command -v tclsh > /dev/null 2>&1 || { verdict 0 "brick: tclsh not installed (the mock needs it)"; continue; }
